@@ -19,4 +19,5 @@ CLAUDE.md
 # Session AWS credentials — tracked only as aws-config.example.sh
 /scripts/aws-config.sh
 /scripts/params.sh
-/frontend/config.js
+/frontend/public/config.js
+node_modules/

@@ -1,4 +1,5 @@
-// Copy to config.js for local development; deployments generate config.js from stack outputs.
+// Copy to public/config.js for local development; deployments generate public/config.js from
+// stack outputs.
 window.CONFIG = {
   cognitoDomain: "https://diet-trk-<account>.auth.eu-central-1.amazoncognito.com",
   clientId: "<user-pool-client-id>",
