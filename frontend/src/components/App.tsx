@@ -12,7 +12,7 @@ import { TrendChart } from "./TrendChart";
 
 // Top-level screen: owns the server data (questionnaire config, answer history, submissions)
 // and the submit → alerts → trend flow; the components below it are presentational.
-export function App({ email, api }: { email: string; api: Api }) {
+export function App({ email, api, onSignOut }: { email: string; api: Api; onSignOut: () => void }) {
   const queryClient = useQueryClient();
   const [now] = useState(() => new Date());
   const todayStr = isoDate(now);
@@ -70,7 +70,7 @@ export function App({ email, api }: { email: string; api: Api }) {
 
   return (
     <>
-      <Header email={email} />
+      <Header email={email} onSignOut={onSignOut} />
       <main>
         <Alerts items={alerts} />
         {trendDate && <TrendChart questionnaire={questionnaire} days={days} endDate={trendDate} />}

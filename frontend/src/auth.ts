@@ -1,5 +1,5 @@
-// Google sign-in through the Cognito Hosted UI using the authorization-code + PKCE flow.
-// No client secret exists in the browser; the verifier lives in sessionStorage only for the
+// Google sign-in and sign-out through the Cognito Hosted UI using the authorization-code + PKCE
+// flow. No client secret exists in the browser; the verifier lives in sessionStorage only for the
 // duration of the redirect round-trip.
 
 import type { AppConfig } from "./config";
@@ -26,6 +26,18 @@ export async function ensureSignedIn(cfg: AppConfig): Promise<Tokens> {
   await redirectToLogin(cfg);
   // Navigation to the Hosted UI is underway; never resolve so the app does not mount signed-out.
   return new Promise<never>(() => {});
+}
+
+export function logoutUrl(cfg: AppConfig): string {
+  const params = new URLSearchParams({ client_id: cfg.clientId, logout_uri: cfg.redirectUri });
+  return `${cfg.cognitoDomain}/logout?${params}`;
+}
+
+// Clearing local tokens alone is not enough: the Hosted UI session cookie would silently sign the
+// same Google account back in on the next visit, so sign-out must also hit Cognito's /logout.
+export function signOut(cfg: AppConfig, navigate: (url: string) => void = (url) => { location.href = url; }): void {
+  sessionStorage.removeItem("tokens");
+  navigate(logoutUrl(cfg));
 }
 
 async function redirectToLogin(cfg: AppConfig): Promise<void> {
