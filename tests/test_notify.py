@@ -1,0 +1,69 @@
+import json
+
+import boto3
+import pytest
+from moto import mock_aws
+
+from common import notify
+
+
+def test_send_email_via_ses():
+    with mock_aws():
+        ses = boto3.client("ses", region_name="eu-central-1")
+        ses.verify_email_identity(EmailAddress="me@example.com")
+        notify.send_email(ses, "me@example.com", "me@example.com", "נושא", "גוף ההודעה")
+        assert ses.get_send_quota()["SentLast24Hours"] == 1
+
+
+def test_send_telegram_posts_message(monkeypatch):
+    captured = {}
+
+    class FakeResponse:
+        def __enter__(self): return self
+        def __exit__(self, *args): return False
+        def read(self): return json.dumps({"ok": True}).encode()
+
+    def fake_urlopen(request):
+        captured["url"] = request.full_url
+        captured["body"] = json.loads(request.data)
+        return FakeResponse()
+
+    monkeypatch.setattr(notify.urllib.request, "urlopen", fake_urlopen)
+    notify.send_telegram("TOKEN", "12345", "שלום")
+    assert captured["url"] == "https://api.telegram.org/botTOKEN/sendMessage"
+    assert captured["body"] == {"chat_id": "12345", "text": "שלום"}
+
+
+def test_send_telegram_raises_on_api_failure(monkeypatch):
+    class FakeResponse:
+        def __enter__(self): return self
+        def __exit__(self, *args): return False
+        def read(self): return json.dumps({"ok": False, "description": "bad chat"}).encode()
+
+    monkeypatch.setattr(notify.urllib.request, "urlopen", lambda request: FakeResponse())
+    with pytest.raises(RuntimeError):
+        notify.send_telegram("TOKEN", "12345", "שלום")
+
+
+def test_telegram_config_returns_none_when_token_absent():
+    with mock_aws():
+        ssm = boto3.client("ssm", region_name="eu-central-1")
+        assert notify.telegram_config(ssm, "/diet-tracker/telegram/bot-token", "/diet-tracker/telegram/chat-map") is None
+
+
+def test_telegram_config_returns_token_and_chat_map_when_both_present():
+    with mock_aws():
+        ssm = boto3.client("ssm", region_name="eu-central-1")
+        ssm.put_parameter(Name="/diet-tracker/telegram/bot-token", Type="SecureString", Value="TOKEN")
+        ssm.put_parameter(Name="/diet-tracker/telegram/chat-map", Type="SecureString",
+                          Value='{"a@gmail.com": "111"}')
+        result = notify.telegram_config(ssm, "/diet-tracker/telegram/bot-token", "/diet-tracker/telegram/chat-map")
+        assert result == ("TOKEN", {"a@gmail.com": "111"})
+
+
+def test_telegram_config_raises_when_token_present_but_chat_map_missing():
+    with mock_aws():
+        ssm = boto3.client("ssm", region_name="eu-central-1")
+        ssm.put_parameter(Name="/diet-tracker/telegram/bot-token", Type="SecureString", Value="TOKEN")
+        with pytest.raises(ssm.exceptions.ParameterNotFound):
+            notify.telegram_config(ssm, "/diet-tracker/telegram/bot-token", "/diet-tracker/telegram/chat-map")

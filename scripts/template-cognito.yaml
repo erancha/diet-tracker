@@ -1,0 +1,98 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Cognito user pool with Google sign-in, gated by a pre-signup allowlist.
+
+Parameters:
+  GoogleClientId:
+    Type: String
+  GoogleClientSecret:
+    Type: String
+    NoEcho: true
+  AllowedEmails:
+    Type: String
+    Description: Comma-separated Google account emails permitted to sign up
+  CallbackUrls:
+    Type: CommaDelimitedList
+    Default: 'http://localhost:8000/'
+  DomainPrefix:
+    Type: String
+    Default: diet-trk
+
+Resources:
+  PreSignupFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../build/lambda
+      Handler: handlers/presignup.handler
+      Runtime: python3.13
+      Architectures: [arm64]
+      Timeout: 5
+      Environment:
+        Variables:
+          ALLOWED_EMAILS: !Ref AllowedEmails
+
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub '${AWS::StackName}-UserPool'
+      AliasAttributes: [email]
+      AutoVerifiedAttributes: [email]
+      LambdaConfig:
+        PreSignUp: !GetAtt PreSignupFunction.Arn
+      Schema:
+        - Name: email
+          AttributeDataType: String
+          Mutable: true
+        - Name: name
+          AttributeDataType: String
+          Mutable: true
+
+  PreSignupPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref PreSignupFunction
+      Action: lambda:InvokeFunction
+      Principal: cognito-idp.amazonaws.com
+      SourceArn: !GetAtt UserPool.Arn
+
+  GoogleProvider:
+    Type: AWS::Cognito::UserPoolIdentityProvider
+    Properties:
+      ProviderName: Google
+      ProviderType: Google
+      UserPoolId: !Ref UserPool
+      ProviderDetails:
+        client_id: !Ref GoogleClientId
+        client_secret: !Ref GoogleClientSecret
+        authorize_scopes: 'openid email profile'
+      AttributeMapping:
+        email: email
+        name: name
+        username: sub
+
+  UserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      Domain: !Sub '${DomainPrefix}-${AWS::AccountId}'
+      UserPoolId: !Ref UserPool
+
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    DependsOn: GoogleProvider
+    Properties:
+      UserPoolId: !Ref UserPool
+      GenerateSecret: false
+      SupportedIdentityProviders: [Google]
+      CallbackURLs: !Ref CallbackUrls
+      LogoutURLs: !Ref CallbackUrls
+      AllowedOAuthFlows: [code]
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthScopes: [openid, email, profile]
+
+Outputs:
+  UserPoolId:
+    Value: !Ref UserPool
+  UserPoolClientId:
+    Value: !Ref UserPoolClient
+  HostedUiDomain:
+    Value: !Sub 'https://${UserPoolDomain}.auth.${AWS::Region}.amazoncognito.com'

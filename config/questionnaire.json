@@ -1,0 +1,75 @@
+{
+  "version": 2,
+  "questions": [
+    {
+      "id": "drinking",
+      "type": "single",
+      "text": "שכפ\"צ - שתיה",
+      "choices": [
+        { "id": "under_2_5l", "label": "פחות מ-2.5 ליטר !!", "value": 2.0 },
+        { "id": "l2_5", "label": "2.5 ליטר", "value": 2.5 },
+        { "id": "l3", "label": "3 ליטר", "value": 3 },
+        { "id": "l3_5", "label": "3.5 ליטר", "value": 3.5 },
+        { "id": "l4", "label": "4 ליטר", "value": 4 }
+      ]
+    },
+    {
+      "id": "vegetables",
+      "type": "single",
+      "text": "שכפ\"צ - כמות ירקות",
+      "choices": [
+        { "id": "meals1", "label": "ב-1 ארוחות" },
+        { "id": "meals2", "label": "ב-2 ארוחות" },
+        { "id": "meals3", "label": "ב-3 ארוחות" },
+        { "id": "none", "label": "אף ארוחה !!" }
+      ]
+    },
+    {
+      "id": "eating_window",
+      "type": "single",
+      "text": "שכפ\"צ - פתיחת חלון אכילה",
+      "choices": [
+        { "id": "h8", "label": "8 שעות", "value": 8 },
+        { "id": "h9", "label": "9 שעות", "value": 9 },
+        { "id": "h10", "label": "10 שעות", "value": 10 },
+        { "id": "h11", "label": "11 שעות", "value": 11 },
+        { "id": "h12", "label": "12 שעות", "value": 12 },
+        { "id": "over_12", "label": "מעל 12 שעות !!", "value": 13 }
+      ]
+    },
+    {
+      "id": "meals",
+      "type": "single",
+      "text": "שכפ\"צ - צמצום מספר ארוחות",
+      "choices": [
+        { "id": "m2", "label": "2 ארוחות" },
+        { "id": "m3", "label": "3 ארוחות" },
+        { "id": "over_3", "label": "מעל 3 ארוחות / נשנושים בין הארוחות !!" }
+      ]
+    },
+    {
+      "id": "carbs",
+      "type": "single",
+      "text": "פחמימות / קמחים / סוכרים",
+      "choices": [
+        { "id": "grade1_2", "label": "דרגות 1-2 (קטניות / שיבולת שועל, קינואה, ..) + פרי אחד" },
+        { "id": "grade3", "label": "דרגה 3 (אורז מלא, תפו\"א) + פרי אחד" },
+        { "id": "grade4", "label": "דרגה 4 (אורז לבן, בטטה, סלק, תירס) + פרי אחד" },
+        { "id": "grade5", "label": "דרגה 5 (פירות): יותר מפרי אחד | כמות משמעותית של מיץ סחוט" },
+        { "id": "grade6_7", "label": "דרגות 6-7 (קמחים מלאים, שיבולת שועל דקה | קמח לבן, סוכר ודומיו): ~ כוס פסטה" },
+        { "id": "grade7_heavy", "label": "דרגה 7!: ~ כריך+ | פיצה+ | פרוסת עוגה/עוגיות | קרוטונים+ !!" },
+        { "id": "grade7_light", "label": "דרגה 7: ~ חטיף אנרגיה בינוני | לחמניה קטנה | פרוסת לחם ~" },
+        { "id": "alcohol", "label": "~ כוס אלכוהול לא יבש" },
+        { "id": "nuts", "label": "יותר מדי אגוזים או שקדים" },
+        { "id": "off_reset", "label": "יצאתי מאיפוס לגמרי.." }
+      ]
+    }
+  ],
+  "rules": [
+    { "id": "low_drinking", "question_id": "drinking", "violating_choice_ids": ["under_2_5l"], "consecutive_days": 2, "message": "פחות מ-2.5 ליטר שתיה {days} ימים ברצוף" },
+    { "id": "no_vegetables", "question_id": "vegetables", "violating_choice_ids": ["none"], "consecutive_days": 2, "message": "אף ארוחה עם ירקות {days} ימים ברצוף" },
+    { "id": "long_eating_window", "question_id": "eating_window", "violating_choice_ids": ["over_12"], "consecutive_days": 3, "message": "חלון אכילה מעל 12 שעות {days} ימים ברצוף" },
+    { "id": "too_many_meals", "question_id": "meals", "violating_choice_ids": ["over_3"], "consecutive_days": 2, "message": "מעל 3 ארוחות או נשנושים {days} ימים ברצוף" },
+    { "id": "heavy_carbs", "question_id": "carbs", "violating_choice_ids": ["grade7_heavy", "off_reset"], "consecutive_days": 2, "message": "פחמימות דרגה 7 או יציאה מאיפוס {days} ימים ברצוף" }
+  ]
+}

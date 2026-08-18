@@ -1,0 +1,50 @@
+:root {
+  --accent: #2e7d32;
+  --danger: #c62828;
+  --viz-series-1: #2a78d6;
+  --viz-series-2: #eb6834;
+  --viz-critical: #d03b3b;
+  --viz-grid: #e1e0d9;
+  --viz-baseline: #c3c2b7;
+  --viz-muted: #898781;
+}
+body { font-family: system-ui, sans-serif; max-width: 40rem; margin: 0 auto; padding: 1rem; background: #fafafa; color: #212121; }
+header { display: flex; justify-content: space-between; align-items: baseline; }
+h1 { font-size: 1.4rem; color: var(--accent); }
+.day-picker { display: flex; gap: 1rem; align-items: center; margin-bottom: 0.75rem; font-size: 0.9rem; }
+.day-picker label { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0; cursor: pointer; }
+fieldset { border: 1px solid #ddd; border-radius: 8px; margin: 0 0 1rem; padding: 0.75rem 1rem; background: #fff; }
+legend { font-weight: 600; padding: 0 0.5rem; }
+label { display: block; padding: 0.35rem 0; cursor: pointer; }
+button { background: var(--accent); color: #fff; border: 0; border-radius: 8px; padding: 0.6rem 2.5rem; font-size: 1rem; cursor: pointer; }
+.alert { background: #ffebee; color: var(--danger); border-radius: 8px; padding: 0.6rem 1rem; margin-bottom: 0.5rem; }
+.ok { background: #e8f5e9; color: var(--accent); border-radius: 8px; padding: 0.6rem 1rem; margin-bottom: 0.5rem; }
+.table-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; margin-top: 0.5rem; background: #fff; }
+th, td { border: 1px solid #ddd; padding: 0.4rem 0.6rem; text-align: right; font-size: 0.9rem; }
+td.violation { background: #ffebee; color: var(--danger); }
+
+.trend { margin: 0 0 0.75rem; }
+.trend-svg { width: 100%; height: auto; display: block; }
+.trend-title { font-size: 12px; }
+.trend-ytick, .trend-xtick { font-size: 11px; fill: var(--viz-muted); }
+.trend-grid { stroke: var(--viz-grid); stroke-width: 1; }
+.trend-baseline { stroke: var(--viz-baseline); stroke-width: 1; }
+.trend-line { fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.trend-violation-tick { stroke: var(--viz-critical); stroke-width: 2; }
+.hit { fill: transparent; cursor: pointer; }
+.hit:focus-visible { outline: 2px solid var(--viz-muted); outline-offset: 1px; }
+.trend-legend { display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; margin-top: 0.3rem; }
+.trend-legend-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--viz-critical); display: inline-block; }
+.trend-tooltip {
+  position: fixed;
+  transform: translate(-50%, -100%);
+  background: #212121;
+  color: #fff;
+  font-size: 11px;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 20;
+}
