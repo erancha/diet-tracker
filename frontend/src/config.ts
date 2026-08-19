@@ -7,6 +7,8 @@ export interface AppConfig {
   clientId: string;
   apiUrl: string;
   redirectUri: string;
+  // App owner's address, shown to rejected sign-ins as the contact for requesting access.
+  rootEmail: string;
 }
 
 declare global {
