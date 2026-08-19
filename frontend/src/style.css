@@ -7,8 +7,9 @@
   --viz-grid: #e1e0d9;
   --viz-baseline: #c3c2b7;
   --viz-muted: #898781;
+  --column-width: 48rem;
 }
-body { font-family: system-ui, sans-serif; max-width: 40rem; margin: 0 auto; padding: 1rem; background: #fafafa; color: #212121; }
+body { font-family: system-ui, sans-serif; max-width: var(--column-width); margin: 0 auto; padding: 1rem; background: #fafafa; color: #212121; }
 header { display: flex; justify-content: space-between; align-items: baseline; }
 h1 { font-size: 1.4rem; color: var(--accent); }
 .day-picker { display: flex; gap: 1rem; align-items: center; margin-bottom: 0.75rem; font-size: 0.9rem; }
@@ -19,9 +20,24 @@ label { display: block; padding: 0.35rem 0; cursor: pointer; }
 button { background: var(--accent); color: #fff; border: 0; border-radius: 8px; padding: 0.6rem 2.5rem; font-size: 1rem; cursor: pointer; }
 .alert { background: #ffebee; color: var(--danger); border-radius: 8px; padding: 0.6rem 1rem; margin-bottom: 0.5rem; }
 .ok { background: #e8f5e9; color: var(--accent); border-radius: 8px; padding: 0.6rem 1rem; margin-bottom: 0.5rem; }
-.table-wrap { overflow-x: auto; }
-table { border-collapse: collapse; width: 100%; margin-top: 0.5rem; background: #fff; }
+/* The wrapper grows past the centered column into the viewport's left gutter (inline-end in this
+   RTL layout), stopping 3rem short of the edge; on narrow screens the gutter is only the body
+   padding and the margin resolves to 0. The table sizes to its content within that room — at
+   least 20% wider than the column when space allows — so cells wrap only when truly out of
+   space, with horizontal scroll as the fallback. */
+.table-wrap { overflow-x: auto; margin-left: min(0px, calc(3rem - (100vw - 100%) / 2)); }
+table { border-collapse: collapse; min-width: min(calc(var(--column-width) * 1.2), 100%); margin-top: 0.5rem; background: #fff; }
 th, td { border: 1px solid #ddd; padding: 0.4rem 0.6rem; text-align: right; font-size: 0.9rem; }
+/* From tablet width up, all columns but the last two take a fixed width, so their long headers
+   wrap instead of dictating column width and the freed space goes to the last two columns —
+   which in the current questionnaire carry the long answers (a positional assumption; reorder
+   the config with long-answered questions elsewhere and this rule needs revisiting). The date
+   stays on one line rather than breaking at its hyphens. On phones the fixed width would floor
+   the columns and force horizontal scrolling, so it is off there. */
+@media (min-width: 48rem) {
+  th:not(:nth-last-child(-n+2)) { width: 8rem; }
+  tbody td:first-child { white-space: nowrap; }
+}
 td.violation { background: #ffebee; color: var(--danger); }
 /* The trash glyph can render as a monochrome outline that takes the CSS text color — it must
    inherit the cell's color, not the global button rule's white, or it vanishes on the white cell. */
