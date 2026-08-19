@@ -47,6 +47,18 @@ def test_has_answers(store):
     assert store.has_answers("u1", "2026-08-18")
 
 
+def test_delete_answers_removes_only_that_day(store):
+    store.put_answers("u1", "2026-08-17", ANSWERS, 1, "2026-08-17T20:00:00+03:00")
+    store.put_answers("u1", "2026-08-18", ANSWERS, 1, "2026-08-18T20:00:00+03:00")
+    store.delete_answers("u1", "2026-08-17")
+    assert set(store.get_answers_range("u1", "2026-08-01", "2026-08-18")) == {"2026-08-18"}
+
+
+def test_delete_answers_raises_key_error_when_no_record_exists(store):
+    with pytest.raises(KeyError):
+        store.delete_answers("u1", "2026-08-18")
+
+
 def test_nudge_state_roundtrip_and_default(store):
     assert store.get_nudge_state("u1") == {"rules": {}}
     state = {"rules": {"long_eating_window": {"last_alert_for": "2026-08-18"}}}

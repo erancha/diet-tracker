@@ -4,9 +4,12 @@ import { choiceLabel, isViolating, selectedIds } from "../violations";
 interface Props {
   questionnaire: Questionnaire;
   days: Day[];
+  // Dates whose rows offer deletion — the backend accepts deletes only for today and yesterday.
+  deletableDates: Set<string>;
+  onDelete: (date: string) => void;
 }
 
-export function HistoryTable({ questionnaire, days }: Props) {
+export function HistoryTable({ questionnaire, days, deletableDates, onDelete }: Props) {
   const cellText = (questionId: string, value: AnswerValue) =>
     selectedIds(value).map((id) => choiceLabel(questionnaire, questionId, id)).join(" · ");
 
@@ -21,7 +24,13 @@ export function HistoryTable({ questionnaire, days }: Props) {
       <tbody>
         {days.map((day) => (
           <tr key={day.date}>
-            <td>{day.date}</td>
+            <td>
+              {day.date}
+              {deletableDates.has(day.date) && (
+                <button type="button" className="delete-day" aria-label={`מחיקת הרשומה של ${day.date}`}
+                  onClick={() => onDelete(day.date)}>🗑️</button>
+              )}
+            </td>
             {questionnaire.questions.map((q) =>
               q.id in day.answers ? (
                 <td key={q.id} className={isViolating(questionnaire, q.id, day.answers[q.id]) ? "violation" : undefined}>

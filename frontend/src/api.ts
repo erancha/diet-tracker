@@ -12,6 +12,7 @@ export interface SubmitPayload {
 export interface Api {
   getHistory(): Promise<HistoryResponse>;
   submitAnswers(payload: SubmitPayload): Promise<SubmitResult>;
+  deleteAnswers(date: string): Promise<{ date: string }>;
 }
 
 export function createApi(cfg: AppConfig, tokens: Tokens): Api {
@@ -30,5 +31,6 @@ export function createApi(cfg: AppConfig, tokens: Tokens): Api {
   return {
     getHistory: () => request("GET", "/answers"),
     submitAnswers: (payload) => request("POST", "/answers", payload),
+    deleteAnswers: (date) => request("DELETE", `/answers/${date}`),
   };
 }

@@ -56,7 +56,7 @@ Resources:
     Properties:
       CorsConfiguration:
         AllowOrigins: !Ref AllowedOrigins
-        AllowMethods: [GET, POST, OPTIONS]
+        AllowMethods: [GET, POST, DELETE, OPTIONS]
         AllowHeaders: [Authorization, Content-Type]
       Auth:
         DefaultAuthorizer: CognitoJwt
@@ -88,6 +88,12 @@ Resources:
             ApiId: !Ref Api
             Method: GET
             Path: /answers
+        Delete:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref Api
+            Method: DELETE
+            Path: /answers/{date}
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref Table

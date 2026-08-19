@@ -1,4 +1,5 @@
-"""HTTP API handler: questionnaire submission with synchronous rule alerts, and history.
+"""HTTP API handler: questionnaire submission with synchronous rule alerts, history, and
+deletion of a recent day's record.
 
 The caller's identity comes exclusively from the JWT claims the API Gateway authorizer
 verified — the request body never names a user."""
@@ -24,7 +25,23 @@ def handler(event, context):
         return _submit(sub, email, json.loads(event["body"]))
     if route == "GET /answers":
         return _history(sub)
+    if route == "DELETE /answers/{date}":
+        return _delete(sub, event["pathParameters"]["date"])
     raise ValueError(f"unhandled route {route!r}")
+
+
+def _backfill_window():
+    """The days a record may be written or deleted for — today and yesterday, so after-midnight
+    corrections can still target the prior day."""
+    day = today()
+    return day, {day, days_before(day, 1)}
+
+
+def _reject_outside_window(chosen, allowed):
+    """Returns the 400 response for a date outside the backfill window, or None when it is legal."""
+    if chosen in allowed:
+        return None
+    return _response(400, {"error": f"date must be one of {sorted(allowed)}"})
 
 
 def _recent_history(sub):
@@ -41,13 +58,11 @@ def _submit(sub, email, body):
         questionnaire.validate_answers(answers)
     except ValueError as error:
         return _response(400, {"error": str(error)})
-    day = today()
-    allowed = {day, days_before(day, 1)}
-    # "date" is optional: absent means today; present, it must land in the backfill window
-    # (today or yesterday) so after-midnight submissions can still target the prior day.
+    day, allowed = _backfill_window()
     chosen = body.get("date", day)
-    if chosen not in allowed:
-        return _response(400, {"error": f"date must be one of {sorted(allowed)}"})
+    rejection = _reject_outside_window(chosen, allowed)
+    if rejection:
+        return rejection
     store = Store(os.environ["TABLE_NAME"])
     store.put_answers(sub, chosen, answers, questionnaire.version, now_iso())
     history = store.get_answers_range(sub, days_before(chosen, LOOKBACK_DAYS), chosen)
@@ -60,6 +75,18 @@ def _submit(sub, email, body):
         "date": chosen,
         "violations": [{"rule_id": v.rule_id, "message": v.message} for v in violations],
     })
+
+
+def _delete(sub, chosen):
+    _, allowed = _backfill_window()
+    rejection = _reject_outside_window(chosen, allowed)
+    if rejection:
+        return rejection
+    try:
+        Store(os.environ["TABLE_NAME"]).delete_answers(sub, chosen)
+    except KeyError:
+        return _response(404, {"error": f"no record for {chosen}"})
+    return _response(200, {"date": chosen})
 
 
 def _history(sub):

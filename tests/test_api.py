@@ -117,3 +117,37 @@ def test_submit_rejects_future_date_with_400(env):
     tomorrow = days_before(today(), -1)
     response = api.handler(request("POST /answers", {"answers": ANSWERS, "date": tomorrow}), None)
     assert response["statusCode"] == 400
+
+
+def delete_request(date):
+    event = request("DELETE /answers/{date}")
+    event["pathParameters"] = {"date": date}
+    return event
+
+
+def test_delete_removes_todays_record(env):
+    api.handler(request("POST /answers", {"answers": ANSWERS}), None)
+    response = api.handler(delete_request(today()), None)
+    assert response["statusCode"] == 200
+    assert json.loads(response["body"])["date"] == today()
+    history = json.loads(api.handler(request("GET /answers"), None)["body"])
+    assert history["days"] == []
+
+
+def test_delete_removes_yesterdays_record(env):
+    from common.store import Store
+    yesterday = days_before(today(), 1)
+    api.handler(request("POST /answers", {"answers": ANSWERS, "date": yesterday}), None)
+    response = api.handler(delete_request(yesterday), None)
+    assert response["statusCode"] == 200
+    assert not Store("diet").has_answers("u1", yesterday)
+
+
+def test_delete_rejects_date_before_window_with_400(env):
+    response = api.handler(delete_request(days_before(today(), 2)), None)
+    assert response["statusCode"] == 400
+
+
+def test_delete_returns_404_when_no_record_exists(env):
+    response = api.handler(delete_request(today()), None)
+    assert response["statusCode"] == 404

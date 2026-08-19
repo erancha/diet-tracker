@@ -25,6 +25,16 @@ class Store:
             "answers": answers, "questionnaire_version": version, "submitted_at": submitted_at,
         })
 
+    def delete_answers(self, user_sub, day) -> None:
+        """Removes the day's record; raises KeyError when the user has no record for that day."""
+        try:
+            self._table.delete_item(
+                Key={"pk": self._pk(user_sub), "sk": day},
+                ConditionExpression="attribute_exists(pk)",
+            )
+        except self._table.meta.client.exceptions.ConditionalCheckFailedException:
+            raise KeyError(day)
+
     def has_answers(self, user_sub, day) -> bool:
         return "Item" in self._table.get_item(Key={"pk": self._pk(user_sub), "sk": day})
 

@@ -23,6 +23,9 @@ button { background: var(--accent); color: #fff; border: 0; border-radius: 8px; 
 table { border-collapse: collapse; width: 100%; margin-top: 0.5rem; background: #fff; }
 th, td { border: 1px solid #ddd; padding: 0.4rem 0.6rem; text-align: right; font-size: 0.9rem; }
 td.violation { background: #ffebee; color: var(--danger); }
+/* The trash glyph can render as a monochrome outline that takes the CSS text color — it must
+   inherit the cell's color, not the global button rule's white, or it vanishes on the white cell. */
+.delete-day { background: none; color: inherit; padding: 0 0.3rem; font-size: 1rem; margin-inline-start: 0.4rem; }
 
 .trend { margin: 0 0 0.75rem; }
 .trend-panel-title { display: flex; align-items: center; gap: 0.35rem; font-size: 12px; margin: 0 0 0.15rem; }

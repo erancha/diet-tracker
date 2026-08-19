@@ -54,6 +54,15 @@ export function App({ email, api, onSignOut }: { email: string; api: Api; onSign
     onError: (error) => setAlerts([{ kind: "alert", message: String(error) }]),
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: api.deleteAnswers,
+    onSuccess: (result) => {
+      setAlerts([{ kind: "ok", message: `הרשומה של ${result.date} נמחקה` }]);
+      queryClient.invalidateQueries({ queryKey: ["history"] });
+    },
+    onError: (error) => setAlerts([{ kind: "alert", message: String(error) }]),
+  });
+
   if (questionnaireQuery.isPending || historyQuery.isPending) {
     return <main>טוען…</main>;
   }
@@ -83,7 +92,14 @@ export function App({ email, api, onSignOut }: { email: string; api: Api; onSign
         <section>
           <h2>היסטוריה</h2>
           <div className="table-wrap">
-            <HistoryTable questionnaire={questionnaire} days={days} />
+            <HistoryTable
+              questionnaire={questionnaire}
+              days={days}
+              deletableDates={new Set([todayStr, yesterdayStr])}
+              onDelete={(date) => {
+                if (window.confirm(`למחוק את הרשומה של ${date}?`)) deleteMutation.mutate(date);
+              }}
+            />
           </div>
         </section>
       </main>
