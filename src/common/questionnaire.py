@@ -1,8 +1,10 @@
-"""Loads and validates the questionnaire config — the single source of truth for
-questions, choices, and alert rules shared by the API, the nudge jobs, and the frontend."""
+"""Loads and validates the questionnaire config — the single source of truth for questions,
+numeric choice values (meal-point weights for carbs), and threshold alert rules shared by the
+API, the nudge jobs, and the frontend."""
 
 import json
 from dataclasses import dataclass
+from numbers import Number
 from pathlib import Path
 
 
@@ -10,9 +12,10 @@ from pathlib import Path
 class Choice:
     id: str
     label: str
+    value: float
 
 
-QUESTION_TYPES = {"single", "multi"}
+QUESTION_TYPES = {"single", "points"}
 
 
 @dataclass(frozen=True)
@@ -21,21 +24,34 @@ class Question:
     type: str
     text: str
     choices: tuple[Choice, ...]
+    # Present only on questions charted as a trend panel.
+    panel_title: str | None
+    # Present only on points questions: the day-end slider's top of scale. Meal sums may
+    # legally exceed it; it caps the slider, not the stored value.
+    max: float | None
 
-    def choice_label(self, choice_id: str) -> str:
+    def value_label(self, value) -> str:
+        """The choice label for an exactly-matching value, else the number itself as text —
+        stored values between choice anchors (e.g. a computed 10.4h window) are legal."""
         for choice in self.choices:
-            if choice.id == choice_id:
+            if choice.value == value:
                 return choice.label
-        raise KeyError(f"question {self.id!r} has no choice {choice_id!r}")
+        return f"{value:g}"
 
 
 @dataclass(frozen=True)
 class Rule:
     id: str
     question_id: str
-    violating_choice_ids: frozenset
+    at_least: float | None
+    below: float | None
     consecutive_days: int
     message: str
+
+    def violates(self, value) -> bool:
+        if self.at_least is not None:
+            return value >= self.at_least
+        return value < self.below
 
 
 @dataclass(frozen=True)
@@ -50,6 +66,10 @@ class Questionnaire:
                 return question
         raise KeyError(f"unknown question {question_id!r}")
 
+    def carb_weights(self) -> dict:
+        """Meal-point weight per carbs choice id — the scoring table for meal derivation."""
+        return {choice.id: choice.value for choice in self.question("carbs").choices}
+
     def validate_answers(self, answers: dict) -> None:
         expected = {question.id for question in self.questions}
         got = set(answers)
@@ -58,55 +78,44 @@ class Questionnaire:
                 f"answers must cover exactly the questionnaire questions; "
                 f"missing={sorted(expected - got)}, unknown={sorted(got - expected)}"
             )
-        for question in self.questions:
-            value = answers[question.id]
-            choice_ids = {c.id for c in question.choices}
-            if question.type == "single":
-                if not isinstance(value, str):
-                    raise ValueError(f"answer for question {question.id!r} must be a choice id string")
-                if value not in choice_ids:
-                    raise ValueError(f"invalid choice {value!r} for question {question.id!r}")
-            else:
-                if not isinstance(value, list):
-                    raise ValueError(f"answer for question {question.id!r} must be a list of choice ids")
-                if not value:
-                    raise ValueError(f"answer for question {question.id!r} must not be empty")
-                if len(set(value)) != len(value):
-                    raise ValueError(f"answer for question {question.id!r} must not contain duplicates")
-                unknown = set(value) - choice_ids
-                if unknown:
-                    raise ValueError(f"invalid choices {sorted(unknown)} for question {question.id!r}")
+        for question_id, value in answers.items():
+            # bool is a Number subtype; it is never a legal answer.
+            if isinstance(value, bool) or not isinstance(value, Number):
+                raise ValueError(f"answer for question {question_id!r} must be a number")
+            if value < 0:
+                raise ValueError(f"answer for question {question_id!r} must not be negative")
 
 
 def load(path) -> Questionnaire:
     raw = json.loads(Path(path).read_text(encoding="utf-8"))
     questions = []
     for q in raw["questions"]:
-        if "type" not in q:
-            raise ValueError(f"question {q['id']!r} is missing a type")
-        if q["type"] not in QUESTION_TYPES:
-            raise ValueError(f"question {q['id']!r} has unknown type {q['type']!r}")
+        if q.get("type") not in QUESTION_TYPES:
+            raise ValueError(f"question {q['id']!r} has missing or unknown type {q.get('type')!r}")
+        for c in q["choices"]:
+            if isinstance(c.get("value"), bool) or not isinstance(c.get("value"), Number):
+                raise ValueError(f"choice {c['id']!r} of question {q['id']!r} needs a numeric value")
         questions.append(Question(
             id=q["id"], type=q["type"], text=q["text"],
-            choices=tuple(Choice(id=c["id"], label=c["label"]) for c in q["choices"]),
+            choices=tuple(Choice(id=c["id"], label=c["label"], value=c["value"]) for c in q["choices"]),
+            panel_title=q.get("panel_title"), max=q.get("max"),
         ))
     questions = tuple(questions)
-    rules = tuple(
-        Rule(id=r["id"], question_id=r["question_id"],
-             violating_choice_ids=frozenset(r["violating_choice_ids"]),
-             consecutive_days=r["consecutive_days"], message=r["message"])
-        for r in raw["rules"]
-    )
+    rules = []
+    for r in raw["rules"]:
+        comparators = [k for k in ("at_least", "below") if k in r]
+        if len(comparators) != 1:
+            raise ValueError(f"rule {r['id']!r} must set exactly one of at_least/below")
+        rules.append(Rule(id=r["id"], question_id=r["question_id"],
+                          at_least=r.get("at_least"), below=r.get("below"),
+                          consecutive_days=r["consecutive_days"], message=r["message"]))
+    rules = tuple(rules)
     question_ids = [q.id for q in questions]
     if len(set(question_ids)) != len(question_ids):
         raise ValueError("duplicate question ids")
     for rule in rules:
-        question = next((q for q in questions if q.id == rule.question_id), None)
-        if question is None:
+        if all(q.id != rule.question_id for q in questions):
             raise ValueError(f"rule {rule.id!r} references unknown question {rule.question_id!r}")
-        choice_ids = {c.id for c in question.choices}
-        if not rule.violating_choice_ids <= choice_ids:
-            raise ValueError(f"rule {rule.id!r} references choices outside question {question.id!r}")
         if "{days}" not in rule.message:
             raise ValueError(f"rule {rule.id!r} message must contain {{days}}")
     return Questionnaire(version=raw["version"], questions=questions, rules=rules)

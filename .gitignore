@@ -21,3 +21,4 @@ CLAUDE.md
 /scripts/params.sh
 /frontend/public/config.js
 node_modules/
+docs/senior-code-eval*.md

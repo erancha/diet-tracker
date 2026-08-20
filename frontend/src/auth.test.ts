@@ -8,6 +8,7 @@ const cfg: AppConfig = {
   apiUrl: "https://api.example.com",
   redirectUri: "https://app.example.com/",
   rootEmail: "root@example.com",
+  firstReminderHour: 20,
 };
 
 describe("logoutUrl", () => {

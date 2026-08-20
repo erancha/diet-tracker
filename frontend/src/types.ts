@@ -4,21 +4,23 @@
 export interface Choice {
   id: string;
   label: string;
-  // Numeric unit mapping (e.g. liters, hours); present on every choice of a chartable question.
-  value?: number;
+  value: number;
 }
 
 export interface Question {
   id: string;
-  type: "single" | "multi";
+  type: "single" | "points";
   text: string;
   choices: Choice[];
+  panel_title?: string;
+  max?: number;
 }
 
 export interface Rule {
   id: string;
   question_id: string;
-  violating_choice_ids: string[];
+  at_least?: number;
+  below?: number;
   consecutive_days: number;
   message: string;
 }
@@ -29,8 +31,28 @@ export interface Questionnaire {
   rules: Rule[];
 }
 
-// A single question's stored answer: one choice id, or the selected ids of a multi question.
-export type AnswerValue = string | string[];
+// A single question's stored answer — always a number (points, counts, hours, liters).
+export type AnswerValue = number;
+
+export interface Meal {
+  id: string;
+  at: string;
+  carbs_choice: string;
+  vegetables: boolean;
+}
+
+export interface Derived {
+  carbs: number;
+  meals: number;
+  vegetables: number;
+  eating_window: number;
+}
+
+export interface DayPayload {
+  date: string;
+  meals: Meal[];
+  derived: Derived;
+}
 
 export interface Day {
   date: string;
@@ -39,6 +61,14 @@ export interface Day {
 
 export interface HistoryResponse {
   days: Day[];
+  today: DayPayload;
+  yesterday: DayPayload | null;
+}
+
+export interface NewMeal {
+  at: string;
+  carbs_choice: string;
+  vegetables: boolean;
 }
 
 export interface Violation {

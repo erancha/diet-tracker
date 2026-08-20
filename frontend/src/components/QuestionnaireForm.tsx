@@ -1,36 +1,44 @@
 import { useRef, useState } from "react";
-import type { AnswerValue, Questionnaire } from "../types";
+import type { Choice, Derived, Questionnaire } from "../types";
+import { ChoiceFieldset } from "./ChoiceFieldset";
+import { PointsSlider } from "./PointsSlider";
 
 interface Props {
   questionnaire: Questionnaire;
-  onSubmit: (answers: Record<string, AnswerValue>) => void;
+  floors: Derived;
+  onSubmit: (answers: Record<string, number>) => void;
   onValidationError: (message: string) => void;
 }
 
-// Renders the questionnaire as controlled radio/checkbox groups. Single questions rely on native
-// required-field validation; multi questions enforce an at-least-one rule explicitly because
-// HTML has no required semantics for checkbox groups.
-export function QuestionnaireForm({ questionnaire, onSubmit, onValidationError }: Props) {
+// Renders the day-end questionnaire: single questions as radio groups floored by the day's
+// recorded meals, points questions as sliders pinned to the recorded sum. Radio questions rely
+// on native required-field validation; sliders always hold a value, starting at their floor.
+export function QuestionnaireForm({ questionnaire, floors, onSubmit, onValidationError }: Props) {
   const formRef = useRef<HTMLFormElement>(null);
-  // Multi answers start as empty arrays so selection state is always an array; single answers
-  // are absent until picked, which native validation guarantees never survives to submit.
-  const [answers, setAnswers] = useState<Record<string, AnswerValue>>(() =>
-    Object.fromEntries(questionnaire.questions.filter((q) => q.type === "multi").map((q) => [q.id, []])));
+  const floorOf = (questionId: string): number =>
+    questionId in floors ? floors[questionId as keyof Derived] : 0;
+  const [answers, setAnswers] = useState<Record<string, number>>(() =>
+    Object.fromEntries(questionnaire.questions
+      .filter((q) => q.type === "points")
+      .map((q) => [q.id, floorOf(q.id)])));
+  // Single-type answers store their choice id alongside the numeric answer above: two choices
+  // can share a value, and only the id tells the radio group which one is checked.
+  const [selectedIds, setSelectedIds] = useState<Record<string, string>>({});
 
-  const pickSingle = (questionId: string, choiceId: string) =>
-    setAnswers((a) => ({ ...a, [questionId]: choiceId }));
+  const pickPoints = (questionId: string, value: number) =>
+    setAnswers((a) => ({ ...a, [questionId]: value }));
 
-  const toggleMulti = (questionId: string, choiceId: string, checked: boolean) =>
-    setAnswers((a) => {
-      const current = a[questionId] as string[];
-      return { ...a, [questionId]: checked ? [...current, choiceId] : current.filter((id) => id !== choiceId) };
-    });
+  const pickChoice = (questionId: string, choice: Choice) => {
+    setSelectedIds((s) => ({ ...s, [questionId]: choice.id }));
+    setAnswers((a) => ({ ...a, [questionId]: choice.value }));
+  };
 
   function handleSubmit() {
     if (!formRef.current!.reportValidity()) return;
     for (const question of questionnaire.questions) {
-      if (question.type === "multi" && (answers[question.id] as string[]).length === 0) {
-        onValidationError(`יש לסמן לפחות אפשרות אחת בשאלת ${question.text}`);
+      const floor = floorOf(question.id);
+      if (answers[question.id] < floor) {
+        onValidationError(`הערך של ${question.text} לא יכול להיות נמוך מ-${floor} שנרשם ביומן`);
         return;
       }
     }
@@ -39,32 +47,14 @@ export function QuestionnaireForm({ questionnaire, onSubmit, onValidationError }
 
   return (
     <form ref={formRef}>
-      {questionnaire.questions.map((question) => (
-        <fieldset key={question.id}>
-          <legend>{question.text}</legend>
-          {question.choices.map((choice) => (
-            <label key={choice.id}>
-              {question.type === "multi" ? (
-                <input
-                  type="checkbox"
-                  name={question.id}
-                  checked={(answers[question.id] as string[]).includes(choice.id)}
-                  onChange={(e) => toggleMulti(question.id, choice.id, e.target.checked)}
-                />
-              ) : (
-                <input
-                  type="radio"
-                  name={question.id}
-                  required
-                  checked={answers[question.id] === choice.id}
-                  onChange={() => pickSingle(question.id, choice.id)}
-                />
-              )}
-              {" "}{choice.label}
-            </label>
-          ))}
-        </fieldset>
-      ))}
+      {questionnaire.questions.map((question) =>
+        question.type === "points" ? (
+          <PointsSlider key={question.id} question={question} value={answers[question.id]}
+                        floor={floorOf(question.id)} onChange={(v) => pickPoints(question.id, v)} />
+        ) : (
+          <ChoiceFieldset key={question.id} question={question} selectedId={selectedIds[question.id]}
+                          floor={floorOf(question.id)} onPick={(c) => pickChoice(question.id, c)} />
+        ))}
       <button type="button" onClick={handleSubmit}>שליחה</button>
     </form>
   );

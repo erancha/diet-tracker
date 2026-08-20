@@ -1,55 +1,51 @@
 import { describe, expect, it } from "vitest";
-import { choiceLabel, isViolating, selectedIds, splitChartable, violatingChoiceLabels } from "./violations";
-import { fixtureQuestionnaire as q } from "./test-fixtures";
+import { isViolating, trendPanels, valueLabel, violates } from "./violations";
+import type { Question, Questionnaire, Rule } from "./types";
 
-describe("selectedIds", () => {
-  it("wraps a single-choice answer in an array", () => {
-    expect(selectedIds("a")).toEqual(["a"]);
-  });
+const carbs: Question = {
+  id: "carbs", type: "points", text: "פחמימות", max: 30, panel_title: "ציון פחמימות",
+  choices: [
+    { id: "no_carbs", label: "ללא פחמימות", value: 0 },
+    { id: "grade3", label: "דרגה 3", value: 3 },
+  ],
+};
+const meals: Question = {
+  id: "meals", type: "single", text: "ארוחות",
+  choices: [{ id: "m2", label: "2 ארוחות", value: 2 }, { id: "m3", label: "3 ארוחות", value: 3 }],
+};
+const heavy: Rule = { id: "heavy", question_id: "carbs", at_least: 8, consecutive_days: 2, message: "x {days}" };
+const few: Rule = { id: "few", question_id: "meals", below: 3, consecutive_days: 2, message: "y {days}" };
+const questionnaire: Questionnaire = { version: 3, questions: [carbs, meals], rules: [heavy, few] };
 
-  it("passes a multi-choice answer through", () => {
-    expect(selectedIds(["a", "b"])).toEqual(["a", "b"]);
-  });
-});
-
-describe("choiceLabel", () => {
-  it("resolves a choice id to its label", () => {
-    expect(choiceLabel(q, "drinking", "mid")).toBe("3 ליטר");
-  });
-
-  it("falls back to the raw id for choices from older questionnaire versions", () => {
-    expect(choiceLabel(q, "drinking", "retired_choice")).toBe("retired_choice");
+describe("violates", () => {
+  it("compares against at_least and below thresholds", () => {
+    expect(violates(heavy, 8)).toBe(true);
+    expect(violates(heavy, 7.9)).toBe(false);
+    expect(violates(few, 2)).toBe(true);
+    expect(violates(few, 3)).toBe(false);
   });
 });
 
 describe("isViolating", () => {
-  it("flags a violating single answer", () => {
-    expect(isViolating(q, "drinking", "low")).toBe(true);
-  });
-
-  it("passes a non-violating single answer", () => {
-    expect(isViolating(q, "drinking", "mid")).toBe(false);
-  });
-
-  it("flags a multi answer containing a violating choice", () => {
-    expect(isViolating(q, "snacks", ["fruit", "nuts"])).toBe(true);
-  });
-
-  it("passes a multi answer without violating choices", () => {
-    expect(isViolating(q, "snacks", ["fruit"])).toBe(false);
+  it("matches the rules of the given question only", () => {
+    expect(isViolating(questionnaire, "carbs", 9)).toBe(true);
+    expect(isViolating(questionnaire, "carbs", 2)).toBe(false);
+    expect(isViolating(questionnaire, "meals", 2)).toBe(true);
   });
 });
 
-describe("violatingChoiceLabels", () => {
-  it("labels only the violating selections", () => {
-    expect(violatingChoiceLabels(q, "snacks", ["nuts", "fruit"])).toBe("אגוזים");
+describe("valueLabel", () => {
+  it("maps exact choice values to labels and passes other numbers through", () => {
+    expect(valueLabel(carbs, 3)).toBe("דרגה 3");
+    expect(valueLabel(carbs, 17)).toBe("17");
+    expect(valueLabel(meals, 2.5)).toBe("2.5");
   });
 });
 
-describe("splitChartable", () => {
-  it("separates fully numeric questions from the rest", () => {
-    const { chartable, other } = splitChartable(q);
-    expect(chartable.map((question) => question.id)).toEqual(["drinking", "window"]);
-    expect(other.map((question) => question.id)).toEqual(["snacks"]);
+describe("trendPanels", () => {
+  it("splits questions by panel_title presence", () => {
+    const { panels, strip } = trendPanels(questionnaire);
+    expect(panels.map((q) => q.id)).toEqual(["carbs"]);
+    expect(strip.map((q) => q.id)).toEqual(["meals"]);
   });
 });

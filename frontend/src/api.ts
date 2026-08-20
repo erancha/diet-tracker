@@ -2,7 +2,7 @@
 
 import type { Tokens } from "./auth";
 import type { AppConfig } from "./config";
-import type { AnswerValue, HistoryResponse, SubmitResult } from "./types";
+import type { AnswerValue, DayPayload, HistoryResponse, NewMeal, SubmitResult } from "./types";
 
 export interface SubmitPayload {
   answers: Record<string, AnswerValue>;
@@ -10,9 +10,11 @@ export interface SubmitPayload {
 }
 
 export interface Api {
-  getHistory(): Promise<HistoryResponse>;
-  submitAnswers(payload: SubmitPayload): Promise<SubmitResult>;
-  deleteAnswers(date: string): Promise<{ date: string }>;
+  getDays(): Promise<HistoryResponse>;
+  submitDay(payload: SubmitPayload): Promise<SubmitResult>;
+  deleteDay(date: string): Promise<{ date: string }>;
+  addMeal(meal: NewMeal): Promise<DayPayload>;
+  deleteMeal(date: string, id: string): Promise<DayPayload>;
 }
 
 export function createApi(cfg: AppConfig, tokens: Tokens): Api {
@@ -29,8 +31,10 @@ export function createApi(cfg: AppConfig, tokens: Tokens): Api {
     return response.json();
   }
   return {
-    getHistory: () => request("GET", "/answers"),
-    submitAnswers: (payload) => request("POST", "/answers", payload),
-    deleteAnswers: (date) => request("DELETE", `/answers/${date}`),
+    getDays: () => request("GET", "/days"),
+    submitDay: (payload) => request("POST", "/days", payload),
+    deleteDay: (date) => request("DELETE", `/days/${date}`),
+    addMeal: (meal) => request("POST", "/meals", meal),
+    deleteMeal: (date, id) => request("DELETE", `/meals/${date}/${id}`),
   };
 }

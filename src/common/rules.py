@@ -1,9 +1,9 @@
-"""Evaluates alert rules over per-day answer history.
+"""Evaluates alert rules over per-day numeric answer history.
 
-A rule fires when its question was answered with a violating choice for at least
-`consecutive_days` days ending at the evaluation date. Alerts repeat daily while the streak
-holds, but at most once per (rule, date) — `mark_alerted` records the date so the submit path
-and the nightly job never double-alert the same day.
+A rule fires when its question's value violated its threshold for at least `consecutive_days`
+days ending at the evaluation date. Alerts repeat daily while the streak holds, but at most once
+per (rule, date) — `mark_alerted` records the date so the submit path and the nightly job never
+double-alert the same day.
 """
 
 from dataclasses import dataclass
@@ -20,11 +20,6 @@ class Violation:
     message: str
 
 
-def selected_ids(value) -> set:
-    """Normalizes a single-question answer (str) or multi-question answer (list) to a choice-id set."""
-    return {value} if isinstance(value, str) else set(value)
-
-
 def streak(rule, history: dict, as_of: str) -> int:
     day = date.fromisoformat(as_of)
     count = 0
@@ -35,7 +30,7 @@ def streak(rule, history: dict, as_of: str) -> int:
         if rule.question_id not in answers:
             # Answers predating the question's introduction are legal; they end the streak.
             break
-        if not selected_ids(answers[rule.question_id]) & rule.violating_choice_ids:
+        if not rule.violates(answers[rule.question_id]):
             break
         count += 1
         day -= timedelta(days=1)

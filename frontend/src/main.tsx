@@ -32,7 +32,7 @@ try {
     root.render(
       <StrictMode>
         <QueryClientProvider client={new QueryClient()}>
-          <App email={email} api={api} onSignOut={() => signOut(cfg)} />
+          <App email={email} api={api} reminderHour={cfg.firstReminderHour} onSignOut={() => signOut(cfg)} />
         </QueryClientProvider>
       </StrictMode>,
     );

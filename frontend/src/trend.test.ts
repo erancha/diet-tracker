@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { shortForm, ticksFor } from "./trend";
+import { domainFor, shortForm, ticksFor } from "./trend";
 import { fixtureQuestionnaire } from "./test-fixtures";
+import type { Question } from "./types";
 
 const drinking = fixtureQuestionnaire.questions[0];
 const window_ = fixtureQuestionnaire.questions[1];
@@ -33,5 +34,37 @@ describe("ticksFor", () => {
       { value: 8, label: "8" },
       { value: 13, label: "מעל 12" },
     ]);
+  });
+});
+
+describe("ticksFor points questions", () => {
+  it("uses 0, midpoint, and max instead of choice values", () => {
+    const carbs: Question = {
+      id: "carbs", type: "points", text: "פחמימות", max: 30,
+      choices: [{ id: "no_carbs", label: "ללא", value: 0 }],
+    };
+    expect(ticksFor(carbs).map((t) => t.value)).toEqual([0, 15, 30]);
+  });
+});
+
+describe("domainFor", () => {
+  it("keeps the choice-value domain for single questions, ignoring plotted data", () => {
+    expect(domainFor(drinking, [2, 3, null])).toEqual([1.5, 4.5]);
+  });
+
+  it("spans the configured max for a points question even when day totals stay under it", () => {
+    const carbs: Question = {
+      id: "carbs", type: "points", text: "פחמימות", max: 30,
+      choices: [{ id: "no_carbs", label: "ללא", value: 0 }],
+    };
+    expect(domainFor(carbs, [4, null])).toEqual([-0.5, 30.5]);
+  });
+
+  it("extends past the configured max when a day total exceeds it", () => {
+    const carbs: Question = {
+      id: "carbs", type: "points", text: "פחמימות", max: 8,
+      choices: [{ id: "no_carbs", label: "ללא", value: 0 }],
+    };
+    expect(domainFor(carbs, [15, null])).toEqual([-0.5, 15.5]);
   });
 });

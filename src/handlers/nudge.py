@@ -33,7 +33,7 @@ def handler(event, context):
 def _build_env() -> NudgeEnv:
     ssm = boto3.client("ssm")
     return NudgeEnv(
-        store=Store(os.environ["TABLE_NAME"]),
+        store=Store(os.environ["DAYS_TABLE"], os.environ["MEALS_TABLE"], os.environ["STATE_TABLE"]),
         questionnaire=load(os.environ["QUESTIONNAIRE_PATH"]),
         users=users.list_users(boto3.client("cognito-idp"), os.environ["USER_POOL_ID"]),
         telegram=notify.telegram_config(ssm, os.environ["BOT_TOKEN_PARAM"], os.environ["CHAT_MAP_PARAM"]),
@@ -52,14 +52,14 @@ def _send(env, user, subject, text):
 def _reminder(env):
     day = today()
     for user in env.users:
-        if not env.store.has_answers(user.sub, day):
+        if not env.store.has_day(user.sub, day):
             _send(env, user, "תזכורת — שאלון תזונה", "עדיין לא מילאת את שאלון התזונה של היום 🕗")
 
 
 def _rules_job(env):
     day = today()
     for user in env.users:
-        history = env.store.get_answers_range(user.sub, days_before(day, LOOKBACK_DAYS), day)
+        history = env.store.get_days_range(user.sub, days_before(day, LOOKBACK_DAYS), day)
         if not history:
             # A user who never submitted in the window has nothing to evaluate;
             # the reminder job owns that situation.
@@ -76,5 +76,5 @@ def _rules_job(env):
 def _weekly(env):
     day = today()
     for user in env.users:
-        history = env.store.get_answers_range(user.sub, days_before(day, 6), day)
+        history = env.store.get_days_range(user.sub, days_before(day, 6), day)
         _send(env, user, "סיכום שבועי — מעקב תזונה", digest.weekly_text(env.questionnaire, history))

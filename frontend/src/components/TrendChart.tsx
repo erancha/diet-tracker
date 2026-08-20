@@ -1,12 +1,8 @@
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis } from "recharts";
 import type { Day, Question, Questionnaire } from "../types";
 import { dayLabel, last7Days } from "../dates";
-import { ticksFor } from "../trend";
-import { isViolating, splitChartable, violatingChoiceLabels } from "../violations";
-
-// Positional presentation copy for the trend panels — paired by chartable order, not by
-// question id, so the config stays the only place question identity is declared.
-const PANEL_TITLES = ["שתיה (ליטרים)", "חלון אכילה (שעות)"];
+import { domainFor, ticksFor } from "../trend";
+import { isViolating, trendPanels, valueLabel } from "../violations";
 
 // Shared horizontal geometry across the panels and the violations strip: the panels reserve the
 // y-axis width axis-side, the strip (which has no y-axis) reserves it as left margin, so every
@@ -17,7 +13,7 @@ const MARGIN_RIGHT = 14;
 interface PanelPoint {
   date: string;
   label: string;
-  // null charts as a gap: the day is missing or its answer references a retired choice.
+  // null charts as a gap: the day is missing or predates the question.
   value: number | null;
   choiceLabel: string | null;
   violating: boolean;
@@ -34,16 +30,9 @@ function panelData(questionnaire: Questionnaire, question: Question, dayStrs: st
     const gap: PanelPoint = { date, label: dayLabel(date), value: null, choiceLabel: null, violating: false };
     const day = dayByDate.get(date);
     if (!day || !(question.id in day.answers)) return gap;
-    const answerId = day.answers[question.id] as string;
-    const choice = question.choices.find((c) => c.id === answerId);
-    // Answers referencing choices from older questionnaire versions chart as a gap.
-    if (!choice) return gap;
-    return {
-      ...gap,
-      value: choice.value!,
-      choiceLabel: choice.label,
-      violating: isViolating(questionnaire, question.id, answerId),
-    };
+    const value = day.answers[question.id];
+    return { ...gap, value, choiceLabel: valueLabel(question, value),
+             violating: isViolating(questionnaire, question.id, value) };
   });
 }
 
@@ -53,7 +42,7 @@ function stripData(questionnaire: Questionnaire, otherQuestions: Question[], day
     const violations = day
       ? otherQuestions
           .filter((q) => q.id in day.answers && isViolating(questionnaire, q.id, day.answers[q.id]))
-          .map((q) => `${q.text}: ${violatingChoiceLabels(questionnaire, q.id, day.answers[q.id])}`)
+          .map((q) => `${q.text}: ${valueLabel(q, day.answers[q.id])}`)
       : [];
     return { label: dayLabel(date), y: 0, violations };
   });
@@ -103,8 +92,8 @@ function TrendPanel({ questionnaire, question, dayStrs, dayByDate, index, showXA
   title: string;
 }) {
   const color = `var(--viz-series-${index + 1})`;
-  const values = question.choices.map((c) => c.value!);
-  const domain: [number, number] = [Math.min(...values) - 0.5, Math.max(...values) + 0.5];
+  const data = panelData(questionnaire, question, dayStrs, dayByDate);
+  const domain = domainFor(question, data.map((d) => d.value));
   const ticks = ticksFor(question);
   const labelFor = new Map(ticks.map((t) => [t.value, t.label]));
   return (
@@ -114,7 +103,7 @@ function TrendPanel({ questionnaire, question, dayStrs, dayByDate, index, showXA
         {title}
       </div>
       <ResponsiveContainer width="100%" height={showXAxis ? 122 : 104}>
-        <LineChart data={panelData(questionnaire, question, dayStrs, dayByDate)} margin={{ top: 6, right: MARGIN_RIGHT, bottom: 0, left: 0 }}>
+        <LineChart data={data} margin={{ top: 6, right: MARGIN_RIGHT, bottom: 0, left: 0 }}>
           <CartesianGrid horizontal vertical={false} stroke="var(--viz-grid)" />
           <XAxis
             dataKey="label"
@@ -144,13 +133,13 @@ function TrendPanel({ questionnaire, question, dayStrs, dayByDate, index, showXA
 // 7-day trend ending at the submitted date: one line panel per chartable question, then a strip
 // marking days where any non-chartable question violated a rule.
 export function TrendChart({ questionnaire, days, endDate }: { questionnaire: Questionnaire; days: Day[]; endDate: string }) {
-  const { chartable, other } = splitChartable(questionnaire);
-  if (chartable.length === 0) return null;
+  const { panels, strip } = trendPanels(questionnaire);
+  if (panels.length === 0) return null;
   const dayStrs = last7Days(endDate);
   const dayByDate = new Map(days.map((d) => [d.date, d]));
   return (
     <div className="trend" dir="ltr">
-      {chartable.map((question, index) => (
+      {panels.map((question, index) => (
         <TrendPanel
           key={question.id}
           questionnaire={questionnaire}
@@ -158,8 +147,8 @@ export function TrendChart({ questionnaire, days, endDate }: { questionnaire: Qu
           dayStrs={dayStrs}
           dayByDate={dayByDate}
           index={index}
-          showXAxis={index === chartable.length - 1}
-          title={PANEL_TITLES[index] ?? question.text}
+          showXAxis={index === panels.length - 1}
+          title={question.panel_title!}
         />
       ))}
       <ResponsiveContainer width="100%" height={32}>
@@ -167,7 +156,7 @@ export function TrendChart({ questionnaire, days, endDate }: { questionnaire: Qu
           <XAxis dataKey="label" type="category" scale="point" hide />
           <YAxis dataKey="y" hide domain={[-1, 1]} />
           <Tooltip content={<StripTooltip />} />
-          <Scatter data={stripData(questionnaire, other, dayStrs, dayByDate)} shape={<StripTicks />} isAnimationActive={false} />
+          <Scatter data={stripData(questionnaire, strip, dayStrs, dayByDate)} shape={<StripTicks />} isAnimationActive={false} />
         </ScatterChart>
       </ResponsiveContainer>
       <div className="trend-legend"><span className="trend-legend-dot" /> חריגה</div>

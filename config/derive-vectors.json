@@ -1,0 +1,25 @@
+{
+  "weights": { "no_carbs": 0, "grade1": 1, "grade2": 2, "grade3": 3, "grade4": 4, "grade5": 5,
+               "grade6_7": 6, "grade7_light": 7, "grade7_heavy": 8, "alcohol": 4, "nuts": 3 },
+  "vectors": [
+    { "name": "empty day", "meals": [],
+      "derived": { "carbs": 0, "meals": 0, "vegetables": 0, "eating_window": 0 } },
+    { "name": "single meal has zero window", "meals": [
+        { "at": "2026-08-20T09:10:00+03:00", "carbs_choice": "grade2", "vegetables": true } ],
+      "derived": { "carbs": 2, "meals": 1, "vegetables": 1, "eating_window": 0 } },
+    { "name": "full day with alcohol", "meals": [
+        { "at": "2026-08-20T09:10:00+03:00", "carbs_choice": "no_carbs", "vegetables": true },
+        { "at": "2026-08-20T13:30:00+03:00", "carbs_choice": "grade4", "vegetables": true },
+        { "at": "2026-08-20T19:00:00+03:00", "carbs_choice": "grade7_light", "vegetables": false },
+        { "at": "2026-08-20T21:24:00+03:00", "carbs_choice": "alcohol", "vegetables": false } ],
+      "derived": { "carbs": 15, "meals": 4, "vegetables": 2, "eating_window": 12.2 } },
+    { "name": "same-minute meals", "meals": [
+        { "at": "2026-08-20T12:00:00+03:00", "carbs_choice": "grade3", "vegetables": false },
+        { "at": "2026-08-20T12:00:00+03:00", "carbs_choice": "nuts", "vegetables": false } ],
+      "derived": { "carbs": 6, "meals": 2, "vegetables": 0, "eating_window": 0 } },
+    { "name": "out-of-order input still spans first to last", "meals": [
+        { "at": "2026-08-20T20:00:00+03:00", "carbs_choice": "grade6_7", "vegetables": false },
+        { "at": "2026-08-20T08:00:00+03:00", "carbs_choice": "no_carbs", "vegetables": true } ],
+      "derived": { "carbs": 6, "meals": 2, "vegetables": 1, "eating_window": 12 } }
+  ]
+}

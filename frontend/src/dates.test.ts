@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dayLabel, defaultDay, isoDate, last7Days, parseIsoDate } from "./dates";
+import { dayLabel, defaultDay, expandQuestionnaire, isoDate, last7Days, parseIsoDate } from "./dates";
 
 describe("isoDate", () => {
   it("formats a local date as YYYY-MM-DD with zero padding", () => {
@@ -52,5 +52,31 @@ describe("defaultDay", () => {
 
   it("defaults to today during normal hours", () => {
     expect(defaultDay(tenAm, new Set())).toBe("today");
+  });
+});
+
+describe("expandQuestionnaire", () => {
+  const eightPm = new Date(2026, 7, 18, 20, 0);
+  const beforeEight = new Date(2026, 7, 18, 19, 59);
+  const reminderHour = 20;
+
+  it("expands from the reminder hour on an untracked, unsubmitted day", () => {
+    expect(expandQuestionnaire(eightPm, reminderHour, 0, false)).toBe(true);
+  });
+
+  it("stays collapsed before the reminder hour", () => {
+    expect(expandQuestionnaire(beforeEight, reminderHour, 0, false)).toBe(false);
+  });
+
+  it("respects a different configured reminder hour", () => {
+    expect(expandQuestionnaire(beforeEight, 19, 0, false)).toBe(true);
+  });
+
+  it("stays collapsed when meals were recorded", () => {
+    expect(expandQuestionnaire(eightPm, reminderHour, 2, false)).toBe(false);
+  });
+
+  it("stays collapsed once today is submitted", () => {
+    expect(expandQuestionnaire(eightPm, reminderHour, 0, true)).toBe(false);
   });
 });

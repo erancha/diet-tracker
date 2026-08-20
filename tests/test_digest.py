@@ -1,42 +1,27 @@
-from pathlib import Path
-
 from common.digest import weekly_text
-from common.questionnaire import load
-
-CONFIG = Path(__file__).parent.parent / "config" / "questionnaire.json"
-Q = load(CONFIG)
 
 
-def test_empty_week():
-    assert weekly_text(Q, {}) == "לא מולאו שאלונים השבוע"
+def test_empty_history_message(numeric_questionnaire):
+    assert weekly_text(numeric_questionnaire, {}) == "לא מולאו שאלונים השבוע"
 
 
-def test_digest_counts_days_choices_and_clean_days():
+def test_weekly_text_reports_averages_and_clean_days(numeric_questionnaire):
     history = {
-        "2026-08-16": {
-            "drinking": "l3", "vegetables": "meals2", "eating_window": "over_12",
-            "meals": "m3", "carbs": "grade3",
-        },
-        "2026-08-17": {
-            "drinking": "l3", "vegetables": "meals2", "eating_window": "h10",
-            "meals": "m3", "carbs": "grade3",
-        },
+        "2026-08-19": {"carbs": 7, "drinking": 3},
+        "2026-08-20": {"carbs": 2, "drinking": 2},
     }
-    text = weekly_text(Q, history)
+    text = weekly_text(numeric_questionnaire, history)
     assert "מולאו 2 מתוך 7 ימים" in text
-    assert "10 שעות: 1" in text and "מעל 12 שעות !!: 1" in text
-    # 2026-08-16 answered a violating choice (over_12), so one of two days is clean.
+    assert "carbs: ממוצע 4.5" in text
+    assert "drinking: ממוצע 2.5" in text
+    # 08-19 is clean; 08-20 violates low_drinking (2 < 2.5).
     assert "ימים ללא חריגה: 1 מתוך 2" in text
 
 
-def test_digest_counts_each_selected_id_in_multi_question(multi_questionnaire):
+def test_days_predating_a_question_are_skipped_in_its_average(numeric_questionnaire):
     history = {
-        "2026-08-16": {"carbs": ["grade3", "grade1_2"]},
-        "2026-08-17": {"carbs": ["grade3"]},
+        "2026-08-19": {"drinking": 3},
+        "2026-08-20": {"carbs": 4, "drinking": 3},
     }
-    text = weekly_text(multi_questionnaire, history)
-    carbs_line = next(
-        line for line in text.splitlines() if line.startswith(multi_questionnaire.question("carbs").text)
-    )
-    assert "grade3: 2" in carbs_line
-    assert "grade1_2: 1" in carbs_line
+    text = weekly_text(numeric_questionnaire, history)
+    assert "carbs: ממוצע 4" in text

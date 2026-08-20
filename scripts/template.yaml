@@ -13,6 +13,11 @@ Parameters:
   AllowedOrigins:
     Type: CommaDelimitedList
     Default: 'http://localhost:8000'
+  ReminderHours:
+    Type: String
+    Default: '20,22'
+    Description: Asia/Jerusalem hours of the daily fill reminders; the first also drives the
+      frontend's auto-expanded evening questionnaire via the FirstReminderHour output
   BotTokenParam:
     Type: String
     Default: /diet-tracker/telegram/bot-token
@@ -28,7 +33,9 @@ Globals:
     Timeout: 30
     Environment:
       Variables:
-        TABLE_NAME: !Ref Table
+        DAYS_TABLE: !Ref DaysTable
+        MEALS_TABLE: !Ref MealsTable
+        STATE_TABLE: !Ref NudgeStateTable
         QUESTIONNAIRE_PATH: /var/task/questionnaire.json
         BOT_TOKEN_PARAM: !Ref BotTokenParam
         CHAT_MAP_PARAM: !Ref ChatMapParam
@@ -36,7 +43,7 @@ Globals:
         USER_POOL_ID: !Ref UserPoolId
 
 Resources:
-  Table:
+  DaysTable:
     Type: AWS::DynamoDB::Table
     Properties:
       BillingMode: PAY_PER_REQUEST
@@ -49,6 +56,32 @@ Resources:
         - AttributeName: pk
           AttributeType: S
         - AttributeName: sk
+          AttributeType: S
+
+  MealsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: pk
+          KeyType: HASH
+        - AttributeName: sk
+          KeyType: RANGE
+      AttributeDefinitions:
+        - AttributeName: pk
+          AttributeType: S
+        - AttributeName: sk
+          AttributeType: S
+
+  NudgeStateTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: pk
+          KeyType: HASH
+      AttributeDefinitions:
+        - AttributeName: pk
           AttributeType: S
 
   Api:
@@ -76,27 +109,43 @@ Resources:
       CodeUri: ../build/lambda
       Handler: handlers/api.handler
       Events:
-        Submit:
+        SubmitDay:
           Type: HttpApi
           Properties:
             ApiId: !Ref Api
             Method: POST
-            Path: /answers
+            Path: /days
         History:
           Type: HttpApi
           Properties:
             ApiId: !Ref Api
             Method: GET
-            Path: /answers
-        Delete:
+            Path: /days
+        DeleteDay:
           Type: HttpApi
           Properties:
             ApiId: !Ref Api
             Method: DELETE
-            Path: /answers/{date}
+            Path: /days/{date}
+        AddMeal:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref Api
+            Method: POST
+            Path: /meals
+        DeleteMeal:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref Api
+            Method: DELETE
+            Path: /meals/{date}/{id}
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !Ref Table
+            TableName: !Ref DaysTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref MealsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref NudgeStateTable
         - !Ref NotifyPolicy
 
   NudgeFunction:
@@ -106,7 +155,11 @@ Resources:
       Handler: handlers/nudge.handler
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !Ref Table
+            TableName: !Ref DaysTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref MealsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref NudgeStateTable
         - !Ref NotifyPolicy
         - Statement:
             - Effect: Allow
@@ -155,7 +208,7 @@ Resources:
   ReminderSchedule:
     Type: AWS::Scheduler::Schedule
     Properties:
-      ScheduleExpression: 'cron(0 20,22 * * ? *)'
+      ScheduleExpression: !Sub 'cron(0 ${ReminderHours} * * ? *)'
       ScheduleExpressionTimezone: Asia/Jerusalem
       FlexibleTimeWindow:
         Mode: 'OFF'
@@ -244,6 +297,8 @@ Resources:
 Outputs:
   ApiUrl:
     Value: !Sub 'https://${Api}.execute-api.${AWS::Region}.amazonaws.com'
+  FirstReminderHour:
+    Value: !Select [0, !Split [',', !Ref ReminderHours]]
   FrontendBucket:
     Value: !Ref FrontendBucket
   FrontendUrl:

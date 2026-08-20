@@ -1,5 +1,5 @@
-import type { AnswerValue, Day, Questionnaire } from "../types";
-import { choiceLabel, isViolating, selectedIds } from "../violations";
+import type { Day, Questionnaire } from "../types";
+import { isViolating, valueLabel } from "../violations";
 
 interface Props {
   questionnaire: Questionnaire;
@@ -10,8 +10,8 @@ interface Props {
 }
 
 export function HistoryTable({ questionnaire, days, deletableDates, onDelete }: Props) {
-  const cellText = (questionId: string, value: AnswerValue) =>
-    selectedIds(value).map((id) => choiceLabel(questionnaire, questionId, id)).join(" · ");
+  const cellText = (questionId: string, value: number) =>
+    valueLabel(questionnaire.questions.find((q) => q.id === questionId)!, value);
 
   return (
     <table>

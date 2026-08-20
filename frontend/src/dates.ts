@@ -23,6 +23,14 @@ export function last7Days(endDateStr: string): string[] {
     isoDate(new Date(end.getFullYear(), end.getMonth(), end.getDate() - (6 - i))));
 }
 
+// From the first evening reminder onward (reminderHour, delivered via config.js from the
+// stack's ReminderHours parameter), a day with no recorded meals is headed for retrospective
+// entry, so the day-end questionnaire opens expanded instead of waiting behind its
+// collapsed-by-default toggle.
+export function expandQuestionnaire(now: Date, reminderHour: number, mealsRecorded: number, todaySubmitted: boolean): boolean {
+  return now.getHours() >= reminderHour && mealsRecorded === 0 && !todaySubmitted;
+}
+
 // Before 04:00, with neither today nor yesterday filled yet, the questionnaire being filled now
 // is almost always for the day that just ended — default to yesterday so after-midnight users
 // don't have to notice and switch the picker themselves.

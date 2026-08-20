@@ -7,7 +7,11 @@ cd "$(dirname "$0")/.."
 source scripts/aws-config.sh
 source scripts/params.sh
 
-APP=diet-tracker
+# Optional environment suffix (e.g. "dev") deploys a fully isolated stack pair alongside the
+# default one; the Cognito domain prefix must vary with it because domains are global.
+ENV_SUFFIX="${1:+-$1}"
+
+APP="diet-tracker${ENV_SUFFIX}"
 ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
 ARTIFACTS_BUCKET="${APP}-artifacts-${ACCOUNT}"
 aws s3api head-bucket --bucket "$ARTIFACTS_BUCKET" 2>/dev/null || aws s3 mb "s3://${ARTIFACTS_BUCKET}"
@@ -39,7 +43,7 @@ deploy_cognito() {
   aws cloudformation deploy --template-file build/template-cognito.pkg.yaml \
     --stack-name "${APP}-cognito" --capabilities CAPABILITY_IAM CAPABILITY_AUTO_EXPAND --no-fail-on-empty-changeset \
     --parameter-overrides GoogleClientId="$GOOGLE_CLIENT_ID" GoogleClientSecret="$GOOGLE_CLIENT_SECRET" \
-      AllowedEmails="$ALLOWED_EMAILS" CallbackUrls="$callbacks"
+      AllowedEmails="$ALLOWED_EMAILS" CallbackUrls="$callbacks" DomainPrefix="diet-trk${ENV_SUFFIX}"
 }
 
 deploy_main() {
@@ -71,6 +75,7 @@ fi
 HOSTED_UI_DOMAIN=$(stack_output "${APP}-cognito" HostedUiDomain)
 CLIENT_ID=$(stack_output "${APP}-cognito" UserPoolClientId)
 API_URL=$(stack_output "$APP" ApiUrl)
+FIRST_REMINDER_HOUR=$(stack_output "$APP" FirstReminderHour)
 # public/ may be absent on a fresh clone — its only content is this gitignored file.
 mkdir -p frontend/public
 # The allowlist's first entry is the app owner, shown to rejected sign-ins as the access contact.
@@ -82,9 +87,10 @@ window.CONFIG = {
   apiUrl: "$API_URL",
   redirectUri: window.location.origin + "/",
   rootEmail: "${ALLOWED_EMAILS%%,*}",
+  firstReminderHour: ${FIRST_REMINDER_HOUR},
 };
 EOF
 
-[ -x scripts/sync-frontend.sh ] && scripts/sync-frontend.sh
+[ -x scripts/sync-frontend.sh ] && scripts/sync-frontend.sh "${1:-}"
 FRONTEND_URL=$(stack_output "$APP" FrontendUrl)
 echo "Deployed. Frontend: ${FRONTEND_URL}"

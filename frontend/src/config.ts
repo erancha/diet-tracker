@@ -9,6 +9,9 @@ export interface AppConfig {
   redirectUri: string;
   // App owner's address, shown to rejected sign-ins as the contact for requesting access.
   rootEmail: string;
+  // First hour (local) of the stack's daily fill reminders; from then on an untracked,
+  // unsubmitted day opens the day-end questionnaire expanded.
+  firstReminderHour: number;
 }
 
 declare global {

@@ -1,18 +1,24 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Api } from "../api";
-import type { AnswerValue, Questionnaire } from "../types";
-import { defaultDay, isoDate, yesterdayOf } from "../dates";
+import type { AnswerValue, Derived, Questionnaire } from "../types";
+import { defaultDay, expandQuestionnaire, isoDate, yesterdayOf } from "../dates";
 import { Alerts, type AlertItem } from "./Alerts";
+import { CollapsibleSection } from "./CollapsibleSection";
 import { DayPicker, type DayChoice } from "./DayPicker";
+import { DayTracker } from "./DayTracker";
 import { Header } from "./Header";
 import { HistoryTable } from "./HistoryTable";
 import { QuestionnaireForm } from "./QuestionnaireForm";
 import { TrendChart } from "./TrendChart";
 
-// Top-level screen: owns the server data (questionnaire config, answer history, submissions)
-// and the submit → alerts → trend flow; the components below it are presentational.
-export function App({ email, api, onSignOut }: { email: string; api: Api; onSignOut: () => void }) {
+// Top-level screen: owns the server data (questionnaire config, day history, today's and
+// yesterday's meal payloads) and every mutation — meal recording and deletion, day submission
+// with tracked floors, day deletion — plus the submit → alerts → trend flow; the components
+// below it are presentational.
+export function App({ email, api, reminderHour, onSignOut }: {
+  email: string; api: Api; reminderHour: number; onSignOut: () => void;
+}) {
   const queryClient = useQueryClient();
   const [now] = useState(() => new Date());
   const todayStr = isoDate(now);
@@ -33,7 +39,7 @@ export function App({ email, api, onSignOut }: { email: string; api: Api; onSign
     },
     staleTime: Infinity,
   });
-  const historyQuery = useQuery({ queryKey: ["history"], queryFn: api.getHistory });
+  const historyQuery = useQuery({ queryKey: ["days"], queryFn: api.getDays });
 
   const historyDays = historyQuery.data?.days;
   useEffect(() => {
@@ -43,23 +49,35 @@ export function App({ email, api, onSignOut }: { email: string; api: Api; onSign
   }, [day, historyDays, now]);
 
   const submitMutation = useMutation({
-    mutationFn: api.submitAnswers,
+    mutationFn: api.submitDay,
     onSuccess: (result) => {
       setAlerts(result.violations.length
         ? result.violations.map((v) => ({ kind: "alert" as const, message: v.message }))
         : [{ kind: "ok", message: `נשמר לתאריך ${result.date}! אין חריגות היום ✔` }]);
       setTrendDate(result.date);
-      queryClient.invalidateQueries({ queryKey: ["history"] });
+      queryClient.invalidateQueries({ queryKey: ["days"] });
     },
     onError: (error) => setAlerts([{ kind: "alert", message: String(error) }]),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: api.deleteAnswers,
+    mutationFn: api.deleteDay,
     onSuccess: (result) => {
       setAlerts([{ kind: "ok", message: `הרשומה של ${result.date} נמחקה` }]);
-      queryClient.invalidateQueries({ queryKey: ["history"] });
+      queryClient.invalidateQueries({ queryKey: ["days"] });
     },
+    onError: (error) => setAlerts([{ kind: "alert", message: String(error) }]),
+  });
+
+  const mealMutation = useMutation({
+    mutationFn: api.addMeal,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["days"] }),
+    onError: (error) => setAlerts([{ kind: "alert", message: String(error) }]),
+  });
+
+  const deleteMealMutation = useMutation({
+    mutationFn: (id: string) => api.deleteMeal(todayStr, id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["days"] }),
     onError: (error) => setAlerts([{ kind: "alert", message: String(error) }]),
   });
 
@@ -72,7 +90,11 @@ export function App({ email, api, onSignOut }: { email: string; api: Api; onSign
   }
 
   const questionnaire = questionnaireQuery.data;
-  const days = historyQuery.data.days;
+  const data = historyQuery.data;
+  const todaySubmitted = data.days.some((d) => d.date === todayStr);
+
+  const zeroFloors: Derived = { carbs: 0, meals: 0, vegetables: 0, eating_window: 0 };
+  const floors = day === "yesterday" ? (data.yesterday?.derived ?? zeroFloors) : data.today.derived;
 
   const submit = (answers: Record<string, AnswerValue>) =>
     submitMutation.mutate({ answers, date: day === "yesterday" ? yesterdayStr : todayStr });
@@ -82,19 +104,33 @@ export function App({ email, api, onSignOut }: { email: string; api: Api; onSign
       <Header email={email} onSignOut={onSignOut} />
       <main>
         <Alerts items={alerts} />
-        {trendDate && <TrendChart questionnaire={questionnaire} days={days} endDate={trendDate} />}
-        <DayPicker todayStr={todayStr} yesterdayStr={yesterdayStr} value={day ?? "today"} onChange={setDay} />
-        <QuestionnaireForm
-          questionnaire={questionnaire}
-          onSubmit={submit}
-          onValidationError={(message) => setAlerts([{ kind: "alert", message }])}
-        />
+        {trendDate && <TrendChart questionnaire={questionnaire} days={data.days} endDate={trendDate} />}
+        {!todaySubmitted && (
+          <DayTracker
+            questionnaire={questionnaire}
+            today={data.today}
+            onAddMeal={(meal) => mealMutation.mutate(meal)}
+            onDeleteMeal={(id) => deleteMealMutation.mutate(id)}
+            onCloseDay={(answers) => submitMutation.mutate({ answers, date: todayStr })}
+          />
+        )}
+        <CollapsibleSection title="שאלון סוף יום"
+                            defaultCollapsed={!expandQuestionnaire(now, reminderHour, data.today.meals.length, todaySubmitted)}>
+          <DayPicker todayStr={todayStr} yesterdayStr={yesterdayStr} value={day ?? "today"} onChange={setDay} />
+          <QuestionnaireForm
+            key={day ?? "today"}
+            questionnaire={questionnaire}
+            floors={floors}
+            onSubmit={submit}
+            onValidationError={(message) => setAlerts([{ kind: "alert", message }])}
+          />
+        </CollapsibleSection>
         <section>
           <h2>היסטוריה</h2>
           <div className="table-wrap">
             <HistoryTable
               questionnaire={questionnaire}
-              days={days}
+              days={data.days}
               deletableDates={new Set([todayStr, yesterdayStr])}
               onDelete={(date) => {
                 if (window.confirm(`למחוק את הרשומה של ${date}?`)) deleteMutation.mutate(date);

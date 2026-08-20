@@ -5,16 +5,15 @@ import { HistoryTable } from "./HistoryTable";
 import { fixtureQuestionnaire } from "../test-fixtures";
 
 const days = [
-  { date: "2026-08-17", answers: { drinking: "low", snacks: ["nuts", "fruit"] } },
+  { date: "2026-08-17", answers: { drinking: 2 } },
 ];
 
 const noDelete = { deletableDates: new Set<string>(), onDelete: () => {} };
 
 describe("HistoryTable", () => {
-  it("marks violating answers and joins multi-answer labels", () => {
+  it("marks a violating exact-match answer with its choice label", () => {
     render(<HistoryTable questionnaire={fixtureQuestionnaire} days={days} {...noDelete} />);
     expect(screen.getByText("פחות מ-2.5 ליטר !!")).toHaveClass("violation");
-    expect(screen.getByText("אגוזים · פרי")).toBeInTheDocument();
   });
 
   it("renders a dash for questions without an answer", () => {

@@ -3,7 +3,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 source scripts/aws-config.sh
 
-APP=diet-tracker
+APP="diet-tracker${1:+-$1}"
 BUCKET=$(aws cloudformation describe-stacks --stack-name "$APP" \
   --query "Stacks[0].Outputs[?OutputKey=='FrontendBucket'].OutputValue" --output text)
 aws s3 rm "s3://${BUCKET}" --recursive

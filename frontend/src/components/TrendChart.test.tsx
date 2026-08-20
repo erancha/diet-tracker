@@ -5,8 +5,8 @@ import { fixtureQuestionnaire } from "../test-fixtures";
 import type { Day } from "../types";
 
 const days: Day[] = [
-  { date: "2026-08-17", answers: { drinking: "low", window: "h8", snacks: ["nuts"] } },
-  { date: "2026-08-18", answers: { drinking: "mid", window: "over" } },
+  { date: "2026-08-17", answers: { drinking: 2, window: 8 } },
+  { date: "2026-08-18", answers: { drinking: 3, window: 13 } },
 ];
 
 describe("TrendChart", () => {
