@@ -21,19 +21,22 @@ export function claims(idToken: string): { email: string } {
   return JSON.parse(atob(payload));
 }
 
-export async function ensureSignedIn(cfg: AppConfig): Promise<Tokens> {
+/**
+ * Resolves the current session: stored tokens, a fresh code exchange when returning from the
+ * Hosted UI, or null when no sign-in is underway — the caller then shows the landing page and
+ * starts the flow via redirectToLogin only on an explicit user action.
+ */
+export async function ensureSignedIn(cfg: AppConfig): Promise<Tokens | null> {
   const stored: Tokens | null = JSON.parse(sessionStorage.getItem("tokens") || "null");
   if (stored && stored.expires_at > Date.now() + 60_000) return stored;
   const params = new URLSearchParams(location.search);
   const code = params.get("code");
   if (code) return exchangeCode(cfg, code);
   // A rejected sign-in (e.g. PreSignUp allowlist) comes back as an OAuth error redirect; surface
-  // it instead of restarting the login flow, which would silently bounce the user to Google again.
+  // it instead of treating it as signed-out, which would silently offer another doomed sign-in.
   const error = params.get("error");
   if (error) throw new AuthError(userFacingMessage(params.get("error_description") ?? error, cfg.rootEmail));
-  await redirectToLogin(cfg);
-  // Navigation to the Hosted UI is underway; never resolve so the app does not mount signed-out.
-  return new Promise<never>(() => {});
+  return null;
 }
 
 export function logoutUrl(cfg: AppConfig): string {
@@ -62,7 +65,7 @@ function userFacingMessage(description: string, rootEmail: string): string {
     : description;
 }
 
-async function redirectToLogin(cfg: AppConfig): Promise<void> {
+export async function redirectToLogin(cfg: AppConfig): Promise<void> {
   const verifier = b64url(crypto.getRandomValues(new Uint8Array(32)));
   sessionStorage.setItem("pkce_verifier", verifier);
   const challenge = b64url(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier)));

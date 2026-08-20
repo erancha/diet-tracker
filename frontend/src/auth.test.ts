@@ -46,6 +46,13 @@ describe("ensureSignedIn", () => {
 
     expect(err.message).toBe("Something went wrong");
   });
+
+  it("resolves to null when there is no session, no auth code, and no error redirect", async () => {
+    sessionStorage.removeItem("tokens");
+    history.replaceState(null, "", "/");
+
+    await expect(ensureSignedIn(cfg)).resolves.toBeNull();
+  });
 });
 
 describe("signOut", () => {
