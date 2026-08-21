@@ -35,10 +35,14 @@ describe("isViolating", () => {
 });
 
 describe("valueLabel", () => {
-  it("maps exact choice values to labels and passes other numbers through", () => {
-    expect(valueLabel(carbs, 3)).toBe("דרגה 3");
-    expect(valueLabel(carbs, 17)).toBe("17");
+  it("maps exact choice values to labels for single-choice questions", () => {
+    expect(valueLabel(meals, 3)).toBe("3 ארוחות");
     expect(valueLabel(meals, 2.5)).toBe("2.5");
+  });
+
+  it("renders points questions as the score, even when it collides with a choice value", () => {
+    expect(valueLabel(carbs, 3)).toBe("3");
+    expect(valueLabel(carbs, 17)).toBe("17");
   });
 });
 

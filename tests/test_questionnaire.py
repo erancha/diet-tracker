@@ -90,7 +90,15 @@ def test_validate_answers_accepts_numbers_and_rejects_everything_else(tmp_path):
         q.validate_answers({"carbs": 1, "extra": 2})
 
 
-def test_value_label_maps_back_to_choice_label(tmp_path):
-    q = load(write(tmp_path, minimal()))
-    assert q.question("carbs").value_label(3) == "g3"
+def test_value_label_maps_single_choices_but_keeps_points_scores_numeric(tmp_path):
+    raw = minimal()
+    raw["questions"].append({
+        "id": "meals", "type": "single", "text": "meals",
+        "choices": [{"id": "m3", "label": "three", "value": 3}],
+    })
+    q = load(write(tmp_path, raw))
+    assert q.question("meals").value_label(3) == "three"
+    assert q.question("meals").value_label(2.5) == "2.5"
+    # A points score is a meal-weight sum, not a picked choice — 3 must not read as grade3.
+    assert q.question("carbs").value_label(3) == "3"
     assert q.question("carbs").value_label(17) == "17"

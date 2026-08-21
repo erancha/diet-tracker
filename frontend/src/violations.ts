@@ -12,8 +12,11 @@ export function isViolating(questionnaire: Questionnaire, questionId: string, va
 }
 
 // The choice label for an exactly-matching value, else the number itself — stored values
-// between choice anchors (e.g. a computed 10.4h window) are legal.
+// between choice anchors (e.g. a computed 10.4h window) are legal. A points question stores a
+// summed score, not a picked choice, so its value is always shown as the number: a score of 3
+// happening to equal grade3's per-meal weight does not mean grade3 was eaten.
 export function valueLabel(question: Question, value: number): string {
+  if (question.type === "points") return String(value);
   return question.choices.find((c) => c.value === value)?.label ?? String(value);
 }
 

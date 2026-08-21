@@ -32,7 +32,12 @@ class Question:
 
     def value_label(self, value) -> str:
         """The choice label for an exactly-matching value, else the number itself as text —
-        stored values between choice anchors (e.g. a computed 10.4h window) are legal."""
+        stored values between choice anchors (e.g. a computed 10.4h window) are legal. A points
+        question stores a summed score, not a picked choice, so its value is always rendered as
+        the number: a score of 3 happening to equal grade3's per-meal weight does not mean
+        grade3 was eaten."""
+        if self.type == "points":
+            return f"{value:g}"
         for choice in self.choices:
             if choice.value == value:
                 return choice.label
