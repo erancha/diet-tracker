@@ -10,9 +10,12 @@ import boto3
 
 from common import digest, notify, rules, users
 from common.dates import days_before, today
+from common.log import get_logger
 from common.questionnaire import load
 from common.rules import LOOKBACK_DAYS
 from common.store import Store
+
+logger = get_logger(__name__)
 
 
 @dataclass(frozen=True)
@@ -27,7 +30,10 @@ class NudgeEnv:
 
 def handler(event, context):
     jobs = {"reminder": _reminder, "rules": _rules_job, "weekly": _weekly}
-    jobs[event["job"]](_build_env())
+    env = _build_env()
+    logger.info("job=%s starting users=%d", event["job"], len(env.users))
+    jobs[event["job"]](env)
+    logger.info("job=%s completed", event["job"])
 
 
 def _build_env() -> NudgeEnv:

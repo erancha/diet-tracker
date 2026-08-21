@@ -1,4 +1,5 @@
 import json
+import logging
 
 import boto3
 import pytest
@@ -32,6 +33,29 @@ def test_send_telegram_posts_message(monkeypatch):
     notify.send_telegram("TOKEN", "12345", "שלום")
     assert captured["url"] == "https://api.telegram.org/botTOKEN/sendMessage"
     assert captured["body"] == {"chat_id": "12345", "text": "שלום"}
+
+
+def test_send_email_logs_delivery_receipt(caplog):
+    with mock_aws():
+        ses = boto3.client("ses", region_name="eu-central-1")
+        ses.verify_email_identity(EmailAddress="me@example.com")
+        with caplog.at_level(logging.INFO):
+            notify.send_email(ses, "me@example.com", "you@example.com", "נושא", "גוף")
+    assert "email sent" in caplog.text
+    assert "you@example.com" in caplog.text
+
+
+def test_send_telegram_logs_delivery_receipt(monkeypatch, caplog):
+    class FakeResponse:
+        def __enter__(self): return self
+        def __exit__(self, *args): return False
+        def read(self): return json.dumps({"ok": True}).encode()
+
+    monkeypatch.setattr(notify.urllib.request, "urlopen", lambda request: FakeResponse())
+    with caplog.at_level(logging.INFO):
+        notify.send_telegram("TOKEN", "12345", "שלום")
+    assert "telegram sent" in caplog.text
+    assert "12345" in caplog.text
 
 
 def test_send_telegram_raises_on_api_failure(monkeypatch):

@@ -1,4 +1,5 @@
 import json
+import logging
 from pathlib import Path
 
 import boto3
@@ -56,6 +57,13 @@ def add_meal(carbs_choice="grade3", vegetables=True, at_time="09:10:00"):
     return api.handler(request("POST /meals", {
         "at": f"{today()}T{at_time}+03:00", "carbs_choice": carbs_choice,
         "vegetables": vegetables}), None)
+
+
+def test_handler_logs_route_and_caller(env, caplog):
+    with caplog.at_level(logging.INFO):
+        api.handler(request("GET /days"), None)
+    assert "GET /days" in caplog.text
+    assert "u1" in caplog.text
 
 
 def test_submit_stores_numeric_answers_and_reports_no_violations(env):

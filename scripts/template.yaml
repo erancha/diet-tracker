@@ -31,6 +31,11 @@ Globals:
     Architectures: [arm64]
     MemorySize: 256
     Timeout: 30
+    # JSON format is what activates the runtime-level filter; raise ApplicationLogLevel to INFO
+    # to surface the request lines and delivery receipts the code emits.
+    LoggingConfig:
+      LogFormat: JSON
+      ApplicationLogLevel: WARN
     Environment:
       Variables:
         DAYS_TABLE: !Ref DaysTable

@@ -1,4 +1,5 @@
 import dataclasses
+import logging
 from pathlib import Path
 
 import boto3
@@ -47,6 +48,16 @@ def env(monkeypatch):
             ses=None, sender="me@x.com",
         )
         yield e, sent
+
+
+def test_handler_logs_job_start_and_completion(env, monkeypatch, caplog):
+    e, sent = env
+    monkeypatch.setattr(nudge, "_build_env", lambda: e)
+    with caplog.at_level(logging.INFO):
+        nudge.handler({"job": "reminder"}, None)
+    assert "job=reminder" in caplog.text
+    assert "users=2" in caplog.text
+    assert "completed" in caplog.text
 
 
 def test_reminder_targets_only_users_missing_today(env):

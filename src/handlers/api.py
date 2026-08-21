@@ -14,9 +14,12 @@ import boto3
 from common import notify, rules, users
 from common.dates import days_before, now_iso, today
 from common.derive import derive
+from common.log import get_logger
 from common.questionnaire import load
 from common.rules import LOOKBACK_DAYS
 from common.store import Store
+
+logger = get_logger(__name__)
 
 
 def handler(event, context):
@@ -24,6 +27,7 @@ def handler(event, context):
     route = event["routeKey"]
     sub = claims["sub"]
     email = claims["email"].lower()
+    logger.info("request route=%s sub=%s", route, sub)
     if route == "POST /days":
         return _submit(sub, email, json.loads(event["body"]))
     if route == "GET /days":

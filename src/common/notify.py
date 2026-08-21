@@ -2,12 +2,17 @@
 Bot API.
 
 Telegram is called with stdlib urllib so the Lambdas carry no third-party HTTP dependency,
-keeping cold starts minimal. send_email and send_telegram raise on failure — delivery problems
-must surface in CloudWatch, not vanish. telegram_config resolves whether the Telegram channel is
-active at all, per the bot-token SSM parameter."""
+keeping cold starts minimal. send_email and send_telegram raise on failure and log a
+per-recipient receipt on success, so both outcomes are answerable from CloudWatch.
+telegram_config resolves whether the Telegram channel is active at all, per the bot-token SSM
+parameter."""
 
 import json
 import urllib.request
+
+from common.log import get_logger
+
+logger = get_logger(__name__)
 
 
 def send_email(ses_client, sender, recipient, subject, body) -> None:
@@ -19,6 +24,7 @@ def send_email(ses_client, sender, recipient, subject, body) -> None:
             "Body": {"Text": {"Data": body, "Charset": "UTF-8"}},
         },
     )
+    logger.info("email sent to=%s subject=%s", recipient, subject)
 
 
 def send_telegram(bot_token, chat_id, text) -> None:
@@ -31,6 +37,7 @@ def send_telegram(bot_token, chat_id, text) -> None:
         payload = json.loads(response.read())
     if not payload["ok"]:
         raise RuntimeError(f"Telegram send failed: {payload}")
+    logger.info("telegram sent chat_id=%s", chat_id)
 
 
 def telegram_config(ssm_client, bot_token_param, chat_map_param):
