@@ -71,12 +71,18 @@ td.violation { background: #ffebee; color: var(--danger); }
 .points-slider input[type="range"] { flex: 1; accent-color: var(--danger); background: linear-gradient(to left, #2e7d32, #f9a825, #c62828); height: 6px; border-radius: 3px; appearance: none; }
 .points-slider output { font-weight: 600; min-width: 2ch; text-align: center; }
 .day-tracker { background: #fff; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; }
+/* The tracker is the app's primary daily surface; its header reads slightly larger than the
+   other sections'. */
+.day-tracker h2 { font-size: 1.6rem; }
 /* Section header doubles as the collapse toggle; the arrow flips with aria-expanded. */
 .section-toggle { background: none; color: inherit; font: inherit; font-weight: 600; padding: 0; cursor: pointer; }
 .section-toggle::after { content: " ▴"; font-size: 0.8em; }
 .section-toggle[aria-expanded="false"]::after { content: " ▾"; }
 .tracker-actions { display: flex; gap: 1rem; }
-.tracker-dashboard { display: flex; gap: 1.2rem; flex-wrap: wrap; font-weight: 600; margin-bottom: 0.5rem; }
+/* Dark red sets the day's numbers apart from the meal list and legends around them; larger type
+   would do the same but wraps the four items on narrow screens. Deliberately not --danger — the
+   dashboard is neutral information, not a violation signal. */
+.tracker-dashboard { display: flex; gap: 1.2rem; flex-wrap: wrap; font-weight: 600; color: darkred; margin-bottom: 0.5rem; }
 /* The dashboard is already semibold, so the score needs extra weight to stand out. */
 .tracker-dashboard strong { font-weight: 800; }
 .meal-list { list-style: none; padding: 0; }
