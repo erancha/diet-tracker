@@ -67,6 +67,7 @@ export interface Day {
 }
 
 export interface HistoryResponse {
+  // Sorted newest first, so days[0] is the most recent recorded day.
   days: Day[];
   today: DayPayload;
   yesterday: DayPayload | null;

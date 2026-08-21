@@ -10,7 +10,7 @@
   --column-width: 48rem;
 }
 body { font-family: system-ui, sans-serif; max-width: var(--column-width); margin: 0 auto; padding: 1rem; background: #fafafa; color: #212121; }
-header { display: flex; justify-content: space-between; align-items: baseline; }
+header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 1rem; }
 /* The account box sits on the page's left edge (flex end in this RTL layout) and stacks the
    email above the sign-out button; align-items flex-end keeps both on the box's left edge
    rather than right-aligned per RTL default. It is auxiliary chrome, so it reads smaller than

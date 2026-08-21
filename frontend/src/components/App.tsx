@@ -14,8 +14,8 @@ import { TrendChart } from "./TrendChart";
 
 // Top-level screen: owns the server data (questionnaire config, day history, today's and
 // yesterday's meal payloads) and every mutation — meal recording and deletion, day submission
-// with tracked floors, day deletion — plus the submit → alerts → trend flow; the components
-// below it are presentational.
+// with tracked floors, day deletion — plus the submit → alerts flow; the components below it
+// are presentational.
 export function App({ email, api, reminderHour, onSignOut }: {
   email: string; api: Api; reminderHour: number; onSignOut: () => void;
 }) {
@@ -25,8 +25,6 @@ export function App({ email, api, reminderHour, onSignOut }: {
   const yesterdayStr = isoDate(yesterdayOf(now));
 
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
-  // The trend appears only after a submission, anchored to the submitted date.
-  const [trendDate, setTrendDate] = useState<string | null>(null);
   // null until history arrives, when the after-midnight smart default can be computed.
   const [day, setDay] = useState<DayChoice | null>(null);
 
@@ -54,7 +52,6 @@ export function App({ email, api, reminderHour, onSignOut }: {
       setAlerts(result.violations.length
         ? result.violations.map((v) => ({ kind: "alert" as const, message: v.message }))
         : [{ kind: "ok", message: `נשמר לתאריך ${result.date}! אין חריגות היום ✔` }]);
-      setTrendDate(result.date);
       queryClient.invalidateQueries({ queryKey: ["days"] });
     },
     onError: (error) => setAlerts([{ kind: "alert", message: String(error) }]),
@@ -104,7 +101,6 @@ export function App({ email, api, reminderHour, onSignOut }: {
       <Header email={email} onSignOut={onSignOut} />
       <main>
         <Alerts items={alerts} />
-        {trendDate && <TrendChart questionnaire={questionnaire} days={data.days} endDate={trendDate} />}
         {!todaySubmitted && (
           <DayTracker
             questionnaire={questionnaire}
@@ -126,6 +122,9 @@ export function App({ email, api, reminderHour, onSignOut }: {
           />
         </CollapsibleSection>
         <CollapsibleSection title="היסטוריה" className="history">
+          {data.days.length > 0 && (
+            <TrendChart questionnaire={questionnaire} days={data.days} endDate={data.days[0].date} />
+          )}
           <div className="table-wrap">
             <HistoryTable
               questionnaire={questionnaire}
