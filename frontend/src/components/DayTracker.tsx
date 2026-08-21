@@ -3,6 +3,9 @@ import type { DayPayload, NewMeal, Questionnaire } from "../types";
 import { ChoiceFieldset } from "./ChoiceFieldset";
 import { CollapsibleSection } from "./CollapsibleSection";
 
+// Hours since the last meal below which the tracker starts collapsed instead of expanded.
+const REOPEN_GAP_HOURS = 4;
+
 // The intraday companion: records meals as they happen, shows the day's derived values live,
 // lists today's meals for delete-and-re-report correction, and closes a fully tracked day by
 // asking only for water. Recorded meals are the evidence that floors the day-end form; this
@@ -18,6 +21,7 @@ export function DayTracker({ questionnaire, today, onAddMeal, onDeleteMeal, onCl
   const drinkingQuestion = questionnaire.questions.find((q) => q.id === "drinking")!;
   const [carbsChoiceId, setCarbsChoiceId] = useState<string | undefined>(undefined);
   const [vegetables, setVegetables] = useState(false);
+  const [fruit, setFruit] = useState(false);
   const [closing, setClosing] = useState(false);
   const [drinkingChoiceId, setDrinkingChoiceId] = useState<string | undefined>(undefined);
 
@@ -25,28 +29,42 @@ export function DayTracker({ questionnaire, today, onAddMeal, onDeleteMeal, onCl
     carbsQuestion.choices.find((c) => c.id === choiceId)?.label ?? choiceId;
   const timeOf = (at: string) => at.slice(11, 16);
 
+  // Right after a meal the tracker has nothing left to ask, so it starts folded to its dashboard
+  // and opens on its own only once the typical between-meals gap (four hours) has passed. Meals
+  // arrive in chronological sort-key order, so the last entry is the latest.
+  const lastMeal = today.meals[today.meals.length - 1];
+  const withinMealGap = lastMeal !== undefined &&
+    Date.now() - Date.parse(lastMeal.at) < REOPEN_GAP_HOURS * 3_600_000;
+
   // Only reachable through the record button, which renders only once a grade is picked.
   function recordMeal() {
-    onAddMeal({ at: localIso(new Date()), carbs_choice: carbsChoiceId!, vegetables });
+    onAddMeal({ at: localIso(new Date()), carbs_choice: carbsChoiceId!, vegetables, fruit });
     setCarbsChoiceId(undefined);
     setVegetables(false);
+    setFruit(false);
   }
 
   return (
-    <CollapsibleSection className="day-tracker" title="יומן היום" summary={
+    <CollapsibleSection className="day-tracker" title="יומן היום" defaultCollapsed={withinMealGap}
+                        summary={
       <div className="tracker-dashboard">
         <span>ארוחות: {today.derived.meals}</span>
         <span>ירקות: {today.derived.vegetables}</span>
         <span>חלון: {today.derived.eating_window} שעות</span>
-        <strong>ציון: {today.derived.carbs}</strong>
+        <strong title={carbsQuestion.tooltip}>ציון: {today.derived.carbs}</strong>
       </div>
     }>
-      <ChoiceFieldset question={carbsQuestion} selectedId={carbsChoiceId}
+      <ChoiceFieldset question={carbsQuestion} selectedId={carbsChoiceId} scope="meal"
                       onPick={(choice) => setCarbsChoiceId(choice.id)} />
       <label>
         <input type="checkbox" checked={vegetables}
                onChange={(e) => setVegetables(e.target.checked)} />
-        {" "}כללה ירקות
+        {" "}כולל ירקות
+      </label>
+      <label>
+        <input type="checkbox" checked={fruit}
+               onChange={(e) => setFruit(e.target.checked)} />
+        {" "}כולל פרי
       </label>
       <div className="tracker-actions">
         {carbsChoiceId !== undefined && (
@@ -63,9 +81,10 @@ export function DayTracker({ questionnaire, today, onAddMeal, onDeleteMeal, onCl
       <ul className="meal-list">
         {today.meals.map((meal) => (
           <li key={meal.id}>
-            {timeOf(meal.at)} · {gradeLabel(meal.carbs_choice)}
+            <strong>{timeOf(meal.at)}</strong> · {gradeLabel(meal.carbs_choice)}
             {meal.vegetables && " · 🥗"}
-            <button type="button" aria-label={`מחיקת ארוחה ${timeOf(meal.at)}`}
+            {meal.fruit && " · 🍎"}
+            <button type="button" className="delete-meal" aria-label={`מחיקת ארוחה ${timeOf(meal.at)}`}
                     onClick={() => { if (window.confirm("למחוק את הארוחה?")) onDeleteMeal(meal.id); }}>
               🗑️
             </button>

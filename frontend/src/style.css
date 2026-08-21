@@ -47,8 +47,10 @@ th { vertical-align: top; }
 }
 td.violation { background: #ffebee; color: var(--danger); }
 /* The trash glyph can render as a monochrome outline that takes the CSS text color — it must
-   inherit the cell's color, not the global button rule's white, or it vanishes on the white cell. */
-.delete-day { background: none; color: inherit; padding: 0 0.3rem; font-size: 1rem; margin-inline-start: 0.4rem; }
+   inherit the surrounding text color, not the global button rule's white, or it vanishes on the
+   white background. */
+.delete-day, .delete-meal { background: none; color: inherit; padding: 0 0.3rem; font-size: 1rem; }
+.delete-day { margin-inline-start: 0.4rem; }
 
 .trend { margin: 0 0 0.75rem; }
 .trend-panel-title { display: flex; align-items: center; gap: 0.35rem; font-size: 12px; margin: 0 0 0.15rem; }
@@ -79,3 +81,4 @@ td.violation { background: #ffebee; color: var(--danger); }
 .tracker-dashboard strong { font-weight: 800; }
 .meal-list { list-style: none; padding: 0; }
 .meal-list li { padding: 0.25rem 0; }
+.delete-meal { margin-inline-start: 2rem; }

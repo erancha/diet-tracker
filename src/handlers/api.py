@@ -145,10 +145,12 @@ def _add_meal(sub, body):
         return _response(400, {"error": f"unknown carbs choice {body['carbs_choice']!r}"})
     if not isinstance(body["vegetables"], bool):
         return _response(400, {"error": "vegetables must be a boolean"})
+    if not isinstance(body["fruit"], bool):
+        return _response(400, {"error": "fruit must be a boolean"})
     store = _store()
     if store.has_day(sub, day):
         return _response(409, {"error": f"{day} is already submitted"})
-    store.add_meal(sub, day, body["at"], body["carbs_choice"], body["vegetables"])
+    store.add_meal(sub, day, body["at"], body["carbs_choice"], body["vegetables"], body["fruit"])
     return _response(200, _day_payload(store, questionnaire, sub, day))
 
 

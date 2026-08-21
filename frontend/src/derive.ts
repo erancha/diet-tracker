@@ -4,6 +4,11 @@
 
 import type { Derived, Meal } from "./types";
 
+// Every carbs grade includes one fruit; only the day's first fruit rides free. Each fruit meal
+// after it counts as grade 5 ("more than one fruit"), so its weight is raised to at least this
+// choice's weight — never lowered when the meal's own grade is already heavier.
+const FRUIT_ESCALATION_CHOICE = "grade5";
+
 // The eating window is reported in half hours and must round exactly like the server code,
 // which is the authority: Python's round() sends a window landing exactly between two half
 // hours (a span ending in .25 or .75) to the nearest even half-hour count, not always upward
@@ -16,18 +21,29 @@ function roundToHalfHour(hours: number): number {
   return (whole % 2 === 0 ? whole : whole + 1) / 2;
 }
 
-export function deriveDay(meals: Pick<Meal, "at" | "carbs_choice" | "vegetables">[], weights: Record<string, number>): Derived {
+export function deriveDay(meals: Pick<Meal, "at" | "carbs_choice" | "vegetables" | "fruit">[], weights: Record<string, number>): Derived {
   if (meals.length === 0) return { carbs: 0, meals: 0, vegetables: 0, eating_window: 0 };
-  const times = meals.map((m) => new Date(m.at).getTime()).sort((a, b) => a - b);
-  const carbs = meals.reduce((sum, m) => {
-    const weight = weights[m.carbs_choice];
-    if (weight === undefined) throw new Error(`unknown carbs choice ${m.carbs_choice}`);
-    return sum + weight;
-  }, 0);
+  const ordered = [...meals].sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime());
+  let carbs = 0;
+  let fruits = 0;
+  for (const meal of ordered) {
+    let weight = weights[meal.carbs_choice];
+    if (weight === undefined) throw new Error(`unknown carbs choice ${meal.carbs_choice}`);
+    if (meal.fruit) {
+      fruits += 1;
+      if (fruits > 1) {
+        const escalation = weights[FRUIT_ESCALATION_CHOICE];
+        if (escalation === undefined) throw new Error(`unknown carbs choice ${FRUIT_ESCALATION_CHOICE}`);
+        weight = Math.max(weight, escalation);
+      }
+    }
+    carbs += weight;
+  }
+  const window = new Date(ordered[ordered.length - 1].at).getTime() - new Date(ordered[0].at).getTime();
   return {
     carbs,
     meals: meals.length,
     vegetables: meals.filter((m) => m.vegetables).length,
-    eating_window: roundToHalfHour((times[times.length - 1] - times[0]) / 3600_000),
+    eating_window: roundToHalfHour(window / 3600_000),
   };
 }

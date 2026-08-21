@@ -18,7 +18,7 @@ def weekly_text(questionnaire, history: dict) -> str:
     for question in questionnaire.questions:
         values = [answers[question.id] for answers in history.values() if question.id in answers]
         if values:
-            lines.append(f"{question.text}: ממוצע {sum(values) / len(values):g}")
+            lines.append(f"{question.day_title}: ממוצע {sum(values) / len(values):g}")
     clean = sum(1 for answers in history.values() if not _violates_any(questionnaire, answers))
     lines += ["", f"ימים ללא חריגה: {clean} מתוך {days}"]
     return "\n".join(lines)

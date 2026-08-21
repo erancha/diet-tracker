@@ -50,21 +50,23 @@ class Store:
         return {item["sk"]: {k: _from_dynamo(v) for k, v in item["answers"].items()}
                 for item in response["Items"]}
 
-    def add_meal(self, user_sub, day, at, carbs_choice, vegetables) -> str:
+    def add_meal(self, user_sub, day, at, carbs_choice, vegetables, fruit) -> str:
         # Time-of-day prefix keeps sort-key order chronological; the random suffix separates
         # same-second reports.
         meal_id = f"{at[11:19]}-{secrets.token_hex(3)}"
         self._meals.put_item(Item={
             "pk": user_sub, "sk": f"{day}#{meal_id}",
-            "at": at, "carbs_choice": carbs_choice, "vegetables": vegetables,
+            "at": at, "carbs_choice": carbs_choice, "vegetables": vegetables, "fruit": fruit,
         })
         return meal_id
 
     def get_meals(self, user_sub, day) -> list:
         response = self._meals.query(
             KeyConditionExpression=Key("pk").eq(user_sub) & Key("sk").begins_with(f"{day}#"))
+        # Meals recorded before the fruit flag existed legally lack the attribute.
         return [{"id": item["sk"].split("#", 1)[1], "at": item["at"],
-                 "carbs_choice": item["carbs_choice"], "vegetables": item["vegetables"]}
+                 "carbs_choice": item["carbs_choice"], "vegetables": item["vegetables"],
+                 "fruit": item.get("fruit", False)}
                 for item in response["Items"]]
 
     def delete_meal(self, user_sub, day, meal_id) -> None:

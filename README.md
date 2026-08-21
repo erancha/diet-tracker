@@ -1,9 +1,11 @@
 # diet-tracker
 
 Serverless Hebrew diet tracker built around an intraday meal log. Each meal is recorded as it
-happens — carb grade plus whether it included vegetables — and scored in points (golf style:
-lower is better). The day's values derive from the log: carb score, meal count, vegetable meals,
-and the eating window between first and last meal. Recorded meals floor the end-of-day
+happens — carb grade plus whether it included vegetables and fruit — and scored in points (golf
+style: lower is better). The day's values derive from the log: carb score, meal count, vegetable
+meals, and the eating window between first and last meal. The day's first fruit is included in
+its meal's grade; each fruit after it scores the meal as at least grade 5 ("more than one
+fruit"). Recorded meals floor the end-of-day
 questionnaire (a day can admit more than was tracked, never less), and a fully tracked day closes
 from the tracker with only water entered. Proactive nudges run alongside: fill reminders while a
 day is unsubmitted, threshold alerts over consecutive violating days (email, plus Telegram when a

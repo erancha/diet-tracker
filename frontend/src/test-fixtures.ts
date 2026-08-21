@@ -21,6 +21,7 @@ export const fixtureQuestionnaire: Questionnaire = {
       type: "single",
       text: "חלון אכילה",
       panel_title: "חלון אכילה (שעות)",
+      tooltip: "מהארוחה הראשונה עד האחרונה",
       choices: [
         { id: "h8", label: "8 שעות", value: 8 },
         { id: "over", label: "מעל 12 שעות !!", value: 13 },

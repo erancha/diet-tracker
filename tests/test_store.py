@@ -30,24 +30,31 @@ def test_has_and_delete_day(store):
 
 
 def test_meals_roundtrip_chronological_and_per_day(store):
-    later = store.add_meal("u1", "2026-08-20", "2026-08-20T13:30:00+03:00", "grade4", True)
-    earlier = store.add_meal("u1", "2026-08-20", "2026-08-20T09:10:00+03:00", "no_carbs", True)
-    store.add_meal("u1", "2026-08-19", "2026-08-19T09:00:00+03:00", "grade3", False)
+    later = store.add_meal("u1", "2026-08-20", "2026-08-20T13:30:00+03:00", "grade4", True, False)
+    earlier = store.add_meal("u1", "2026-08-20", "2026-08-20T09:10:00+03:00", "no_carbs", True, True)
+    store.add_meal("u1", "2026-08-19", "2026-08-19T09:00:00+03:00", "grade3", False, False)
     meals = store.get_meals("u1", "2026-08-20")
     assert [m["id"] for m in meals] == [earlier, later]
     assert meals[0] == {"id": earlier, "at": "2026-08-20T09:10:00+03:00",
-                        "carbs_choice": "no_carbs", "vegetables": True}
+                        "carbs_choice": "no_carbs", "vegetables": True, "fruit": True}
+
+
+def test_meal_stored_before_the_fruit_flag_reads_as_no_fruit(store, ddb):
+    ddb.Table("meals").put_item(Item={
+        "pk": "u1", "sk": "2026-08-20#09:10:00-abc123",
+        "at": "2026-08-20T09:10:00+03:00", "carbs_choice": "grade3", "vegetables": True})
+    assert store.get_meals("u1", "2026-08-20")[0]["fruit"] is False
 
 
 def test_same_second_meals_get_distinct_ids(store):
-    ids = {store.add_meal("u1", "2026-08-20", "2026-08-20T12:00:00+03:00", "grade3", False)
+    ids = {store.add_meal("u1", "2026-08-20", "2026-08-20T12:00:00+03:00", "grade3", False, False)
            for _ in range(5)}
     assert len(ids) == 5
     assert len(store.get_meals("u1", "2026-08-20")) == 5
 
 
 def test_delete_meal(store):
-    meal_id = store.add_meal("u1", "2026-08-20", "2026-08-20T12:00:00+03:00", "grade3", False)
+    meal_id = store.add_meal("u1", "2026-08-20", "2026-08-20T12:00:00+03:00", "grade3", False, False)
     store.delete_meal("u1", "2026-08-20", meal_id)
     assert store.get_meals("u1", "2026-08-20") == []
     with pytest.raises(KeyError):

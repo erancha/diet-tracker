@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { isViolating, trendPanels, valueLabel, violates } from "./violations";
+import { isViolating, questionTitle, trendPanels, valueLabel, violates } from "./violations";
 import type { Question, Questionnaire, Rule } from "./types";
 
 const carbs: Question = {
   id: "carbs", type: "points", text: "פחמימות", max: 30, panel_title: "ציון פחמימות",
+  day_qualifier: "סיכום ציון", meal_qualifier: "דרגת הארוחה",
   choices: [
     { id: "no_carbs", label: "ללא פחמימות", value: 0 },
     { id: "grade3", label: "דרגה 3", value: 3 },
@@ -43,6 +44,18 @@ describe("valueLabel", () => {
   it("renders points questions as the score, even when it collides with a choice value", () => {
     expect(valueLabel(carbs, 3)).toBe("3");
     expect(valueLabel(carbs, 17)).toBe("17");
+  });
+});
+
+describe("questionTitle", () => {
+  it("appends the scope's qualifier to the shared base text", () => {
+    expect(questionTitle(carbs, "day")).toBe("פחמימות (סיכום ציון)");
+    expect(questionTitle(carbs, "meal")).toBe("פחמימות (דרגת הארוחה)");
+  });
+
+  it("is the bare text for a question without qualifiers", () => {
+    expect(questionTitle(meals, "day")).toBe("ארוחות");
+    expect(questionTitle(meals, "meal")).toBe("ארוחות");
   });
 });
 

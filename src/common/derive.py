@@ -6,6 +6,11 @@ submit validation)."""
 from dataclasses import dataclass
 from datetime import datetime
 
+# Every carbs grade includes one fruit; only the day's first fruit rides free. Each fruit meal
+# after it counts as grade 5 ("more than one fruit"), so its weight is raised to at least this
+# choice's weight — never lowered when the meal's own grade is already heavier.
+FRUIT_ESCALATION_CHOICE = "grade5"
+
 
 @dataclass(frozen=True)
 class Derived:
@@ -18,10 +23,21 @@ class Derived:
 def derive(meals: list, weights: dict) -> Derived:
     if not meals:
         return Derived(carbs=0, meals=0, vegetables=0, eating_window=0)
-    times = sorted(datetime.fromisoformat(meal["at"]) for meal in meals)
+    ordered = sorted(meals, key=lambda meal: datetime.fromisoformat(meal["at"]))
+    carbs = 0
+    fruits = 0
+    for meal in ordered:
+        weight = weights[meal["carbs_choice"]]
+        if meal["fruit"]:
+            fruits += 1
+            if fruits > 1:
+                weight = max(weight, weights[FRUIT_ESCALATION_CHOICE])
+        carbs += weight
+    window = (datetime.fromisoformat(ordered[-1]["at"])
+              - datetime.fromisoformat(ordered[0]["at"]))
     return Derived(
-        carbs=sum(weights[meal["carbs_choice"]] for meal in meals),
+        carbs=carbs,
         meals=len(meals),
         vegetables=sum(1 for meal in meals if meal["vegetables"]),
-        eating_window=round((times[-1] - times[0]).total_seconds() / 1800) / 2,
+        eating_window=round(window.total_seconds() / 1800) / 2,
     )

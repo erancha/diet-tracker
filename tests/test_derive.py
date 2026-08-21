@@ -16,6 +16,7 @@ def test_derivation_vectors(vector):
 
 
 def test_unknown_carbs_choice_raises():
-    meal = {"at": "2026-08-20T09:00:00+03:00", "carbs_choice": "nope", "vegetables": False}
+    meal = {"at": "2026-08-20T09:00:00+03:00", "carbs_choice": "nope", "vegetables": False,
+            "fruit": False}
     with pytest.raises(KeyError):
         derive([meal], FIXTURE["weights"])

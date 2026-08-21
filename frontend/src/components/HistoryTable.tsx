@@ -1,5 +1,5 @@
 import type { Day, Questionnaire } from "../types";
-import { isViolating, valueLabel } from "../violations";
+import { isViolating, questionTitle, valueLabel } from "../violations";
 
 interface Props {
   questionnaire: Questionnaire;
@@ -18,7 +18,7 @@ export function HistoryTable({ questionnaire, days, deletableDates, onDelete }: 
       <thead>
         <tr>
           <th>תאריך</th>
-          {questionnaire.questions.map((q) => <th key={q.id}>{q.text}</th>)}
+          {questionnaire.questions.map((q) => <th key={q.id} title={q.tooltip}>{questionTitle(q, "day")}</th>)}
         </tr>
       </thead>
       <tbody>

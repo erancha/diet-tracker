@@ -14,6 +14,12 @@ export interface Question {
   choices: Choice[];
   panel_title?: string;
   max?: number;
+  // Hover explanation shown wherever the question text is a heading (form legend, history header).
+  tooltip?: string;
+  // Parenthesized qualifiers appended to the text per heading scope (see questionTitle): text
+  // alone names the subject; a day heading shows a summed score, a tracker meal a single grade.
+  day_qualifier?: string;
+  meal_qualifier?: string;
 }
 
 export interface Rule {
@@ -39,6 +45,7 @@ export interface Meal {
   at: string;
   carbs_choice: string;
   vegetables: boolean;
+  fruit: boolean;
 }
 
 export interface Derived {
@@ -69,6 +76,7 @@ export interface NewMeal {
   at: string;
   carbs_choice: string;
   vegetables: boolean;
+  fruit: boolean;
 }
 
 export interface Violation {

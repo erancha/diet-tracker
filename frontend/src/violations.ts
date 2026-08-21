@@ -20,6 +20,15 @@ export function valueLabel(question: Question, value: number): string {
   return question.choices.find((c) => c.value === value)?.label ?? String(value);
 }
 
+// A question's heading for one scope. The config stores the base text once; a scope that shifts
+// its meaning (a day heading shows a summed score, a tracker meal a single grade) declares a
+// qualifier, appended here in parentheses. The same day-scope composition exists server-side as
+// Question.day_title for digest emails.
+export function questionTitle(question: Question, scope: "day" | "meal"): string {
+  const qualifier = scope === "day" ? question.day_qualifier : question.meal_qualifier;
+  return qualifier === undefined ? question.text : `${question.text} (${qualifier})`;
+}
+
 // Questions with a panel_title chart as trend panels; the rest surface in the violations strip.
 export function trendPanels(questionnaire: Questionnaire): { panels: Question[]; strip: Question[] } {
   const panels = questionnaire.questions.filter((q) => q.panel_title !== undefined);

@@ -16,6 +16,11 @@ describe("HistoryTable", () => {
     expect(screen.getByText("פחות מ-2.5 ליטר !!")).toHaveClass("violation");
   });
 
+  it("exposes a question's tooltip on its column header", () => {
+    render(<HistoryTable questionnaire={fixtureQuestionnaire} days={days} {...noDelete} />);
+    expect(screen.getByText("חלון אכילה")).toHaveAttribute("title", "מהארוחה הראשונה עד האחרונה");
+  });
+
   it("renders a dash for questions without an answer", () => {
     render(<HistoryTable questionnaire={fixtureQuestionnaire} days={days} {...noDelete} />);
     expect(screen.getByText("—")).toBeInTheDocument();

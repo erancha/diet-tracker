@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import type { Choice, Derived, Questionnaire } from "../types";
+import { questionTitle } from "../violations";
 import { ChoiceFieldset } from "./ChoiceFieldset";
 import { PointsSlider } from "./PointsSlider";
 
@@ -38,7 +39,7 @@ export function QuestionnaireForm({ questionnaire, floors, onSubmit, onValidatio
     for (const question of questionnaire.questions) {
       const floor = floorOf(question.id);
       if (answers[question.id] < floor) {
-        onValidationError(`הערך של ${question.text} לא יכול להיות נמוך מ-${floor} שנרשם ביומן`);
+        onValidationError(`הערך של ${questionTitle(question, "day")} לא יכול להיות נמוך מ-${floor} שנרשם ביומן`);
         return;
       }
     }

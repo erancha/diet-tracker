@@ -11,7 +11,7 @@ const questionnaire: Questionnaire = {
     { id: "meals", type: "single", text: "ארוחות",
       choices: [{ id: "m2", label: "2 ארוחות", value: 2 }, { id: "m3", label: "3 ארוחות", value: 3 },
                 { id: "over_3", label: "מעל 3", value: 4 }] },
-    { id: "carbs", type: "points", text: "פחמימות", max: 30,
+    { id: "carbs", type: "points", text: "פחמימות", max: 30, tooltip: "סכום הנקודות מכל הארוחות",
       choices: [{ id: "no_carbs", label: "ללא", value: 0 }] },
   ],
   rules: [],
@@ -46,6 +46,11 @@ describe("QuestionnaireForm", () => {
     fireEvent.change(screen.getByRole("slider"), { target: { value: "7" } });
     fireEvent.click(screen.getByRole("button", { name: "שליחה" }));
     expect(onSubmit).toHaveBeenCalledWith({ drinking: 3, meals: 4, carbs: 7 });
+  });
+
+  it("exposes a points question's tooltip on its legend", () => {
+    renderForm();
+    expect(screen.getByText("פחמימות")).toHaveAttribute("title", "סכום הנקודות מכל הארוחות");
   });
 
   it("slider max extends when the floor exceeds the configured max", () => {

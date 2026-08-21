@@ -24,11 +24,23 @@ class Question:
     type: str
     text: str
     choices: tuple[Choice, ...]
+    # Parenthesized qualifier appended to the text in day-scope headings (see day_title). The
+    # config also carries a meal_qualifier for the frontend's per-meal picker; the backend never
+    # renders a meal-scope heading, so it is not modeled here.
+    day_qualifier: str | None
     # Present only on questions charted as a trend panel.
     panel_title: str | None
     # Present only on points questions: the day-end slider's top of scale. Meal sums may
     # legally exceed it; it caps the slider, not the stored value.
     max: float | None
+
+    @property
+    def day_title(self) -> str:
+        """The question's day-scope heading — the base text plus the day qualifier when one is
+        declared. Mirrors questionTitle(question, "day") in frontend/src/violations.ts."""
+        if self.day_qualifier is None:
+            return self.text
+        return f"{self.text} ({self.day_qualifier})"
 
     def value_label(self, value) -> str:
         """The choice label for an exactly-matching value, else the number itself as text —
@@ -128,7 +140,7 @@ def load(path) -> Questionnaire:
         questions.append(Question(
             id=q["id"], type=q["type"], text=q["text"],
             choices=tuple(Choice(id=c["id"], label=c["label"], value=c["value"]) for c in q["choices"]),
-            panel_title=q.get("panel_title"), max=q.get("max"),
+            day_qualifier=q.get("day_qualifier"), panel_title=q.get("panel_title"), max=q.get("max"),
         ))
     questions = tuple(questions)
     rules = []
