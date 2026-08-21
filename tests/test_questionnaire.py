@@ -98,6 +98,34 @@ def test_validate_answers_accepts_numbers_and_rejects_everything_else(tmp_path):
         q.validate_answers({"carbs": 1, "extra": 2})
 
 
+def with_meals_question(extra_choices=()):
+    raw = minimal()
+    raw["questions"].append({
+        "id": "meals", "type": "single", "text": "meals",
+        "choices": [{"id": "m2", "label": "two", "value": 2},
+                    {"id": "m3", "label": "three", "value": 3}, *extra_choices],
+    })
+    return raw
+
+
+def test_validate_answers_enforces_choice_membership_and_points_range(tmp_path):
+    q = load(write(tmp_path, with_meals_question()))
+    q.validate_answers({"carbs": 12, "meals": 3})
+    with pytest.raises(ValueError, match="meals"):
+        q.validate_answers({"carbs": 12, "meals": 999})
+    with pytest.raises(ValueError, match="meals"):
+        q.validate_answers({"carbs": 12, "meals": 2.5})
+    with pytest.raises(ValueError, match="carbs"):
+        q.validate_answers({"carbs": 31, "meals": 3})
+
+
+def test_validate_answers_accepts_tracked_floors_above_the_choice_scale(tmp_path):
+    q = load(write(tmp_path, with_meals_question()))
+    q.validate_answers({"carbs": 40, "meals": 5}, floors={"carbs": 40, "meals": 5})
+    with pytest.raises(ValueError, match="meals"):
+        q.validate_answers({"carbs": 12, "meals": 5}, floors={"meals": 4})
+
+
 def test_value_label_maps_single_choices_but_keeps_points_scores_numeric(tmp_path):
     raw = minimal()
     raw["questions"].append({

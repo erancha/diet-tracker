@@ -82,7 +82,11 @@ class Questionnaire:
         """Meal-point weight per carbs choice id — the scoring table for meal derivation."""
         return {choice.id: choice.value for choice in self.question("carbs").choices}
 
-    def validate_answers(self, answers: dict) -> None:
+    def validate_answers(self, answers: dict, floors: dict | None = None) -> None:
+        """Rejects answers outside each question's domain: a single question accepts only its
+        choice values, a points question its 0..max range. A value equal to its entry in floors
+        (the day's meal-derived values) is also legal — the tracked truth may exceed the choice
+        scale."""
         expected = {question.id for question in self.questions}
         got = set(answers)
         if got != expected:
@@ -96,6 +100,20 @@ class Questionnaire:
                 raise ValueError(f"answer for question {question_id!r} must be a number")
             if value < 0:
                 raise ValueError(f"answer for question {question_id!r} must not be negative")
+            question = self.question(question_id)
+            floor = floors.get(question_id) if floors else None
+            # 1e-9 absorbs float representation noise, matching the submit floor check.
+            matches_floor = floor is not None and abs(value - floor) < 1e-9
+            if matches_floor:
+                continue
+            if question.type == "single":
+                if all(choice.value != value for choice in question.choices):
+                    raise ValueError(
+                        f"answer for question {question_id!r} ({value}) is not a choice value")
+            elif value > question.max:
+                raise ValueError(
+                    f"answer for question {question_id!r} ({value}) exceeds the maximum "
+                    f"({question.max})")
 
 
 def load(path) -> Questionnaire:

@@ -74,10 +74,6 @@ def _day_payload(store, questionnaire, sub, day) -> dict:
 def _submit(sub, email, body):
     questionnaire = _questionnaire()
     answers = body["answers"]
-    try:
-        questionnaire.validate_answers(answers)
-    except ValueError as error:
-        return _response(400, {"error": str(error)})
     day, allowed = _backfill_window()
     chosen = body.get("date", day)
     rejection = _reject_outside_window(chosen, allowed)
@@ -85,6 +81,10 @@ def _submit(sub, email, body):
         return rejection
     store = _store()
     floors = derive(store.get_meals(sub, chosen), questionnaire.carb_weights())
+    try:
+        questionnaire.validate_answers(answers, floors=asdict(floors))
+    except ValueError as error:
+        return _response(400, {"error": str(error)})
     for field, floor in asdict(floors).items():
         # 1e-9 absorbs float representation noise; a genuinely lower value still rejects.
         if answers[field] < floor - 1e-9:
