@@ -10,6 +10,7 @@ import { createApi } from "./api";
 import { AuthError, claims, ensureSignedIn, redirectToLogin, signOut } from "./auth";
 import { getConfig } from "./config";
 import { App } from "./components/App";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Landing } from "./components/Landing";
 import "./style.css";
 
@@ -22,7 +23,9 @@ try {
   if (tokens === null) {
     root.render(
       <StrictMode>
-        <Landing onSignIn={() => redirectToLogin(cfg)} />
+        <ErrorBoundary>
+          <Landing onSignIn={() => redirectToLogin(cfg)} />
+        </ErrorBoundary>
       </StrictMode>,
     );
   } else {
@@ -31,9 +34,11 @@ try {
 
     root.render(
       <StrictMode>
-        <QueryClientProvider client={new QueryClient()}>
-          <App email={email} api={api} reminderHour={cfg.firstReminderHour} onSignOut={() => signOut(cfg)} />
-        </QueryClientProvider>
+        <ErrorBoundary>
+          <QueryClientProvider client={new QueryClient()}>
+            <App email={email} api={api} reminderHour={cfg.firstReminderHour} onSignOut={() => signOut(cfg)} />
+          </QueryClientProvider>
+        </ErrorBoundary>
       </StrictMode>,
     );
   }
