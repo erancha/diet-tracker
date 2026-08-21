@@ -27,7 +27,7 @@ const trackedDay: DayPayload = {
     { id: "a", at: "2026-08-20T09:10:00+03:00", carbs_choice: "no_carbs", vegetables: true },
     { id: "b", at: "2026-08-20T13:30:00+03:00", carbs_choice: "grade4", vegetables: false },
   ],
-  derived: { carbs: 4, meals: 2, vegetables: 1, eating_window: 4.3 },
+  derived: { carbs: 4, meals: 2, vegetables: 1, eating_window: 4.5 },
 };
 
 describe("DayTracker", () => {
@@ -87,7 +87,7 @@ describe("DayTracker", () => {
                        onAddMeal={vi.fn()} onDeleteMeal={onDeleteMeal} onCloseDay={vi.fn()} />);
     expect(screen.getByText(/ציון: 4/)).toBeInTheDocument();
     expect(screen.getByText(/ארוחות: 2/)).toBeInTheDocument();
-    expect(screen.getByText("חלון: 4.3 שעות")).toBeInTheDocument();
+    expect(screen.getByText("חלון: 4.5 שעות")).toBeInTheDocument();
     expect(screen.getByText("דרגה 4")).toBeInTheDocument();
     fireEvent.click(screen.getAllByRole("button", { name: /מחיקת ארוחה/ })[1]);
     expect(onDeleteMeal).toHaveBeenCalledWith("b");
@@ -101,7 +101,7 @@ describe("DayTracker", () => {
     fireEvent.click(screen.getByLabelText("3 ליטר"));
     fireEvent.click(screen.getByRole("button", { name: "אישור וסגירה" }));
     expect(onCloseDay).toHaveBeenCalledWith({
-      carbs: 4, meals: 2, vegetables: 1, eating_window: 4.3, drinking: 3 });
+      carbs: 4, meals: 2, vegetables: 1, eating_window: 4.5, drinking: 3 });
   });
 
   it("close-day appears only once two meals are recorded", () => {

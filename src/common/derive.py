@@ -23,5 +23,5 @@ def derive(meals: list, weights: dict) -> Derived:
         carbs=sum(weights[meal["carbs_choice"]] for meal in meals),
         meals=len(meals),
         vegetables=sum(1 for meal in meals if meal["vegetables"]),
-        eating_window=round((times[-1] - times[0]).total_seconds() / 3600, 1),
+        eating_window=round((times[-1] - times[0]).total_seconds() / 1800) / 2,
     )
