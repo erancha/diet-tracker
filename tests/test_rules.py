@@ -32,6 +32,11 @@ def test_below_rule_streak(numeric_questionnaire):
     assert rules.streak(low, history, "2026-08-20") == 2
 
 
+def test_alert_message_substitutes_rule_threshold(numeric_questionnaire):
+    violations = rules.due_alerts(numeric_questionnaire, days(9, 9), "2026-08-19", {"rules": {}})
+    assert violations[0].message == "carbs 8 and up 2 days in a row"
+
+
 def test_due_alerts_fires_at_threshold_once_per_day(numeric_questionnaire):
     history = days(9, 9)
     state = {"rules": {}}

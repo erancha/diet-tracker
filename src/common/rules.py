@@ -44,7 +44,8 @@ def due_alerts(questionnaire, history: dict, as_of: str, state: dict) -> list:
         # A rule with no alert history is a legal state for new users and new rules.
         already = state["rules"].get(rule.id, {}).get("last_alert_for")
         if current >= rule.consecutive_days and already != as_of:
-            violations.append(Violation(rule.id, current, rule.message.format(days=current)))
+            violations.append(Violation(rule.id, current,
+                                        rule.message.format(days=current, value=rule.threshold)))
     return violations
 
 

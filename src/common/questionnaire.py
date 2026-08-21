@@ -58,6 +58,13 @@ class Rule:
             return value >= self.at_least
         return value < self.below
 
+    @property
+    def threshold(self) -> float:
+        """The comparator bound: at_least when set, otherwise below."""
+        if self.at_least is not None:
+            return self.at_least
+        return self.below
+
 
 @dataclass(frozen=True)
 class Questionnaire:

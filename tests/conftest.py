@@ -55,7 +55,7 @@ def numeric_questionnaire(tmp_path):
         ],
         "rules": [
             {"id": "heavy_carbs", "question_id": "carbs", "at_least": 8,
-             "consecutive_days": 2, "message": "heavy carbs {days} days in a row"},
+             "consecutive_days": 2, "message": "carbs {value} and up {days} days in a row"},
             {"id": "low_drinking", "question_id": "drinking", "below": 2.5,
              "consecutive_days": 2, "message": "low drinking {days} days in a row"},
         ],
