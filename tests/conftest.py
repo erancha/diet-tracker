@@ -1,8 +1,33 @@
 import json
 
+import boto3
 import pytest
+from moto import mock_aws
 
 from common.questionnaire import load
+
+
+def _table(ddb, name, with_sort_key=True):
+    key_schema = [{"AttributeName": "pk", "KeyType": "HASH"}]
+    attrs = [{"AttributeName": "pk", "AttributeType": "S"}]
+    if with_sort_key:
+        key_schema.append({"AttributeName": "sk", "KeyType": "RANGE"})
+        attrs.append({"AttributeName": "sk", "AttributeType": "S"})
+    ddb.create_table(TableName=name, KeySchema=key_schema, AttributeDefinitions=attrs,
+                     BillingMode="PAY_PER_REQUEST")
+
+
+@pytest.fixture
+def ddb():
+    """Mocked DynamoDB resource with the app's three tables pre-created (days and meals keyed by
+    pk+sk, state by pk only). The AWS mock stays active for the whole test, so code under test may
+    also build its own boto3 clients."""
+    with mock_aws():
+        resource = boto3.resource("dynamodb", region_name="eu-central-1")
+        _table(resource, "days")
+        _table(resource, "meals")
+        _table(resource, "state", with_sort_key=False)
+        yield resource
 
 
 @pytest.fixture

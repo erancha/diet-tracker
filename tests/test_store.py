@@ -1,30 +1,13 @@
-import boto3
 import pytest
-from moto import mock_aws
 
 from common.store import Store
 
 ANSWERS = {"drinking": 3, "vegetables": 2, "eating_window": 10.4, "meals": 3, "carbs": 12}
 
 
-def _table(ddb, name, with_sort_key=True):
-    key_schema = [{"AttributeName": "pk", "KeyType": "HASH"}]
-    attrs = [{"AttributeName": "pk", "AttributeType": "S"}]
-    if with_sort_key:
-        key_schema.append({"AttributeName": "sk", "KeyType": "RANGE"})
-        attrs.append({"AttributeName": "sk", "AttributeType": "S"})
-    ddb.create_table(TableName=name, KeySchema=key_schema, AttributeDefinitions=attrs,
-                     BillingMode="PAY_PER_REQUEST")
-
-
 @pytest.fixture
-def store():
-    with mock_aws():
-        ddb = boto3.resource("dynamodb", region_name="eu-central-1")
-        _table(ddb, "days")
-        _table(ddb, "meals")
-        _table(ddb, "state", with_sort_key=False)
-        yield Store("days", "meals", "state", dynamodb=ddb)
+def store(ddb):
+    return Store("days", "meals", "state", dynamodb=ddb)
 
 
 def test_day_roundtrip_preserves_numeric_answers_per_user(store):

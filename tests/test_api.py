@@ -2,9 +2,7 @@ import json
 import logging
 from pathlib import Path
 
-import boto3
 import pytest
-from moto import mock_aws
 
 from common.dates import days_before, today
 from handlers import api
@@ -13,31 +11,16 @@ CONFIG = str(Path(__file__).parent.parent / "config" / "questionnaire.json")
 ANSWERS = {"drinking": 3, "vegetables": 2, "eating_window": 13, "meals": 3, "carbs": 4}
 
 
-def _table(ddb, name, with_sort_key=True):
-    key_schema = [{"AttributeName": "pk", "KeyType": "HASH"}]
-    attrs = [{"AttributeName": "pk", "AttributeType": "S"}]
-    if with_sort_key:
-        key_schema.append({"AttributeName": "sk", "KeyType": "RANGE"})
-        attrs.append({"AttributeName": "sk", "AttributeType": "S"})
-    ddb.create_table(TableName=name, KeySchema=key_schema, AttributeDefinitions=attrs,
-                     BillingMode="PAY_PER_REQUEST")
-
-
 @pytest.fixture
-def env(monkeypatch):
-    with mock_aws():
-        ddb = boto3.resource("dynamodb", region_name="eu-central-1")
-        _table(ddb, "days")
-        _table(ddb, "meals")
-        _table(ddb, "state", with_sort_key=False)
-        monkeypatch.setenv("AWS_DEFAULT_REGION", "eu-central-1")
-        monkeypatch.setenv("DAYS_TABLE", "days")
-        monkeypatch.setenv("MEALS_TABLE", "meals")
-        monkeypatch.setenv("STATE_TABLE", "state")
-        monkeypatch.setenv("QUESTIONNAIRE_PATH", CONFIG)
-        alerts = []
-        monkeypatch.setattr(api, "_alert", lambda email, violations: alerts.append((email, violations)))
-        yield alerts
+def env(monkeypatch, ddb):
+    monkeypatch.setenv("AWS_DEFAULT_REGION", "eu-central-1")
+    monkeypatch.setenv("DAYS_TABLE", "days")
+    monkeypatch.setenv("MEALS_TABLE", "meals")
+    monkeypatch.setenv("STATE_TABLE", "state")
+    monkeypatch.setenv("QUESTIONNAIRE_PATH", CONFIG)
+    alerts = []
+    monkeypatch.setattr(api, "_alert", lambda email, violations: alerts.append((email, violations)))
+    return alerts
 
 
 def request(route, body=None, path_params=None):

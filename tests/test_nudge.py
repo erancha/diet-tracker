@@ -2,9 +2,7 @@ import dataclasses
 import logging
 from pathlib import Path
 
-import boto3
 import pytest
-from moto import mock_aws
 
 from common.dates import days_before, today
 from common.questionnaire import load
@@ -17,37 +15,22 @@ VIOLATING = {"drinking": 3, "vegetables": 2, "eating_window": 13, "meals": 3, "c
 CLEAN = {"drinking": 3, "vegetables": 2, "eating_window": 10, "meals": 3, "carbs": 3}
 
 
-def _table(ddb, name, with_sort_key=True):
-    key_schema = [{"AttributeName": "pk", "KeyType": "HASH"}]
-    attrs = [{"AttributeName": "pk", "AttributeType": "S"}]
-    if with_sort_key:
-        key_schema.append({"AttributeName": "sk", "KeyType": "RANGE"})
-        attrs.append({"AttributeName": "sk", "AttributeType": "S"})
-    ddb.create_table(TableName=name, KeySchema=key_schema, AttributeDefinitions=attrs,
-                     BillingMode="PAY_PER_REQUEST")
-
-
 @pytest.fixture
-def env(monkeypatch):
+def env(monkeypatch, ddb):
     sent = []
     monkeypatch.setattr(nudge.notify, "send_telegram", lambda token, chat, text: sent.append(("tg", chat, text)))
     monkeypatch.setattr(nudge.notify, "send_email", lambda ses, sender, to, subject, body: sent.append(("mail", to, body)))
-    with mock_aws():
-        ddb = boto3.resource("dynamodb", region_name="eu-central-1")
-        _table(ddb, "days")
-        _table(ddb, "meals")
-        _table(ddb, "state", with_sort_key=False)
-        monkeypatch.setenv("AWS_DEFAULT_REGION", "eu-central-1")
-        monkeypatch.setenv("DAYS_TABLE", "days")
-        monkeypatch.setenv("MEALS_TABLE", "meals")
-        monkeypatch.setenv("STATE_TABLE", "state")
-        e = nudge.NudgeEnv(
-            store=Store("days", "meals", "state"), questionnaire=load(CONFIG),
-            users=[User("u1", "a@gmail.com"), User("u2", "b@gmail.com")],
-            telegram=("TOKEN", {"a@gmail.com": "111", "b@gmail.com": "222"}),
-            ses=None, sender="me@x.com",
-        )
-        yield e, sent
+    monkeypatch.setenv("AWS_DEFAULT_REGION", "eu-central-1")
+    monkeypatch.setenv("DAYS_TABLE", "days")
+    monkeypatch.setenv("MEALS_TABLE", "meals")
+    monkeypatch.setenv("STATE_TABLE", "state")
+    e = nudge.NudgeEnv(
+        store=Store("days", "meals", "state"), questionnaire=load(CONFIG),
+        users=[User("u1", "a@gmail.com"), User("u2", "b@gmail.com")],
+        telegram=("TOKEN", {"a@gmail.com": "111", "b@gmail.com": "222"}),
+        ses=None, sender="me@x.com",
+    )
+    return e, sent
 
 
 def test_handler_logs_job_start_and_completion(env, monkeypatch, caplog):
