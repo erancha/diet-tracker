@@ -125,8 +125,7 @@ export function App({ email, api, reminderHour, onSignOut }: {
             onValidationError={(message) => setAlerts([{ kind: "alert", message }])}
           />
         </CollapsibleSection>
-        <section>
-          <h2>היסטוריה</h2>
+        <CollapsibleSection title="היסטוריה" className="history">
           <div className="table-wrap">
             <HistoryTable
               questionnaire={questionnaire}
@@ -137,7 +136,7 @@ export function App({ email, api, reminderHour, onSignOut }: {
               }}
             />
           </div>
-        </section>
+        </CollapsibleSection>
       </main>
     </>
   );

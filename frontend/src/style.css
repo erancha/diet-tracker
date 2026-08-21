@@ -11,9 +11,12 @@
 }
 body { font-family: system-ui, sans-serif; max-width: var(--column-width); margin: 0 auto; padding: 1rem; background: #fafafa; color: #212121; }
 header { display: flex; justify-content: space-between; align-items: baseline; }
-/* The account box sits on the page's left edge (flex end in this RTL layout); left-align its
-   content so the email and sign-out button don't right-align inside the box per RTL default. */
-header span { text-align: left; }
+/* The account box sits on the page's left edge (flex end in this RTL layout) and stacks the
+   email above the sign-out button; align-items flex-end keeps both on the box's left edge
+   rather than right-aligned per RTL default. It is auxiliary chrome, so it reads smaller than
+   the questionnaire controls and its button drops the global button's wide padding. */
+header span { display: flex; flex-direction: column; align-items: flex-end; gap: 0.3rem; font-size: 0.8rem; }
+header span button { font-size: inherit; padding: 0.3rem 0.9rem; }
 h1 { font-size: 1.4rem; color: var(--accent); }
 .day-picker { display: flex; gap: 1rem; align-items: center; margin-bottom: 0.75rem; font-size: 0.9rem; }
 .day-picker label { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0; cursor: pointer; }
@@ -45,6 +48,9 @@ th { vertical-align: top; }
   th:not(:nth-last-child(-n+2)) { width: 8rem; }
   tbody td:first-child { white-space: nowrap; }
 }
+/* Together with the table's 0.5rem top margin this puts the history table at about half the
+   default heading gap, so the section header sits close to the data it labels. */
+.history h2 { margin-bottom: 0.25em; }
 td.violation { background: #ffebee; color: var(--danger); }
 /* The trash glyph can render as a monochrome outline that takes the CSS text color — it must
    inherit the surrounding text color, not the global button rule's white, or it vanishes on the
@@ -72,13 +78,17 @@ td.violation { background: #ffebee; color: var(--danger); }
 .points-slider output { font-weight: 600; min-width: 2ch; text-align: center; }
 .day-tracker { background: #fff; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; }
 /* The tracker is the app's primary daily surface; its header reads slightly larger than the
-   other sections'. */
-.day-tracker h2 { font-size: 1.6rem; }
+   other sections' and sits at half the default heading gap above its dashboard line. */
+.day-tracker h2 { font-size: 1.6rem; margin-bottom: 0.4em; }
 /* Section header doubles as the collapse toggle; the arrow flips with aria-expanded. */
 .section-toggle { background: none; color: inherit; font: inherit; font-weight: 600; padding: 0; cursor: pointer; }
 .section-toggle::after { content: " ▴"; font-size: 0.8em; }
 .section-toggle[aria-expanded="false"]::after { content: " ▾"; }
-.tracker-actions { display: flex; gap: 1rem; }
+.meal-flags { display: flex; gap: 1.5rem; }
+.meal-flags label { display: inline-flex; align-items: center; gap: 0.3rem; }
+/* The top margin separates the action buttons from the checkbox row above them, so the
+   checkboxes don't read as attached to the buttons. */
+.tracker-actions { display: flex; gap: 1rem; margin-top: 0.75rem; }
 /* Dark red sets the day's numbers apart from the meal list and legends around them; larger type
    would do the same but wraps the four items on narrow screens. Deliberately not --danger — the
    dashboard is neutral information, not a violation signal. */

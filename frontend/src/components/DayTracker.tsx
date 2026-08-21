@@ -56,16 +56,18 @@ export function DayTracker({ questionnaire, today, onAddMeal, onDeleteMeal, onCl
     }>
       <ChoiceFieldset question={carbsQuestion} selectedId={carbsChoiceId} scope="meal"
                       onPick={(choice) => setCarbsChoiceId(choice.id)} />
-      <label>
-        <input type="checkbox" checked={vegetables}
-               onChange={(e) => setVegetables(e.target.checked)} />
-        {" "}כולל ירקות
-      </label>
-      <label>
-        <input type="checkbox" checked={fruit}
-               onChange={(e) => setFruit(e.target.checked)} />
-        {" "}כולל פרי
-      </label>
+      <div className="meal-flags">
+        <label>
+          <input type="checkbox" checked={vegetables}
+                 onChange={(e) => setVegetables(e.target.checked)} />
+          {" "}כולל ירקות
+        </label>
+        <label>
+          <input type="checkbox" checked={fruit}
+                 onChange={(e) => setFruit(e.target.checked)} />
+          {" "}כולל פרי
+        </label>
+      </div>
       <div className="tracker-actions">
         {carbsChoiceId !== undefined && (
           <button type="button" onClick={recordMeal}>
