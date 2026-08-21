@@ -11,6 +11,9 @@
 }
 body { font-family: system-ui, sans-serif; max-width: var(--column-width); margin: 0 auto; padding: 1rem; background: #fafafa; color: #212121; }
 header { display: flex; justify-content: space-between; align-items: baseline; }
+/* The account box sits on the page's left edge (flex end in this RTL layout); left-align its
+   content so the email and sign-out button don't right-align inside the box per RTL default. */
+header span { text-align: left; }
 h1 { font-size: 1.4rem; color: var(--accent); }
 .day-picker { display: flex; gap: 1rem; align-items: center; margin-bottom: 0.75rem; font-size: 0.9rem; }
 .day-picker label { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0; cursor: pointer; }
@@ -29,6 +32,9 @@ button { background: var(--accent); color: #fff; border: 0; border-radius: 8px; 
 .table-wrap { overflow-x: auto; margin-left: min(0px, calc(3rem - (100vw - 100%) / 2)); }
 table { border-collapse: collapse; min-width: min(calc(var(--column-width) * 1.2), 100%); margin-top: 0.5rem; background: #fff; }
 th, td { border: 1px solid #ddd; padding: 0.4rem 0.6rem; text-align: right; font-size: 0.9rem; }
+/* Header texts wrap to different line counts; top alignment keeps the shared שכפ"צ prefix on
+   one visual row instead of shorter headers floating mid-cell. */
+th { vertical-align: top; }
 /* From tablet width up, all columns but the last two take a fixed width, so their long headers
    wrap instead of dictating column width and the freed space goes to the last two columns —
    which in the current questionnaire carry the long answers (a positional assumption; reorder
