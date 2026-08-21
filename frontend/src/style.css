@@ -75,5 +75,7 @@ td.violation { background: #ffebee; color: var(--danger); }
 .section-toggle[aria-expanded="false"]::after { content: " ▾"; }
 .tracker-actions { display: flex; gap: 1rem; }
 .tracker-dashboard { display: flex; gap: 1.2rem; flex-wrap: wrap; font-weight: 600; margin-bottom: 0.5rem; }
+/* The dashboard is already semibold, so the score needs extra weight to stand out. */
+.tracker-dashboard strong { font-weight: 800; }
 .meal-list { list-style: none; padding: 0; }
 .meal-list li { padding: 0.25rem 0; }

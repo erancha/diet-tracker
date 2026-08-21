@@ -42,6 +42,14 @@ def test_repo_config_loads_with_numeric_choices_and_threshold_rules():
         "low_drinking", "no_vegetables", "long_eating_window", "too_many_meals", "heavy_carbs"}
 
 
+def test_repo_config_orders_questions_like_the_day_dashboard_with_carbs_last():
+    # Question order drives the history table columns, the day-end form, and the digest;
+    # it must match the day dashboard's order, with the carbs score closing the list.
+    q = load(CONFIG)
+    assert [question.id for question in q.questions] == [
+        "drinking", "meals", "vegetables", "eating_window", "carbs"]
+
+
 def test_rule_violates_compares_numerically(tmp_path):
     q = load(write(tmp_path, minimal()))
     rule = q.rules[0]

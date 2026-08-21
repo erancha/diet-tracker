@@ -35,10 +35,10 @@ export function DayTracker({ questionnaire, today, onAddMeal, onDeleteMeal, onCl
   return (
     <CollapsibleSection className="day-tracker" title="יומן היום" summary={
       <div className="tracker-dashboard">
-        <span>ציון: {today.derived.carbs}</span>
         <span>ארוחות: {today.derived.meals}</span>
         <span>ירקות: {today.derived.vegetables}</span>
-        <span>חלון אכילה: {today.derived.eating_window} שעות</span>
+        <span>חלון: {today.derived.eating_window} שעות</span>
+        <strong>ציון: {today.derived.carbs}</strong>
       </div>
     }>
       <ChoiceFieldset question={carbsQuestion} selectedId={carbsChoiceId}

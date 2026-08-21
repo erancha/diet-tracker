@@ -72,6 +72,14 @@ describe("DayTracker", () => {
     expect(screen.getByLabelText("דרגה 4")).toBeInTheDocument();
   });
 
+  it("renders the score bold and last in the dashboard", () => {
+    render(<DayTracker questionnaire={questionnaire} today={trackedDay}
+                       onAddMeal={vi.fn()} onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    const score = screen.getByText(/ציון: 4/);
+    expect(score.tagName).toBe("STRONG");
+    expect(score.parentElement!.lastElementChild).toBe(score);
+  });
+
   it("shows the day's derived values and meal list with delete", () => {
     const onDeleteMeal = vi.fn();
     vi.spyOn(window, "confirm").mockReturnValue(true);
@@ -79,6 +87,7 @@ describe("DayTracker", () => {
                        onAddMeal={vi.fn()} onDeleteMeal={onDeleteMeal} onCloseDay={vi.fn()} />);
     expect(screen.getByText(/ציון: 4/)).toBeInTheDocument();
     expect(screen.getByText(/ארוחות: 2/)).toBeInTheDocument();
+    expect(screen.getByText("חלון: 4.3 שעות")).toBeInTheDocument();
     expect(screen.getByText("דרגה 4")).toBeInTheDocument();
     fireEvent.click(screen.getAllByRole("button", { name: /מחיקת ארוחה/ })[1]);
     expect(onDeleteMeal).toHaveBeenCalledWith("b");
