@@ -5,10 +5,10 @@
  */
 export function Landing({ onSignIn }: { onSignIn: () => void }) {
   return (
-    <main>
+    <main className="landing">
       <h1>מעקב תזונה</h1>
       <p>יומן ארוחות יומי שעוזר לשמור על הרגלי אכילה בריאים לאורך זמן:</p>
-      <ul>
+      <ul className="landing-summary">
         <li>
           רישום ארוחות תוך כדי היום — דרגת פחמימות, ירקות ופרי — כולל השלמה של יום אתמול למי
           שנזכר אחרי חצות
@@ -27,7 +27,7 @@ export function Landing({ onSignIn }: { onSignIn: () => void }) {
         </li>
       </ul>
       <button type="button" onClick={onSignIn}>התחברות עם Google</button>
-      <p>
+      <p className="landing-repo">
         <a href="https://github.com/erancha/diet-tracker" target="_blank" rel="noreferrer">
           קוד המקור ב-GitHub
         </a>
