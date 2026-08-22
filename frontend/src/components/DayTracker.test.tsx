@@ -116,8 +116,15 @@ describe("DayTracker", () => {
     expect(screen.getAllByText("דרגה 4")).toHaveLength(2);
     expect(screen.getByText(/🥗/)).toBeInTheDocument();
     expect(screen.getByText(/🍎/)).toBeInTheDocument();
-    fireEvent.click(screen.getAllByRole("button", { name: /מחיקת ארוחה/ })[1]);
+    fireEvent.click(screen.getByRole("button", { name: "מחיקת ארוחה 13:30" }));
     expect(onDeleteMeal).toHaveBeenCalledWith("b");
+  });
+
+  it("lists meals newest first", () => {
+    render(<DayTracker questionnaire={questionnaire} today={trackedDay}
+                       onAddMeal={vi.fn()} onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    const times = screen.getAllByText(/^\d{2}:\d{2}$/).map((el) => el.textContent);
+    expect(times).toEqual(["13:30", "09:10"]);
   });
 
   it("shows each meal's effective points at the end of its row", () => {

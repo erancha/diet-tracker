@@ -90,7 +90,9 @@ export function DayTracker({ questionnaire, today, onAddMeal, onDeleteMeal, onCl
           </button>
         )}
       </div>
-      <MealList questionnaire={questionnaire} meals={today.meals} onDelete={onDeleteMeal} />
+      {/* Newest first: the meal just recorded is the one the user checks or deletes. */}
+      <MealList questionnaire={questionnaire} meals={[...today.meals].reverse()}
+                onDelete={onDeleteMeal} />
       {/* A day with fewer than two meals is not a tracked day worth closing from here; deleting
           down to one meal mid-close also folds the panel away. */}
       {closing && today.meals.length >= 2 && (

@@ -5,7 +5,8 @@ import { HIGH_GRADE_THRESHOLD } from "../violations";
 // Row marker per addition id; a retired id falls back to its raw id, like retired grade choices.
 const ADDITION_MARKERS: Record<string, string> = { sweet: "🍪", alcohol: "🍷", nuts: "🥜" };
 
-// A day's chronological meal list, each row ending with the meal's effective points so the rows
+// A day's meal list rendered in the caller's order (the live tracker passes newest first, the
+// history view chronological), each row ending with the meal's effective points so the rows
 // visibly sum to the day's carb score. Per-meal deletion renders only when a handler is supplied
 // (the live tracker); the read-only history view passes none.
 export function MealList({ questionnaire, meals, onDelete }: {
