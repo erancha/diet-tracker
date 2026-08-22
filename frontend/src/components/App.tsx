@@ -149,9 +149,7 @@ export function App({ email, api, reminderHour, onSignOut }: {
               days={data.days}
               deletableDates={new Set([todayStr, yesterdayStr])}
               todayDate={todayStr}
-              onDelete={(date) => {
-                if (window.confirm(`למחוק את הרשומה של ${date}?`)) deleteMutation.mutate(date);
-              }}
+              onDelete={(date) => deleteMutation.mutate(date)}
               onView={setViewedDate}
             />
           </div>

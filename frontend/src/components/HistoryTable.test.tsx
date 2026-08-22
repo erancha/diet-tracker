@@ -27,12 +27,23 @@ describe("HistoryTable", () => {
     expect(screen.getByText("—")).toBeInTheDocument();
   });
 
-  it("reports the row's date when its delete button is clicked", async () => {
+  it("deletes only after the user confirms a dialog naming the row's date", async () => {
     const onDelete = vi.fn();
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
     render(<HistoryTable questionnaire={fixtureQuestionnaire} days={days}
       {...noDelete} deletableDates={new Set(["2026-08-17"])} onDelete={onDelete} />);
     await userEvent.click(screen.getByRole("button", { name: "מחיקת הרשומה של 2026-08-17" }));
+    expect(confirmSpy).toHaveBeenCalledWith("למחוק את הרשומה של 2026-08-17?");
     expect(onDelete).toHaveBeenCalledWith("2026-08-17");
+  });
+
+  it("does not delete when the user dismisses the confirm dialog", async () => {
+    const onDelete = vi.fn();
+    vi.spyOn(window, "confirm").mockReturnValue(false);
+    render(<HistoryTable questionnaire={fixtureQuestionnaire} days={days}
+      {...noDelete} deletableDates={new Set(["2026-08-17"])} onDelete={onDelete} />);
+    await userEvent.click(screen.getByRole("button", { name: "מחיקת הרשומה של 2026-08-17" }));
+    expect(onDelete).not.toHaveBeenCalled();
   });
 
   it("omits the delete button for dates outside the deletable window", () => {

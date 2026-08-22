@@ -32,7 +32,7 @@ export function HistoryTable({ questionnaire, days, deletableDates, todayDate, o
               {day.date}
               {deletableDates.has(day.date) && (
                 <button type="button" className="delete-day" aria-label={`מחיקת הרשומה של ${day.date}`}
-                  onClick={() => onDelete(day.date)}>🗑️</button>
+                  onClick={() => { if (window.confirm(`למחוק את הרשומה של ${day.date}?`)) onDelete(day.date); }}>🗑️</button>
               )}
             </td>
             {questionnaire.questions.map((q) => {
