@@ -2,8 +2,8 @@
 
 ## Meal log and scoring
 
-Each meal is recorded as it happens with a timestamp, a carb grade, and whether it included
-vegetables, fruit, or a sweet accompaniment. Every carb grade carries a point weight defined in
+Each meal is recorded as it happens with a timestamp, a carb grade, whether it included
+vegetables or fruit, and its additions (see below). Every carb grade carries a point weight defined in
 `config/questionnaire.json`; the day's carb score is the sum of its meals' weights. Scoring is
 golf-style: lower is better.
 
@@ -20,12 +20,14 @@ Every carb grade includes one fruit, so the day's first fruit rides free inside 
 Each fruit meal after it counts as grade 5 ("more than one fruit"): its weight is raised to at
 least that grade's weight, and never lowered when the meal's own grade is already heavier.
 
-## Sweet addition
+## Additions
 
-A meal recorded with the sweet flag pays a fixed surcharge (`sweet_value` in the config) on top
-of its grade, after any fruit escalation. The surcharge keeps the base grade meaningful: an
-excellent meal with a cookie stays cheaper than a heavy meal with one, while a sweet on every
-meal still compounds into a poor day score.
+A meal may carry additions — accompaniments that are not a grade of their own: a sweet, non-dry
+alcohol, or too many nuts. Each addition pays its configured surcharge (the carbs question's
+`additions` in the config) on top of the meal's grade, after any fruit escalation. The surcharge
+keeps the base grade meaningful: an excellent meal with a cookie stays cheaper than a heavy meal
+with one, while an addition on every meal still compounds into a poor day score. Meals stored
+before additions existed are read with the legacy sweet flag mapped to a single sweet addition.
 
 ## Day lifecycle
 

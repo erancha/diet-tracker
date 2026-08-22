@@ -30,35 +30,43 @@ def test_has_and_delete_day(store):
 
 
 def test_meals_roundtrip_chronological_and_per_day(store):
-    later = store.add_meal("u1", "2026-08-20", "2026-08-20T13:30:00+03:00", "grade4", True, False, True)
-    earlier = store.add_meal("u1", "2026-08-20", "2026-08-20T09:10:00+03:00", "no_carbs", True, True, False)
-    store.add_meal("u1", "2026-08-19", "2026-08-19T09:00:00+03:00", "grade3", False, False, False)
+    later = store.add_meal("u1", "2026-08-20", "2026-08-20T13:30:00+03:00", "grade4", True, False, ["sweet"])
+    earlier = store.add_meal("u1", "2026-08-20", "2026-08-20T09:10:00+03:00", "no_carbs", True, True, [])
+    store.add_meal("u1", "2026-08-19", "2026-08-19T09:00:00+03:00", "grade3", False, False, [])
     meals = store.get_meals("u1", "2026-08-20")
     assert [m["id"] for m in meals] == [earlier, later]
     assert meals[0] == {"id": earlier, "at": "2026-08-20T09:10:00+03:00",
                         "carbs_choice": "no_carbs", "vegetables": True, "fruit": True,
-                        "sweet": False}
-    assert meals[1]["sweet"] is True
+                        "additions": []}
+    assert meals[1]["additions"] == ["sweet"]
 
 
-def test_meal_stored_before_the_fruit_and_sweet_flags_reads_them_as_false(store, ddb):
+def test_meal_stored_before_the_fruit_and_addition_flags_reads_them_as_absent(store, ddb):
     ddb.Table("meals").put_item(Item={
         "pk": "u1", "sk": "2026-08-20#09:10:00-abc123",
         "at": "2026-08-20T09:10:00+03:00", "carbs_choice": "grade3", "vegetables": True})
     meal = store.get_meals("u1", "2026-08-20")[0]
     assert meal["fruit"] is False
-    assert meal["sweet"] is False
+    assert meal["additions"] == []
+
+
+def test_meal_stored_with_the_legacy_sweet_flag_reads_as_a_sweet_addition(store, ddb):
+    ddb.Table("meals").put_item(Item={
+        "pk": "u1", "sk": "2026-08-20#09:10:00-abc123",
+        "at": "2026-08-20T09:10:00+03:00", "carbs_choice": "grade3", "vegetables": True,
+        "fruit": False, "sweet": True})
+    assert store.get_meals("u1", "2026-08-20")[0]["additions"] == ["sweet"]
 
 
 def test_same_second_meals_get_distinct_ids(store):
-    ids = {store.add_meal("u1", "2026-08-20", "2026-08-20T12:00:00+03:00", "grade3", False, False, False)
+    ids = {store.add_meal("u1", "2026-08-20", "2026-08-20T12:00:00+03:00", "grade3", False, False, [])
            for _ in range(5)}
     assert len(ids) == 5
     assert len(store.get_meals("u1", "2026-08-20")) == 5
 
 
 def test_delete_meal(store):
-    meal_id = store.add_meal("u1", "2026-08-20", "2026-08-20T12:00:00+03:00", "grade3", False, False, False)
+    meal_id = store.add_meal("u1", "2026-08-20", "2026-08-20T12:00:00+03:00", "grade3", False, False, [])
     store.delete_meal("u1", "2026-08-20", meal_id)
     assert store.get_meals("u1", "2026-08-20") == []
     with pytest.raises(KeyError):

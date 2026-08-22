@@ -50,24 +50,28 @@ class Store:
         return {item["sk"]: {k: _from_dynamo(v) for k, v in item["answers"].items()}
                 for item in response["Items"]}
 
-    def add_meal(self, user_sub, day, at, carbs_choice, vegetables, fruit, sweet) -> str:
+    def add_meal(self, user_sub, day, at, carbs_choice, vegetables, fruit, additions) -> str:
         # Time-of-day prefix keeps sort-key order chronological; the random suffix separates
         # same-second reports.
         meal_id = f"{at[11:19]}-{secrets.token_hex(3)}"
         self._meals.put_item(Item={
             "pk": user_sub, "sk": f"{day}#{meal_id}",
             "at": at, "carbs_choice": carbs_choice, "vegetables": vegetables, "fruit": fruit,
-            "sweet": sweet,
+            "additions": additions,
         })
         return meal_id
 
     def get_meals(self, user_sub, day) -> list:
         response = self._meals.query(
             KeyConditionExpression=Key("pk").eq(user_sub) & Key("sk").begins_with(f"{day}#"))
-        # Meals recorded before the fruit and sweet flags existed legally lack those attributes.
+        # Meals recorded before an attribute existed legally lack it: fruit predates the fruit
+        # flag, and additions supersede the boolean sweet flag, so a legacy sweet meal reads as
+        # a single sweet addition.
         return [{"id": item["sk"].split("#", 1)[1], "at": item["at"],
                  "carbs_choice": item["carbs_choice"], "vegetables": item["vegetables"],
-                 "fruit": item.get("fruit", False), "sweet": item.get("sweet", False)}
+                 "fruit": item.get("fruit", False),
+                 "additions": item.get("additions",
+                                       ["sweet"] if item.get("sweet", False) else [])}
                 for item in response["Items"]]
 
     def delete_meal(self, user_sub, day, meal_id) -> None:

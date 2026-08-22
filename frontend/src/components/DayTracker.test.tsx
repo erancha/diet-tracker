@@ -13,7 +13,7 @@ const emptyDay: DayPayload = {
 const dayWithMealHoursAgo = (hours: number): DayPayload => ({
   date: "2026-08-20",
   meals: [{ id: "m", at: new Date(Date.now() - hours * 3_600_000).toISOString(),
-            carbs_choice: "no_carbs", vegetables: false, fruit: false, sweet: false }],
+            carbs_choice: "no_carbs", vegetables: false, fruit: false, additions: [] }],
   derived: { carbs: 0, meals: 1, vegetables: 0, eating_window: 0 },
 });
 
@@ -46,7 +46,7 @@ describe("DayTracker", () => {
     expect(screen.queryByText("פחמימות (סיכום ציון)")).toBeNull();
   });
 
-  it("records a meal with the picked grade, vegetables, fruit and sweet flags", () => {
+  it("records a meal with the picked grade, vegetables, fruit and additions", () => {
     const onAddMeal = vi.fn();
     render(<DayTracker questionnaire={questionnaire} today={emptyDay}
                        onAddMeal={onAddMeal} onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
@@ -55,9 +55,10 @@ describe("DayTracker", () => {
     fireEvent.click(screen.getByLabelText("כולל ירקות"));
     fireEvent.click(screen.getByLabelText("כולל פרי"));
     fireEvent.click(screen.getByLabelText("כולל מתוק"));
+    fireEvent.click(screen.getByLabelText("כולל אלכוהול לא יבש"));
     fireEvent.click(screen.getByRole("button", { name: "רישום ארוחה" }));
     expect(onAddMeal).toHaveBeenCalledWith(expect.objectContaining({
-      carbs_choice: "grade4", vegetables: true, fruit: true, sweet: true }));
+      carbs_choice: "grade4", vegetables: true, fruit: true, additions: ["sweet", "alcohol"] }));
     // Stamped at tap time with a UTC offset — the test runs on an arbitrary real date.
     expect(onAddMeal.mock.calls[0][0].at).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$/);
   });
@@ -66,9 +67,9 @@ describe("DayTracker", () => {
     const onAddMeal = vi.fn();
     render(<DayTracker questionnaire={questionnaire} today={emptyDay}
                        onAddMeal={onAddMeal} onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
-    fireEvent.click(screen.getByLabelText("~ כוס אלכוהול לא יבש"));
+    fireEvent.click(screen.getByLabelText("דרגה 4!"));
     fireEvent.click(screen.getByRole("button", { name: "רישום ארוחה" }));
-    expect(onAddMeal).toHaveBeenCalledWith(expect.objectContaining({ carbs_choice: "alcohol" }));
+    expect(onAddMeal).toHaveBeenCalledWith(expect.objectContaining({ carbs_choice: "grade4b" }));
   });
 
   it("collapses to the dashboard alone and expands back on header toggle", () => {
@@ -126,16 +127,17 @@ describe("DayTracker", () => {
     expect(screen.getByText("13:30").closest("li")).toHaveTextContent("דרגה 4 · 🍎 · 4");
   });
 
-  it("shows the sweet marker on a meal recorded with the sweet flag", () => {
-    const sweetDay: DayPayload = {
+  it("shows a marker per addition on a recorded meal", () => {
+    const additionsDay: DayPayload = {
       date: "2026-08-20",
       meals: [{ id: "a", at: "2026-08-20T09:10:00+03:00", carbs_choice: "grade4",
-                vegetables: false, fruit: false, sweet: true }],
-      derived: { carbs: 8, meals: 1, vegetables: 0, eating_window: 0 },
+                vegetables: false, fruit: false, additions: ["sweet", "alcohol", "nuts"] }],
+      derived: { carbs: 15, meals: 1, vegetables: 0, eating_window: 0 },
     };
-    render(<DayTracker questionnaire={questionnaire} today={sweetDay}
+    render(<DayTracker questionnaire={questionnaire} today={additionsDay}
                        onAddMeal={vi.fn()} onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
-    expect(screen.getByText(/🍪/)).toBeInTheDocument();
+    expect(screen.getByText("09:10").closest("li"))
+      .toHaveTextContent("דרגה 4 · 🍪 · 🍷 · 🥜 · 15");
   });
 
   it("marks each meal's delete button with the compact delete-meal style", () => {

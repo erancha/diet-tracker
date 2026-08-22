@@ -11,12 +11,19 @@ FIXTURE = json.loads(
 
 @pytest.mark.parametrize("vector", FIXTURE["vectors"], ids=lambda v: v["name"])
 def test_derivation_vectors(vector):
-    result = derive(vector["meals"], FIXTURE["weights"], FIXTURE["sweet_value"])
+    result = derive(vector["meals"], FIXTURE["weights"], FIXTURE["addition_values"])
     assert result == Derived(**vector["derived"])
 
 
 def test_unknown_carbs_choice_raises():
     meal = {"at": "2026-08-20T09:00:00+03:00", "carbs_choice": "nope", "vegetables": False,
-            "fruit": False, "sweet": False}
+            "fruit": False, "additions": []}
     with pytest.raises(KeyError):
-        derive([meal], FIXTURE["weights"], FIXTURE["sweet_value"])
+        derive([meal], FIXTURE["weights"], FIXTURE["addition_values"])
+
+
+def test_unknown_addition_raises():
+    meal = {"at": "2026-08-20T09:00:00+03:00", "carbs_choice": "grade1", "vegetables": False,
+            "fruit": False, "additions": ["nope"]}
+    with pytest.raises(KeyError):
+        derive([meal], FIXTURE["weights"], FIXTURE["addition_values"])

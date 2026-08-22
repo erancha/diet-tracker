@@ -33,9 +33,10 @@ class Question:
     # Present only on points questions: the day-end slider's top of scale. Meal sums may
     # legally exceed it; it caps the slider, not the stored value.
     max: float | None
-    # Present only on the carbs question: point cost a meal's sweet flag adds on top of its
-    # grade. Not a choice, so it never appears in the grade picker or carb_weights().
-    sweet_value: float | None
+    # Present only on the carbs question: the accompaniments a meal may carry (a sweet, alcohol,
+    # too many nuts), each with the point cost it adds on top of the meal's grade. Not choices,
+    # so they never appear in the grade picker or carb_weights().
+    additions: tuple[Choice, ...] | None
 
     @property
     def day_title(self) -> str:
@@ -97,12 +98,13 @@ class Questionnaire:
         """Meal-point weight per carbs choice id — the scoring table for meal derivation."""
         return {choice.id: choice.value for choice in self.question("carbs").choices}
 
-    def sweet_value(self) -> float:
-        """Point cost added to a meal recorded with the sweet flag; the config must declare it."""
-        value = self.question("carbs").sweet_value
-        if value is None:
-            raise ValueError("carbs question must declare sweet_value")
-        return value
+    def addition_values(self) -> dict:
+        """Point cost per addition id — the surcharge table for meal derivation; the config must
+        declare the additions."""
+        additions = self.question("carbs").additions
+        if additions is None:
+            raise ValueError("carbs question must declare additions")
+        return {addition.id: addition.value for addition in additions}
 
     def validate_answers(self, answers: dict, floors: dict | None = None) -> None:
         """Rejects answers outside each question's domain: a single question accepts only its
@@ -147,14 +149,15 @@ def load(path) -> Questionnaire:
         for c in q["choices"]:
             if isinstance(c.get("value"), bool) or not isinstance(c.get("value"), Number):
                 raise ValueError(f"choice {c['id']!r} of question {q['id']!r} needs a numeric value")
-        if "sweet_value" in q and (isinstance(q["sweet_value"], bool)
-                                   or not isinstance(q["sweet_value"], Number)):
-            raise ValueError(f"sweet_value of question {q['id']!r} must be numeric")
+        for a in q.get("additions", ()):
+            if isinstance(a.get("value"), bool) or not isinstance(a.get("value"), Number):
+                raise ValueError(f"addition {a['id']!r} of question {q['id']!r} needs a numeric value")
         questions.append(Question(
             id=q["id"], type=q["type"], text=q["text"],
             choices=tuple(Choice(id=c["id"], label=c["label"], value=c["value"]) for c in q["choices"]),
             day_qualifier=q.get("day_qualifier"), panel_title=q.get("panel_title"), max=q.get("max"),
-            sweet_value=q.get("sweet_value"),
+            additions=tuple(Choice(id=a["id"], label=a["label"], value=a["value"])
+                            for a in q["additions"]) if "additions" in q else None,
         ))
     questions = tuple(questions)
     rules = []

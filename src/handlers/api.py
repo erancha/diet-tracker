@@ -71,7 +71,7 @@ def _day_payload(store, questionnaire, sub, day) -> dict:
     meals = store.get_meals(sub, day)
     return {"date": day, "meals": meals,
             "derived": asdict(derive(meals, questionnaire.carb_weights(),
-                                     questionnaire.sweet_value()))}
+                                     questionnaire.addition_values()))}
 
 
 def _submit(sub, email, body):
@@ -84,7 +84,7 @@ def _submit(sub, email, body):
         return rejection
     store = _store()
     floors = derive(store.get_meals(sub, chosen), questionnaire.carb_weights(),
-                    questionnaire.sweet_value())
+                    questionnaire.addition_values())
     try:
         questionnaire.validate_answers(answers, floors=asdict(floors))
     except ValueError as error:
@@ -161,13 +161,17 @@ def _add_meal(sub, body):
         return _response(400, {"error": "vegetables must be a boolean"})
     if not isinstance(body["fruit"], bool):
         return _response(400, {"error": "fruit must be a boolean"})
-    if not isinstance(body["sweet"], bool):
-        return _response(400, {"error": "sweet must be a boolean"})
+    additions = body["additions"]
+    if not isinstance(additions, list):
+        return _response(400, {"error": "additions must be a list"})
+    unknown = [a for a in additions if a not in questionnaire.addition_values()]
+    if unknown:
+        return _response(400, {"error": f"unknown additions {unknown!r}"})
     store = _store()
     if store.has_day(sub, day):
         return _response(409, {"error": f"{day} is already submitted"})
     store.add_meal(sub, day, body["at"], body["carbs_choice"], body["vegetables"], body["fruit"],
-                   body["sweet"])
+                   additions)
     return _response(200, _day_payload(store, questionnaire, sub, day))
 
 

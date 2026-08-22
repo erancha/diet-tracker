@@ -2,6 +2,9 @@ import { mealWeights } from "../derive";
 import type { Meal, Questionnaire } from "../types";
 import { HIGH_GRADE_THRESHOLD } from "../violations";
 
+// Row marker per addition id; a retired id falls back to its raw id, like retired grade choices.
+const ADDITION_MARKERS: Record<string, string> = { sweet: "🍪", alcohol: "🍷", nuts: "🥜" };
+
 // A day's chronological meal list, each row ending with the meal's effective points so the rows
 // visibly sum to the day's carb score. Per-meal deletion renders only when a handler is supplied
 // (the live tracker); the read-only history view passes none.
@@ -13,11 +16,15 @@ export function MealList({ questionnaire, meals, onDelete }: {
   const carbsQuestion = questionnaire.questions.find((q) => q.id === "carbs")!;
   const timeOf = (at: string) => at.slice(11, 16);
 
-  // A history day may reference a choice id retired by a later questionnaire version, making its
-  // weights unknowable here; per-meal points render only when the whole day still resolves.
+  // A history day may reference a choice or addition id retired by a later questionnaire
+  // version, making its weights unknowable here; per-meal points render only when the whole day
+  // still resolves.
   const weights = Object.fromEntries(carbsQuestion.choices.map((c) => [c.id, c.value]));
-  const points = meals.every((m) => weights[m.carbs_choice] !== undefined)
-    ? mealWeights(meals, weights, carbsQuestion.sweet_value!)
+  const additionValues = Object.fromEntries(
+    (carbsQuestion.additions ?? []).map((a) => [a.id, a.value]));
+  const points = meals.every((m) => weights[m.carbs_choice] !== undefined
+      && m.additions.every((a) => additionValues[a] !== undefined))
+    ? mealWeights(meals, weights, additionValues)
     : undefined;
 
   return (
@@ -35,7 +42,7 @@ export function MealList({ questionnaire, meals, onDelete }: {
               </span>
               {meal.vegetables && " · 🥗"}
               {meal.fruit && " · 🍎"}
-              {meal.sweet && " · 🍪"}
+              {meal.additions.map((id) => ` · ${ADDITION_MARKERS[id] ?? id}`).join("")}
               {points !== undefined && ` · ${points[index]}`}
             </span>
             {onDelete && (

@@ -14,8 +14,10 @@ export interface Question {
   choices: Choice[];
   panel_title?: string;
   max?: number;
-  // Present only on the carbs question: point cost a meal's sweet flag adds on top of its grade.
-  sweet_value?: number;
+  // Present only on the carbs question: the accompaniments a meal may carry (a sweet, alcohol,
+  // too many nuts), each with the point cost it adds on top of the meal's grade. Not choices,
+  // so they never appear in the grade picker.
+  additions?: Choice[];
   // Hover explanation shown wherever the question text is a heading (form legend, history header).
   tooltip?: string;
   // Parenthesized qualifiers appended to the text per heading scope (see questionTitle): text
@@ -48,7 +50,9 @@ export interface Meal {
   carbs_choice: string;
   vegetables: boolean;
   fruit: boolean;
-  sweet: boolean;
+  // Addition ids from the carbs question's additions (e.g. "sweet"); the server normalizes
+  // legacy sweet-flag records into this shape.
+  additions: string[];
 }
 
 export interface Derived {
@@ -81,7 +85,7 @@ export interface NewMeal {
   carbs_choice: string;
   vegetables: boolean;
   fruit: boolean;
-  sweet: boolean;
+  additions: string[];
 }
 
 export interface Violation {

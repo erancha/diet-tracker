@@ -102,7 +102,8 @@ td.view-day { cursor: pointer; }
 .section-toggle { background: none; color: inherit; font: inherit; font-weight: 600; padding: 0; cursor: pointer; }
 .section-toggle::after { content: " ▴"; font-size: 0.8em; }
 .section-toggle[aria-expanded="false"]::after { content: " ▾"; }
-.meal-flags { display: flex; gap: 1.5rem; }
+/* Five config-driven checkboxes must wrap on narrow phones instead of spilling off-screen. */
+.meal-flags { display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; }
 .meal-flags label { display: inline-flex; align-items: center; gap: 0.3rem; }
 /* The top margin separates the action buttons from the checkbox row above them, so the
    checkboxes don't read as attached to the buttons. */

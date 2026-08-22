@@ -24,7 +24,7 @@ export function DayTracker({ questionnaire, today, onAddMeal, onDeleteMeal, onCl
   const [carbsChoiceId, setCarbsChoiceId] = useState<string | undefined>(undefined);
   const [vegetables, setVegetables] = useState(false);
   const [fruit, setFruit] = useState(false);
-  const [sweet, setSweet] = useState(false);
+  const [pickedAdditions, setPickedAdditions] = useState<Set<string>>(new Set());
   const [closing, setClosing] = useState(false);
   const [drinkingChoiceId, setDrinkingChoiceId] = useState<string | undefined>(undefined);
 
@@ -36,12 +36,15 @@ export function DayTracker({ questionnaire, today, onAddMeal, onDeleteMeal, onCl
     Date.now() - Date.parse(lastMeal.at) < REOPEN_GAP_HOURS * 3_600_000;
 
   // Only reachable through the record button, which renders only once a grade is picked.
+  // Additions are sent in config order so the recorded list is deterministic.
   function recordMeal() {
-    onAddMeal({ at: localIso(new Date()), carbs_choice: carbsChoiceId!, vegetables, fruit, sweet });
+    onAddMeal({ at: localIso(new Date()), carbs_choice: carbsChoiceId!, vegetables, fruit,
+                additions: carbsQuestion.additions!
+                  .filter((a) => pickedAdditions.has(a.id)).map((a) => a.id) });
     setCarbsChoiceId(undefined);
     setVegetables(false);
     setFruit(false);
-    setSweet(false);
+    setPickedAdditions(new Set());
   }
 
   return (
@@ -62,11 +65,18 @@ export function DayTracker({ questionnaire, today, onAddMeal, onDeleteMeal, onCl
                  onChange={(e) => setFruit(e.target.checked)} />
           {" "}כולל פרי
         </label>
-        <label>
-          <input type="checkbox" checked={sweet}
-                 onChange={(e) => setSweet(e.target.checked)} />
-          {" "}כולל מתוק
-        </label>
+        {carbsQuestion.additions!.map((addition) => (
+          <label key={addition.id}>
+            <input type="checkbox" checked={pickedAdditions.has(addition.id)}
+                   onChange={(e) => setPickedAdditions((prev) => {
+                     const next = new Set(prev);
+                     if (e.target.checked) next.add(addition.id);
+                     else next.delete(addition.id);
+                     return next;
+                   })} />
+            {" "}{addition.label}
+          </label>
+        ))}
       </div>
       <div className="tracker-actions">
         {carbsChoiceId !== undefined && (
