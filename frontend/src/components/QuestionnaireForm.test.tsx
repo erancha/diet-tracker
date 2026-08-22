@@ -57,4 +57,20 @@ describe("QuestionnaireForm", () => {
     renderForm({ ...zeroFloors, carbs: 35 });
     expect(screen.getByRole("slider")).toHaveAttribute("max", "35");
   });
+
+  it("offers the tracked value as a choice when the floor tops every choice value", () => {
+    const onSubmit = renderForm({ ...zeroFloors, meals: 5 });
+    const tracked = screen.getByLabelText("5");
+    expect(tracked).toBeEnabled();
+    fireEvent.click(screen.getByLabelText("3 ליטר"));
+    fireEvent.click(tracked);
+    fireEvent.click(screen.getByRole("button", { name: "שליחה" }));
+    expect(onSubmit).toHaveBeenCalledWith({ drinking: 3, meals: 5, carbs: 0 });
+  });
+
+  it("does not synthesize an extra choice while a real choice is still enabled", () => {
+    renderForm({ ...zeroFloors, meals: 4 });
+    // drinking has 2 radios and meals 3; a synthesized option would add a sixth.
+    expect(screen.getAllByRole("radio")).toHaveLength(5);
+  });
 });
