@@ -1,5 +1,5 @@
 {
-  "version": 6,
+  "version": 7,
   "questions": [
     {
       "id": "drinking",
@@ -60,7 +60,8 @@
       "max": 30,
       "sweet_value": 4,
       "choices": [
-        { "id": "no_carbs", "label": "ללא פחמימות", "value": 0 },
+        { "id": "no_carbs", "label": "ללא פחמימות (רזה)", "value": 0 },
+        { "id": "no_carbs_heavy", "label": "ללא פחמימות (שמן)", "value": 2 },
         { "id": "grade1", "label": "דרגה 1 (קטניות)", "value": 1 },
         { "id": "grade2", "label": "דרגה 2 (שיבולת שועל, קינואה, ..)", "value": 2 },
         { "id": "grade3", "label": "דרגה 3 (אורז מלא, תפו\"א)", "value": 3 },
