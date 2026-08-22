@@ -36,10 +36,10 @@ def body_of(response):
     return json.loads(response["body"])
 
 
-def add_meal(carbs_choice="grade3", vegetables=True, fruit=False, at_time="09:10:00"):
+def add_meal(carbs_choice="grade3", vegetables=True, fruit=False, sweet=False, at_time="09:10:00"):
     return api.handler(request("POST /meals", {
         "at": f"{today()}T{at_time}+03:00", "carbs_choice": carbs_choice,
-        "vegetables": vegetables, "fruit": fruit}), None)
+        "vegetables": vegetables, "fruit": fruit, "sweet": sweet}), None)
 
 
 def test_handler_logs_route_and_caller(env, caplog):
@@ -126,6 +126,19 @@ def test_add_meal_records_and_returns_recomputed_day(env):
     assert payload["derived"]["eating_window"] == 4.5
 
 
+def test_sweet_meal_adds_the_sweet_cost_on_top_of_its_grade(env):
+    payload = body_of(add_meal("grade2", sweet=True))
+    assert payload["derived"]["carbs"] == 6
+
+
+def test_add_meal_rejects_a_non_boolean_sweet(env):
+    response = api.handler(request("POST /meals", {
+        "at": f"{today()}T09:00:00+03:00", "carbs_choice": "grade3",
+        "vegetables": False, "fruit": False, "sweet": "yes"}), None)
+    assert response["statusCode"] == 400
+    assert "sweet" in body_of(response)["error"]
+
+
 def test_add_meal_rejects_a_naive_timestamp(env):
     response = api.handler(request("POST /meals", {
         "at": f"{today()}T09:00:00", "carbs_choice": "grade3", "vegetables": False}), None)
@@ -154,7 +167,7 @@ def test_add_meal_rejects_other_dates_unknown_choices_and_submitted_days(env):
 def test_get_day_returns_any_past_days_meals_and_derived(env):
     from common.store import Store
     old = days_before(today(), 30)
-    Store("days", "meals", "state").add_meal("u1", old, f"{old}T09:10:00+03:00", "grade3", True, False)
+    Store("days", "meals", "state").add_meal("u1", old, f"{old}T09:10:00+03:00", "grade3", True, False, False)
     payload = body_of(api.handler(request("GET /days/{date}", path_params={"date": old}), None))
     assert payload["date"] == old
     assert [m["carbs_choice"] for m in payload["meals"]] == ["grade3"]

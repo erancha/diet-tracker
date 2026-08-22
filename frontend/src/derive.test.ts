@@ -11,7 +11,7 @@ const fixture = JSON.parse(
 describe("deriveDay", () => {
   for (const vector of fixture.vectors) {
     it(vector.name, () => {
-      expect(deriveDay(vector.meals, fixture.weights)).toEqual(vector.derived);
+      expect(deriveDay(vector.meals, fixture.weights, fixture.sweet_value)).toEqual(vector.derived);
     });
   }
 });

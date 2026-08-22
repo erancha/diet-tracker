@@ -20,7 +20,7 @@ class Derived:
     eating_window: float
 
 
-def derive(meals: list, weights: dict) -> Derived:
+def derive(meals: list, weights: dict, sweet_value: float) -> Derived:
     if not meals:
         return Derived(carbs=0, meals=0, vegetables=0, eating_window=0)
     ordered = sorted(meals, key=lambda meal: datetime.fromisoformat(meal["at"]))
@@ -32,6 +32,10 @@ def derive(meals: list, weights: dict) -> Derived:
             fruits += 1
             if fruits > 1:
                 weight = max(weight, weights[FRUIT_ESCALATION_CHOICE])
+        # A sweet accompaniment costs on top of the meal's grade (escalated or not), so an
+        # excellent meal with a cookie stays cheaper than a heavy meal with one.
+        if meal["sweet"]:
+            weight += sweet_value
         carbs += weight
     window = (datetime.fromisoformat(ordered[-1]["at"])
               - datetime.fromisoformat(ordered[0]["at"]))

@@ -1,57 +1,68 @@
 {
   "weights": { "no_carbs": 0, "grade1": 1, "grade2": 2, "grade3": 3, "grade4": 4, "grade5": 5,
                "grade6_7": 6, "grade7_light": 7, "grade7_heavy": 8, "alcohol": 4, "nuts": 3 },
+  "sweet_value": 4,
   "vectors": [
     { "name": "empty day", "meals": [],
       "derived": { "carbs": 0, "meals": 0, "vegetables": 0, "eating_window": 0 } },
     { "name": "single meal has zero window", "meals": [
-        { "at": "2026-08-20T09:10:00+03:00", "carbs_choice": "grade2", "vegetables": true, "fruit": false } ],
+        { "at": "2026-08-20T09:10:00+03:00", "carbs_choice": "grade2", "vegetables": true, "fruit": false, "sweet": false } ],
       "derived": { "carbs": 2, "meals": 1, "vegetables": 1, "eating_window": 0 } },
     { "name": "full day with alcohol", "meals": [
-        { "at": "2026-08-20T09:10:00+03:00", "carbs_choice": "no_carbs", "vegetables": true, "fruit": false },
-        { "at": "2026-08-20T13:30:00+03:00", "carbs_choice": "grade4", "vegetables": true, "fruit": false },
-        { "at": "2026-08-20T19:00:00+03:00", "carbs_choice": "grade7_light", "vegetables": false, "fruit": false },
-        { "at": "2026-08-20T21:24:00+03:00", "carbs_choice": "alcohol", "vegetables": false, "fruit": false } ],
+        { "at": "2026-08-20T09:10:00+03:00", "carbs_choice": "no_carbs", "vegetables": true, "fruit": false, "sweet": false },
+        { "at": "2026-08-20T13:30:00+03:00", "carbs_choice": "grade4", "vegetables": true, "fruit": false, "sweet": false },
+        { "at": "2026-08-20T19:00:00+03:00", "carbs_choice": "grade7_light", "vegetables": false, "fruit": false, "sweet": false },
+        { "at": "2026-08-20T21:24:00+03:00", "carbs_choice": "alcohol", "vegetables": false, "fruit": false, "sweet": false } ],
       "derived": { "carbs": 15, "meals": 4, "vegetables": 2, "eating_window": 12 } },
     { "name": "same-minute meals", "meals": [
-        { "at": "2026-08-20T12:00:00+03:00", "carbs_choice": "grade3", "vegetables": false, "fruit": false },
-        { "at": "2026-08-20T12:00:00+03:00", "carbs_choice": "nuts", "vegetables": false, "fruit": false } ],
+        { "at": "2026-08-20T12:00:00+03:00", "carbs_choice": "grade3", "vegetables": false, "fruit": false, "sweet": false },
+        { "at": "2026-08-20T12:00:00+03:00", "carbs_choice": "nuts", "vegetables": false, "fruit": false, "sweet": false } ],
       "derived": { "carbs": 6, "meals": 2, "vegetables": 0, "eating_window": 0 } },
     { "name": "out-of-order input still spans first to last", "meals": [
-        { "at": "2026-08-20T20:00:00+03:00", "carbs_choice": "grade6_7", "vegetables": false, "fruit": false },
-        { "at": "2026-08-20T08:00:00+03:00", "carbs_choice": "no_carbs", "vegetables": true, "fruit": false } ],
+        { "at": "2026-08-20T20:00:00+03:00", "carbs_choice": "grade6_7", "vegetables": false, "fruit": false, "sweet": false },
+        { "at": "2026-08-20T08:00:00+03:00", "carbs_choice": "no_carbs", "vegetables": true, "fruit": false, "sweet": false } ],
       "derived": { "carbs": 6, "meals": 2, "vegetables": 1, "eating_window": 12 } },
     { "name": "12.25h midpoint rounds down to the even half hour", "meals": [
-        { "at": "2026-08-20T08:00:00+03:00", "carbs_choice": "no_carbs", "vegetables": false, "fruit": false },
-        { "at": "2026-08-20T20:15:00+03:00", "carbs_choice": "grade1", "vegetables": false, "fruit": false } ],
+        { "at": "2026-08-20T08:00:00+03:00", "carbs_choice": "no_carbs", "vegetables": false, "fruit": false, "sweet": false },
+        { "at": "2026-08-20T20:15:00+03:00", "carbs_choice": "grade1", "vegetables": false, "fruit": false, "sweet": false } ],
       "derived": { "carbs": 1, "meals": 2, "vegetables": 0, "eating_window": 12 } },
     { "name": "12.75h midpoint rounds up to the even half hour", "meals": [
-        { "at": "2026-08-20T08:00:00+03:00", "carbs_choice": "no_carbs", "vegetables": false, "fruit": false },
-        { "at": "2026-08-20T20:45:00+03:00", "carbs_choice": "grade1", "vegetables": false, "fruit": false } ],
+        { "at": "2026-08-20T08:00:00+03:00", "carbs_choice": "no_carbs", "vegetables": false, "fruit": false, "sweet": false },
+        { "at": "2026-08-20T20:45:00+03:00", "carbs_choice": "grade1", "vegetables": false, "fruit": false, "sweet": false } ],
       "derived": { "carbs": 1, "meals": 2, "vegetables": 0, "eating_window": 13 } },
     { "name": "20 minutes past the hour rounds to the next half hour", "meals": [
-        { "at": "2026-08-20T08:00:00+03:00", "carbs_choice": "no_carbs", "vegetables": false, "fruit": false },
-        { "at": "2026-08-20T18:20:00+03:00", "carbs_choice": "grade1", "vegetables": false, "fruit": false } ],
+        { "at": "2026-08-20T08:00:00+03:00", "carbs_choice": "no_carbs", "vegetables": false, "fruit": false, "sweet": false },
+        { "at": "2026-08-20T18:20:00+03:00", "carbs_choice": "grade1", "vegetables": false, "fruit": false, "sweet": false } ],
       "derived": { "carbs": 1, "meals": 2, "vegetables": 0, "eating_window": 10.5 } },
     { "name": "the day's single fruit rides free with its grade", "meals": [
-        { "at": "2026-08-20T09:00:00+03:00", "carbs_choice": "grade1", "vegetables": false, "fruit": true } ],
+        { "at": "2026-08-20T09:00:00+03:00", "carbs_choice": "grade1", "vegetables": false, "fruit": true, "sweet": false } ],
       "derived": { "carbs": 1, "meals": 1, "vegetables": 0, "eating_window": 0 } },
     { "name": "second fruit escalates its meal to grade 5", "meals": [
-        { "at": "2026-08-20T09:00:00+03:00", "carbs_choice": "grade1", "vegetables": false, "fruit": true },
-        { "at": "2026-08-20T13:00:00+03:00", "carbs_choice": "grade2", "vegetables": false, "fruit": true } ],
+        { "at": "2026-08-20T09:00:00+03:00", "carbs_choice": "grade1", "vegetables": false, "fruit": true, "sweet": false },
+        { "at": "2026-08-20T13:00:00+03:00", "carbs_choice": "grade2", "vegetables": false, "fruit": true, "sweet": false } ],
       "derived": { "carbs": 6, "meals": 2, "vegetables": 0, "eating_window": 4 } },
     { "name": "third fruit escalates again", "meals": [
-        { "at": "2026-08-20T09:00:00+03:00", "carbs_choice": "no_carbs", "vegetables": false, "fruit": true },
-        { "at": "2026-08-20T13:00:00+03:00", "carbs_choice": "grade1", "vegetables": false, "fruit": true },
-        { "at": "2026-08-20T19:00:00+03:00", "carbs_choice": "no_carbs", "vegetables": false, "fruit": true } ],
+        { "at": "2026-08-20T09:00:00+03:00", "carbs_choice": "no_carbs", "vegetables": false, "fruit": true, "sweet": false },
+        { "at": "2026-08-20T13:00:00+03:00", "carbs_choice": "grade1", "vegetables": false, "fruit": true, "sweet": false },
+        { "at": "2026-08-20T19:00:00+03:00", "carbs_choice": "no_carbs", "vegetables": false, "fruit": true, "sweet": false } ],
       "derived": { "carbs": 10, "meals": 3, "vegetables": 0, "eating_window": 10 } },
     { "name": "a meal already heavier than grade 5 keeps its own weight", "meals": [
-        { "at": "2026-08-20T09:00:00+03:00", "carbs_choice": "grade1", "vegetables": false, "fruit": true },
-        { "at": "2026-08-20T13:00:00+03:00", "carbs_choice": "grade7_heavy", "vegetables": false, "fruit": true } ],
+        { "at": "2026-08-20T09:00:00+03:00", "carbs_choice": "grade1", "vegetables": false, "fruit": true, "sweet": false },
+        { "at": "2026-08-20T13:00:00+03:00", "carbs_choice": "grade7_heavy", "vegetables": false, "fruit": true, "sweet": false } ],
       "derived": { "carbs": 9, "meals": 2, "vegetables": 0, "eating_window": 4 } },
     { "name": "the free fruit is the chronologically first, not the first listed", "meals": [
-        { "at": "2026-08-20T20:00:00+03:00", "carbs_choice": "grade1", "vegetables": false, "fruit": true },
-        { "at": "2026-08-20T08:00:00+03:00", "carbs_choice": "grade2", "vegetables": false, "fruit": true } ],
-      "derived": { "carbs": 7, "meals": 2, "vegetables": 0, "eating_window": 12 } }
+        { "at": "2026-08-20T20:00:00+03:00", "carbs_choice": "grade1", "vegetables": false, "fruit": true, "sweet": false },
+        { "at": "2026-08-20T08:00:00+03:00", "carbs_choice": "grade2", "vegetables": false, "fruit": true, "sweet": false } ],
+      "derived": { "carbs": 7, "meals": 2, "vegetables": 0, "eating_window": 12 } },
+    { "name": "a sweet addition adds its cost on top of the meal's grade", "meals": [
+        { "at": "2026-08-20T09:10:00+03:00", "carbs_choice": "grade2", "vegetables": true, "fruit": false, "sweet": true } ],
+      "derived": { "carbs": 6, "meals": 1, "vegetables": 1, "eating_window": 0 } },
+    { "name": "a sweet addition on an already heavy meal still adds, never replaces", "meals": [
+        { "at": "2026-08-20T13:00:00+03:00", "carbs_choice": "grade7_heavy", "vegetables": false, "fruit": false, "sweet": true } ],
+      "derived": { "carbs": 12, "meals": 1, "vegetables": 0, "eating_window": 0 } },
+    { "name": "a sweet addition composes with second-fruit escalation", "meals": [
+        { "at": "2026-08-20T09:00:00+03:00", "carbs_choice": "grade1", "vegetables": false, "fruit": true, "sweet": false },
+        { "at": "2026-08-20T13:00:00+03:00", "carbs_choice": "grade2", "vegetables": false, "fruit": true, "sweet": true } ],
+      "derived": { "carbs": 10, "meals": 2, "vegetables": 0, "eating_window": 4 } }
   ]
 }

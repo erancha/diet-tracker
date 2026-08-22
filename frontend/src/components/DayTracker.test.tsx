@@ -13,7 +13,7 @@ const emptyDay: DayPayload = {
 const dayWithMealHoursAgo = (hours: number): DayPayload => ({
   date: "2026-08-20",
   meals: [{ id: "m", at: new Date(Date.now() - hours * 3_600_000).toISOString(),
-            carbs_choice: "no_carbs", vegetables: false, fruit: false }],
+            carbs_choice: "no_carbs", vegetables: false, fruit: false, sweet: false }],
   derived: { carbs: 0, meals: 1, vegetables: 0, eating_window: 0 },
 });
 
@@ -46,7 +46,7 @@ describe("DayTracker", () => {
     expect(screen.queryByText("פחמימות (סיכום ציון)")).toBeNull();
   });
 
-  it("records a meal with the picked grade, vegetables and fruit flags", () => {
+  it("records a meal with the picked grade, vegetables, fruit and sweet flags", () => {
     const onAddMeal = vi.fn();
     render(<DayTracker questionnaire={questionnaire} today={emptyDay}
                        onAddMeal={onAddMeal} onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
@@ -54,9 +54,10 @@ describe("DayTracker", () => {
     fireEvent.click(screen.getByLabelText("דרגה 4"));
     fireEvent.click(screen.getByLabelText("כולל ירקות"));
     fireEvent.click(screen.getByLabelText("כולל פרי"));
+    fireEvent.click(screen.getByLabelText("כולל מתוק"));
     fireEvent.click(screen.getByRole("button", { name: "רישום ארוחה" }));
     expect(onAddMeal).toHaveBeenCalledWith(expect.objectContaining({
-      carbs_choice: "grade4", vegetables: true, fruit: true }));
+      carbs_choice: "grade4", vegetables: true, fruit: true, sweet: true }));
     // Stamped at tap time with a UTC offset — the test runs on an arbitrary real date.
     expect(onAddMeal.mock.calls[0][0].at).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$/);
   });
@@ -116,6 +117,18 @@ describe("DayTracker", () => {
     expect(screen.getByText(/🍎/)).toBeInTheDocument();
     fireEvent.click(screen.getAllByRole("button", { name: /מחיקת ארוחה/ })[1]);
     expect(onDeleteMeal).toHaveBeenCalledWith("b");
+  });
+
+  it("shows the sweet marker on a meal recorded with the sweet flag", () => {
+    const sweetDay: DayPayload = {
+      date: "2026-08-20",
+      meals: [{ id: "a", at: "2026-08-20T09:10:00+03:00", carbs_choice: "grade4",
+                vegetables: false, fruit: false, sweet: true }],
+      derived: { carbs: 8, meals: 1, vegetables: 0, eating_window: 0 },
+    };
+    render(<DayTracker questionnaire={questionnaire} today={sweetDay}
+                       onAddMeal={vi.fn()} onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    expect(screen.getByText(/🍪/)).toBeInTheDocument();
   });
 
   it("marks each meal's delete button with the compact delete-meal style", () => {

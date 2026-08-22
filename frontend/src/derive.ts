@@ -21,7 +21,7 @@ function roundToHalfHour(hours: number): number {
   return (whole % 2 === 0 ? whole : whole + 1) / 2;
 }
 
-export function deriveDay(meals: Pick<Meal, "at" | "carbs_choice" | "vegetables" | "fruit">[], weights: Record<string, number>): Derived {
+export function deriveDay(meals: Pick<Meal, "at" | "carbs_choice" | "vegetables" | "fruit" | "sweet">[], weights: Record<string, number>, sweetValue: number): Derived {
   if (meals.length === 0) return { carbs: 0, meals: 0, vegetables: 0, eating_window: 0 };
   const ordered = [...meals].sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime());
   let carbs = 0;
@@ -37,6 +37,9 @@ export function deriveDay(meals: Pick<Meal, "at" | "carbs_choice" | "vegetables"
         weight = Math.max(weight, escalation);
       }
     }
+    // A sweet accompaniment costs on top of the meal's grade (escalated or not), so an
+    // excellent meal with a cookie stays cheaper than a heavy meal with one.
+    if (meal.sweet) weight += sweetValue;
     carbs += weight;
   }
   const window = new Date(ordered[ordered.length - 1].at).getTime() - new Date(ordered[0].at).getTime();

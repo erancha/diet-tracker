@@ -31,7 +31,7 @@ def minimal(**overrides):
 
 def test_repo_config_loads_with_numeric_choices_and_threshold_rules():
     q = load(CONFIG)
-    assert q.version == 5
+    assert q.version == 6
     carbs = q.question("carbs")
     assert carbs.type == "points" and carbs.max == 30
     assert carbs.day_title == f"{carbs.text} ({carbs.day_qualifier})"
@@ -40,6 +40,8 @@ def test_repo_config_loads_with_numeric_choices_and_threshold_rules():
     assert q.carb_weights()["grade1"] == 1
     assert q.carb_weights()["grade2"] == 2
     assert "grade1_2" not in q.carb_weights()
+    assert q.sweet_value() == 4
+    assert "sweet" not in q.carb_weights()
     assert {r.id for r in q.rules} == {
         "low_drinking", "no_vegetables", "long_eating_window", "too_many_meals", "heavy_carbs"}
 
@@ -50,6 +52,12 @@ def test_repo_config_orders_questions_like_the_day_dashboard_with_carbs_last():
     q = load(CONFIG)
     assert [question.id for question in q.questions] == [
         "drinking", "meals", "vegetables", "eating_window", "carbs"]
+
+
+def test_sweet_value_missing_from_config_raises(tmp_path):
+    q = load(write(tmp_path, minimal()))
+    with pytest.raises(ValueError, match="sweet_value"):
+        q.sweet_value()
 
 
 def test_rule_violates_compares_numerically(tmp_path):

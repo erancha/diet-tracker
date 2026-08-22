@@ -24,6 +24,7 @@ export function DayTracker({ questionnaire, today, onAddMeal, onDeleteMeal, onCl
   const [carbsChoiceId, setCarbsChoiceId] = useState<string | undefined>(undefined);
   const [vegetables, setVegetables] = useState(false);
   const [fruit, setFruit] = useState(false);
+  const [sweet, setSweet] = useState(false);
   const [closing, setClosing] = useState(false);
   const [drinkingChoiceId, setDrinkingChoiceId] = useState<string | undefined>(undefined);
 
@@ -36,10 +37,11 @@ export function DayTracker({ questionnaire, today, onAddMeal, onDeleteMeal, onCl
 
   // Only reachable through the record button, which renders only once a grade is picked.
   function recordMeal() {
-    onAddMeal({ at: localIso(new Date()), carbs_choice: carbsChoiceId!, vegetables, fruit });
+    onAddMeal({ at: localIso(new Date()), carbs_choice: carbsChoiceId!, vegetables, fruit, sweet });
     setCarbsChoiceId(undefined);
     setVegetables(false);
     setFruit(false);
+    setSweet(false);
   }
 
   return (
@@ -59,6 +61,11 @@ export function DayTracker({ questionnaire, today, onAddMeal, onDeleteMeal, onCl
           <input type="checkbox" checked={fruit}
                  onChange={(e) => setFruit(e.target.checked)} />
           {" "}כולל פרי
+        </label>
+        <label>
+          <input type="checkbox" checked={sweet}
+                 onChange={(e) => setSweet(e.target.checked)} />
+          {" "}כולל מתוק
         </label>
       </div>
       <div className="tracker-actions">

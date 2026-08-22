@@ -26,6 +26,7 @@ export function MealList({ questionnaire, meals, onDelete }: {
             </span>
             {meal.vegetables && " · 🥗"}
             {meal.fruit && " · 🍎"}
+            {meal.sweet && " · 🍪"}
             {onDelete && (
               <button type="button" className="delete-meal" aria-label={`מחיקת ארוחה ${timeOf(meal.at)}`}
                       onClick={() => { if (window.confirm("למחוק את הארוחה?")) onDelete(meal.id); }}>

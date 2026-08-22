@@ -14,6 +14,8 @@ export interface Question {
   choices: Choice[];
   panel_title?: string;
   max?: number;
+  // Present only on the carbs question: point cost a meal's sweet flag adds on top of its grade.
+  sweet_value?: number;
   // Hover explanation shown wherever the question text is a heading (form legend, history header).
   tooltip?: string;
   // Parenthesized qualifiers appended to the text per heading scope (see questionTitle): text
@@ -46,6 +48,7 @@ export interface Meal {
   carbs_choice: string;
   vegetables: boolean;
   fruit: boolean;
+  sweet: boolean;
 }
 
 export interface Derived {
@@ -78,6 +81,7 @@ export interface NewMeal {
   carbs_choice: string;
   vegetables: boolean;
   fruit: boolean;
+  sweet: boolean;
 }
 
 export interface Violation {
