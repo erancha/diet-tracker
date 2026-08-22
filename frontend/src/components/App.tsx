@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { Api } from "../api";
+import { alertMessage, type Api } from "../api";
 import type { AnswerValue, Derived, Questionnaire } from "../types";
 import { defaultDay, expandQuestionnaire, isoDate, yesterdayOf } from "../dates";
 import { Alerts, type AlertItem } from "./Alerts";
@@ -55,6 +55,9 @@ export function App({ email, api, reminderHour, onSignOut }: {
     }
   }, [day, historyDays, now]);
 
+  const errorAlert = (action: string) => (error: Error) =>
+    setAlerts([{ kind: "alert", message: alertMessage(action, error) }]);
+
   const submitMutation = useMutation({
     mutationFn: api.submitDay,
     onSuccess: (result) => {
@@ -63,7 +66,7 @@ export function App({ email, api, reminderHour, onSignOut }: {
         : [{ kind: "ok", message: `נשמר לתאריך ${result.date}! אין חריגות היום ✔` }]);
       queryClient.invalidateQueries({ queryKey: ["days"] });
     },
-    onError: (error) => setAlerts([{ kind: "alert", message: String(error) }]),
+    onError: errorAlert("שמירת היום נכשלה"),
   });
 
   const deleteMutation = useMutation({
@@ -72,27 +75,27 @@ export function App({ email, api, reminderHour, onSignOut }: {
       setAlerts([{ kind: "ok", message: `הרשומה של ${result.date} נמחקה` }]);
       queryClient.invalidateQueries({ queryKey: ["days"] });
     },
-    onError: (error) => setAlerts([{ kind: "alert", message: String(error) }]),
+    onError: errorAlert("מחיקת הרשומה נכשלה"),
   });
 
   const mealMutation = useMutation({
     mutationFn: api.addMeal,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["days"] }),
-    onError: (error) => setAlerts([{ kind: "alert", message: String(error) }]),
+    onError: errorAlert("הוספת הארוחה נכשלה"),
   });
 
   const deleteMealMutation = useMutation({
     mutationFn: (id: string) => api.deleteMeal(todayStr, id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["days"] }),
-    onError: (error) => setAlerts([{ kind: "alert", message: String(error) }]),
+    onError: errorAlert("מחיקת הארוחה נכשלה"),
   });
 
   if (questionnaireQuery.isPending || historyQuery.isPending) {
     return <main>טוען…</main>;
   }
   if (questionnaireQuery.isError || historyQuery.isError) {
-    const error = questionnaireQuery.error ?? historyQuery.error;
-    return <main><div className="alert">{String(error)}</div></main>;
+    const error = (questionnaireQuery.error ?? historyQuery.error)!;
+    return <main><div className="alert">{alertMessage("טעינת הנתונים נכשלה", error)}</div></main>;
   }
 
   const questionnaire = questionnaireQuery.data;
@@ -136,7 +139,7 @@ export function App({ email, api, reminderHour, onSignOut }: {
           )}
           {viewedDate !== null && (
             viewedDayQuery.isPending ? <p>טוען…</p>
-            : viewedDayQuery.isError ? <div className="alert">{String(viewedDayQuery.error)}</div>
+            : viewedDayQuery.isError ? <div className="alert">{alertMessage("טעינת היום נכשלה", viewedDayQuery.error)}</div>
             : <DayView questionnaire={questionnaire} day={viewedDayQuery.data}
                        onClose={() => setViewedDate(null)} />
           )}

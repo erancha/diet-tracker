@@ -1,8 +1,28 @@
-// Typed client for the authenticated backend API, bound to the signed-in user's tokens.
+// Typed client for the authenticated backend API, bound to the signed-in user's tokens, plus the
+// Hebrew alert text the UI shows when a request fails.
 
 import type { Tokens } from "./auth";
 import type { AppConfig } from "./config";
 import type { AnswerValue, DayPayload, HistoryResponse, NewMeal, SubmitResult } from "./types";
+
+/** Backend request rejected; the message keeps the method, path, status, and body for diagnosis. */
+export class ApiError extends Error {
+  constructor(readonly status: number, detail: string) {
+    super(detail);
+  }
+}
+
+/**
+ * Builds the Hebrew alert text for a failed action. The already-submitted conflict (409) is the
+ * one API error a legitimate user can hit — a second tab or device closed the day first — so it
+ * gets a fully Hebrew explanation; anything else is unexpected, so a Hebrew lead names the failed
+ * action and the technical detail follows for diagnosis.
+ */
+export function alertMessage(action: string, error: Error): string {
+  return error instanceof ApiError && error.status === 409
+    ? "היום הזה כבר נשלח — יש לרענן את הדף"
+    : `${action} (${error.message})`;
+}
 
 export interface SubmitPayload {
   answers: Record<string, AnswerValue>;
@@ -28,7 +48,9 @@ export function createApi(cfg: AppConfig, tokens: Tokens): Api {
       },
       body: body === undefined ? undefined : JSON.stringify(body),
     });
-    if (!response.ok) throw new Error(`${method} ${path} → ${response.status}: ${await response.text()}`);
+    if (!response.ok) {
+      throw new ApiError(response.status, `${method} ${path} → ${response.status}: ${await response.text()}`);
+    }
     return response.json();
   }
   return {
