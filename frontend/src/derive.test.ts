@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { deriveDay } from "./derive";
+import { deriveDay, mealWeights } from "./derive";
 
 // The same vectors pin src/common/derive.py — reading the file keeps one fixture for both
 // runtimes without import-path acrobatics.
@@ -14,4 +14,29 @@ describe("deriveDay", () => {
       expect(deriveDay(vector.meals, fixture.weights, fixture.sweet_value)).toEqual(vector.derived);
     });
   }
+});
+
+describe("mealWeights", () => {
+  for (const vector of fixture.vectors) {
+    it(`sums to the day's carb score — ${vector.name}`, () => {
+      const perMeal = mealWeights(vector.meals, fixture.weights, fixture.sweet_value);
+      expect(perMeal.reduce((sum, w) => sum + w, 0)).toBe(vector.derived.carbs);
+    });
+  }
+
+  it("aligns results with the input order, not chronological order", () => {
+    const meals = [
+      { at: "2026-08-20T20:00:00+03:00", carbs_choice: "grade6_7", vegetables: false, fruit: false, sweet: false },
+      { at: "2026-08-20T08:00:00+03:00", carbs_choice: "no_carbs", vegetables: false, fruit: false, sweet: false },
+    ];
+    expect(mealWeights(meals, fixture.weights, fixture.sweet_value)).toEqual([6, 0]);
+  });
+
+  it("escalates the chronologically later fruit meal even when listed first", () => {
+    const meals = [
+      { at: "2026-08-20T13:00:00+03:00", carbs_choice: "grade1", vegetables: false, fruit: true, sweet: false },
+      { at: "2026-08-20T09:00:00+03:00", carbs_choice: "grade1", vegetables: false, fruit: true, sweet: false },
+    ];
+    expect(mealWeights(meals, fixture.weights, fixture.sweet_value)).toEqual([5, 1]);
+  });
 });

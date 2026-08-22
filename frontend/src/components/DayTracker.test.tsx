@@ -119,6 +119,13 @@ describe("DayTracker", () => {
     expect(onDeleteMeal).toHaveBeenCalledWith("b");
   });
 
+  it("shows each meal's effective points at the end of its row", () => {
+    render(<DayTracker questionnaire={questionnaire} today={trackedDay}
+                       onAddMeal={vi.fn()} onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    expect(screen.getByText("09:10").closest("li")).toHaveTextContent("ללא פחמימות · 🥗 · 0");
+    expect(screen.getByText("13:30").closest("li")).toHaveTextContent("דרגה 4 · 🍎 · 4");
+  });
+
   it("shows the sweet marker on a meal recorded with the sweet flag", () => {
     const sweetDay: DayPayload = {
       date: "2026-08-20",

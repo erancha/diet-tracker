@@ -42,7 +42,7 @@ export const trackerQuestionnaire: Questionnaire = {
   questions: [
     { id: "drinking", type: "single", text: "שתיה",
       choices: [{ id: "l3", label: "3 ליטר", value: 3 }] },
-    { id: "carbs", type: "points", text: "פחמימות", max: 30,
+    { id: "carbs", type: "points", text: "פחמימות", max: 30, sweet_value: 4,
       tooltip: "המטרה היא ציון נמוך", day_qualifier: "סיכום ציון", meal_qualifier: "דרגת הארוחה",
       choices: [{ id: "no_carbs", label: "ללא פחמימות", value: 0 },
                 { id: "grade4", label: "דרגה 4", value: 4 },

@@ -21,12 +21,15 @@ function roundToHalfHour(hours: number): number {
   return (whole % 2 === 0 ? whole : whole + 1) / 2;
 }
 
-export function deriveDay(meals: Pick<Meal, "at" | "carbs_choice" | "vegetables" | "fruit" | "sweet">[], weights: Record<string, number>, sweetValue: number): Derived {
-  if (meals.length === 0) return { carbs: 0, meals: 0, vegetables: 0, eating_window: 0 };
-  const ordered = [...meals].sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime());
-  let carbs = 0;
+// Each meal's effective carb contribution — its grade weight after fruit escalation, plus the
+// sweet surcharge — aligned with the input order so callers can label the meals they passed in.
+// The returned weights sum to the day's carb score.
+export function mealWeights(meals: Pick<Meal, "at" | "carbs_choice" | "fruit" | "sweet">[], weights: Record<string, number>, sweetValue: number): number[] {
+  const chronological = meals.map((meal, index) => ({ meal, index }))
+    .sort((a, b) => new Date(a.meal.at).getTime() - new Date(b.meal.at).getTime());
+  const result = new Array<number>(meals.length);
   let fruits = 0;
-  for (const meal of ordered) {
+  for (const { meal, index } of chronological) {
     let weight = weights[meal.carbs_choice];
     if (weight === undefined) throw new Error(`unknown carbs choice ${meal.carbs_choice}`);
     if (meal.fruit) {
@@ -40,11 +43,17 @@ export function deriveDay(meals: Pick<Meal, "at" | "carbs_choice" | "vegetables"
     // A sweet accompaniment costs on top of the meal's grade (escalated or not), so an
     // excellent meal with a cookie stays cheaper than a heavy meal with one.
     if (meal.sweet) weight += sweetValue;
-    carbs += weight;
+    result[index] = weight;
   }
+  return result;
+}
+
+export function deriveDay(meals: Pick<Meal, "at" | "carbs_choice" | "vegetables" | "fruit" | "sweet">[], weights: Record<string, number>, sweetValue: number): Derived {
+  if (meals.length === 0) return { carbs: 0, meals: 0, vegetables: 0, eating_window: 0 };
+  const ordered = [...meals].sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime());
   const window = new Date(ordered[ordered.length - 1].at).getTime() - new Date(ordered[0].at).getTime();
   return {
-    carbs,
+    carbs: mealWeights(meals, weights, sweetValue).reduce((sum, w) => sum + w, 0),
     meals: meals.length,
     vegetables: meals.filter((m) => m.vegetables).length,
     eating_window: roundToHalfHour(window / 3600_000),
