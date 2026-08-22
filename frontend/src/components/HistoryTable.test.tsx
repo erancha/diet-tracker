@@ -2,13 +2,14 @@ import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HistoryTable } from "./HistoryTable";
-import { fixtureQuestionnaire } from "../test-fixtures";
+import { fixtureQuestionnaire, trackerQuestionnaire } from "../test-fixtures";
 
 const days = [
   { date: "2026-08-17", answers: { drinking: 2 } },
 ];
 
-const noDelete = { deletableDates: new Set<string>(), onDelete: () => {} };
+const noDelete = { deletableDates: new Set<string>(), onDelete: () => {},
+  todayDate: "2026-08-21", onView: () => {} };
 
 describe("HistoryTable", () => {
   it("marks a violating exact-match answer with its choice label", () => {
@@ -29,13 +30,43 @@ describe("HistoryTable", () => {
   it("reports the row's date when its delete button is clicked", async () => {
     const onDelete = vi.fn();
     render(<HistoryTable questionnaire={fixtureQuestionnaire} days={days}
-      deletableDates={new Set(["2026-08-17"])} onDelete={onDelete} />);
+      {...noDelete} deletableDates={new Set(["2026-08-17"])} onDelete={onDelete} />);
     await userEvent.click(screen.getByRole("button", { name: "מחיקת הרשומה של 2026-08-17" }));
     expect(onDelete).toHaveBeenCalledWith("2026-08-17");
   });
 
   it("omits the delete button for dates outside the deletable window", () => {
     render(<HistoryTable questionnaire={fixtureQuestionnaire} days={days} {...noDelete} />);
-    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /מחיקת/ })).not.toBeInTheDocument();
+  });
+
+  it("makes the whole score summary cell the view control for a past day", async () => {
+    const onView = vi.fn();
+    render(<HistoryTable questionnaire={trackerQuestionnaire}
+      days={[{ date: "2026-08-17", answers: { carbs: 4, drinking: 3 } }]}
+      {...noDelete} onView={onView} />);
+    const cell = screen.getByRole("button", { name: "הצגת היומן של 2026-08-17" });
+    expect(cell.tagName).toBe("TD");
+    expect(cell).toHaveTextContent("4");
+    await userEvent.click(cell);
+    expect(onView).toHaveBeenCalledWith("2026-08-17");
+  });
+
+  it("omits the view button for today's row, whose live tracker is already open", () => {
+    render(<HistoryTable questionnaire={trackerQuestionnaire}
+      days={[{ date: "2026-08-21", answers: { carbs: 4, drinking: 3 } }]} {...noDelete} />);
+    expect(screen.queryByRole("button", { name: /הצגת היומן/ })).not.toBeInTheDocument();
+  });
+
+  it("reddens a score above 30% of the max; the violation background never reaches the score column", () => {
+    render(<HistoryTable questionnaire={trackerQuestionnaire}
+      days={[{ date: "2026-08-16", answers: { carbs: 10, drinking: 3 } },
+             { date: "2026-08-15", answers: { carbs: 9, drinking: 3 } }]} {...noDelete} />);
+    const high = screen.getByRole("button", { name: "הצגת היומן של 2026-08-16" });
+    expect(high).toHaveClass("high-score");
+    expect(high).not.toHaveClass("violation");
+    const low = screen.getByRole("button", { name: "הצגת היומן של 2026-08-15" });
+    expect(low).not.toHaveClass("high-score");
+    expect(low).not.toHaveClass("violation");
   });
 });

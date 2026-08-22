@@ -7,15 +7,16 @@ import { Alerts, type AlertItem } from "./Alerts";
 import { CollapsibleSection } from "./CollapsibleSection";
 import { DayPicker, type DayChoice } from "./DayPicker";
 import { DayTracker } from "./DayTracker";
+import { DayView } from "./DayView";
 import { Header } from "./Header";
 import { HistoryTable } from "./HistoryTable";
 import { QuestionnaireForm } from "./QuestionnaireForm";
 import { TrendChart } from "./TrendChart";
 
 // Top-level screen: owns the server data (questionnaire config, day history, today's and
-// yesterday's meal payloads) and every mutation — meal recording and deletion, day submission
-// with tracked floors, day deletion — plus the submit → alerts flow; the components below it
-// are presentational.
+// yesterday's meal payloads, on-demand past-day payloads) and every mutation — meal recording
+// and deletion, day submission with tracked floors, day deletion — plus the submit → alerts
+// flow; the components below it are presentational.
 export function App({ email, api, reminderHour, onSignOut }: {
   email: string; api: Api; reminderHour: number; onSignOut: () => void;
 }) {
@@ -38,6 +39,14 @@ export function App({ email, api, reminderHour, onSignOut }: {
     staleTime: Infinity,
   });
   const historyQuery = useQuery({ queryKey: ["days"], queryFn: api.getDays });
+
+  // The history row whose read-only day view is open, or null when none is.
+  const [viewedDate, setViewedDate] = useState<string | null>(null);
+  const viewedDayQuery = useQuery({
+    queryKey: ["day", viewedDate],
+    queryFn: () => api.getDay(viewedDate!),
+    enabled: viewedDate !== null,
+  });
 
   const historyDays = historyQuery.data?.days;
   useEffect(() => {
@@ -125,14 +134,22 @@ export function App({ email, api, reminderHour, onSignOut }: {
           {data.days.length > 0 && (
             <TrendChart questionnaire={questionnaire} days={data.days} endDate={data.days[0].date} />
           )}
+          {viewedDate !== null && (
+            viewedDayQuery.isPending ? <p>טוען…</p>
+            : viewedDayQuery.isError ? <div className="alert">{String(viewedDayQuery.error)}</div>
+            : <DayView questionnaire={questionnaire} day={viewedDayQuery.data}
+                       onClose={() => setViewedDate(null)} />
+          )}
           <div className="table-wrap">
             <HistoryTable
               questionnaire={questionnaire}
               days={data.days}
               deletableDates={new Set([todayStr, yesterdayStr])}
+              todayDate={todayStr}
               onDelete={(date) => {
                 if (window.confirm(`למחוק את הרשומה של ${date}?`)) deleteMutation.mutate(date);
               }}
+              onView={setViewedDate}
             />
           </div>
         </CollapsibleSection>

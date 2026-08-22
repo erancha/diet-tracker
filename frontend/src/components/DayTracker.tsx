@@ -2,6 +2,8 @@ import { useState } from "react";
 import type { DayPayload, NewMeal, Questionnaire } from "../types";
 import { ChoiceFieldset } from "./ChoiceFieldset";
 import { CollapsibleSection } from "./CollapsibleSection";
+import { DayDashboard } from "./DayDashboard";
+import { MealList } from "./MealList";
 
 // Hours since the last meal below which the tracker starts collapsed instead of expanded.
 const REOPEN_GAP_HOURS = 4;
@@ -25,10 +27,6 @@ export function DayTracker({ questionnaire, today, onAddMeal, onDeleteMeal, onCl
   const [closing, setClosing] = useState(false);
   const [drinkingChoiceId, setDrinkingChoiceId] = useState<string | undefined>(undefined);
 
-  const gradeLabel = (choiceId: string) =>
-    carbsQuestion.choices.find((c) => c.id === choiceId)?.label ?? choiceId;
-  const timeOf = (at: string) => at.slice(11, 16);
-
   // Right after a meal the tracker has nothing left to ask, so it starts folded to its dashboard
   // and opens on its own only once the typical between-meals gap (four hours) has passed. Meals
   // arrive in chronological sort-key order, so the last entry is the latest.
@@ -47,12 +45,7 @@ export function DayTracker({ questionnaire, today, onAddMeal, onDeleteMeal, onCl
   return (
     <CollapsibleSection className="day-tracker" title="יומן היום" defaultCollapsed={withinMealGap}
                         summary={
-      <div className="tracker-dashboard">
-        <span>ארוחות: {today.derived.meals}</span>
-        <span>ירקות: {today.derived.vegetables}</span>
-        <span>חלון: {today.derived.eating_window} שעות</span>
-        <strong title={carbsQuestion.tooltip}>ציון: {today.derived.carbs}</strong>
-      </div>
+      <DayDashboard questionnaire={questionnaire} derived={today.derived} />
     }>
       <ChoiceFieldset question={carbsQuestion} selectedId={carbsChoiceId} scope="meal"
                       onPick={(choice) => setCarbsChoiceId(choice.id)} />
@@ -80,19 +73,7 @@ export function DayTracker({ questionnaire, today, onAddMeal, onDeleteMeal, onCl
           </button>
         )}
       </div>
-      <ul className="meal-list">
-        {today.meals.map((meal) => (
-          <li key={meal.id}>
-            <strong>{timeOf(meal.at)}</strong> · {gradeLabel(meal.carbs_choice)}
-            {meal.vegetables && " · 🥗"}
-            {meal.fruit && " · 🍎"}
-            <button type="button" className="delete-meal" aria-label={`מחיקת ארוחה ${timeOf(meal.at)}`}
-                    onClick={() => { if (window.confirm("למחוק את הארוחה?")) onDeleteMeal(meal.id); }}>
-              🗑️
-            </button>
-          </li>
-        ))}
-      </ul>
+      <MealList questionnaire={questionnaire} meals={today.meals} onDelete={onDeleteMeal} />
       {/* A day with fewer than two meals is not a tracked day worth closing from here; deleting
           down to one meal mid-close also folds the panel away. */}
       {closing && today.meals.length >= 2 && (

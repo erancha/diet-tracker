@@ -52,11 +52,22 @@ th { vertical-align: top; }
    default heading gap, so the section header sits close to the data it labels. */
 .history h2 { margin-bottom: 0.25em; }
 td.violation { background: #ffebee; color: var(--danger); }
-/* The trash glyph can render as a monochrome outline that takes the CSS text color — it must
-   inherit the surrounding text color, not the global button rule's white, or it vanishes on the
-   white background. */
-.delete-day, .delete-meal { background: none; color: inherit; padding: 0 0.3rem; font-size: 1rem; }
+/* Above-threshold carb scores read as red text pinned to the score itself: the history score
+   cell, the dashboard total, and a meal's grade text. */
+td.high-score, .tracker-dashboard strong.high-score, .meal-list .high-grade { color: var(--danger); }
+/* The trash and close glyphs can render as monochrome outlines that take the CSS text color —
+   they must inherit the surrounding text color, not the global button rule's white, or they
+   vanish on the white background. */
+.delete-day, .delete-meal, .close-view { background: none; color: inherit; padding: 0 0.3rem; font-size: 1rem; }
 .delete-day { margin-inline-start: 0.4rem; }
+/* The whole score cell is the open-day-view control, not a small button inside it. */
+td.view-day { cursor: pointer; }
+
+/* The read-only day view sits above the history table on the same white card styling as the
+   live tracker, so a past day reads as the same surface. */
+.day-view { background: #fff; border-radius: 8px; padding: 1rem; margin: 0.5rem 0 1rem; }
+.day-view header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.4em; }
+.day-view h3 { margin: 0; }
 
 .trend { margin: 0 0 0.75rem; }
 .trend-panel-title { display: flex; align-items: center; gap: 0.35rem; font-size: 12px; margin: 0 0 0.15rem; }
@@ -89,10 +100,9 @@ td.violation { background: #ffebee; color: var(--danger); }
 /* The top margin separates the action buttons from the checkbox row above them, so the
    checkboxes don't read as attached to the buttons. */
 .tracker-actions { display: flex; gap: 1rem; margin-top: 0.75rem; }
-/* Dark red sets the day's numbers apart from the meal list and legends around them; larger type
-   would do the same but wraps the four items on narrow screens. Deliberately not --danger — the
-   dashboard is neutral information, not a violation signal. */
-.tracker-dashboard { display: flex; gap: 1.2rem; flex-wrap: wrap; font-weight: 600; color: darkred; margin-bottom: 0.5rem; }
+/* Neutral by design — red is reserved for the high-score emphasis on the score alone, so a
+   quiet dashboard means the day is on track. */
+.tracker-dashboard { display: flex; gap: 1.2rem; flex-wrap: wrap; font-weight: 600; margin-bottom: 0.5rem; }
 /* The dashboard is already semibold, so the score needs extra weight to stand out. */
 .tracker-dashboard strong { font-weight: 800; }
 .meal-list { list-style: none; padding: 0; }

@@ -11,6 +11,15 @@ export function isViolating(questionnaire: Questionnaire, questionId: string, va
   return questionnaire.rules.some((rule) => rule.question_id === questionId && violates(rule, value));
 }
 
+// Carb-score emphasis thresholds: a day total above this fraction of the points question's max,
+// or a single meal grade above this value, renders emphasized in red.
+export const HIGH_SCORE_FRACTION = 0.3;
+export const HIGH_GRADE_THRESHOLD = 3;
+
+export function isHighScore(question: Question, value: number): boolean {
+  return question.max !== undefined && value > question.max * HIGH_SCORE_FRACTION;
+}
+
 // The choice label for an exactly-matching value, else the number itself — stored values
 // between choice anchors (e.g. a computed 10.4h window) are legal. A points question stores a
 // summed score, not a picked choice, so its value is always shown as the number: a score of 3

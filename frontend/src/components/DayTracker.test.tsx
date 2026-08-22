@@ -1,34 +1,12 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { DayTracker } from "./DayTracker";
-import type { DayPayload, Questionnaire } from "../types";
-
-const questionnaire: Questionnaire = {
-  version: 3,
-  questions: [
-    { id: "drinking", type: "single", text: "שתיה",
-      choices: [{ id: "l3", label: "3 ליטר", value: 3 }] },
-    { id: "carbs", type: "points", text: "פחמימות", max: 30,
-      tooltip: "המטרה היא ציון נמוך", day_qualifier: "סיכום ציון", meal_qualifier: "דרגת הארוחה",
-      choices: [{ id: "no_carbs", label: "ללא פחמימות", value: 0 },
-                { id: "grade4", label: "דרגה 4", value: 4 },
-                { id: "alcohol", label: "~ כוס אלכוהול לא יבש", value: 4 }] },
-  ],
-  rules: [],
-};
+import type { DayPayload } from "../types";
+import { trackedDay, trackerQuestionnaire as questionnaire } from "../test-fixtures";
 
 const emptyDay: DayPayload = {
   date: "2026-08-20", meals: [],
   derived: { carbs: 0, meals: 0, vegetables: 0, eating_window: 0 },
-};
-
-const trackedDay: DayPayload = {
-  date: "2026-08-20",
-  meals: [
-    { id: "a", at: "2026-08-20T09:10:00+03:00", carbs_choice: "no_carbs", vegetables: true, fruit: false },
-    { id: "b", at: "2026-08-20T13:30:00+03:00", carbs_choice: "grade4", vegetables: false, fruit: true },
-  ],
-  derived: { carbs: 4, meals: 2, vegetables: 1, eating_window: 4.5 },
 };
 
 // A day whose single meal was recorded the given number of hours before the test runs.
@@ -132,7 +110,8 @@ describe("DayTracker", () => {
     expect(screen.getByText(/ציון: 4/)).toBeInTheDocument();
     expect(screen.getByText(/ארוחות: 2/)).toBeInTheDocument();
     expect(screen.getByText("חלון: 4.5 שעות")).toBeInTheDocument();
-    expect(screen.getByText("דרגה 4")).toBeInTheDocument();
+    // Once as the carbs picker's radio label, once as the recorded meal's grade text.
+    expect(screen.getAllByText("דרגה 4")).toHaveLength(2);
     expect(screen.getByText(/🥗/)).toBeInTheDocument();
     expect(screen.getByText(/🍎/)).toBeInTheDocument();
     fireEvent.click(screen.getAllByRole("button", { name: /מחיקת ארוחה/ })[1]);

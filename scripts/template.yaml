@@ -126,6 +126,12 @@ Resources:
             ApiId: !Ref Api
             Method: GET
             Path: /days
+        GetDay:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref Api
+            Method: GET
+            Path: /days/{date}
         DeleteDay:
           Type: HttpApi
           Properties:

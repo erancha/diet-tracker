@@ -11,6 +11,7 @@ export interface SubmitPayload {
 
 export interface Api {
   getDays(): Promise<HistoryResponse>;
+  getDay(date: string): Promise<DayPayload>;
   submitDay(payload: SubmitPayload): Promise<SubmitResult>;
   deleteDay(date: string): Promise<{ date: string }>;
   addMeal(meal: NewMeal): Promise<DayPayload>;
@@ -32,6 +33,7 @@ export function createApi(cfg: AppConfig, tokens: Tokens): Api {
   }
   return {
     getDays: () => request("GET", "/days"),
+    getDay: (date) => request("GET", `/days/${date}`),
     submitDay: (payload) => request("POST", "/days", payload),
     deleteDay: (date) => request("DELETE", `/days/${date}`),
     addMeal: (meal) => request("POST", "/meals", meal),

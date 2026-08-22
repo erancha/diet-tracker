@@ -1,5 +1,5 @@
 """HTTP API handler: day submission with meal-derived floors and synchronous rule alerts,
-history, day deletion, and intraday meal reporting.
+history with per-day read-only lookups, day deletion, and intraday meal reporting.
 
 The caller's identity comes exclusively from the JWT claims the API Gateway authorizer
 verified — the request body never names a user."""
@@ -7,7 +7,7 @@ verified — the request body never names a user."""
 import json
 import os
 from dataclasses import asdict
-from datetime import datetime
+from datetime import date, datetime
 
 import boto3
 
@@ -32,6 +32,8 @@ def handler(event, context):
         return _submit(sub, email, json.loads(event["body"]))
     if route == "GET /days":
         return _history(sub)
+    if route == "GET /days/{date}":
+        return _get_day(sub, event["pathParameters"]["date"])
     if route == "DELETE /days/{date}":
         return _delete_day(sub, event["pathParameters"]["date"])
     if route == "POST /meals":
@@ -128,6 +130,16 @@ def _history(sub):
         "yesterday": None if yesterday in history
         else _day_payload(store, questionnaire, sub, yesterday),
     })
+
+
+def _get_day(sub, chosen):
+    """Read-only tracker payload for any stored day, however old — fetched on demand when a
+    history row is opened."""
+    try:
+        date.fromisoformat(chosen)
+    except ValueError:
+        return _response(400, {"error": f"{chosen!r} is not a valid ISO date"})
+    return _response(200, _day_payload(_store(), _questionnaire(), sub, chosen))
 
 
 def _add_meal(sub, body):

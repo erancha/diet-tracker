@@ -151,6 +151,21 @@ def test_add_meal_rejects_other_dates_unknown_choices_and_submitted_days(env):
     assert closed["statusCode"] == 409
 
 
+def test_get_day_returns_any_past_days_meals_and_derived(env):
+    from common.store import Store
+    old = days_before(today(), 30)
+    Store("days", "meals", "state").add_meal("u1", old, f"{old}T09:10:00+03:00", "grade3", True, False)
+    payload = body_of(api.handler(request("GET /days/{date}", path_params={"date": old}), None))
+    assert payload["date"] == old
+    assert [m["carbs_choice"] for m in payload["meals"]] == ["grade3"]
+    assert payload["derived"] == {"carbs": 3, "meals": 1, "vegetables": 1, "eating_window": 0}
+
+
+def test_get_day_rejects_a_malformed_date(env):
+    response = api.handler(request("GET /days/{date}", path_params={"date": "not-a-date"}), None)
+    assert response["statusCode"] == 400
+
+
 def test_delete_meal_updates_day_and_guards_dates(env):
     meal_id = body_of(add_meal())["meals"][0]["id"]
     payload = body_of(api.handler(request("DELETE /meals/{date}/{id}",
