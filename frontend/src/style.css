@@ -113,5 +113,5 @@ td.view-day { cursor: pointer; }
 /* The dashboard is already semibold, so the score needs extra weight to stand out. */
 .tracker-dashboard strong { font-weight: 800; }
 .meal-list { list-style: none; padding: 0; }
-.meal-list li { padding: 0.25rem 0; }
-.delete-meal { margin-inline-start: 2rem; }
+/* Flex pins every row's delete button to the same inline-end column regardless of label width. */
+.meal-list li { padding: 0.25rem 0; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }

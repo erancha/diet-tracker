@@ -19,14 +19,16 @@ export function MealList({ questionnaire, meals, onDelete }: {
         const choice = carbsQuestion.choices.find((c) => c.id === meal.carbs_choice);
         return (
           <li key={meal.id}>
-            <strong>{timeOf(meal.at)}</strong> ·{" "}
-            <span className={choice !== undefined && choice.value > HIGH_GRADE_THRESHOLD
-              ? "high-grade" : undefined}>
-              {choice?.label ?? meal.carbs_choice}
+            <span>
+              <strong>{timeOf(meal.at)}</strong> ·{" "}
+              <span className={choice !== undefined && choice.value > HIGH_GRADE_THRESHOLD
+                ? "high-grade" : undefined}>
+                {choice?.label ?? meal.carbs_choice}
+              </span>
+              {meal.vegetables && " · 🥗"}
+              {meal.fruit && " · 🍎"}
+              {meal.sweet && " · 🍪"}
             </span>
-            {meal.vegetables && " · 🥗"}
-            {meal.fruit && " · 🍎"}
-            {meal.sweet && " · 🍪"}
             {onDelete && (
               <button type="button" className="delete-meal" aria-label={`מחיקת ארוחה ${timeOf(meal.at)}`}
                       onClick={() => { if (window.confirm("למחוק את הארוחה?")) onDelete(meal.id); }}>
