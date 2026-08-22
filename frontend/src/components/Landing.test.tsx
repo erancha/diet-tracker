@@ -11,6 +11,14 @@ describe("Landing", () => {
     expect(screen.getAllByRole("listitem").length).toBeGreaterThan(0);
   });
 
+  it("links to the source repository", () => {
+    render(<Landing onSignIn={() => {}} />);
+
+    expect(screen.getByRole("link", { name: "קוד המקור ב-GitHub" })).toHaveAttribute(
+      "href", "https://github.com/erancha/diet-tracker",
+    );
+  });
+
   it("invokes onSignIn when the sign-in button is clicked", async () => {
     const onSignIn = vi.fn();
     render(<Landing onSignIn={onSignIn} />);

@@ -5,16 +5,14 @@ lower is better.
 
 ## Overview
 
-- Meals are logged as they happen: carb grade, plus whether the meal included vegetables and fruit.
+- Meals are logged as they happen — carb grade, plus whether the meal included vegetables and
+  fruit — and can be backfilled to yesterday for after-midnight logging.
 - The day's values derive from the log: carb score, meal count, vegetable meals, and the eating
   window between first and last meal.
-- The day's first fruit is included in its meal's grade; each fruit after it scores the meal as at
-  least grade 5 ("more than one fruit").
 - Recorded meals floor the end-of-day questionnaire — a day can admit more than was tracked, never
   less — and a fully tracked day closes from the tracker with only water entered.
 - Proactive nudges: fill reminders while a day is unsubmitted, threshold alerts over consecutive
   violating days, a weekly averages digest, and a 7-day trend chart after each submit.
-- Entries can be backfilled to yesterday for after-midnight logging.
 
 ## Tech stack
 
