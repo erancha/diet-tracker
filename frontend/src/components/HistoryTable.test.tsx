@@ -11,6 +11,12 @@ const days = [
 const noDelete = { deletableDates: new Set<string>(), onDelete: () => {}, onView: () => {} };
 
 describe("HistoryTable", () => {
+  it("shows the row date as DD/MM without the year", () => {
+    render(<HistoryTable questionnaire={fixtureQuestionnaire} days={days} {...noDelete} />);
+    expect(screen.getByText("17/08")).toBeInTheDocument();
+    expect(screen.queryByText("2026-08-17")).not.toBeInTheDocument();
+  });
+
   it("marks a violating exact-match answer with its choice label", () => {
     render(<HistoryTable questionnaire={fixtureQuestionnaire} days={days} {...noDelete} />);
     expect(screen.getByText("פחות מ-2.5 ליטר !!")).toHaveClass("violation");

@@ -1,5 +1,6 @@
 import type { KeyboardEvent } from "react";
 import type { Day, Questionnaire } from "../types";
+import { ddmmLabel } from "../dates";
 import { isHighScore, isViolating, questionTitle, valueLabel } from "../violations";
 
 interface Props {
@@ -27,7 +28,7 @@ export function HistoryTable({ questionnaire, days, deletableDates, onDelete, on
         {days.map((day) => (
           <tr key={day.date}>
             <td>
-              {day.date}
+              {ddmmLabel(day.date)}
               {deletableDates.has(day.date) && (
                 <button type="button" className="delete-day" aria-label={`מחיקת הרשומה של ${day.date}`}
                   onClick={() => { if (window.confirm(`למחוק את הרשומה של ${day.date}?`)) onDelete(day.date); }}>🗑️</button>

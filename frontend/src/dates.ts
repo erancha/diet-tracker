@@ -13,6 +13,11 @@ export function dayLabel(s: string): string {
   return `${Number(d)}.${Number(m)}`;
 }
 
+export function ddmmLabel(s: string): string {
+  const [, m, d] = s.split("-");
+  return `${d}/${m}`;
+}
+
 export function yesterdayOf(now: Date): Date {
   return new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
 }

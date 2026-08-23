@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dayLabel, defaultDay, expandQuestionnaire, isoDate, last7Days, parseIsoDate } from "./dates";
+import { dayLabel, ddmmLabel, defaultDay, expandQuestionnaire, isoDate, last7Days, parseIsoDate } from "./dates";
 
 describe("isoDate", () => {
   it("formats a local date as YYYY-MM-DD with zero padding", () => {
@@ -18,6 +18,12 @@ describe("parseIsoDate", () => {
 describe("dayLabel", () => {
   it("renders day.month without leading zeros", () => {
     expect(dayLabel("2026-08-05")).toBe("5.8");
+  });
+});
+
+describe("ddmmLabel", () => {
+  it("renders DD/MM with zero padding and no year", () => {
+    expect(ddmmLabel("2026-08-05")).toBe("05/08");
   });
 });
 
