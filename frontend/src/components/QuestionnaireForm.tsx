@@ -7,6 +7,8 @@ import { PointsSlider } from "./PointsSlider";
 interface Props {
   questionnaire: Questionnaire;
   floors: Derived;
+  // The selected day already has a stored record, so submitting replaces its answers.
+  resubmitting: boolean;
   onSubmit: (answers: Record<string, number>) => void;
   onValidationError: (message: string) => void;
 }
@@ -14,7 +16,7 @@ interface Props {
 // Renders the day-end questionnaire: single questions as radio groups floored by the day's
 // recorded meals, points questions as sliders pinned to the recorded sum. Radio questions rely
 // on native required-field validation; sliders always hold a value, starting at their floor.
-export function QuestionnaireForm({ questionnaire, floors, onSubmit, onValidationError }: Props) {
+export function QuestionnaireForm({ questionnaire, floors, resubmitting, onSubmit, onValidationError }: Props) {
   const formRef = useRef<HTMLFormElement>(null);
   const floorOf = (questionId: string): number =>
     questionId in floors ? floors[questionId as keyof Derived] : 0;
@@ -48,6 +50,9 @@ export function QuestionnaireForm({ questionnaire, floors, onSubmit, onValidatio
 
   return (
     <form ref={formRef}>
+      {resubmitting && (
+        <p className="notice">היום הזה כבר נשלח — שליחה חוזרת תחליף את התשובות שנשמרו</p>
+      )}
       {questionnaire.questions.map((question) =>
         question.type === "points" ? (
           <PointsSlider key={question.id} question={question} value={answers[question.id]}

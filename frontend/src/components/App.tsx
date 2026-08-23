@@ -101,7 +101,8 @@ export function App({ email, api, reminderHour, trackerStartHour, onSignOut }: {
 
   const questionnaire = questionnaireQuery.data;
   const data = historyQuery.data;
-  const todaySubmitted = data.days.some((d) => d.date === todayStr);
+  const submittedDates = new Set(data.days.map((d) => d.date));
+  const todaySubmitted = submittedDates.has(todayStr);
 
   const zeroFloors: Derived = { carbs: 0, meals: 0, vegetables: 0, eating_window: 0 };
   const floors = day === "yesterday" ? (data.yesterday?.derived ?? zeroFloors) : data.today.derived;
@@ -132,6 +133,7 @@ export function App({ email, api, reminderHour, trackerStartHour, onSignOut }: {
             key={day ?? "today"}
             questionnaire={questionnaire}
             floors={floors}
+            resubmitting={submittedDates.has(day === "yesterday" ? yesterdayStr : todayStr)}
             onSubmit={submit}
             onValidationError={(message) => setAlerts([{ kind: "alert", message }])}
           />

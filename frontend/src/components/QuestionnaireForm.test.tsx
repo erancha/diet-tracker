@@ -18,8 +18,8 @@ const questionnaire: Questionnaire = {
 };
 const zeroFloors: Derived = { carbs: 0, meals: 0, vegetables: 0, eating_window: 0 };
 
-function renderForm(floors: Derived = zeroFloors, onSubmit = vi.fn()) {
-  render(<QuestionnaireForm questionnaire={questionnaire} floors={floors}
+function renderForm(floors: Derived = zeroFloors, onSubmit = vi.fn(), resubmitting = false) {
+  render(<QuestionnaireForm questionnaire={questionnaire} floors={floors} resubmitting={resubmitting}
                             onSubmit={onSubmit} onValidationError={vi.fn()} />);
   return onSubmit;
 }
@@ -66,6 +66,16 @@ describe("QuestionnaireForm", () => {
     fireEvent.click(tracked);
     fireEvent.click(screen.getByRole("button", { name: "שליחה" }));
     expect(onSubmit).toHaveBeenCalledWith({ drinking: 3, meals: 5, carbs: 0 });
+  });
+
+  it("warns that submitting again overwrites when the day is already recorded", () => {
+    renderForm(zeroFloors, vi.fn(), true);
+    expect(screen.getByText("היום הזה כבר נשלח — שליחה חוזרת תחליף את התשובות שנשמרו")).toBeInTheDocument();
+  });
+
+  it("shows no overwrite warning for a day without a record", () => {
+    renderForm();
+    expect(screen.queryByText("היום הזה כבר נשלח — שליחה חוזרת תחליף את התשובות שנשמרו")).toBeNull();
   });
 
   it("does not synthesize an extra choice while a real choice is still enabled", () => {

@@ -44,6 +44,8 @@ button { background: var(--accent); color: #fff; border: 0; border-radius: 8px; 
 /* pre-line keeps newlines in alert messages (e.g. the sign-in rejection's contact note). */
 .alert { background: #ffebee; color: var(--danger); border-radius: 8px; padding: 0.6rem 1rem; margin-bottom: 0.5rem; white-space: pre-line; }
 .ok { background: #e8f5e9; color: var(--accent); border-radius: 8px; padding: 0.6rem 1rem; margin-bottom: 0.5rem; }
+/* Informational, not a failure: amber sits between the alert red and the ok green. */
+.notice { background: #fff8e1; color: #795500; border-radius: 8px; padding: 0.6rem 1rem; margin-bottom: 0.5rem; }
 /* The wrapper grows past the centered column into the viewport's left gutter (inline-end in this
    RTL layout), stopping 3rem short of the edge; on narrow screens the gutter is only the body
    padding and the margin resolves to 0. The table sizes to its content within that room — at
