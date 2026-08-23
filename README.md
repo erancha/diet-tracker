@@ -5,9 +5,7 @@ lower is better.
 
 ## Overview
 
-- Meals are logged as they happen — carb grade, whether the meal included vegetables or fruit,
-  and surcharge additions (sweet, alcohol, nuts) — and can be backfilled to yesterday for
-  after-midnight logging.
+- Meals are logged as they happen and can be backfilled to yesterday for after-midnight logging.
 - The day's values derive from the log: carb score, meal count, vegetable meals, and the eating
   window between first and last meal.
 - Recorded meals floor the end-of-day questionnaire — a day can admit more than was tracked, never

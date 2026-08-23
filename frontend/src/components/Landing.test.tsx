@@ -11,6 +11,18 @@ describe("Landing", () => {
     expect(screen.getAllByRole("listitem").length).toBeGreaterThan(0);
   });
 
+  it("mentions each tracked value once across the summary bullets", () => {
+    render(<Landing onSignIn={() => {}} />);
+
+    const summaryText = screen
+      .getAllByRole("listitem")
+      .map((item) => item.textContent)
+      .join(" ");
+    for (const term of ["פחמימות / קמחים / סוכרים", "ירקות"]) {
+      expect(summaryText.split(term).length - 1).toBe(1);
+    }
+  });
+
   it("links to the source repository", () => {
     render(<Landing onSignIn={() => {}} />);
 
