@@ -1,8 +1,8 @@
 import type { Derived, Questionnaire } from "../types";
 import { isHighScore } from "../violations";
 
-// One-line summary of a day's server-derived values, shared by the live tracker header and the
-// read-only history view.
+// One-line summary of a day's derived values, shared by the live tracker header (client-derived)
+// and the read-only history view (server-derived).
 export function DayDashboard({ questionnaire, derived }: {
   questionnaire: Questionnaire;
   derived: Derived;

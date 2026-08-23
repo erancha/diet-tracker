@@ -17,7 +17,34 @@ const dayWithMealHoursAgo = (hours: number): DayPayload => ({
   derived: { carbs: 0, meals: 1, vegetables: 0, eating_window: 0 },
 });
 
+// trackedDay with a derived copy that contradicts its meals: the tracker must recompute from
+// the meals it renders rather than trust the payload's copy.
+const staleDerivedDay: DayPayload = {
+  ...trackedDay,
+  derived: { carbs: 99, meals: 9, vegetables: 9, eating_window: 9 },
+};
+
 describe("DayTracker", () => {
+  it("derives the dashboard from the recorded meals, not the payload's derived copy", () => {
+    render(<DayTracker questionnaire={questionnaire} today={staleDerivedDay}
+                       onAddMeal={vi.fn()} onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    expect(screen.getByText(/ציון: 4/)).toBeInTheDocument();
+    expect(screen.getByText(/ארוחות: 2/)).toBeInTheDocument();
+    expect(screen.getByText(/ירקות: 1/)).toBeInTheDocument();
+    expect(screen.getByText("חלון: 4.5 שעות")).toBeInTheDocument();
+  });
+
+  it("close-day submits values derived from the recorded meals", () => {
+    const onCloseDay = vi.fn();
+    render(<DayTracker questionnaire={questionnaire} today={staleDerivedDay}
+                       onAddMeal={vi.fn()} onDeleteMeal={vi.fn()} onCloseDay={onCloseDay} />);
+    fireEvent.click(screen.getByRole("button", { name: "סגירת יום" }));
+    fireEvent.click(screen.getByLabelText("3 ליטר"));
+    fireEvent.click(screen.getByRole("button", { name: "אישור וסגירה" }));
+    expect(onCloseDay).toHaveBeenCalledWith({
+      carbs: 4, meals: 2, vegetables: 1, eating_window: 4.5, drinking: 3 });
+  });
+
   it("starts collapsed when the last meal is less than four hours old", () => {
     render(<DayTracker questionnaire={questionnaire} today={dayWithMealHoursAgo(1)}
                        onAddMeal={vi.fn()} onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);

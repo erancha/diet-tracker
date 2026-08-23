@@ -2,7 +2,18 @@
 // derivation is the authority (floors, submit validation). Both must satisfy
 // config/derive-vectors.json.
 
-import type { Derived, Meal } from "./types";
+import type { Derived, Meal, Question } from "./types";
+
+// The carbs question's choices and additions as the id → value lookups the derivation
+// functions consume.
+export function carbsScales(question: Question): {
+  weights: Record<string, number>; additionValues: Record<string, number>;
+} {
+  return {
+    weights: Object.fromEntries(question.choices.map((c) => [c.id, c.value])),
+    additionValues: Object.fromEntries((question.additions ?? []).map((a) => [a.id, a.value])),
+  };
+}
 
 // Every carbs grade includes one fruit; only the day's first fruit rides free. Each fruit meal
 // after it counts as grade 5 ("more than one fruit"), so its weight is raised to at least this

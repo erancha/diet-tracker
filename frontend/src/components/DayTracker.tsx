@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { carbsScales, deriveDay } from "../derive";
 import type { DayPayload, NewMeal, Questionnaire } from "../types";
 import { ChoiceFieldset } from "./ChoiceFieldset";
 import { CollapsibleSection } from "./CollapsibleSection";
@@ -10,8 +11,10 @@ const REOPEN_GAP_HOURS = 4;
 
 // The intraday companion: records meals as they happen, shows the day's derived values live,
 // lists today's meals for delete-and-re-report correction, and closes a fully tracked day by
-// asking only for water. Recorded meals are the evidence that floors the day-end form; this
-// component renders the server's derived values verbatim and never computes its own.
+// asking only for water. Recorded meals are the evidence that floors the day-end form; the
+// dashboard and close-day values come from the vector-pinned client derivation twin, so they
+// always agree with the meal list rendered beside them — the server re-derives on submit and
+// stays the authority.
 export function DayTracker({ questionnaire, today, onAddMeal, onDeleteMeal, onCloseDay }: {
   questionnaire: Questionnaire;
   today: DayPayload;
@@ -27,6 +30,11 @@ export function DayTracker({ questionnaire, today, onAddMeal, onDeleteMeal, onCl
   const [pickedAdditions, setPickedAdditions] = useState<Set<string>>(new Set());
   const [closing, setClosing] = useState(false);
   const [drinkingChoiceId, setDrinkingChoiceId] = useState<string | undefined>(undefined);
+
+  // Today's meals always resolve against the current questionnaire, so deriveDay's throw on an
+  // unknown id is a real config/data fault, not a legal state — let the error boundary show it.
+  const { weights, additionValues } = carbsScales(carbsQuestion);
+  const derived = deriveDay(today.meals, weights, additionValues);
 
   // Right after a meal the tracker has nothing left to ask, so it starts folded to its dashboard
   // and opens on its own only once the typical between-meals gap (four hours) has passed. Meals
@@ -50,7 +58,7 @@ export function DayTracker({ questionnaire, today, onAddMeal, onDeleteMeal, onCl
   return (
     <CollapsibleSection className="day-tracker" title="יומן היום" defaultCollapsed={withinMealGap}
                         summary={
-      <DayDashboard questionnaire={questionnaire} derived={today.derived} />
+      <DayDashboard questionnaire={questionnaire} derived={derived} />
     }>
       <ChoiceFieldset question={carbsQuestion} selectedId={carbsChoiceId} scope="meal"
                       onPick={(choice) => setCarbsChoiceId(choice.id)} />
@@ -98,7 +106,7 @@ export function DayTracker({ questionnaire, today, onAddMeal, onDeleteMeal, onCl
           <ChoiceFieldset question={drinkingQuestion} selectedId={drinkingChoiceId}
                           onPick={(choice) => setDrinkingChoiceId(choice.id)} />
           <button type="button" disabled={drinkingChoiceId === undefined}
-                  onClick={() => onCloseDay({ ...today.derived,
+                  onClick={() => onCloseDay({ ...derived,
                     drinking: drinkingQuestion.choices.find((c) => c.id === drinkingChoiceId)!.value })}>
             אישור וסגירה
           </button>

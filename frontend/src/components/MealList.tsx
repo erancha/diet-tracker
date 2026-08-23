@@ -1,4 +1,4 @@
-import { mealWeights } from "../derive";
+import { carbsScales, mealWeights } from "../derive";
 import type { Meal, Questionnaire } from "../types";
 import { HIGH_GRADE_THRESHOLD } from "../violations";
 
@@ -22,9 +22,7 @@ export function MealList({ questionnaire, meals, onDelete }: {
   // A history day may reference a choice or addition id retired by a later questionnaire
   // version, making its weights unknowable here; per-meal points render only when the whole day
   // still resolves.
-  const weights = Object.fromEntries(carbsQuestion.choices.map((c) => [c.id, c.value]));
-  const additionValues = Object.fromEntries(
-    (carbsQuestion.additions ?? []).map((a) => [a.id, a.value]));
+  const { weights, additionValues } = carbsScales(carbsQuestion);
   const points = meals.every((m) => weights[m.carbs_choice] !== undefined
       && m.additions.every((a) => additionValues[a] !== undefined))
     ? mealWeights(newestFirst, weights, additionValues)
