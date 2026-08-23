@@ -31,9 +31,9 @@ def minimal(**overrides):
 
 def test_repo_config_loads_with_numeric_choices_and_threshold_rules():
     q = load(CONFIG)
-    assert q.version == 8
+    assert q.version == 9
     carbs = q.question("carbs")
-    assert carbs.type == "points" and carbs.max == 30
+    assert carbs.type == "points" and carbs.max == 35
     assert carbs.day_title == f"{carbs.text} ({carbs.day_qualifier})"
     assert q.question("drinking").day_title == q.question("drinking").text
     assert q.carb_weights()["grade7_heavy"] == 8

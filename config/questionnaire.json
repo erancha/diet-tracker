@@ -1,5 +1,5 @@
 {
-  "version": 8,
+  "version": 9,
   "questions": [
     {
       "id": "drinking",
@@ -57,7 +57,7 @@
       "meal_qualifier": "דרגת הארוחה",
       "tooltip": "כל ארוחה שנרשמת ביומן מוסיפה את הנקודות של דרגת הפחמימות שנבחרה לה; הציון היומי הוא סכום הנקודות מכל הארוחות. כמו בגולף — המטרה היא ציון נמוך ככל האפשר",
       "panel_qualifier": "ציון, נמוך = טוב",
-      "max": 30,
+      "max": 35,
       "additions": [
         { "id": "sweet", "label": "כולל מתוק", "value": 4 },
         { "id": "alcohol", "label": "כולל אלכוהול לא יבש", "value": 4 },
@@ -86,7 +86,7 @@
       "message": "חלון אכילה מעל 12 שעות {days} ימים ברצוף" },
     { "id": "too_many_meals", "question_id": "meals", "at_least": 4, "consecutive_days": 2,
       "message": "מעל 3 ארוחות או נשנושים {days} ימים ברצוף" },
-    { "id": "heavy_carbs", "question_id": "carbs", "at_least": 8, "consecutive_days": 2,
+    { "id": "heavy_carbs", "question_id": "carbs", "at_least": 11, "consecutive_days": 2,
       "message": "ציון פחמימות {value} ומעלה {days} ימים ברצוף" }
   ]
 }
