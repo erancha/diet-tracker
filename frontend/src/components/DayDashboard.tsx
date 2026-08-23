@@ -10,9 +10,9 @@ export function DayDashboard({ questionnaire, derived }: {
   const carbsQuestion = questionnaire.questions.find((q) => q.id === "carbs")!;
   return (
     <div className="tracker-dashboard">
-      <span>ארוחות: {derived.meals}</span>
       <span>ירקות: {derived.vegetables}</span>
       <span>חלון: {derived.eating_window} שעות</span>
+      <span>ארוחות: {derived.meals}</span>
       <strong title={carbsQuestion.tooltip}
               className={isHighScore(carbsQuestion, derived.carbs) ? "high-score" : undefined}>
         ציון: {derived.carbs}

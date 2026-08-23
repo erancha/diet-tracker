@@ -53,7 +53,7 @@ def test_repo_config_orders_questions_like_the_day_dashboard_with_carbs_last():
     # it must match the day dashboard's order, with the carbs score closing the list.
     q = load(CONFIG)
     assert [question.id for question in q.questions] == [
-        "drinking", "meals", "vegetables", "eating_window", "carbs"]
+        "drinking", "vegetables", "eating_window", "meals", "carbs"]
 
 
 def test_additions_missing_from_config_raises(tmp_path):
