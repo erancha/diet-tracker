@@ -23,6 +23,12 @@ lower is better.
 
 ## Architecture
 
+The backend is a modular monolith on serverless infrastructure: every Lambda is a thin entry point
+(`src/handlers/`) over one shared domain core (`src/common/`), and all functions deploy from a
+single code package against the same DynamoDB tables. Features are separated by Python modules,
+keeping the domain logic in one place while Lambda still provides independent scaling and
+scheduling per entry point.
+
 ```mermaid
 graph LR
     U((User)) --> FE[React RTL frontend<br/>S3 + CloudFront]
