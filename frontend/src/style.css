@@ -2,7 +2,8 @@
   --accent: #2e7d32;
   --danger: #c62828;
   --viz-series-1: #2a78d6;
-  --viz-series-2: #eb6834;
+  --viz-series-2: #1baf7a;
+  --viz-series-3: #4a3aa7;
   --viz-critical: #d03b3b;
   --viz-grid: #e1e0d9;
   --viz-baseline: #c3c2b7;
@@ -80,11 +81,13 @@ td.view-day { cursor: pointer; }
 .day-view header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.4em; }
 .day-view h3 { margin: 0; }
 
-.trend { margin: 0 0 0.75rem; }
+.trend { margin: 0 0 1.5rem; }
+.trend-panel { border: 1px solid #ddd; border-radius: 8px; padding: 0.6rem 0.5rem 0.4rem; background: #fff; }
+.trend-panel + .trend-panel { margin-top: 1.75rem; }
 .trend-panel-title { display: flex; align-items: center; gap: 0.35rem; font-size: 12px; margin: 0 0 0.15rem; }
 .trend-chip { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
 .trend-violation-tick { stroke: var(--viz-critical); stroke-width: 2; }
-.trend-legend { display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; margin-top: 0.3rem; }
+.trend-legend { display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; margin-bottom: 0.5rem; }
 .trend-legend-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--viz-critical); display: inline-block; }
 .trend-tooltip {
   background: #212121;

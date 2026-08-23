@@ -16,4 +16,16 @@ describe("TrendChart", () => {
     expect(screen.getByText("חלון אכילה (שעות)")).toBeInTheDocument();
     expect(screen.getByText("חריגה")).toBeInTheDocument();
   });
+
+  it("wraps each panel in a trend-panel container so panels are visually separated", () => {
+    const { container } = render(<TrendChart questionnaire={fixtureQuestionnaire} days={days} endDate="2026-08-18" />);
+    expect(container.querySelectorAll(".trend-panel")).toHaveLength(2);
+  });
+
+  it("renders the violation legend above the panels", () => {
+    const { container } = render(<TrendChart questionnaire={fixtureQuestionnaire} days={days} endDate="2026-08-18" />);
+    const legend = container.querySelector(".trend-legend")!;
+    const firstPanel = container.querySelector(".trend-panel")!;
+    expect(legend.compareDocumentPosition(firstPanel) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
 });

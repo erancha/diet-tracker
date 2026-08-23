@@ -97,7 +97,7 @@ function TrendPanel({ questionnaire, question, dayStrs, dayByDate, index, showXA
   const ticks = ticksFor(question);
   const labelFor = new Map(ticks.map((t) => [t.value, t.label]));
   return (
-    <div>
+    <div className="trend-panel">
       <div className="trend-panel-title">
         <span className="trend-chip" style={{ background: color }} />
         {title}
@@ -139,6 +139,7 @@ export function TrendChart({ questionnaire, days, endDate }: { questionnaire: Qu
   const dayByDate = new Map(days.map((d) => [d.date, d]));
   return (
     <div className="trend" dir="ltr">
+      <div className="trend-legend"><span className="trend-legend-dot" /> חריגה</div>
       {panels.map((question, index) => (
         <TrendPanel
           key={question.id}
@@ -151,15 +152,14 @@ export function TrendChart({ questionnaire, days, endDate }: { questionnaire: Qu
           title={panelTitle(question)!}
         />
       ))}
-      <ResponsiveContainer width="100%" height={32}>
-        <ScatterChart margin={{ top: 4, right: MARGIN_RIGHT, bottom: 4, left: Y_AXIS_WIDTH }}>
+      <ResponsiveContainer width="100%" height={22}>
+        <ScatterChart margin={{ top: 2, right: MARGIN_RIGHT, bottom: 2, left: Y_AXIS_WIDTH }}>
           <XAxis dataKey="label" type="category" scale="point" hide />
           <YAxis dataKey="y" hide domain={[-1, 1]} />
           <Tooltip content={<StripTooltip />} />
           <Scatter data={stripData(questionnaire, strip, dayStrs, dayByDate)} shape={<StripTicks />} isAnimationActive={false} />
         </ScatterChart>
       </ResponsiveContainer>
-      <div className="trend-legend"><span className="trend-legend-dot" /> חריגה</div>
     </div>
   );
 }
