@@ -15,8 +15,10 @@ const REOPEN_GAP_HOURS = 4;
 // dashboard and close-day values come from the vector-pinned client derivation twin, so they
 // always agree with the meal list rendered beside them — the server re-derives on submit and
 // stays the authority.
-export function DayTracker({ questionnaire, today, onAddMeal, onDeleteMeal, onCloseDay }: {
+export function DayTracker({ questionnaire, trackerStartHour, today, onAddMeal, onDeleteMeal, onCloseDay }: {
   questionnaire: Questionnaire;
+  // First local hour at which a day with no recorded meals starts expanded (config.js).
+  trackerStartHour: number;
   today: DayPayload;
   onAddMeal: (meal: NewMeal) => void;
   onDeleteMeal: (id: string) => void;
@@ -37,11 +39,13 @@ export function DayTracker({ questionnaire, today, onAddMeal, onDeleteMeal, onCl
   const derived = deriveDay(today.meals, weights, additionValues);
 
   // Right after a meal the tracker has nothing left to ask, so it starts folded to its dashboard
-  // and opens on its own only once the typical between-meals gap (four hours) has passed. Meals
-  // arrive in chronological sort-key order, so the last entry is the latest.
+  // and opens on its own only once the typical between-meals gap (four hours) has passed. A day
+  // with no meals yet stays folded until the configured start hour — mornings need no tracking
+  // prompt. Meals arrive in chronological sort-key order, so the last entry is the latest.
   const lastMeal = today.meals[today.meals.length - 1];
-  const withinMealGap = lastMeal !== undefined &&
-    Date.now() - Date.parse(lastMeal.at) < REOPEN_GAP_HOURS * 3_600_000;
+  const startCollapsed = lastMeal !== undefined
+    ? Date.now() - Date.parse(lastMeal.at) < REOPEN_GAP_HOURS * 3_600_000
+    : new Date().getHours() < trackerStartHour;
 
   // Only reachable through the record button, which renders only once a grade is picked.
   // Additions are sent in config order so the recorded list is deterministic.
@@ -56,7 +60,7 @@ export function DayTracker({ questionnaire, today, onAddMeal, onDeleteMeal, onCl
   }
 
   return (
-    <CollapsibleSection className="day-tracker" title="יומן היום" defaultCollapsed={withinMealGap}
+    <CollapsibleSection className="day-tracker" title="יומן היום" defaultCollapsed={startCollapsed}
                         summary={
       <DayDashboard questionnaire={questionnaire} derived={derived} />
     }>

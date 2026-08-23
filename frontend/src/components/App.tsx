@@ -17,8 +17,8 @@ import { TrendChart } from "./TrendChart";
 // yesterday's meal payloads, on-demand past-day payloads) and every mutation — meal recording
 // and deletion, day submission with tracked floors, day deletion — plus the submit → alerts
 // flow; the components below it are presentational.
-export function App({ email, api, reminderHour, onSignOut }: {
-  email: string; api: Api; reminderHour: number; onSignOut: () => void;
+export function App({ email, api, reminderHour, trackerStartHour, onSignOut }: {
+  email: string; api: Api; reminderHour: number; trackerStartHour: number; onSignOut: () => void;
 }) {
   const queryClient = useQueryClient();
   const [now] = useState(() => new Date());
@@ -116,6 +116,7 @@ export function App({ email, api, reminderHour, onSignOut }: {
         {!todaySubmitted && (
           <DayTracker
             questionnaire={questionnaire}
+            trackerStartHour={trackerStartHour}
             today={data.today}
             onAddMeal={(meal) => mealMutation.mutate(meal)}
             onDeleteMeal={(id) => deleteMealMutation.mutate(id)}
