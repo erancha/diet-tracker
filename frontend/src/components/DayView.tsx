@@ -1,4 +1,5 @@
 import type { DayPayload, Questionnaire } from "../types";
+import { ddmmLabel } from "../dates";
 import { DayDashboard } from "./DayDashboard";
 import { MealList } from "./MealList";
 
@@ -12,7 +13,7 @@ export function DayView({ questionnaire, day, onClose }: {
   return (
     <section className="day-view">
       <header>
-        <h3>יומן {day.date}</h3>
+        <h3>יומן {ddmmLabel(day.date)}</h3>
         <button type="button" className="close-view" aria-label="סגירת התצוגה" onClick={onClose}>
           ✖
         </button>

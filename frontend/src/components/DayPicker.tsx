@@ -1,3 +1,5 @@
+import { ddmmLabel } from "../dates";
+
 export type DayChoice = "today" | "yesterday";
 
 interface Props {
@@ -12,11 +14,11 @@ export function DayPicker({ todayStr, yesterdayStr, value, onChange }: Props) {
     <div className="day-picker">
       <label>
         <input type="radio" name="day" checked={value === "today"} onChange={() => onChange("today")} />
-        {" "}היום ({todayStr})
+        {" "}היום ({ddmmLabel(todayStr)})
       </label>
       <label>
         <input type="radio" name="day" checked={value === "yesterday"} onChange={() => onChange("yesterday")} />
-        {" "}אתמול ({yesterdayStr})
+        {" "}אתמול ({ddmmLabel(yesterdayStr)})
       </label>
     </div>
   );

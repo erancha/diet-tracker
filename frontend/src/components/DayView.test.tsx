@@ -6,7 +6,7 @@ import { trackedDay, trackerQuestionnaire } from "../test-fixtures";
 describe("DayView", () => {
   it("shows the day's date, derived values and meals without any edit controls", () => {
     render(<DayView questionnaire={trackerQuestionnaire} day={trackedDay} onClose={vi.fn()} />);
-    expect(screen.getByText(/2026-08-20/)).toBeInTheDocument();
+    expect(screen.getByText(/יומן 20\/08/)).toBeInTheDocument();
     expect(screen.getByText(/ארוחות: 2/)).toBeInTheDocument();
     expect(screen.getByText(/ציון: 4/)).toBeInTheDocument();
     expect(screen.getByText("09:10")).toBeInTheDocument();
