@@ -2,7 +2,7 @@ import { CartesianGrid, Line, LineChart, ResponsiveContainer, Scatter, ScatterCh
 import type { Day, Question, Questionnaire } from "../types";
 import { dayLabel, last7Days } from "../dates";
 import { domainFor, ticksFor } from "../trend";
-import { isViolating, questionTitle, trendPanels, valueLabel } from "../violations";
+import { isViolating, panelTitle, questionTitle, trendPanels, valueLabel } from "../violations";
 
 // Shared horizontal geometry across the panels and the violations strip: the panels reserve the
 // y-axis width axis-side, the strip (which has no y-axis) reserves it as left margin, so every
@@ -148,7 +148,7 @@ export function TrendChart({ questionnaire, days, endDate }: { questionnaire: Qu
           dayByDate={dayByDate}
           index={index}
           showXAxis={index === panels.length - 1}
-          title={question.panel_title!}
+          title={panelTitle(question)!}
         />
       ))}
       <ResponsiveContainer width="100%" height={32}>

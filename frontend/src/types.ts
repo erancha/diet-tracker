@@ -12,7 +12,11 @@ export interface Question {
   type: "single" | "points";
   text: string;
   choices: Choice[];
+  // Trend-panel heading; a question carrying either field charts as a panel. panel_title is a
+  // full standalone heading, panel_qualifier a suffix to text — composed by panelTitle, which
+  // documents when each applies.
   panel_title?: string;
+  panel_qualifier?: string;
   max?: number;
   // Present only on the carbs question: the accompaniments a meal may carry (a sweet, alcohol,
   // too many nuts), each with the point cost it adds on top of the meal's grade. Not choices,

@@ -148,7 +148,6 @@ export function App({ email, api, reminderHour, onSignOut }: {
               questionnaire={questionnaire}
               days={data.days}
               deletableDates={new Set([todayStr, yesterdayStr])}
-              todayDate={todayStr}
               onDelete={(date) => deleteMutation.mutate(date)}
               onView={setViewedDate}
             />

@@ -8,8 +8,7 @@ const days = [
   { date: "2026-08-17", answers: { drinking: 2 } },
 ];
 
-const noDelete = { deletableDates: new Set<string>(), onDelete: () => {},
-  todayDate: "2026-08-21", onView: () => {} };
+const noDelete = { deletableDates: new Set<string>(), onDelete: () => {}, onView: () => {} };
 
 describe("HistoryTable", () => {
   it("marks a violating exact-match answer with its choice label", () => {
@@ -63,10 +62,12 @@ describe("HistoryTable", () => {
     expect(onView).toHaveBeenCalledWith("2026-08-17");
   });
 
-  it("omits the view button for today's row, whose live tracker is already open", () => {
+  it("offers the read-only view on today's row, whose tracker is gone once the day is closed", async () => {
+    const onView = vi.fn();
     render(<HistoryTable questionnaire={trackerQuestionnaire}
-      days={[{ date: "2026-08-21", answers: { carbs: 4, drinking: 3 } }]} {...noDelete} />);
-    expect(screen.queryByRole("button", { name: /הצגת היומן/ })).not.toBeInTheDocument();
+      days={[{ date: "2026-08-21", answers: { carbs: 4, drinking: 3 } }]} {...noDelete} onView={onView} />);
+    await userEvent.click(screen.getByRole("button", { name: "הצגת היומן של 2026-08-21" }));
+    expect(onView).toHaveBeenCalledWith("2026-08-21");
   });
 
   it("reddens a score above 30% of the max; the violation background never reaches the score column", () => {

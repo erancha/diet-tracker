@@ -30,16 +30,26 @@ export function valueLabel(question: Question, value: number): string {
 }
 
 // A question's heading for one scope. The config stores the base text once; a scope that shifts
-// its meaning (a day heading shows a summed score, a tracker meal a single grade) declares a
-// qualifier, appended here in parentheses. The same day-scope composition exists server-side as
-// Question.day_title for digest emails.
-export function questionTitle(question: Question, scope: "day" | "meal"): string {
-  const qualifier = scope === "day" ? question.day_qualifier : question.meal_qualifier;
+// its meaning (a day heading shows a summed score, a tracker meal a single grade, a trend panel
+// a charted score) declares a qualifier, appended here in parentheses. The same day-scope
+// composition exists server-side as Question.day_title for digest emails.
+export function questionTitle(question: Question, scope: "day" | "meal" | "panel"): string {
+  const qualifier = scope === "day" ? question.day_qualifier
+    : scope === "meal" ? question.meal_qualifier
+    : question.panel_qualifier;
   return qualifier === undefined ? question.text : `${question.text} (${qualifier})`;
 }
 
-// Questions with a panel_title chart as trend panels; the rest surface in the violations strip.
+// A question's trend-panel heading, or undefined for questions charting no panel: panel_title
+// stands alone when the chart names the subject differently from the question text; otherwise
+// panel_qualifier qualifies the text, keeping the subject defined once in the config.
+export function panelTitle(question: Question): string | undefined {
+  if (question.panel_title !== undefined) return question.panel_title;
+  return question.panel_qualifier !== undefined ? questionTitle(question, "panel") : undefined;
+}
+
+// Questions with a panel heading chart as trend panels; the rest surface in the violations strip.
 export function trendPanels(questionnaire: Questionnaire): { panels: Question[]; strip: Question[] } {
-  const panels = questionnaire.questions.filter((q) => q.panel_title !== undefined);
+  const panels = questionnaire.questions.filter((q) => panelTitle(q) !== undefined);
   return { panels, strip: questionnaire.questions.filter((q) => !panels.includes(q)) };
 }

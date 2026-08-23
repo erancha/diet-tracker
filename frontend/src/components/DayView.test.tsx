@@ -16,6 +16,12 @@ describe("DayView", () => {
     expect(screen.queryByRole("radio")).toBeNull();
   });
 
+  it("lists meals newest first", () => {
+    render(<DayView questionnaire={trackerQuestionnaire} day={trackedDay} onClose={vi.fn()} />);
+    const times = screen.getAllByText(/^\d{2}:\d{2}$/).map((el) => el.textContent);
+    expect(times).toEqual(["13:30", "09:10"]);
+  });
+
   it("states explicitly that a day without meals was not tracked", () => {
     render(<DayView questionnaire={trackerQuestionnaire}
                     day={{ date: "2026-08-19", meals: [],

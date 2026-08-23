@@ -7,13 +7,11 @@ interface Props {
   days: Day[];
   // Dates whose rows offer deletion — the backend accepts deletes only for today and yesterday.
   deletableDates: Set<string>;
-  // Today's row offers no read-only view: its live tracker is already open above the history.
-  todayDate: string;
   onDelete: (date: string) => void;
   onView: (date: string) => void;
 }
 
-export function HistoryTable({ questionnaire, days, deletableDates, todayDate, onDelete, onView }: Props) {
+export function HistoryTable({ questionnaire, days, deletableDates, onDelete, onView }: Props) {
   const cellText = (questionId: string, value: number) =>
     valueLabel(questionnaire.questions.find((q) => q.id === questionId)!, value);
 
@@ -38,7 +36,7 @@ export function HistoryTable({ questionnaire, days, deletableDates, todayDate, o
             {questionnaire.questions.map((q) => {
               if (!(q.id in day.answers)) return <td key={q.id}>—</td>;
               const value = day.answers[q.id];
-              const viewable = q.type === "points" && day.date !== todayDate;
+              const viewable = q.type === "points";
               // The score column signals a high total with red text alone; the violation
               // background stays on the answer columns.
               const classes = (q.type === "points"

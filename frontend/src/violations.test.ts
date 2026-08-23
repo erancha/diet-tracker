@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isViolating, questionTitle, trendPanels, valueLabel, violates } from "./violations";
+import { isViolating, panelTitle, questionTitle, trendPanels, valueLabel, violates } from "./violations";
 import type { Question, Questionnaire, Rule } from "./types";
 
 const carbs: Question = {
@@ -60,9 +60,26 @@ describe("questionTitle", () => {
 });
 
 describe("trendPanels", () => {
-  it("splits questions by panel_title presence", () => {
+  it("splits questions by panel heading presence", () => {
     const { panels, strip } = trendPanels(questionnaire);
     expect(panels.map((q) => q.id)).toEqual(["carbs"]);
     expect(strip.map((q) => q.id)).toEqual(["meals"]);
+  });
+
+  it("charts a question whose panel heading is a qualifier on its text", () => {
+    const derived: Question = { ...carbs, panel_title: undefined, panel_qualifier: "ציון, נמוך = טוב" };
+    const { panels } = trendPanels({ ...questionnaire, questions: [derived, meals] });
+    expect(panels.map((q) => q.id)).toEqual(["carbs"]);
+  });
+});
+
+describe("panelTitle", () => {
+  it("uses a standalone panel_title verbatim", () => {
+    expect(panelTitle(carbs)).toBe("ציון פחמימות");
+  });
+
+  it("derives the title from the question text when only a panel qualifier is declared", () => {
+    const derived: Question = { ...carbs, panel_title: undefined, panel_qualifier: "ציון, נמוך = טוב" };
+    expect(panelTitle(derived)).toBe("פחמימות (ציון, נמוך = טוב)");
   });
 });

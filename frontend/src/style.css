@@ -28,7 +28,11 @@ h1 { font-size: 1.4rem; color: var(--accent); }
 .day-picker { display: flex; gap: 1rem; align-items: center; margin-bottom: 0.75rem; font-size: 0.9rem; }
 .day-picker label { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0; cursor: pointer; }
 fieldset { border: 1px solid #ddd; border-radius: 8px; margin: 0 0 1rem; padding: 0.75rem 1rem; background: #fff; }
-legend { font-weight: 600; padding: 0 0.5rem; }
+/* A legend keeps its heading on one line. The longest heading (the carbs meal grade) spans
+   ~20em — wider than a phone viewport at 1rem — so below ~26rem the font scales with the
+   viewport instead of wrapping; the slope keeps a few percent of clearance down to 320px-wide
+   screens after the body, fieldset and legend paddings are taken out. */
+legend { font-weight: 600; padding: 0 0.5rem; white-space: nowrap; font-size: min(1rem, 4.8vw - 4px); }
 label { display: block; padding: 0.35rem 0; cursor: pointer; }
 button { background: var(--accent); color: #fff; border: 0; border-radius: 8px; padding: 0.6rem 2.5rem; font-size: 1rem; cursor: pointer; }
 /* pre-line keeps newlines in alert messages (e.g. the sign-in rejection's contact note). */
