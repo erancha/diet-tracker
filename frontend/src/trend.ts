@@ -1,6 +1,17 @@
-// Y-axis tick selection and labeling for the trend panels.
+// Y-axis tick selection and labeling for the trend panels, plus the in-progress day's
+// stand-in point.
 
-import type { Question } from "./types";
+import type { Day, DayPayload, Question } from "./types";
+
+// Today's stand-in for the trend before the day is closed: once a meal is recorded, the running
+// carb score charts on the points panel so a heavy day surfaces while it can still be corrected.
+// Only the carb score is meaningful mid-day (it just sums recorded meals), so the stand-in
+// carries that single answer and every other panel charts today as a gap. A submitted today is
+// already a recorded day and needs no stand-in.
+export function liveTrendDay(today: DayPayload, days: Day[]): Day | null {
+  if (today.meals.length === 0 || days.some((d) => d.date === today.date)) return null;
+  return { date: today.date, answers: { carbs: today.derived.carbs } };
+}
 
 // Short form for choice labels phrased as an open-ended bound ("מעל 12 שעות", "פחות מ-2.5 ליטר")
 // so a y-axis tick landing on that choice reads the bound instead of the bare mapped number.

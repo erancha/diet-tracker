@@ -1,7 +1,7 @@
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis } from "recharts";
-import type { Day, Question, Questionnaire } from "../types";
+import type { Day, DayPayload, Question, Questionnaire } from "../types";
 import { dayLabel, last7Days } from "../dates";
-import { domainFor, ticksFor } from "../trend";
+import { domainFor, liveTrendDay, ticksFor } from "../trend";
 import { isViolating, panelTitle, questionTitle, trendPanels, valueLabel } from "../violations";
 
 // Shared horizontal geometry across the panels and the violations strip: the panels reserve the
@@ -130,13 +130,18 @@ function TrendPanel({ questionnaire, question, dayStrs, dayByDate, index, showXA
   );
 }
 
-// 7-day trend ending at the submitted date: one line panel per chartable question, then a strip
-// marking days where any non-chartable question violated a rule.
-export function TrendChart({ questionnaire, days, endDate }: { questionnaire: Questionnaire; days: Day[]; endDate: string }) {
+// 7-day trend: one line panel per chartable question, then a strip marking days where any
+// non-chartable question violated a rule. Ends at today once today has recorded meals — its
+// running carb score charts live — else at the latest submitted date.
+export function TrendChart({ questionnaire, days, today, endDate }: {
+  questionnaire: Questionnaire; days: Day[]; today: DayPayload; endDate: string;
+}) {
   const { panels, strip } = trendPanels(questionnaire);
   if (panels.length === 0) return null;
-  const dayStrs = last7Days(endDate);
+  const liveDay = liveTrendDay(today, days);
+  const dayStrs = last7Days(liveDay?.date ?? endDate);
   const dayByDate = new Map(days.map((d) => [d.date, d]));
+  if (liveDay) dayByDate.set(liveDay.date, liveDay);
   return (
     <div className="trend" dir="ltr">
       <div className="trend-legend"><span className="trend-legend-dot" /> חריגה</div>

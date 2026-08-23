@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { domainFor, shortForm, ticksFor } from "./trend";
-import { fixtureQuestionnaire } from "./test-fixtures";
+import { domainFor, liveTrendDay, shortForm, ticksFor } from "./trend";
+import { fixtureQuestionnaire, trackedDay } from "./test-fixtures";
 import type { Question } from "./types";
 
 const drinking = fixtureQuestionnaire.questions[0];
@@ -44,6 +44,24 @@ describe("ticksFor points questions", () => {
       choices: [{ id: "no_carbs", label: "ללא", value: 0 }],
     };
     expect(ticksFor(carbs).map((t) => t.value)).toEqual([0, 15, 30]);
+  });
+});
+
+describe("liveTrendDay", () => {
+  it("stands in for an unsubmitted day with recorded meals, carrying only the carb score", () => {
+    const days = [{ date: "2026-08-19", answers: { carbs: 6 } }];
+    expect(liveTrendDay(trackedDay, days)).toEqual({ date: "2026-08-20", answers: { carbs: 4 } });
+  });
+
+  it("returns null before the first meal", () => {
+    const noMeals = { ...trackedDay, meals: [],
+                      derived: { carbs: 0, meals: 0, vegetables: 0, eating_window: 0 } };
+    expect(liveTrendDay(noMeals, [])).toBeNull();
+  });
+
+  it("returns null once today is already a submitted day", () => {
+    const days = [{ date: trackedDay.date, answers: { carbs: 4, drinking: 3 } }];
+    expect(liveTrendDay(trackedDay, days)).toBeNull();
   });
 });
 

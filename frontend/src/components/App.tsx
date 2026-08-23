@@ -136,7 +136,7 @@ export function App({ email, api, reminderHour, trackerStartHour, onSignOut }: {
         </CollapsibleSection>
         <CollapsibleSection title="היסטוריה" className="history">
           {data.days.length > 0 && (
-            <TrendChart questionnaire={questionnaire} days={data.days} endDate={data.days[0].date} />
+            <TrendChart questionnaire={questionnaire} days={data.days} today={data.today} endDate={data.days[0].date} />
           )}
           {viewedDate !== null && (
             viewedDayQuery.isPending ? <p>טוען…</p>

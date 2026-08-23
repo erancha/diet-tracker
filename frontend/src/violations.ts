@@ -48,8 +48,11 @@ export function panelTitle(question: Question): string | undefined {
   return question.panel_qualifier !== undefined ? questionTitle(question, "panel") : undefined;
 }
 
-// Questions with a panel heading chart as trend panels; the rest surface in the violations strip.
+// Questions with a panel heading chart as trend panels; the rest surface in the violations
+// strip. Points panels chart before single-type panels — the summed carb score is the day's
+// headline metric — with config order kept within each group.
 export function trendPanels(questionnaire: Questionnaire): { panels: Question[]; strip: Question[] } {
-  const panels = questionnaire.questions.filter((q) => panelTitle(q) !== undefined);
+  const panels = questionnaire.questions.filter((q) => panelTitle(q) !== undefined)
+    .sort((a, b) => Number(b.type === "points") - Number(a.type === "points"));
   return { panels, strip: questionnaire.questions.filter((q) => !panels.includes(q)) };
 }

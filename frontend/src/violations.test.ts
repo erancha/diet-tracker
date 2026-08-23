@@ -71,6 +71,15 @@ describe("trendPanels", () => {
     const { panels } = trendPanels({ ...questionnaire, questions: [derived, meals] });
     expect(panels.map((q) => q.id)).toEqual(["carbs"]);
   });
+
+  it("orders points panels before single-type panels regardless of config order", () => {
+    const drinking: Question = {
+      id: "drinking", type: "single", text: "שתיה", panel_title: "שתיה (ליטרים)",
+      choices: [{ id: "l3", label: "3 ליטר", value: 3 }],
+    };
+    const { panels } = trendPanels({ ...questionnaire, questions: [drinking, carbs, meals] });
+    expect(panels.map((q) => q.id)).toEqual(["carbs", "drinking"]);
+  });
 });
 
 describe("panelTitle", () => {
