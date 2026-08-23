@@ -1,7 +1,7 @@
 // Typed client for the authenticated backend API, bound to the signed-in user's tokens, plus the
 // Hebrew alert text the UI shows when a request fails.
 
-import type { Tokens } from "./auth";
+import { redirectToLogin, type Tokens } from "./auth";
 import type { AppConfig } from "./config";
 import type { AnswerValue, DayPayload, HistoryResponse, NewMeal, SubmitResult } from "./types";
 
@@ -38,7 +38,11 @@ export interface Api {
   deleteMeal(date: string, id: string): Promise<DayPayload>;
 }
 
-export function createApi(cfg: AppConfig, tokens: Tokens): Api {
+export function createApi(
+  cfg: AppConfig,
+  tokens: Tokens,
+  reauthenticate: () => void = () => void redirectToLogin(cfg),
+): Api {
   async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
     const response = await fetch(cfg.apiUrl + path, {
       method,
@@ -48,6 +52,15 @@ export function createApi(cfg: AppConfig, tokens: Tokens): Api {
       },
       body: body === undefined ? undefined : JSON.stringify(body),
     });
+    // The captured token has outlived its validity (the tab stayed open past expiry). The Cognito
+    // Hosted UI session cookie outlasts the ID token, so re-running the login redirect usually
+    // completes silently and lands back with a fresh token. The promise never settles: the page is
+    // navigating away, and rejecting would flash an error alert during the redirect.
+    if (response.status === 401) {
+      sessionStorage.removeItem("tokens");
+      reauthenticate();
+      return new Promise<T>(() => {});
+    }
     if (!response.ok) {
       throw new ApiError(response.status, `${method} ${path} → ${response.status}: ${await response.text()}`);
     }

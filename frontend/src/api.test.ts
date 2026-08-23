@@ -17,6 +17,21 @@ const tokens: Tokens = { id_token: "token", expires_at: 0 };
 describe("createApi", () => {
   afterEach(() => vi.unstubAllGlobals());
 
+  it("clears the stored tokens, triggers re-authentication, and never settles on a 401", async () => {
+    sessionStorage.setItem("tokens", JSON.stringify(tokens));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("Unauthorized", { status: 401 })));
+    const reauthenticate = vi.fn();
+
+    const outcome = await Promise.race([
+      createApi(cfg, tokens, reauthenticate).getDays().then(() => "settled", () => "settled"),
+      new Promise((resolve) => setTimeout(() => resolve("pending"), 10)),
+    ]);
+
+    expect(outcome).toBe("pending");
+    expect(sessionStorage.getItem("tokens")).toBeNull();
+    expect(reauthenticate).toHaveBeenCalledOnce();
+  });
+
   it("rejects with an ApiError carrying the status and the diagnostic detail on a non-ok response", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
       new Response('{"error": "2026-08-22 is already submitted"}', { status: 409 }),
