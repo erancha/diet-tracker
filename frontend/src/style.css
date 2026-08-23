@@ -91,7 +91,7 @@ td.view-day { cursor: pointer; }
 .trend { margin: 0 0 1.5rem; }
 .trend-panel { border: 1px solid #ddd; border-radius: 8px; padding: 0.6rem 0.5rem 0.4rem; background: #fff; }
 .trend-panel + .trend-panel { margin-top: 1.75rem; }
-.trend-panel-title { display: flex; align-items: center; gap: 0.35rem; font-size: 12px; margin: 0 0 0.15rem; }
+.trend-panel-title { display: flex; align-items: center; gap: 0.35rem; font-size: 12px; font-weight: 700; margin: 0 0 0.15rem; }
 .trend-chip { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
 .trend-violation-tick { stroke: var(--viz-critical); stroke-width: 2; }
 .trend-legend { display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; margin-bottom: 0.5rem; }
