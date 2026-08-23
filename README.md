@@ -1,7 +1,7 @@
 # diet-tracker
 
-Serverless Hebrew diet tracker built around an intraday meal log, scored in points golf-style —
-lower is better.
+Free multi-user SaaS: a serverless Hebrew diet tracker built around an intraday meal log, scored
+in points golf-style — lower is better.
 
 ## Overview
 
