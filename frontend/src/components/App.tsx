@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { alertMessage, type Api } from "../api";
+import { activeViolations } from "../violations";
 import type { AnswerValue, Derived, Questionnaire } from "../types";
 import { defaultDay, expandQuestionnaire, isoDate, yesterdayOf } from "../dates";
 import { Alerts, type AlertItem } from "./Alerts";
@@ -110,7 +111,8 @@ export function App({ email, api, reminderHour, trackerStartHour, onSignOut }: {
 
   return (
     <>
-      <Header email={email} onSignOut={onSignOut} />
+      <Header email={email} onSignOut={onSignOut}
+              activeViolations={activeViolations(questionnaire, data.days, todayStr, yesterdayStr)} />
       <main>
         <Alerts items={alerts} />
         {!todaySubmitted && (

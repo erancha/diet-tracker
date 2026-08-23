@@ -1,10 +1,38 @@
-// Threshold-rule checks and numeric-value labeling against the questionnaire config. All
-// functions take the questionnaire explicitly so they stay pure and independently testable.
+// Threshold-rule checks, violating-streak evaluation, and numeric-value labeling against the
+// questionnaire config. All functions take the questionnaire explicitly so they stay pure and
+// independently testable.
 
-import type { Question, Questionnaire, Rule } from "./types";
+import type { Day, Question, Questionnaire, Rule } from "./types";
+import { isoDate, parseIsoDate, yesterdayOf } from "./dates";
 
 export function violates(rule: Rule, value: number): boolean {
   return rule.at_least !== undefined ? value >= rule.at_least : value < rule.below!;
+}
+
+// Formatted messages of the rules whose violating streak is still running — the client-side
+// mirror of the backend's streak walk (src/common/rules.py), reading the same rules the chart's
+// red dots use, so the alarm and the chart always agree. A streak is
+// counted over consecutive calendar days ending at the newest submitted day; a gap day or a day
+// predating the rule's question ends it. A newest day older than yesterday is stale, not a
+// reminder: the streak may have already been broken by the unsubmitted days, so nothing reports.
+export function activeViolations(questionnaire: Questionnaire, days: Day[],
+                                 todayStr: string, yesterdayStr: string): string[] {
+  const newest = days[0];
+  if (newest === undefined || (newest.date !== todayStr && newest.date !== yesterdayStr)) return [];
+  const answersByDate = new Map(days.map((d) => [d.date, d.answers]));
+  return questionnaire.rules.flatMap((rule) => {
+    let day = parseIsoDate(newest.date);
+    let streak = 0;
+    for (;;) {
+      const value = answersByDate.get(isoDate(day))?.[rule.question_id];
+      if (value === undefined || !violates(rule, value)) break;
+      streak += 1;
+      day = yesterdayOf(day);
+    }
+    if (streak < rule.consecutive_days) return [];
+    const threshold = rule.at_least ?? rule.below!;
+    return [rule.message.replaceAll("{days}", String(streak)).replaceAll("{value}", String(threshold))];
+  });
 }
 
 export function isViolating(questionnaire: Questionnaire, questionId: string, value: number): boolean {

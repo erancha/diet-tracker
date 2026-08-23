@@ -18,6 +18,9 @@ header { display: flex; justify-content: space-between; align-items: baseline; m
    the questionnaire controls and its button drops the global button's wide padding. */
 header span { display: flex; flex-direction: column; align-items: flex-end; gap: 0.3rem; font-size: 0.8rem; }
 header span button { font-size: inherit; padding: 0.3rem 0.9rem; }
+/* The alarm is a warning indicator, not an action, so it wears the alert palette instead of the
+   accent button green. */
+header .alarm { background: #ffebee; color: var(--danger); }
 h1 { font-size: 1.4rem; color: var(--accent); }
 /* The landing fills the visible viewport (minus the body's 1rem padding) so the repo link's auto
    top margin pushes it to the bottom of the page. svh keeps the link above the fold on mobile,
