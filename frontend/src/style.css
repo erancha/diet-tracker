@@ -134,8 +134,11 @@ td.view-day { cursor: pointer; }
 /* The dashboard is already semibold, so the score needs extra weight to stand out. */
 .tracker-dashboard strong { font-weight: 800; }
 .meal-list { list-style: none; padding: 0; }
-/* Flex pins every row's controls to the same inline-end column regardless of label width. They
-   are grouped into one child because space-between spreads free space between every child: a
-   third one would drift with the text it follows instead of holding a column. */
-.meal-list li { padding: 0.25rem 0; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+/* The text cell alone absorbs the row's free space, so every cell after it — the score, then the
+   controls — holds the same column down the list however long a label runs. Distributing the
+   space between the cells instead would let each one drift with the text it follows. */
+.meal-list li { padding: 0.25rem 0; display: flex; align-items: center; gap: 0.5rem; }
+.meal-list .meal-text { flex: 1; }
+/* Sized for the widest score the carb scale reaches, so a two-digit day does not shift the column. */
+.meal-list .meal-points { flex-shrink: 0; min-width: 4ch; }
 .meal-list .meal-actions { display: flex; align-items: center; flex-shrink: 0; }

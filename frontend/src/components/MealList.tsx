@@ -36,7 +36,7 @@ export function MealList({ questionnaire, meals, onEdit, onDelete }: {
         const choice = carbsQuestion.choices.find((c) => c.id === meal.carbs_choice);
         return (
           <li key={meal.id}>
-            <span>
+            <span className="meal-text">
               <strong>{timeOf(meal.at)}</strong> ·{" "}
               <span className={choice !== undefined && choice.value > HIGH_GRADE_THRESHOLD
                 ? "high-grade" : undefined}>
@@ -45,11 +45,15 @@ export function MealList({ questionnaire, meals, onEdit, onDelete }: {
               {meal.vegetables && " · 🥗"}
               {meal.fruit && " · 🍎"}
               {meal.additions.map((id) => ` · ${ADDITION_MARKERS[id] ?? id}`).join("")}
-              {points !== undefined && ` · ${points[index]}`}
             </span>
-            {/* One flex child, so the row's text and its controls stay the only two things the
-                space between them separates — the controls line up down the list however long
-                each row's text runs. */}
+            {/* A bare number reads as nothing in particular; the carbs tooltip is what says it is
+                this meal's contribution to the day's score. */}
+            {points !== undefined && (
+              <span className="meal-points" title={carbsQuestion.tooltip}>
+                {" · "}{points[index]}
+              </span>
+            )}
+            {/* Grouped into one cell so the pencil and bin travel together as the row's controls. */}
             <span className="meal-actions">
               {onEdit && (
                 <button type="button" className="edit-meal"

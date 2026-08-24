@@ -376,6 +376,27 @@ describe("DayTracker", () => {
     expect(screen.getByText("13:30").closest("li")).toHaveTextContent("דרגה 4 · 🍎 · 4");
   });
 
+  it("gives each meal's points their own cell so the scores hold a column", () => {
+    render(<DayTracker questionnaire={questionnaire} trackerStartHour={0} today={trackedDay}
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    for (const [time, score] of [["09:10", "0"], ["13:30", "4"]] as const) {
+      const row = screen.getByText(time).closest("li")!;
+      const cell = Array.from(row.children).find((el) => el.classList.contains("meal-points"));
+      expect(cell, `no points cell in the ${time} row`).toBeDefined();
+      expect(cell).toHaveTextContent(score);
+    }
+  });
+
+  it("names the meal's score through the carbs tooltip, so the bare number is explained", () => {
+    render(<DayTracker questionnaire={questionnaire} trackerStartHour={0} today={trackedDay}
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    const row = screen.getByText("13:30").closest("li")!;
+    const cell = Array.from(row.children).find((el) => el.classList.contains("meal-points"));
+    expect(cell).toHaveAttribute("title", "המטרה היא ציון נמוך");
+  });
+
   it("shows a marker per addition on a recorded meal", () => {
     const additionsDay: DayPayload = {
       date: "2026-08-20",
