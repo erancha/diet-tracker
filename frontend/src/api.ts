@@ -35,6 +35,7 @@ export interface Api {
   submitDay(payload: SubmitPayload): Promise<SubmitResult>;
   deleteDay(date: string): Promise<{ date: string }>;
   addMeal(meal: NewMeal): Promise<DayPayload>;
+  updateMeal(date: string, id: string, meal: NewMeal): Promise<DayPayload>;
   deleteMeal(date: string, id: string): Promise<DayPayload>;
 }
 
@@ -72,6 +73,7 @@ export function createApi(
     submitDay: (payload) => request("POST", "/days", payload),
     deleteDay: (date) => request("DELETE", `/days/${date}`),
     addMeal: (meal) => request("POST", "/meals", meal),
+    updateMeal: (date, id, meal) => request("PUT", `/meals/${date}/${id}`, meal),
     deleteMeal: (date, id) => request("DELETE", `/meals/${date}/${id}`),
   };
 }

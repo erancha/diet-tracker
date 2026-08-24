@@ -74,6 +74,19 @@ class Store:
                                        ["sweet"] if item.get("sweet", False) else [])}
                 for item in response["Items"]]
 
+    def replace_meal(self, user_sub, day, meal_id, at, carbs_choice, vegetables, fruit,
+                     additions) -> str:
+        """Rewrites one meal wholesale, returning its new id; raises KeyError when no such meal
+        exists. The id carries the meal's time to keep the sort key chronological, so a corrected
+        time necessarily moves the meal to a new id. The replacement is written before the
+        original is removed: an interrupted correction leaves a duplicate the user can delete,
+        never a meal that silently disappeared."""
+        if "Item" not in self._meals.get_item(Key={"pk": user_sub, "sk": f"{day}#{meal_id}"}):
+            raise KeyError(meal_id)
+        new_id = self.add_meal(user_sub, day, at, carbs_choice, vegetables, fruit, additions)
+        self.delete_meal(user_sub, day, meal_id)
+        return new_id
+
     def delete_meal(self, user_sub, day, meal_id) -> None:
         """Removes one meal; raises KeyError when no such meal exists."""
         try:

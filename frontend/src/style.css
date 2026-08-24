@@ -75,10 +75,10 @@ td.violation { background: #ffebee; color: var(--danger); }
 /* Above-threshold carb scores read as red text pinned to the score itself: the history score
    cell, the dashboard total, and a meal's grade text. */
 td.high-score, .tracker-dashboard strong.high-score, .meal-list .high-grade { color: var(--danger); }
-/* The trash and close glyphs can render as monochrome outlines that take the CSS text color —
-   they must inherit the surrounding text color, not the global button rule's white, or they
-   vanish on the white background. */
-.delete-day, .delete-meal, .close-view { background: none; color: inherit; padding: 0 0.3rem; font-size: 1rem; }
+/* The pencil, trash and close glyphs can render as monochrome outlines that take the CSS text
+   color, so they must inherit the surrounding text rather than the global button rule's white,
+   or they vanish on the white background. */
+.delete-day, .edit-meal, .delete-meal, .close-view { background: none; color: inherit; padding: 0 0.3rem; font-size: 1rem; }
 .delete-day { margin-inline-start: 0.4rem; }
 /* The whole score cell is the open-day-view control, not a small button inside it. */
 td.view-day { cursor: pointer; }
@@ -117,9 +117,14 @@ td.view-day { cursor: pointer; }
 .section-toggle { background: none; color: inherit; font: inherit; font-weight: 600; padding: 0; cursor: pointer; }
 .section-toggle::after { content: " ▴"; font-size: 0.8em; }
 .section-toggle[aria-expanded="false"]::after { content: " ▾"; }
+/* Body-sized against the tracker's larger heading, so the fold reads as a row inside the panel
+   rather than as a section of its own. */
+.meal-form h3 { font-size: 1rem; margin: 0 0 0.5rem; }
 /* Five config-driven checkboxes must wrap on narrow phones instead of spilling off-screen. */
 .meal-flags { display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; }
 .meal-flags label { display: inline-flex; align-items: center; gap: 0.3rem; }
+/* The meal-time picker takes its own line so the checkbox row above keeps its wrap layout. */
+.meal-time { display: block; margin-top: 0.75rem; }
 /* The top margin separates the action buttons from the checkbox row above them, so the
    checkboxes don't read as attached to the buttons. */
 .tracker-actions { display: flex; gap: 1rem; margin-top: 0.75rem; }
@@ -129,5 +134,8 @@ td.view-day { cursor: pointer; }
 /* The dashboard is already semibold, so the score needs extra weight to stand out. */
 .tracker-dashboard strong { font-weight: 800; }
 .meal-list { list-style: none; padding: 0; }
-/* Flex pins every row's delete button to the same inline-end column regardless of label width. */
+/* Flex pins every row's controls to the same inline-end column regardless of label width. They
+   are grouped into one child because space-between spreads free space between every child: a
+   third one would drift with the text it follows instead of holding a column. */
 .meal-list li { padding: 0.25rem 0; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+.meal-list .meal-actions { display: flex; align-items: center; flex-shrink: 0; }

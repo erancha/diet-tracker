@@ -24,7 +24,8 @@ const staleDerivedDay: DayPayload = {
   derived: { carbs: 99, meals: 9, vegetables: 9, eating_window: 9 },
 };
 
-// Pins only the clock: the empty-day fold compares the current hour against the start hour.
+// Pins the clock: the empty-day fold compares the current hour against the start hour, and the
+// meal form's default time is derived from it.
 const atLocalTime = (hour: number, minute = 0) => {
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date(2026, 7, 20, hour, minute));
@@ -36,7 +37,8 @@ describe("DayTracker", () => {
   it("starts collapsed on an empty day before the tracker start hour", () => {
     atLocalTime(9);
     render(<DayTracker questionnaire={questionnaire} trackerStartHour={12} today={emptyDay}
-                       onAddMeal={vi.fn()} onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     expect(screen.getByRole("button", { name: "יומן היום" }))
       .toHaveAttribute("aria-expanded", "false");
   });
@@ -44,7 +46,8 @@ describe("DayTracker", () => {
   it("starts expanded from the tracker start hour onward on an empty day", () => {
     atLocalTime(12);
     render(<DayTracker questionnaire={questionnaire} trackerStartHour={12} today={emptyDay}
-                       onAddMeal={vi.fn()} onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     expect(screen.getByRole("button", { name: "יומן היום" }))
       .toHaveAttribute("aria-expanded", "true");
   });
@@ -52,14 +55,16 @@ describe("DayTracker", () => {
   it("keeps the tracker folded after a recent meal even past the tracker start hour", () => {
     atLocalTime(15);
     render(<DayTracker questionnaire={questionnaire} trackerStartHour={12} today={dayWithMealHoursAgo(1)}
-                       onAddMeal={vi.fn()} onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     expect(screen.getByRole("button", { name: "יומן היום" }))
       .toHaveAttribute("aria-expanded", "false");
   });
 
   it("derives the dashboard from the recorded meals, not the payload's derived copy", () => {
     render(<DayTracker questionnaire={questionnaire} trackerStartHour={0} today={staleDerivedDay}
-                       onAddMeal={vi.fn()} onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     expect(screen.getByText(/ציון: 4/)).toBeInTheDocument();
     expect(screen.getByText(/ארוחות: 2/)).toBeInTheDocument();
     expect(screen.getByText(/ירקות: 1/)).toBeInTheDocument();
@@ -69,7 +74,8 @@ describe("DayTracker", () => {
   it("close-day submits values derived from the recorded meals", () => {
     const onCloseDay = vi.fn();
     render(<DayTracker questionnaire={questionnaire} trackerStartHour={0} today={staleDerivedDay}
-                       onAddMeal={vi.fn()} onDeleteMeal={vi.fn()} onCloseDay={onCloseDay} />);
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={onCloseDay} />);
     fireEvent.click(screen.getByRole("button", { name: "סגירת יום" }));
     fireEvent.click(screen.getByLabelText("3 ליטר"));
     fireEvent.click(screen.getByRole("button", { name: "אישור וסגירה" }));
@@ -79,28 +85,32 @@ describe("DayTracker", () => {
 
   it("starts collapsed when the last meal is less than four hours old", () => {
     render(<DayTracker questionnaire={questionnaire} trackerStartHour={0} today={dayWithMealHoursAgo(1)}
-                       onAddMeal={vi.fn()} onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     expect(screen.getByRole("button", { name: "יומן היום" }))
       .toHaveAttribute("aria-expanded", "false");
   });
 
   it("starts expanded once four hours have passed since the last meal", () => {
     render(<DayTracker questionnaire={questionnaire} trackerStartHour={0} today={dayWithMealHoursAgo(4)}
-                       onAddMeal={vi.fn()} onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     expect(screen.getByRole("button", { name: "יומן היום" }))
       .toHaveAttribute("aria-expanded", "true");
   });
 
   it("renders each meal's time in bold", () => {
     render(<DayTracker questionnaire={questionnaire} trackerStartHour={0} today={trackedDay}
-                       onAddMeal={vi.fn()} onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     const time = screen.getByText("09:10");
     expect(time.tagName).toBe("STRONG");
   });
 
   it("titles the per-meal carbs picker with the meal-level text, not the score summary", () => {
     render(<DayTracker questionnaire={questionnaire} trackerStartHour={0} today={emptyDay}
-                       onAddMeal={vi.fn()} onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     expect(screen.getByText("פחמימות (דרגת הארוחה)")).toBeInTheDocument();
     expect(screen.queryByText("פחמימות (סיכום ציון)")).toBeNull();
   });
@@ -108,7 +118,8 @@ describe("DayTracker", () => {
   it("records a meal with the picked grade, vegetables, fruit and additions", () => {
     const onAddMeal = vi.fn();
     render(<DayTracker questionnaire={questionnaire} trackerStartHour={0} today={emptyDay}
-                       onAddMeal={onAddMeal} onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+                       onAddMeal={onAddMeal} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     expect(screen.queryByRole("button", { name: "רישום ארוחה" })).toBeNull();
     fireEvent.click(screen.getByLabelText("דרגה 4"));
     fireEvent.click(screen.getByLabelText("כולל ירקות"));
@@ -118,22 +129,135 @@ describe("DayTracker", () => {
     fireEvent.click(screen.getByRole("button", { name: "רישום ארוחה" }));
     expect(onAddMeal).toHaveBeenCalledWith(expect.objectContaining({
       carbs_choice: "grade4", vegetables: true, fruit: true, additions: ["sweet", "alcohol"] }));
-    // Stamped at tap time with a UTC offset — the test runs on an arbitrary real date.
+    // Carries a UTC offset — the test runs on an arbitrary real date, with the clock unpinned.
     expect(onAddMeal.mock.calls[0][0].at).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$/);
   });
 
   it("records the picked choice id even when another choice shares its numeric value", () => {
     const onAddMeal = vi.fn();
     render(<DayTracker questionnaire={questionnaire} trackerStartHour={0} today={emptyDay}
-                       onAddMeal={onAddMeal} onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+                       onAddMeal={onAddMeal} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     fireEvent.click(screen.getByLabelText("דרגה 4!"));
     fireEvent.click(screen.getByRole("button", { name: "רישום ארוחה" }));
     expect(onAddMeal).toHaveBeenCalledWith(expect.objectContaining({ carbs_choice: "grade4b" }));
   });
 
+  it("defaults the meal time to twenty minutes before the ten-minute mark just passed", () => {
+    atLocalTime(12, 25);
+    render(<DayTracker questionnaire={questionnaire} trackerStartHour={0} today={emptyDay}
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    expect(screen.getByLabelText("שעת הארוחה")).toHaveValue("12:00");
+  });
+
+  it("holds the default at midnight during the first twenty minutes of the day", () => {
+    atLocalTime(0, 5);
+    render(<DayTracker questionnaire={questionnaire} trackerStartHour={0} today={emptyDay}
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    expect(screen.getByLabelText("שעת הארוחה")).toHaveValue("00:00");
+  });
+
+  it("records a meal at the picked time rather than the submission moment", () => {
+    atLocalTime(16, 5);
+    const onAddMeal = vi.fn();
+    render(<DayTracker questionnaire={questionnaire} trackerStartHour={0} today={emptyDay}
+                       onAddMeal={onAddMeal} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    fireEvent.click(screen.getByLabelText("דרגה 4"));
+    fireEvent.change(screen.getByLabelText("שעת הארוחה"), { target: { value: "13:00" } });
+    fireEvent.click(screen.getByRole("button", { name: "רישום ארוחה" }));
+    expect(onAddMeal.mock.calls[0][0].at).toMatch(/^2026-08-20T13:00:00[+-]\d{2}:\d{2}$/);
+  });
+
+  it("returns the meal time to the default estimate after a meal is recorded", () => {
+    atLocalTime(16, 5);
+    render(<DayTracker questionnaire={questionnaire} trackerStartHour={0} today={emptyDay}
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    fireEvent.click(screen.getByLabelText("דרגה 4"));
+    fireEvent.change(screen.getByLabelText("שעת הארוחה"), { target: { value: "13:00" } });
+    fireEvent.click(screen.getByRole("button", { name: "רישום ארוחה" }));
+    expect(screen.getByLabelText("שעת הארוחה")).toHaveValue("15:40");
+  });
+
+  it("refuses to record a meal at a time the day has not reached yet", () => {
+    atLocalTime(13, 0);
+    const onAddMeal = vi.fn();
+    render(<DayTracker questionnaire={questionnaire} trackerStartHour={0} today={emptyDay}
+                       onAddMeal={onAddMeal} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    fireEvent.click(screen.getByLabelText("דרגה 4"));
+    fireEvent.change(screen.getByLabelText("שעת הארוחה"), { target: { value: "14:00" } });
+    expect(screen.getByRole("button", { name: "רישום ארוחה" })).toBeDisabled();
+    expect(screen.getByText("לא ניתן לרשום ארוחה בשעה עתידית")).toBeInTheDocument();
+  });
+
+  it("loads a recorded meal into the meal form when its edit button is tapped", () => {
+    render(<DayTracker questionnaire={questionnaire} trackerStartHour={0} today={trackedDay}
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()} onDeleteMeal={vi.fn()}
+                       onCloseDay={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "עריכת ארוחה 13:30" }));
+    expect(screen.getByLabelText("שעת הארוחה")).toHaveValue("13:30");
+    expect(screen.getByLabelText("דרגה 4")).toBeChecked();
+    expect(screen.getByLabelText("כולל פרי")).toBeChecked();
+    expect(screen.getByLabelText("כולל ירקות")).not.toBeChecked();
+    expect(screen.getByRole("button", { name: "עדכון ארוחה" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "רישום ארוחה" })).toBeNull();
+  });
+
+  it("sends the edited meal under its own id and returns the form to recording", () => {
+    atLocalTime(19, 5);
+    const onUpdateMeal = vi.fn();
+    render(<DayTracker questionnaire={questionnaire} trackerStartHour={0} today={trackedDay}
+                       onAddMeal={vi.fn()} onUpdateMeal={onUpdateMeal} onDeleteMeal={vi.fn()}
+                       onCloseDay={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "עריכת ארוחה 13:30" }));
+    fireEvent.change(screen.getByLabelText("שעת הארוחה"), { target: { value: "12:00" } });
+    fireEvent.click(screen.getByLabelText("כולל ירקות"));
+    fireEvent.click(screen.getByLabelText("כולל מתוק"));
+    fireEvent.click(screen.getByRole("button", { name: "עדכון ארוחה" }));
+    expect(onUpdateMeal).toHaveBeenCalledWith("b", expect.objectContaining({
+      carbs_choice: "grade4", vegetables: true, fruit: true, additions: ["sweet"] }));
+    expect(onUpdateMeal.mock.calls[0][1].at).toMatch(/T12:00:00[+-]\d{2}:\d{2}$/);
+    expect(screen.queryByRole("button", { name: "עדכון ארוחה" })).toBeNull();
+  });
+
+  it("cancels an edit without sending it and restores the default meal time", () => {
+    atLocalTime(19, 5);
+    const onUpdateMeal = vi.fn();
+    render(<DayTracker questionnaire={questionnaire} trackerStartHour={0} today={trackedDay}
+                       onAddMeal={vi.fn()} onUpdateMeal={onUpdateMeal} onDeleteMeal={vi.fn()}
+                       onCloseDay={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "עריכת ארוחה 13:30" }));
+    fireEvent.click(screen.getByRole("button", { name: "ביטול עריכה" }));
+    expect(onUpdateMeal).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("שעת הארוחה")).toHaveValue("18:40");
+    expect(screen.getByLabelText("דרגה 4")).not.toBeChecked();
+    expect(screen.queryByRole("button", { name: "עדכון ארוחה" })).toBeNull();
+  });
+
+  it("falls back to recording when the meal being edited is deleted", () => {
+    const { rerender } = render(
+      <DayTracker questionnaire={questionnaire} trackerStartHour={0} today={trackedDay}
+                  onAddMeal={vi.fn()} onUpdateMeal={vi.fn()} onDeleteMeal={vi.fn()}
+                  onCloseDay={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "עריכת ארוחה 13:30" }));
+
+    rerender(<DayTracker questionnaire={questionnaire} trackerStartHour={0}
+                         today={{ ...trackedDay, meals: [trackedDay.meals[0]] }}
+                         onAddMeal={vi.fn()} onUpdateMeal={vi.fn()} onDeleteMeal={vi.fn()}
+                         onCloseDay={vi.fn()} />);
+
+    expect(screen.queryByRole("button", { name: "עדכון ארוחה" })).toBeNull();
+    expect(screen.getByRole("button", { name: "רישום ארוחה" })).toBeInTheDocument();
+  });
+
   it("collapses to the dashboard alone and expands back on header toggle", () => {
     render(<DayTracker questionnaire={questionnaire} trackerStartHour={0} today={trackedDay}
-                       onAddMeal={vi.fn()} onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     const toggle = screen.getByRole("button", { name: "יומן היום" });
     expect(toggle).toHaveAttribute("aria-expanded", "true");
 
@@ -149,9 +273,64 @@ describe("DayTracker", () => {
     expect(screen.getByLabelText("דרגה 4")).toBeInTheDocument();
   });
 
+  it("folds the meal inputs away while keeping the actions and meal list in view", () => {
+    render(<DayTracker questionnaire={questionnaire} trackerStartHour={0} today={trackedDay}
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    const form = screen.getByRole("button", { name: "פרטי הארוחה" });
+    expect(form).toHaveAttribute("aria-expanded", "true");
+
+    fireEvent.click(form);
+
+    expect(form).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByLabelText("שעת הארוחה")).toBeNull();
+    expect(screen.queryByLabelText("דרגה 4")).toBeNull();
+    expect(screen.getByRole("button", { name: "סגירת יום" })).toBeInTheDocument();
+    expect(screen.getByText("13:30")).toBeInTheDocument();
+    expect(screen.getByText(/ציון: 4/)).toBeInTheDocument();
+  });
+
+  it("opens the meal inputs with the tracker when a meal is due", () => {
+    render(<DayTracker questionnaire={questionnaire} trackerStartHour={0}
+                       today={dayWithMealHoursAgo(4)}
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    expect(screen.getByRole("button", { name: "פרטי הארוחה" }))
+      .toHaveAttribute("aria-expanded", "true");
+  });
+
+  it("leaves the meal inputs folded when the tracker is opened by hand", () => {
+    atLocalTime(9);
+    render(<DayTracker questionnaire={questionnaire} trackerStartHour={12} today={emptyDay}
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "יומן היום" }));
+
+    expect(screen.getByRole("button", { name: "פרטי הארוחה" }))
+      .toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByLabelText("דרגה 4")).toBeNull();
+  });
+
+  it("unfolds the meal inputs when a recorded meal is opened for editing", () => {
+    render(<DayTracker questionnaire={questionnaire} trackerStartHour={0}
+                       today={dayWithMealHoursAgo(1)}
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "יומן היום" }));
+    expect(screen.getByRole("button", { name: "פרטי הארוחה" }))
+      .toHaveAttribute("aria-expanded", "false");
+
+    fireEvent.click(screen.getByRole("button", { name: /^עריכת ארוחה/ }));
+
+    expect(screen.getByRole("button", { name: "פרטי הארוחה" }))
+      .toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("button", { name: "עדכון ארוחה" })).toBeInTheDocument();
+  });
+
   it("renders the score bold and last in the dashboard", () => {
     render(<DayTracker questionnaire={questionnaire} trackerStartHour={0} today={trackedDay}
-                       onAddMeal={vi.fn()} onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     const score = screen.getByText(/ציון: 4/);
     expect(score.tagName).toBe("STRONG");
     expect(score.parentElement!.lastElementChild).toBe(score);
@@ -159,7 +338,8 @@ describe("DayTracker", () => {
 
   it("exposes the carbs tooltip on the dashboard score", () => {
     render(<DayTracker questionnaire={questionnaire} trackerStartHour={0} today={trackedDay}
-                       onAddMeal={vi.fn()} onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     expect(screen.getByText(/ציון: 4/)).toHaveAttribute("title", "המטרה היא ציון נמוך");
   });
 
@@ -167,7 +347,8 @@ describe("DayTracker", () => {
     const onDeleteMeal = vi.fn();
     vi.spyOn(window, "confirm").mockReturnValue(true);
     render(<DayTracker questionnaire={questionnaire} trackerStartHour={0} today={trackedDay}
-                       onAddMeal={vi.fn()} onDeleteMeal={onDeleteMeal} onCloseDay={vi.fn()} />);
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={onDeleteMeal} onCloseDay={vi.fn()} />);
     expect(screen.getByText(/ציון: 4/)).toBeInTheDocument();
     expect(screen.getByText(/ארוחות: 2/)).toBeInTheDocument();
     expect(screen.getByText("חלון: 4.5 שעות")).toBeInTheDocument();
@@ -181,14 +362,16 @@ describe("DayTracker", () => {
 
   it("lists meals newest first", () => {
     render(<DayTracker questionnaire={questionnaire} trackerStartHour={0} today={trackedDay}
-                       onAddMeal={vi.fn()} onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     const times = screen.getAllByText(/^\d{2}:\d{2}$/).map((el) => el.textContent);
     expect(times).toEqual(["13:30", "09:10"]);
   });
 
   it("shows each meal's effective points at the end of its row", () => {
     render(<DayTracker questionnaire={questionnaire} trackerStartHour={0} today={trackedDay}
-                       onAddMeal={vi.fn()} onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     expect(screen.getByText("09:10").closest("li")).toHaveTextContent("ללא פחמימות · 🥗 · 0");
     expect(screen.getByText("13:30").closest("li")).toHaveTextContent("דרגה 4 · 🍎 · 4");
   });
@@ -201,14 +384,16 @@ describe("DayTracker", () => {
       derived: { carbs: 15, meals: 1, vegetables: 0, eating_window: 0 },
     };
     render(<DayTracker questionnaire={questionnaire} trackerStartHour={0} today={additionsDay}
-                       onAddMeal={vi.fn()} onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     expect(screen.getByText("09:10").closest("li"))
       .toHaveTextContent("דרגה 4 · 🍪 · 🍷 · 🥜 · 15");
   });
 
   it("marks each meal's delete button with the compact delete-meal style", () => {
     render(<DayTracker questionnaire={questionnaire} trackerStartHour={0} today={trackedDay}
-                       onAddMeal={vi.fn()} onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     for (const button of screen.getAllByRole("button", { name: /מחיקת ארוחה/ })) {
       expect(button).toHaveClass("delete-meal");
     }
@@ -217,7 +402,8 @@ describe("DayTracker", () => {
   it("close-day asks for water and submits derived values plus drinking", () => {
     const onCloseDay = vi.fn();
     render(<DayTracker questionnaire={questionnaire} trackerStartHour={0} today={trackedDay}
-                       onAddMeal={vi.fn()} onDeleteMeal={vi.fn()} onCloseDay={onCloseDay} />);
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={onCloseDay} />);
     fireEvent.click(screen.getByRole("button", { name: "סגירת יום" }));
     fireEvent.click(screen.getByLabelText("3 ליטר"));
     fireEvent.click(screen.getByRole("button", { name: "אישור וסגירה" }));
@@ -233,15 +419,18 @@ describe("DayTracker", () => {
     };
     const { rerender } = render(
       <DayTracker questionnaire={questionnaire} trackerStartHour={0} today={emptyDay}
-                  onAddMeal={vi.fn()} onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+                  onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                  onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     expect(screen.queryByRole("button", { name: "סגירת יום" })).toBeNull();
 
     rerender(<DayTracker questionnaire={questionnaire} trackerStartHour={0} today={singleMealDay}
-                         onAddMeal={vi.fn()} onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+                         onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                         onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     expect(screen.queryByRole("button", { name: "סגירת יום" })).toBeNull();
 
     rerender(<DayTracker questionnaire={questionnaire} trackerStartHour={0} today={trackedDay}
-                         onAddMeal={vi.fn()} onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+                         onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                         onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     expect(screen.getByRole("button", { name: "סגירת יום" })).toBeInTheDocument();
   });
 });

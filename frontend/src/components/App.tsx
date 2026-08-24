@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { alertMessage, type Api } from "../api";
 import { activeViolations } from "../violations";
-import type { AnswerValue, Derived, Questionnaire } from "../types";
+import type { AnswerValue, Derived, NewMeal, Questionnaire } from "../types";
 import { defaultDay, expandQuestionnaire, isoDate, yesterdayOf } from "../dates";
 import { Alerts, type AlertItem } from "./Alerts";
 import { CollapsibleSection } from "./CollapsibleSection";
@@ -85,6 +85,12 @@ export function App({ email, api, reminderHour, trackerStartHour, onSignOut }: {
     onError: errorAlert("הוספת הארוחה נכשלה"),
   });
 
+  const updateMealMutation = useMutation({
+    mutationFn: ({ id, meal }: { id: string; meal: NewMeal }) => api.updateMeal(todayStr, id, meal),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["days"] }),
+    onError: errorAlert("עדכון הארוחה נכשל"),
+  });
+
   const deleteMealMutation = useMutation({
     mutationFn: (id: string) => api.deleteMeal(todayStr, id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["days"] }),
@@ -122,6 +128,7 @@ export function App({ email, api, reminderHour, trackerStartHour, onSignOut }: {
             trackerStartHour={trackerStartHour}
             today={data.today}
             onAddMeal={(meal) => mealMutation.mutate(meal)}
+            onUpdateMeal={(id, meal) => updateMealMutation.mutate({ id, meal })}
             onDeleteMeal={(id) => deleteMealMutation.mutate(id)}
             onCloseDay={(answers) => submitMutation.mutate({ answers, date: todayStr })}
           />

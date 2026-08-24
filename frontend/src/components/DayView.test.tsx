@@ -12,6 +12,7 @@ describe("DayView", () => {
     expect(screen.getByText("09:10")).toBeInTheDocument();
     expect(screen.getByText(/דרגה 4/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /מחיקת ארוחה/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /עריכת ארוחה/ })).toBeNull();
     expect(screen.queryByRole("checkbox")).toBeNull();
     expect(screen.queryByRole("radio")).toBeNull();
   });

@@ -1,5 +1,6 @@
 """HTTP API handler: day submission with meal-derived floors and synchronous rule alerts,
-history with per-day read-only lookups, day deletion, and intraday meal reporting.
+history with per-day read-only lookups, day deletion, and intraday meal reporting with
+whole-meal corrections.
 
 The caller's identity comes exclusively from the JWT claims the API Gateway authorizer
 verified — the request body never names a user."""
@@ -38,6 +39,9 @@ def handler(event, context):
         return _delete_day(sub, event["pathParameters"]["date"])
     if route == "POST /meals":
         return _add_meal(sub, json.loads(event["body"]))
+    if route == "PUT /meals/{date}/{id}":
+        return _update_meal(sub, event["pathParameters"]["date"], event["pathParameters"]["id"],
+                            json.loads(event["body"]))
     if route == "DELETE /meals/{date}/{id}":
         return _delete_meal(sub, event["pathParameters"]["date"], event["pathParameters"]["id"])
     raise ValueError(f"unhandled route {route!r}")
@@ -144,8 +148,9 @@ def _get_day(sub, chosen):
     return _response(200, _day_payload(_store(), _questionnaire(), sub, chosen))
 
 
-def _add_meal(sub, body):
-    day = today()
+def _meal_rejection(body, day, questionnaire):
+    """The 400 response a meal body earns when a field cannot be stored, or None when the whole
+    body is legal. Recording and correcting a meal take identical bodies, so they share it."""
     try:
         at = datetime.fromisoformat(body["at"])
     except ValueError:
@@ -154,31 +159,69 @@ def _add_meal(sub, body):
         return _response(400, {"error": f"at ({body['at']!r}) must include a UTC offset"})
     if at.date().isoformat() != day:
         return _response(400, {"error": f"meals can only be recorded for today ({day})"})
-    questionnaire = _questionnaire()
     if body["carbs_choice"] not in questionnaire.carb_weights():
         return _response(400, {"error": f"unknown carbs choice {body['carbs_choice']!r}"})
     if not isinstance(body["vegetables"], bool):
         return _response(400, {"error": "vegetables must be a boolean"})
     if not isinstance(body["fruit"], bool):
         return _response(400, {"error": "fruit must be a boolean"})
-    additions = body["additions"]
-    if not isinstance(additions, list):
+    if not isinstance(body["additions"], list):
         return _response(400, {"error": "additions must be a list"})
-    unknown = [a for a in additions if a not in questionnaire.addition_values()]
+    unknown = [a for a in body["additions"] if a not in questionnaire.addition_values()]
     if unknown:
         return _response(400, {"error": f"unknown additions {unknown!r}"})
+    return None
+
+
+def _wrong_correction_day(date, day):
+    """The 400 response for correcting a meal outside today, or None. A meal is stored under the
+    day it belongs to, and only the running day may still be corrected."""
+    return None if date == day \
+        else _response(400, {"error": f"meals can only be corrected for today ({day})"})
+
+
+def _add_meal(sub, body):
+    day = today()
+    questionnaire = _questionnaire()
+    rejection = _meal_rejection(body, day, questionnaire)
+    if rejection is not None:
+        return rejection
     store = _store()
     if store.has_day(sub, day):
         return _response(409, {"error": f"{day} is already submitted"})
     store.add_meal(sub, day, body["at"], body["carbs_choice"], body["vegetables"], body["fruit"],
-                   additions)
+                   body["additions"])
+    return _response(200, _day_payload(store, questionnaire, sub, day))
+
+
+def _update_meal(sub, date, meal_id, body):
+    """Replaces a recorded meal with a new body: every field the tracker sets when recording,
+    the time included. A corrected time re-keys the meal, so the reply carries the day's meals in
+    their new order along with the re-derived values."""
+    day = today()
+    wrong_day = _wrong_correction_day(date, day)
+    if wrong_day is not None:
+        return wrong_day
+    questionnaire = _questionnaire()
+    rejection = _meal_rejection(body, day, questionnaire)
+    if rejection is not None:
+        return rejection
+    store = _store()
+    if store.has_day(sub, day):
+        return _response(409, {"error": f"{day} is already submitted"})
+    try:
+        store.replace_meal(sub, day, meal_id, body["at"], body["carbs_choice"],
+                           body["vegetables"], body["fruit"], body["additions"])
+    except KeyError:
+        return _response(404, {"error": f"no meal {meal_id!r} for {day}"})
     return _response(200, _day_payload(store, questionnaire, sub, day))
 
 
 def _delete_meal(sub, date, meal_id):
     day = today()
-    if date != day:
-        return _response(400, {"error": f"meals can only be corrected for today ({day})"})
+    wrong_day = _wrong_correction_day(date, day)
+    if wrong_day is not None:
+        return wrong_day
     store = _store()
     if store.has_day(sub, day):
         return _response(409, {"error": f"{day} is already submitted"})

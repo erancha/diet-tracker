@@ -99,7 +99,7 @@ Resources:
     Properties:
       CorsConfiguration:
         AllowOrigins: !Ref AllowedOrigins
-        AllowMethods: [GET, POST, DELETE, OPTIONS]
+        AllowMethods: [GET, POST, PUT, DELETE, OPTIONS]
         AllowHeaders: [Authorization, Content-Type]
       Auth:
         DefaultAuthorizer: CognitoJwt
@@ -149,6 +149,12 @@ Resources:
             ApiId: !Ref Api
             Method: POST
             Path: /meals
+        UpdateMeal:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref Api
+            Method: PUT
+            Path: /meals/{date}/{id}
         DeleteMeal:
           Type: HttpApi
           Properties:

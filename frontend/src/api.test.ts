@@ -33,6 +33,20 @@ describe("createApi", () => {
     expect(reauthenticate).toHaveBeenCalledOnce();
   });
 
+  it("sends an edited meal as a whole-meal PUT under the meal's own path", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response('{"date": "2026-08-22"}'));
+    vi.stubGlobal("fetch", fetchMock);
+    const meal = { at: "2026-08-22T13:30:00+03:00", carbs_choice: "grade4", vegetables: true,
+                   fruit: false, additions: ["sweet"] };
+
+    await createApi(cfg, tokens).updateMeal("2026-08-22", "13:30:00-abcdef", meal);
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("https://api.example.com/meals/2026-08-22/13:30:00-abcdef");
+    expect(init.method).toBe("PUT");
+    expect(JSON.parse(init.body)).toEqual(meal);
+  });
+
   it("rejects with an ApiError carrying the status and the diagnostic detail on a non-ok response", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
       new Response('{"error": "2026-08-22 is already submitted"}', { status: 409 }),

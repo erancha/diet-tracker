@@ -73,6 +73,25 @@ def test_delete_meal(store):
         store.delete_meal("u1", "2026-08-20", meal_id)
 
 
+def test_replace_meal_rewrites_every_field_and_reorders_an_edited_time(store):
+    edited = store.add_meal("u1", "2026-08-20", "2026-08-20T13:30:00+03:00", "grade4", False, False, [])
+    store.add_meal("u1", "2026-08-20", "2026-08-20T18:00:00+03:00", "grade3", False, False, [])
+    new_id = store.replace_meal("u1", "2026-08-20", edited, "2026-08-20T09:10:00+03:00",
+                                "no_carbs", True, True, ["sweet"])
+    meals = store.get_meals("u1", "2026-08-20")
+    assert [m["id"] for m in meals][0] == new_id
+    assert meals[0] == {"id": new_id, "at": "2026-08-20T09:10:00+03:00", "carbs_choice": "no_carbs",
+                        "vegetables": True, "fruit": True, "additions": ["sweet"]}
+    assert len(meals) == 2
+
+
+def test_replace_meal_leaves_no_trace_of_an_unknown_meal(store):
+    with pytest.raises(KeyError):
+        store.replace_meal("u1", "2026-08-20", "12:00:00-abcdef", "2026-08-20T12:00:00+03:00",
+                           "grade3", False, False, [])
+    assert store.get_meals("u1", "2026-08-20") == []
+
+
 def test_nudge_state_roundtrip_with_legal_empty_default(store):
     assert store.get_nudge_state("u1") == {"rules": {}}
     store.put_nudge_state("u1", {"rules": {"heavy_carbs": {"last_alert_for": "2026-08-19"}}})

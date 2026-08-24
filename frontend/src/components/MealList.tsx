@@ -6,13 +6,14 @@ import { HIGH_GRADE_THRESHOLD } from "../violations";
 const ADDITION_MARKERS: Record<string, string> = { sweet: "🍪", alcohol: "🍷", nuts: "🥜" };
 
 // A day's meal list rendered newest first — the top row is the meal just recorded, the one the
-// user checks or deletes — each row ending with the meal's effective points so the rows visibly
-// sum to the day's carb score. Per-meal deletion renders only when a handler is supplied
-// (the live tracker); the read-only history view passes none.
-export function MealList({ questionnaire, meals, onDelete }: {
+// user checks, corrects or deletes — each row ending with the meal's effective points so the rows
+// visibly sum to the day's carb score. Per-meal editing and deletion render only when their
+// handlers are supplied (the live tracker); the read-only history view passes none.
+export function MealList({ questionnaire, meals, onEdit, onDelete }: {
   questionnaire: Questionnaire;
   // Chronological, as the server stores them; rendering reverses to newest first.
   meals: Meal[];
+  onEdit?: (meal: Meal) => void;
   onDelete?: (id: string) => void;
 }) {
   const carbsQuestion = questionnaire.questions.find((q) => q.id === "carbs")!;
@@ -46,12 +47,25 @@ export function MealList({ questionnaire, meals, onDelete }: {
               {meal.additions.map((id) => ` · ${ADDITION_MARKERS[id] ?? id}`).join("")}
               {points !== undefined && ` · ${points[index]}`}
             </span>
-            {onDelete && (
-              <button type="button" className="delete-meal" aria-label={`מחיקת ארוחה ${timeOf(meal.at)}`}
-                      onClick={() => { if (window.confirm("למחוק את הארוחה?")) onDelete(meal.id); }}>
-                🗑️
-              </button>
-            )}
+            {/* One flex child, so the row's text and its controls stay the only two things the
+                space between them separates — the controls line up down the list however long
+                each row's text runs. */}
+            <span className="meal-actions">
+              {onEdit && (
+                <button type="button" className="edit-meal"
+                        aria-label={`עריכת ארוחה ${timeOf(meal.at)}`}
+                        onClick={() => onEdit(meal)}>
+                  ✏️
+                </button>
+              )}
+              {onDelete && (
+                <button type="button" className="delete-meal"
+                        aria-label={`מחיקת ארוחה ${timeOf(meal.at)}`}
+                        onClick={() => { if (window.confirm("למחוק את הארוחה?")) onDelete(meal.id); }}>
+                  🗑️
+                </button>
+              )}
+            </span>
           </li>
         );
       })}

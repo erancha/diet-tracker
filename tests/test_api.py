@@ -42,6 +42,14 @@ def add_meal(carbs_choice="grade3", vegetables=True, fruit=False, additions=(), 
         "vegetables": vegetables, "fruit": fruit, "additions": list(additions)}), None)
 
 
+def update_meal(meal_id, carbs_choice="grade3", vegetables=True, fruit=False, additions=(),
+                at_time="09:10:00", date=None):
+    return api.handler(request("PUT /meals/{date}/{id}", {
+        "at": f"{today()}T{at_time}+03:00", "carbs_choice": carbs_choice,
+        "vegetables": vegetables, "fruit": fruit, "additions": list(additions)},
+        path_params={"date": date or today(), "id": meal_id}), None)
+
+
 def test_handler_logs_route_and_caller(env, caplog):
     with caplog.at_level(logging.INFO):
         api.handler(request("GET /days"), None)
@@ -167,6 +175,40 @@ def test_add_meal_rejects_other_dates_unknown_choices_and_submitted_days(env):
     assert unknown["statusCode"] == 400
     api.handler(request("POST /days", {"answers": ANSWERS}), None)
     closed = add_meal()
+    assert closed["statusCode"] == 409
+
+
+def test_update_meal_rewrites_every_recorded_field_and_recomputes_the_day(env):
+    meal_id = body_of(add_meal("grade3"))["meals"][0]["id"]
+    payload = body_of(update_meal(meal_id, "no_carbs", vegetables=False, fruit=True,
+                                  additions=["sweet"], at_time="13:30:00"))
+    assert len(payload["meals"]) == 1
+    meal = payload["meals"][0]
+    assert meal["at"] == f"{today()}T13:30:00+03:00"
+    assert (meal["carbs_choice"], meal["vegetables"], meal["fruit"], meal["additions"]) \
+        == ("no_carbs", False, True, ["sweet"])
+    assert payload["derived"]["vegetables"] == 0
+
+
+def test_update_meal_rejects_an_unknown_choice_and_a_naive_timestamp(env):
+    meal_id = body_of(add_meal())["meals"][0]["id"]
+    unknown = update_meal(meal_id, carbs_choice="off_reset")
+    assert unknown["statusCode"] == 400
+    naive = api.handler(request("PUT /meals/{date}/{id}",
+                                {"at": f"{today()}T09:00:00", "carbs_choice": "grade3",
+                                 "vegetables": False, "fruit": False, "additions": []},
+                                path_params={"date": today(), "id": meal_id}), None)
+    assert naive["statusCode"] == 400
+
+
+def test_update_meal_guards_missing_meals_other_dates_and_submitted_days(env):
+    meal_id = body_of(add_meal())["meals"][0]["id"]
+    missing = update_meal("09:10:00-abcdef")
+    assert missing["statusCode"] == 404
+    stale = update_meal(meal_id, date=days_before(today(), 1))
+    assert stale["statusCode"] == 400
+    api.handler(request("POST /days", {"answers": ANSWERS}), None)
+    closed = update_meal(meal_id)
     assert closed["statusCode"] == 409
 
 
