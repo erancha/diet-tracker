@@ -53,31 +53,48 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-.wrap { max-width: 1180px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; }
+.wrap { --wrap-pad: 1.5rem; max-width: 1180px; margin: 0 auto; padding: 2.5rem var(--wrap-pad) 4rem; }
 
 /* ── masthead ─────────────────────────────────────────────────────────── */
-.masthead { border-bottom: 1px solid var(--c-line); padding-bottom: 1.4rem; margin-bottom: 2.2rem; }
-.eyebrow {
-  font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.16em;
-  text-transform: uppercase; color: var(--c-dim); margin: 0 0 0.5rem;
+/* One line, so the device clears the fold on a phone. Everything static about the page lives
+   behind the toggle, which wears the app's own disclosure arrow. */
+.masthead {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 1rem;
+  border-bottom: 1px solid var(--c-line); padding-bottom: 0.7rem; margin-bottom: 1.3rem;
 }
-.masthead h1 {
-  font-size: clamp(1.9rem, 4.2vw, 2.7rem); font-weight: 600; letter-spacing: -0.02em;
-  margin: 0 0 0.5rem; text-wrap: balance;
+.masthead h1 { font-size: 1.3rem; font-weight: 600; letter-spacing: -0.01em; margin: 0; }
+.about-toggle {
+  background: none; border: 0; color: var(--c-muted); font: inherit; font-size: 0.85rem;
+  padding: 0; cursor: pointer; flex: none;
 }
-.masthead p { margin: 0; max-width: 62ch; color: var(--c-muted); font-size: 0.98rem; }
-.masthead p strong { color: var(--c-paper); font-weight: 500; }
+.about-toggle:hover { color: var(--c-paper); }
+.about-toggle:focus-visible { outline: 2px solid var(--c-live); outline-offset: 3px; }
+.about-toggle::after { content: " \25BE"; font-size: 0.8em; }
+.about-toggle[aria-expanded="true"]::after { content: " \25B4"; }
+.about { display: grid; gap: 1.3rem; margin-bottom: 1.6rem; }
+.about[hidden] { display: none; }
+.lede { margin: 0; max-width: 62ch; color: var(--c-muted); font-size: 0.95rem; }
+.lede strong { color: var(--c-paper); font-weight: 500; }
 
 /* ── workbench grid ───────────────────────────────────────────────────── */
-.bench { display: grid; grid-template-columns: 392px 1fr; gap: 3rem; align-items: start; }
-@media (max-width: 940px) { .bench { grid-template-columns: 1fr; gap: 2.2rem; } }
+/* minmax(0, …) lets the columns fall below their content width; a bare 1fr keeps its automatic
+   min-content floor, which the fixed-width device would hold open into a sideways page scroll. */
+.bench { display: grid; grid-template-columns: 410px minmax(0, 1fr); gap: 3rem; align-items: start; }
+@media (max-width: 940px) { .bench { grid-template-columns: minmax(0, 1fr); gap: 2.2rem; } }
 
 .rig { position: sticky; top: 1.5rem; display: flex; flex-direction: column; gap: 1rem; }
 @media (max-width: 940px) { .rig { position: static; } }
 
 /* ── the device ───────────────────────────────────────────────────────── */
+/* The screen inside is a fixed 390px because every pinned value in the app stylesheet below —
+   the legend's viewport-derived size, the 340px chart width — was resolved for that width. So a
+   narrow window shrinks the device by scaling it whole rather than by reflowing the screen; the
+   stage reserves the scaled height, and offsetTop/offsetLeft stay in unscaled coordinates, which
+   is what the cursor and scrolling maths read. */
+.stage { display: flex; justify-content: center; overflow: hidden; height: calc(704px * var(--k, 1)); }
 .device {
-  width: 392px; max-width: 100%;
+  width: 410px; flex: none;
+  transform: scale(var(--k, 1)); transform-origin: top center;
   background: #05090a;
   border: 1px solid var(--c-wire);
   border-radius: 26px;
@@ -91,7 +108,6 @@ body {
   background: #fafafa;
   height: 684px;
 }
-@media (max-width: 420px) { .device { padding: 6px; } .viewport { border-radius: 14px; } }
 
 .statusbar {
   direction: ltr;
@@ -210,9 +226,8 @@ body {
 }
 .readout dd.hot { color: var(--c-alarm); }
 
-/* ── footer note ──────────────────────────────────────────────────────── */
+/* ── provenance, inside the disclosure ────────────────────────────────── */
 .provenance {
-  margin-top: 2.6rem; padding-top: 1.3rem; border-top: 1px solid var(--c-line);
   display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1.4rem;
 }
 .provenance h3 {
@@ -221,6 +236,11 @@ body {
 }
 .provenance p { margin: 0; font-size: 0.88rem; color: var(--c-muted); }
 .provenance a { color: var(--c-live); }
+
+@media (max-width: 720px) {
+  .wrap { --wrap-pad: 0.75rem; padding-top: 1rem; padding-bottom: 2rem; }
+  .masthead { margin-bottom: 1rem; }
+}
 
 @media (prefers-reduced-motion: reduce) {
   .tap { transition: none; }
@@ -321,42 +341,18 @@ body {
 <body>
 <div class="wrap">
   <header class="masthead">
-    <p class="eyebrow">diet-tracker · הדמיית שימוש</p>
     <h1>יום ביומן</h1>
-    <p>
+    <button type="button" class="about-toggle" id="about-toggle"
+            aria-expanded="false" aria-controls="about">על ההדמיה</button>
+  </header>
+
+  <div class="about" id="about" hidden>
+    <p class="lede">
       מסלול שלם באפליקציה, על מסך טלפון: התחברות עם Google, שלוש ארוחות שנרשמות בזמן שהן קורות,
       סגירת היום מתוך היומן, וגרף המגמה של השבוע.
       <strong>ההיסטוריה שמאחורי הכול היא נתונים חיים</strong> — חמישה ימים שנשלחו ושבע־עשרה ארוחות
       שנקראו היישר מ־DynamoDB.
     </p>
-  </header>
-
-  <div class="bench">
-    <div class="rig">
-      <div class="device">
-        <div class="viewport" id="viewport">
-          <div class="statusbar">
-            <span id="clock">11:48</span>
-            <span class="glyphs">▮▮▯ ⌁ 78%</span>
-          </div>
-          <div class="screen" id="screen" dir="rtl" lang="he"></div>
-          <div class="tap" id="tap"></div>
-        </div>
-      </div>
-
-      <div class="transport">
-        <div class="track"><span id="progress"></span></div>
-        <div class="controls">
-          <button type="button" class="primary" id="playpause">השהיה</button>
-          <button type="button" id="restart">מהתחלה</button>
-          <button type="button" id="speed">1×</button>
-          <span class="clockread" id="beatread">1 / 27</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="script" id="script"></div>
-  </div>
 
   <div class="provenance">
     <div>
@@ -379,7 +375,38 @@ body {
       <p><a href="/">לאפליקציה עצמה</a><br>
         <a href="https://github.com/erancha/diet-tracker" target="_blank" rel="noreferrer">github.com/erancha/diet-tracker</a></p>
     </div>
+    </div>
   </div>
+
+  <div class="bench">
+    <div class="rig">
+      <div class="stage" id="stage">
+        <div class="device">
+        <div class="viewport" id="viewport">
+          <div class="statusbar">
+            <span id="clock">11:48</span>
+            <span class="glyphs">▮▮▯ ⌁ 78%</span>
+          </div>
+          <div class="screen" id="screen" dir="rtl" lang="he"></div>
+          <div class="tap" id="tap"></div>
+        </div>
+      </div>
+      </div>
+
+      <div class="transport">
+        <div class="track"><span id="progress"></span></div>
+        <div class="controls">
+          <button type="button" class="primary" id="playpause">השהיה</button>
+          <button type="button" id="restart">מהתחלה</button>
+          <button type="button" id="speed">1×</button>
+          <span class="clockread" id="beatread">1 / 27</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="script" id="script"></div>
+  </div>
+
 </div>
 
 <script>
@@ -1218,6 +1245,23 @@ speedEl.addEventListener("click", () => {
   speed = speed === 1 ? 2 : speed === 2 ? 0.5 : 1;
   speedEl.textContent = speed === 0.5 ? "0.5×" : speed + "×";
 });
+
+const aboutToggle = document.getElementById("about-toggle");
+const aboutEl = document.getElementById("about");
+aboutToggle.addEventListener("click", () => {
+  const open = aboutToggle.getAttribute("aria-expanded") === "true";
+  aboutToggle.setAttribute("aria-expanded", String(!open));
+  aboutEl.hidden = open;
+});
+
+/* The device holds its 390px screen at every window width and shrinks by scaling instead. */
+const stageEl = document.getElementById("stage");
+const DEVICE_WIDTH = 410;
+function fitDevice() {
+  stageEl.style.setProperty("--k", Math.min(1, stageEl.clientWidth / DEVICE_WIDTH).toFixed(4));
+}
+window.addEventListener("resize", fitDevice);
+fitDevice();
 
 buildScript();
 render();
