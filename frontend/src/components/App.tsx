@@ -17,7 +17,7 @@ import { TrendChart } from "./TrendChart";
 // Top-level screen: owns the server data (questionnaire config, day history, today's and
 // yesterday's meal payloads, on-demand past-day payloads) and every mutation — meal recording
 // and deletion, day submission with tracked floors, day deletion — plus the submit → alerts
-// flow; the components below it are presentational.
+// flow; the components below it hold no server state of their own.
 export function App({ email, api, reminderHour, trackerStartHour, onSignOut }: {
   email: string; api: Api; reminderHour: number; trackerStartHour: number; onSignOut: () => void;
 }) {
@@ -149,16 +149,15 @@ export function App({ email, api, reminderHour, trackerStartHour, onSignOut }: {
             : <DayView questionnaire={questionnaire} day={viewedDayQuery.data}
                        onClose={() => setViewedDate(null)} />
           )}
-          <div className="table-wrap">
-            <HistoryTable
-              questionnaire={questionnaire}
-              days={data.days}
-              deletableDates={new Set([todayStr, yesterdayStr])}
-              viewedDate={viewedDate}
-              onDelete={(date) => deleteMutation.mutate(date)}
-              onView={setViewedDate}
-            />
-          </div>
+          <HistoryTable
+            questionnaire={questionnaire}
+            days={data.days}
+            today={todayStr}
+            deletableDates={new Set([todayStr, yesterdayStr])}
+            viewedDate={viewedDate}
+            onDelete={(date) => deleteMutation.mutate(date)}
+            onView={setViewedDate}
+          />
         </CollapsibleSection>
       </main>
     </>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dayEnded, dayLabel, ddmmLabel, defaultDay, expandQuestionnaire, isoDate, last7Days, parseIsoDate, weekdayDdmmLabel } from "./dates";
+import { dayEnded, dayLabel, daysBefore, ddmmLabel, defaultDay, expandQuestionnaire, isoDate, last7Days, parseIsoDate, weekdayDdmmLabel } from "./dates";
 
 describe("isoDate", () => {
   it("formats a local date as YYYY-MM-DD with zero padding", () => {
@@ -34,6 +34,28 @@ describe("weekdayDdmmLabel", () => {
 
   it("labels Saturday with ש rather than a numeral letter", () => {
     expect(weekdayDdmmLabel("2026-08-22")).toBe("ש׳ 22/08");
+  });
+});
+
+describe("daysBefore", () => {
+  it("counts back within the month", () => {
+    expect(daysBefore("2026-08-18", 6)).toBe("2026-08-12");
+  });
+
+  it("returns the date itself for a zero offset", () => {
+    expect(daysBefore("2026-08-18", 0)).toBe("2026-08-18");
+  });
+
+  it("crosses a month boundary", () => {
+    expect(daysBefore("2026-08-03", 6)).toBe("2026-07-28");
+  });
+
+  it("crosses a year boundary", () => {
+    expect(daysBefore("2026-01-03", 6)).toBe("2025-12-28");
+  });
+
+  it("lands on the leap day counting back into February 2028", () => {
+    expect(daysBefore("2028-03-01", 1)).toBe("2028-02-29");
   });
 });
 

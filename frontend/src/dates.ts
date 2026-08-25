@@ -32,10 +32,13 @@ export function yesterdayOf(now: Date): Date {
   return new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
 }
 
+export function daysBefore(s: string, n: number): string {
+  const d = parseIsoDate(s);
+  return isoDate(new Date(d.getFullYear(), d.getMonth(), d.getDate() - n));
+}
+
 export function last7Days(endDateStr: string): string[] {
-  const end = parseIsoDate(endDateStr);
-  return Array.from({ length: 7 }, (_, i) =>
-    isoDate(new Date(end.getFullYear(), end.getMonth(), end.getDate() - (6 - i))));
+  return Array.from({ length: 7 }, (_, i) => daysBefore(endDateStr, 6 - i));
 }
 
 // The day counts as over for questionnaire purposes from the first evening reminder onward

@@ -31,8 +31,9 @@ h1 { font-size: 1.4rem; color: var(--accent); }
 .landing-summary { margin-top: 0; }
 .landing-summary li { margin-bottom: 0.6rem; }
 .landing-repo { margin-top: auto; }
-.day-picker { display: flex; gap: 1rem; align-items: center; margin-bottom: 0.75rem; font-size: 0.9rem; }
-.day-picker label { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0; cursor: pointer; }
+.day-picker, .range-picker { display: flex; gap: 1rem; align-items: center; margin-bottom: 0.75rem; font-size: 0.9rem; }
+.day-picker label, .range-picker label { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0; cursor: pointer; }
+.range-picker { margin-top: 0.5rem; }
 /* The day it names has not ended yet, so the whole option — not just the radio — reads as blocked. */
 .day-picker label:has(input:disabled) { opacity: 0.5; cursor: default; }
 fieldset { border: 1px solid #ddd; border-radius: 8px; margin: 0 0 1rem; padding: 0.75rem 1rem; background: #fff; }
