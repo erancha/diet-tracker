@@ -33,6 +33,8 @@ h1 { font-size: 1.4rem; color: var(--accent); }
 .landing-repo { margin-top: auto; }
 .day-picker { display: flex; gap: 1rem; align-items: center; margin-bottom: 0.75rem; font-size: 0.9rem; }
 .day-picker label { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0; cursor: pointer; }
+/* The day it names has not ended yet, so the whole option — not just the radio — reads as blocked. */
+.day-picker label:has(input:disabled) { opacity: 0.5; cursor: default; }
 fieldset { border: 1px solid #ddd; border-radius: 8px; margin: 0 0 1rem; padding: 0.75rem 1rem; background: #fff; }
 /* A legend keeps its heading on one line. The longest heading (the carbs meal grade) spans
    ~20em — wider than a phone viewport at 1rem — so below ~26rem the font scales with the

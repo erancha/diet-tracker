@@ -35,6 +35,10 @@ before additions existed are read with the legacy sweet flag mapped to a single 
   more than was tracked, never less. The server-side derivation is the authority for floors and
   submit validation.
 - **Water-close** — a fully tracked day closes directly from the tracker with only water entered.
+- **Answerable day** — the day-end questionnaire answers a day that has ended, so it opens on the
+  last one that did: today from the first evening reminder hour (the stack's `ReminderHours`)
+  onward, yesterday for the whole stretch before it, including the small hours after midnight.
+  Today stays disabled in the day picker until that hour.
 - **Backfill** — entries can be backfilled to yesterday, so after-midnight meals land on the day
   they belong to.
 

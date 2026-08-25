@@ -38,20 +38,22 @@ export function last7Days(endDateStr: string): string[] {
     isoDate(new Date(end.getFullYear(), end.getMonth(), end.getDate() - (6 - i))));
 }
 
-// From the first evening reminder onward (reminderHour, delivered via config.js from the
-// stack's ReminderHours parameter), a day with no recorded meals is headed for retrospective
-// entry, so the day-end questionnaire opens expanded instead of waiting behind its
-// collapsed-by-default toggle.
-export function expandQuestionnaire(now: Date, reminderHour: number, mealsRecorded: number, todaySubmitted: boolean): boolean {
-  return now.getHours() >= reminderHour && mealsRecorded === 0 && !todaySubmitted;
+// The day counts as over for questionnaire purposes from the first evening reminder onward
+// (reminderHour, delivered via config.js from the stack's ReminderHours parameter). Until then
+// the day is still accumulating meals and cannot honestly be answered for.
+export function dayEnded(now: Date, reminderHour: number): boolean {
+  return now.getHours() >= reminderHour;
 }
 
-// Before 04:00, with neither today nor yesterday filled yet, the questionnaire being filled now
-// is almost always for the day that just ended — default to yesterday so after-midnight users
-// don't have to notice and switch the picker themselves.
-export function defaultDay(now: Date, filledDates: Set<string>): "today" | "yesterday" {
-  const afterMidnightGap = now.getHours() < 4
-    && !filledDates.has(isoDate(yesterdayOf(now)))
-    && !filledDates.has(isoDate(now));
-  return afterMidnightGap ? "yesterday" : "today";
+// A day with no recorded meals is headed for retrospective entry, so once it ends the day-end
+// questionnaire opens expanded instead of waiting behind its collapsed-by-default toggle.
+export function expandQuestionnaire(now: Date, reminderHour: number, mealsRecorded: number, todaySubmitted: boolean): boolean {
+  return dayEnded(now, reminderHour) && mealsRecorded === 0 && !todaySubmitted;
+}
+
+// The questionnaire closes a finished day, so the day it opens on is the last one that ended:
+// today from the evening reminder onward, yesterday for the whole stretch before it — the small
+// hours after midnight included, when the day just ended is the one awaiting answers.
+export function defaultDay(now: Date, reminderHour: number): "today" | "yesterday" {
+  return dayEnded(now, reminderHour) ? "today" : "yesterday";
 }

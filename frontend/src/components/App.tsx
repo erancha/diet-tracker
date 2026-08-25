@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { alertMessage, type Api } from "../api";
 import { activeViolations } from "../violations";
 import type { AnswerValue, Derived, NewMeal, Questionnaire } from "../types";
-import { defaultDay, expandQuestionnaire, isoDate, yesterdayOf } from "../dates";
+import { dayEnded, defaultDay, expandQuestionnaire, isoDate, yesterdayOf } from "../dates";
 import { Alerts, type AlertItem } from "./Alerts";
 import { CollapsibleSection } from "./CollapsibleSection";
 import { DayPicker, type DayChoice } from "./DayPicker";
@@ -27,8 +27,8 @@ export function App({ email, api, reminderHour, trackerStartHour, onSignOut }: {
   const yesterdayStr = isoDate(yesterdayOf(now));
 
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
-  // null until history arrives, when the after-midnight smart default can be computed.
-  const [day, setDay] = useState<DayChoice | null>(null);
+  const todaySelectable = dayEnded(now, reminderHour);
+  const [day, setDay] = useState<DayChoice>(() => defaultDay(now, reminderHour));
 
   const questionnaireQuery = useQuery({
     queryKey: ["questionnaire"],
@@ -48,13 +48,6 @@ export function App({ email, api, reminderHour, trackerStartHour, onSignOut }: {
     queryFn: () => api.getDay(viewedDate!),
     enabled: viewedDate !== null,
   });
-
-  const historyDays = historyQuery.data?.days;
-  useEffect(() => {
-    if (day === null && historyDays) {
-      setDay(defaultDay(now, new Set(historyDays.map((d) => d.date))));
-    }
-  }, [day, historyDays, now]);
 
   const errorAlert = (action: string) => (error: Error) =>
     setAlerts([{ kind: "alert", message: alertMessage(action, error) }]);
@@ -135,9 +128,10 @@ export function App({ email, api, reminderHour, trackerStartHour, onSignOut }: {
         )}
         <CollapsibleSection title="שאלון סוף יום"
                             defaultCollapsed={!expandQuestionnaire(now, reminderHour, data.today.meals.length, todaySubmitted)}>
-          <DayPicker todayStr={todayStr} yesterdayStr={yesterdayStr} value={day ?? "today"} onChange={setDay} />
+          <DayPicker todayStr={todayStr} yesterdayStr={yesterdayStr} value={day}
+                     todaySelectable={todaySelectable} reminderHour={reminderHour} onChange={setDay} />
           <QuestionnaireForm
-            key={day ?? "today"}
+            key={day}
             questionnaire={questionnaire}
             floors={floors}
             resubmitting={submittedDates.has(day === "yesterday" ? yesterdayStr : todayStr)}

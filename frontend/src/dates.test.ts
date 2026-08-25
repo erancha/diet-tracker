@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dayLabel, ddmmLabel, defaultDay, expandQuestionnaire, isoDate, last7Days, parseIsoDate, weekdayDdmmLabel } from "./dates";
+import { dayEnded, dayLabel, ddmmLabel, defaultDay, expandQuestionnaire, isoDate, last7Days, parseIsoDate, weekdayDdmmLabel } from "./dates";
 
 describe("isoDate", () => {
   it("formats a local date as YYYY-MM-DD with zero padding", () => {
@@ -50,24 +50,35 @@ describe("last7Days", () => {
   });
 });
 
+describe("dayEnded", () => {
+  it("counts the day as ended from the reminder hour onward", () => {
+    expect(dayEnded(new Date(2026, 7, 18, 20, 0), 20)).toBe(true);
+  });
+
+  it("counts the day as still running before the reminder hour", () => {
+    expect(dayEnded(new Date(2026, 7, 18, 19, 59), 20)).toBe(false);
+  });
+
+  it("counts the after-midnight hours as the new day still running", () => {
+    expect(dayEnded(new Date(2026, 7, 18, 2, 0), 20)).toBe(false);
+  });
+});
+
 describe("defaultDay", () => {
-  const twoAm = new Date(2026, 7, 18, 2, 0);
-  const tenAm = new Date(2026, 7, 18, 10, 0);
-
-  it("defaults to yesterday before 04:00 when neither day is filled", () => {
-    expect(defaultDay(twoAm, new Set())).toBe("yesterday");
+  it("defaults to yesterday while today is still running", () => {
+    expect(defaultDay(new Date(2026, 7, 18, 10, 0), 20)).toBe("yesterday");
   });
 
-  it("defaults to today before 04:00 once yesterday is already filled", () => {
-    expect(defaultDay(twoAm, new Set(["2026-08-17"]))).toBe("today");
+  it("defaults to yesterday after midnight", () => {
+    expect(defaultDay(new Date(2026, 7, 18, 2, 0), 20)).toBe("yesterday");
   });
 
-  it("defaults to today before 04:00 once today is already filled", () => {
-    expect(defaultDay(twoAm, new Set(["2026-08-18"]))).toBe("today");
+  it("defaults to today once the day has ended", () => {
+    expect(defaultDay(new Date(2026, 7, 18, 21, 0), 20)).toBe("today");
   });
 
-  it("defaults to today during normal hours", () => {
-    expect(defaultDay(tenAm, new Set())).toBe("today");
+  it("follows a different configured reminder hour", () => {
+    expect(defaultDay(new Date(2026, 7, 18, 19, 0), 19)).toBe("today");
   });
 });
 
