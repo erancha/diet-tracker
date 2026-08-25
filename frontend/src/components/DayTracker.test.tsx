@@ -179,6 +179,8 @@ describe("DayTracker", () => {
     fireEvent.click(screen.getByLabelText("דרגה 4"));
     fireEvent.change(screen.getByLabelText("שעת הארוחה"), { target: { value: "13:00" } });
     fireEvent.click(screen.getByRole("button", { name: "רישום ארוחה" }));
+    // Recording folds the inputs away, so the restored default is read back through the header.
+    fireEvent.click(screen.getByRole("button", { name: "פרטי הארוחה" }));
     expect(screen.getByLabelText("שעת הארוחה")).toHaveValue("15:40");
   });
 
@@ -325,6 +327,44 @@ describe("DayTracker", () => {
     expect(screen.getByRole("button", { name: "פרטי הארוחה" }))
       .toHaveAttribute("aria-expanded", "true");
     expect(screen.getByRole("button", { name: "עדכון ארוחה" })).toBeInTheDocument();
+  });
+
+  it("folds the meal inputs away once a meal is recorded", () => {
+    atLocalTime(19, 5);
+    render(<DayTracker questionnaire={questionnaire} trackerStartHour={0} today={emptyDay}
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    fireEvent.click(screen.getByLabelText("דרגה 4"));
+    fireEvent.click(screen.getByRole("button", { name: "רישום ארוחה" }));
+
+    expect(screen.getByRole("button", { name: "פרטי הארוחה" }))
+      .toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByLabelText("שעת הארוחה")).toBeNull();
+  });
+
+  it("folds the meal inputs away once a correction is sent", () => {
+    atLocalTime(19, 5);
+    render(<DayTracker questionnaire={questionnaire} trackerStartHour={0} today={trackedDay}
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "עריכת ארוחה 13:30" }));
+    fireEvent.click(screen.getByRole("button", { name: "עדכון ארוחה" }));
+
+    expect(screen.getByRole("button", { name: "פרטי הארוחה" }))
+      .toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("leaves the meal inputs open when an edit is cancelled", () => {
+    atLocalTime(19, 5);
+    render(<DayTracker questionnaire={questionnaire} trackerStartHour={0} today={trackedDay}
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "עריכת ארוחה 13:30" }));
+    fireEvent.click(screen.getByRole("button", { name: "ביטול עריכה" }));
+
+    expect(screen.getByRole("button", { name: "פרטי הארוחה" }))
+      .toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByLabelText("שעת הארוחה")).toBeInTheDocument();
   });
 
   it("renders the score bold and last in the dashboard", () => {

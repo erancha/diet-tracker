@@ -71,7 +71,8 @@ export function DayTracker({ questionnaire, trackerStartHour, today, onAddMeal, 
   // report, so they fold away behind the dashboard, the actions and the meal list. They open with
   // the tracker itself: the same conditions that decide the tracker is due a meal decide the form
   // is worth showing. Opening the tracker by hand leaves them folded — the day's figures and its
-  // meal list are what a manual look is usually after.
+  // meal list are what a manual look is usually after. A recorded meal or a sent correction folds
+  // them again, returning the tracker to the state a finished report leaves it in.
   const [formCollapsed, setFormCollapsed] = useState(startCollapsed);
 
   // Only reachable through the submit button, which renders only once a grade is picked and is
@@ -85,6 +86,9 @@ export function DayTracker({ questionnaire, trackerStartHour, today, onAddMeal, 
     if (editing !== undefined) onUpdateMeal(editing.id, meal);
     else onAddMeal(meal);
     clearForm();
+    // Folded here rather than in clearForm, which cancelling an edit also runs: an abandoned
+    // correction leaves the inputs open for whatever the user meant to record instead.
+    setFormCollapsed(true);
   }
 
   function clearForm() {
