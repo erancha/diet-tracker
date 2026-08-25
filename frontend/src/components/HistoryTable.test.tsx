@@ -8,12 +8,15 @@ const days = [
   { date: "2026-08-17", answers: { drinking: 2 } },
 ];
 
-const noDelete = { deletableDates: new Set<string>(), onDelete: () => {}, onView: () => {} };
+const noDelete = { deletableDates: new Set<string>(), viewedDate: null, onDelete: () => {}, onView: () => {} };
+// A row offers deletion only where both conditions hold: the date is still deletable and its day
+// view is the open one.
+const deleting = { deletableDates: new Set(["2026-08-17"]), viewedDate: "2026-08-17" };
 
 describe("HistoryTable", () => {
-  it("shows the row date as DD/MM without the year", () => {
+  it("shows the row date as weekday and DD/MM without the year", () => {
     render(<HistoryTable questionnaire={fixtureQuestionnaire} days={days} {...noDelete} />);
-    expect(screen.getByText("17/08")).toBeInTheDocument();
+    expect(screen.getByText("ב׳ 17/08")).toBeInTheDocument();
     expect(screen.queryByText("2026-08-17")).not.toBeInTheDocument();
   });
 
@@ -36,7 +39,7 @@ describe("HistoryTable", () => {
     const onDelete = vi.fn();
     const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
     render(<HistoryTable questionnaire={fixtureQuestionnaire} days={days}
-      {...noDelete} deletableDates={new Set(["2026-08-17"])} onDelete={onDelete} />);
+      {...noDelete} {...deleting} onDelete={onDelete} />);
     await userEvent.click(screen.getByRole("button", { name: "מחיקת הרשומה של 2026-08-17" }));
     expect(confirmSpy).toHaveBeenCalledWith("למחוק את הרשומה של 2026-08-17?");
     expect(onDelete).toHaveBeenCalledWith("2026-08-17");
@@ -46,14 +49,43 @@ describe("HistoryTable", () => {
     const onDelete = vi.fn();
     vi.spyOn(window, "confirm").mockReturnValue(false);
     render(<HistoryTable questionnaire={fixtureQuestionnaire} days={days}
-      {...noDelete} deletableDates={new Set(["2026-08-17"])} onDelete={onDelete} />);
+      {...noDelete} {...deleting} onDelete={onDelete} />);
     await userEvent.click(screen.getByRole("button", { name: "מחיקת הרשומה של 2026-08-17" }));
     expect(onDelete).not.toHaveBeenCalled();
   });
 
+  it("puts the delete button in the row's last cell, clear of the date", () => {
+    render(<HistoryTable questionnaire={fixtureQuestionnaire} days={days}
+      {...noDelete} {...deleting} />);
+    const button = screen.getByRole("button", { name: "מחיקת הרשומה של 2026-08-17" });
+    const [, dataRow] = screen.getAllByRole("row");
+    expect(button.closest("td")).toBe(dataRow.lastElementChild);
+  });
+
+  it("deletes without also opening the day view of the score cell it shares", async () => {
+    const onView = vi.fn();
+    const onDelete = vi.fn();
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    render(<HistoryTable questionnaire={trackerQuestionnaire}
+      days={[{ date: "2026-08-17", answers: { carbs: 4, drinking: 3 } }]}
+      {...noDelete} {...deleting} onDelete={onDelete} onView={onView} />);
+    await userEvent.click(screen.getByRole("button", { name: "מחיקת הרשומה של 2026-08-17" }));
+    expect(onDelete).toHaveBeenCalledWith("2026-08-17");
+    expect(onView).not.toHaveBeenCalled();
+  });
+
   it("omits the delete button for dates outside the deletable window", () => {
-    render(<HistoryTable questionnaire={fixtureQuestionnaire} days={days} {...noDelete} />);
+    render(<HistoryTable questionnaire={fixtureQuestionnaire} days={days}
+      {...noDelete} viewedDate="2026-08-17" />);
     expect(screen.queryByRole("button", { name: /מחיקת/ })).not.toBeInTheDocument();
+  });
+
+  it("withholds the delete button until the row's own day view is open", () => {
+    const { rerender } = render(<HistoryTable questionnaire={fixtureQuestionnaire} days={days}
+      {...noDelete} deletableDates={deleting.deletableDates} />);
+    expect(screen.queryByRole("button", { name: /מחיקת/ })).not.toBeInTheDocument();
+    rerender(<HistoryTable questionnaire={fixtureQuestionnaire} days={days} {...noDelete} {...deleting} />);
+    expect(screen.getByRole("button", { name: "מחיקת הרשומה של 2026-08-17" })).toBeInTheDocument();
   });
 
   it("makes the whole score summary cell the view control for a past day", async () => {

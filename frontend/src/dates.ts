@@ -18,6 +18,16 @@ export function ddmmLabel(s: string): string {
   return `${d}/${m}`;
 }
 
+// Hebrew names the weekdays by the numeral letters א–ו, with שבת abbreviated ש; the geresh marks
+// all seven as day names rather than stray letters. Index matches Date.getDay(), Sunday first.
+const WEEKDAY_LETTERS = ["א", "ב", "ג", "ד", "ה", "ו", "ש"];
+
+// Where the layout affords a wider date, the weekday leads it; the space between them is also the
+// break opportunity that drops the date to a second line when the column is too narrow for both.
+export function weekdayDdmmLabel(s: string): string {
+  return `${WEEKDAY_LETTERS[parseIsoDate(s).getDay()]}׳ ${ddmmLabel(s)}`;
+}
+
 export function yesterdayOf(now: Date): Date {
   return new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dayLabel, ddmmLabel, defaultDay, expandQuestionnaire, isoDate, last7Days, parseIsoDate } from "./dates";
+import { dayLabel, ddmmLabel, defaultDay, expandQuestionnaire, isoDate, last7Days, parseIsoDate, weekdayDdmmLabel } from "./dates";
 
 describe("isoDate", () => {
   it("formats a local date as YYYY-MM-DD with zero padding", () => {
@@ -24,6 +24,16 @@ describe("dayLabel", () => {
 describe("ddmmLabel", () => {
   it("renders DD/MM with zero padding and no year", () => {
     expect(ddmmLabel("2026-08-05")).toBe("05/08");
+  });
+});
+
+describe("weekdayDdmmLabel", () => {
+  it("prefixes DD/MM with the Hebrew weekday letter", () => {
+    expect(weekdayDdmmLabel("2026-08-05")).toBe("ד׳ 05/08");
+  });
+
+  it("labels Saturday with ש rather than a numeral letter", () => {
+    expect(weekdayDdmmLabel("2026-08-22")).toBe("ש׳ 22/08");
   });
 });
 
