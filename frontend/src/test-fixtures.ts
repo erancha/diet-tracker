@@ -1,4 +1,12 @@
+import { screen } from "@testing-library/react";
 import type { DayPayload, Questionnaire } from "./types";
+
+// The dashboard keeps each figure's value in its own element so color lands on the number alone,
+// and getByText matches an element's own text nodes only — so a figure is reachable by its label
+// and read back whole through toHaveTextContent.
+export function dashboardFigure(label: string): HTMLElement {
+  return screen.getByText(new RegExp(`${label}:`));
+}
 
 // Mirrors the production config's shape: two chartable single questions — one with an
 // open-ended bottom bound, one with an open-ended top bound.

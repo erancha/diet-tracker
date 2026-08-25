@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DayTracker } from "./DayTracker";
 import type { DayPayload } from "../types";
-import { trackedDay, trackerQuestionnaire as questionnaire } from "../test-fixtures";
+import { dashboardFigure, trackedDay, trackerQuestionnaire as questionnaire } from "../test-fixtures";
 
 const emptyDay: DayPayload = {
   date: "2026-08-20", meals: [],
@@ -65,10 +65,10 @@ describe("DayTracker", () => {
     render(<DayTracker questionnaire={questionnaire} trackerStartHour={0} today={staleDerivedDay}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
-    expect(screen.getByText(/ציון: 4/)).toBeInTheDocument();
-    expect(screen.getByText(/ארוחות: 2/)).toBeInTheDocument();
-    expect(screen.getByText(/ירקות: 1/)).toBeInTheDocument();
-    expect(screen.getByText("חלון: 4.5 שעות")).toBeInTheDocument();
+    expect(dashboardFigure("ציון")).toHaveTextContent("ציון: 4");
+    expect(dashboardFigure("ארוחות")).toHaveTextContent("ארוחות: 2");
+    expect(dashboardFigure("ירקות")).toHaveTextContent("ירקות: 1");
+    expect(dashboardFigure("חלון")).toHaveTextContent("חלון: 4.5 שעות");
   });
 
   it("close-day submits values derived from the recorded meals", () => {
@@ -264,7 +264,7 @@ describe("DayTracker", () => {
     fireEvent.click(toggle);
 
     expect(toggle).toHaveAttribute("aria-expanded", "false");
-    expect(screen.getByText(/ציון: 4/)).toBeInTheDocument();
+    expect(dashboardFigure("ציון")).toHaveTextContent("ציון: 4");
     expect(screen.queryByRole("button", { name: "רישום ארוחה" })).toBeNull();
     expect(screen.queryByRole("button", { name: "סגירת יום" })).toBeNull();
     expect(screen.queryByText("דרגה 4")).toBeNull();
@@ -287,7 +287,7 @@ describe("DayTracker", () => {
     expect(screen.queryByLabelText("דרגה 4")).toBeNull();
     expect(screen.getByRole("button", { name: "סגירת יום" })).toBeInTheDocument();
     expect(screen.getByText("13:30")).toBeInTheDocument();
-    expect(screen.getByText(/ציון: 4/)).toBeInTheDocument();
+    expect(dashboardFigure("ציון")).toHaveTextContent("ציון: 4");
   });
 
   it("opens the meal inputs with the tracker when a meal is due", () => {
@@ -331,7 +331,7 @@ describe("DayTracker", () => {
     render(<DayTracker questionnaire={questionnaire} trackerStartHour={0} today={trackedDay}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
-    const score = screen.getByText(/ציון: 4/);
+    const score = dashboardFigure("ציון");
     expect(score.tagName).toBe("STRONG");
     expect(score.parentElement!.lastElementChild).toBe(score);
   });
@@ -340,7 +340,7 @@ describe("DayTracker", () => {
     render(<DayTracker questionnaire={questionnaire} trackerStartHour={0} today={trackedDay}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
-    expect(screen.getByText(/ציון: 4/)).toHaveAttribute("title", "המטרה היא ציון נמוך");
+    expect(dashboardFigure("ציון")).toHaveAttribute("title", "המטרה היא ציון נמוך");
   });
 
   it("shows the day's derived values and meal list with delete", () => {
@@ -349,9 +349,9 @@ describe("DayTracker", () => {
     render(<DayTracker questionnaire={questionnaire} trackerStartHour={0} today={trackedDay}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={onDeleteMeal} onCloseDay={vi.fn()} />);
-    expect(screen.getByText(/ציון: 4/)).toBeInTheDocument();
-    expect(screen.getByText(/ארוחות: 2/)).toBeInTheDocument();
-    expect(screen.getByText("חלון: 4.5 שעות")).toBeInTheDocument();
+    expect(dashboardFigure("ציון")).toHaveTextContent("ציון: 4");
+    expect(dashboardFigure("ארוחות")).toHaveTextContent("ארוחות: 2");
+    expect(dashboardFigure("חלון")).toHaveTextContent("חלון: 4.5 שעות");
     // Once as the carbs picker's radio label, once as the recorded meal's grade text.
     expect(screen.getAllByText("דרגה 4")).toHaveLength(2);
     expect(screen.getByText(/🥗/)).toBeInTheDocument();

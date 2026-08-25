@@ -76,8 +76,10 @@ th { vertical-align: top; font-size: calc(var(--cell-font-size) - 1pt); }
 .history h2 { margin-bottom: 0.25em; }
 td.violation { background: #ffebee; color: var(--danger); }
 /* Above-threshold carb scores read as red text pinned to the score itself: the history score
-   cell, the dashboard total, and a meal's grade text. */
-td.high-score, .tracker-dashboard strong.high-score, .meal-list .high-grade { color: var(--danger); }
+   cell, the dashboard total, and a meal's grade text. In the dashboard it reaches the figure
+   rather than the whole item, so the alarm sits on the number its label merely names, and its
+   specificity outranks the green that figure otherwise carries. */
+td.high-score, .tracker-dashboard .high-score .value, .meal-list .high-grade { color: var(--danger); }
 /* The pencil, trash and close glyphs can render as monochrome outlines that take the CSS text
    color, so they must inherit the surrounding text rather than the global button rule's white,
    or they vanish on the white background. */
@@ -131,9 +133,11 @@ td.view-day { cursor: pointer; }
 /* The top margin separates the action buttons from the checkbox row above them, so the
    checkboxes don't read as attached to the buttons. */
 .tracker-actions { display: flex; gap: 1rem; margin-top: 0.75rem; }
-/* Neutral by design — red is reserved for the high-score emphasis on the score alone, so a
-   quiet dashboard means the day is on track. */
 .tracker-dashboard { display: flex; gap: 1.2rem; flex-wrap: wrap; font-weight: 600; margin-bottom: 0.5rem; }
+/* Color falls on the figures alone, their labels staying body-colored chrome. The accent green
+   reads as a measurement rather than a verdict, leaving red to mean only the high-score alarm —
+   so an all-green line means the day is on track. */
+.tracker-dashboard .value { color: var(--accent); }
 /* The dashboard is already semibold, so the score needs extra weight to stand out. */
 .tracker-dashboard strong { font-weight: 800; }
 .meal-list { list-style: none; padding: 0; }
