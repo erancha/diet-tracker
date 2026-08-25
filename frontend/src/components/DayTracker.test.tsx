@@ -24,6 +24,13 @@ const staleDerivedDay: DayPayload = {
   derived: { carbs: 99, meals: 9, vegetables: 9, eating_window: 9 },
 };
 
+// A day wide enough to offer close-day: trackedDay's first meal pushed back into the morning for
+// a 6.5-hour window, keeping the contradictory derived copy so the recomputation stays under test.
+const wideWindowDay: DayPayload = {
+  ...staleDerivedDay,
+  meals: [{ ...trackedDay.meals[0], at: "2026-08-20T07:00:00+03:00" }, trackedDay.meals[1]],
+};
+
 // Pins the clock: the meal form's default time is derived from it, as is the future-time guard
 // on the submit button.
 const atLocalTime = (hour: number, minute = 0) => {
@@ -67,14 +74,14 @@ describe("DayTracker", () => {
 
   it("close-day submits values derived from the recorded meals", () => {
     const onCloseDay = vi.fn();
-    render(<DayTracker questionnaire={questionnaire} today={staleDerivedDay}
+    render(<DayTracker questionnaire={questionnaire} today={wideWindowDay}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={onCloseDay} />);
     fireEvent.click(screen.getByRole("button", { name: "סגירת יום" }));
     fireEvent.click(screen.getByLabelText("3 ליטר"));
     fireEvent.click(screen.getByRole("button", { name: "אישור וסגירה" }));
     expect(onCloseDay).toHaveBeenCalledWith({
-      carbs: 4, meals: 2, vegetables: 1, eating_window: 4.5, drinking: 3 });
+      carbs: 4, meals: 2, vegetables: 1, eating_window: 6.5, drinking: 3 });
   });
 
   it("renders each meal's time in bold", () => {
@@ -243,7 +250,7 @@ describe("DayTracker", () => {
   });
 
   it("collapses to the dashboard alone and expands back on header toggle", () => {
-    render(<DayTracker questionnaire={questionnaire} today={trackedDay}
+    render(<DayTracker questionnaire={questionnaire} today={wideWindowDay}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     const toggle = screen.getByRole("button", { name: "יומן היום" });
@@ -263,7 +270,7 @@ describe("DayTracker", () => {
   });
 
   it("starts with the meal inputs folded behind the actions and the meal list", () => {
-    render(<DayTracker questionnaire={questionnaire} today={trackedDay}
+    render(<DayTracker questionnaire={questionnaire} today={wideWindowDay}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     expect(screen.getByRole("button", { name: "פרטי הארוחה" }))
@@ -434,14 +441,43 @@ describe("DayTracker", () => {
 
   it("close-day asks for water and submits derived values plus drinking", () => {
     const onCloseDay = vi.fn();
-    render(<DayTracker questionnaire={questionnaire} today={trackedDay}
+    render(<DayTracker questionnaire={questionnaire} today={wideWindowDay}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={onCloseDay} />);
     fireEvent.click(screen.getByRole("button", { name: "סגירת יום" }));
     fireEvent.click(screen.getByLabelText("3 ליטר"));
     fireEvent.click(screen.getByRole("button", { name: "אישור וסגירה" }));
     expect(onCloseDay).toHaveBeenCalledWith({
-      carbs: 4, meals: 2, vegetables: 1, eating_window: 4.5, drinking: 3 });
+      carbs: 4, meals: 2, vegetables: 1, eating_window: 6.5, drinking: 3 });
+  });
+
+  it("close-day stays hidden until the recorded meals span six hours", () => {
+    const { rerender } = render(
+      <DayTracker questionnaire={questionnaire} today={trackedDay}
+                  onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                  onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    expect(dashboardFigure("חלון")).toHaveTextContent("חלון: 4.5 שעות");
+    expect(screen.queryByRole("button", { name: "סגירת יום" })).toBeNull();
+
+    rerender(<DayTracker questionnaire={questionnaire} today={wideWindowDay}
+                         onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                         onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    expect(dashboardFigure("חלון")).toHaveTextContent("חלון: 6.5 שעות");
+    expect(screen.getByRole("button", { name: "סגירת יום" })).toBeInTheDocument();
+  });
+
+  it("folds the close-day panel away when a deletion narrows the window below six hours", () => {
+    const { rerender } = render(
+      <DayTracker questionnaire={questionnaire} today={wideWindowDay}
+                  onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                  onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "סגירת יום" }));
+    expect(screen.getByRole("button", { name: "אישור וסגירה" })).toBeInTheDocument();
+
+    rerender(<DayTracker questionnaire={questionnaire} today={trackedDay}
+                         onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                         onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    expect(screen.queryByRole("button", { name: "אישור וסגירה" })).toBeNull();
   });
 
   it("close-day appears only once two meals are recorded", () => {
@@ -461,7 +497,7 @@ describe("DayTracker", () => {
                          onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     expect(screen.queryByRole("button", { name: "סגירת יום" })).toBeNull();
 
-    rerender(<DayTracker questionnaire={questionnaire} today={trackedDay}
+    rerender(<DayTracker questionnaire={questionnaire} today={wideWindowDay}
                          onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                          onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     expect(screen.getByRole("button", { name: "סגירת יום" })).toBeInTheDocument();

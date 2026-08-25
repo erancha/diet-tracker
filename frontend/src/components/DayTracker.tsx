@@ -12,6 +12,12 @@ import { MealList } from "./MealList";
 const TIME_STEP_MINUTES = 10;
 const REPORT_LAG_MINUTES = 20;
 
+// Closing the day from here is offered only once the recorded meals span this much of the day;
+// anything narrower is a day still being eaten, whose figures would be closed too early. A day
+// under two meals derives a zero window, so it never reaches this floor either. The full day-end
+// questionnaire closes a day the tracker declines to.
+const CLOSE_DAY_MIN_WINDOW_HOURS = 6;
+
 // The intraday companion: records meals at the time they were eaten, shows the day's derived
 // values live, lists today's meals for in-place correction or deletion, and closes a fully
 // tracked day by asking only for water. Recorded meals are the evidence that floors the day-end
@@ -43,6 +49,7 @@ export function DayTracker({ questionnaire, today, onAddMeal, onUpdateMeal,
   // unknown id is a real config/data fault, not a legal state — let the error boundary show it.
   const { weights, additionValues } = carbsScales(carbsQuestion);
   const derived = deriveDay(today.meals, weights, additionValues);
+  const closable = derived.eating_window >= CLOSE_DAY_MIN_WINDOW_HOURS;
 
   // A meal cannot have been eaten yet, so the day's own clock caps the picker. Both values are
   // zero-padded "HH:MM" on the same day, so they compare as strings.
@@ -150,7 +157,7 @@ export function DayTracker({ questionnaire, today, onAddMeal, onUpdateMeal,
             ביטול עריכה
           </button>
         )}
-        {today.meals.length >= 2 && (
+        {closable && (
           <button type="button" onClick={() => setClosing((c) => !c)}>
             סגירת יום
           </button>
@@ -158,9 +165,9 @@ export function DayTracker({ questionnaire, today, onAddMeal, onUpdateMeal,
       </div>
       <MealList questionnaire={questionnaire} meals={today.meals} onEdit={startEdit}
                 onDelete={onDeleteMeal} />
-      {/* A day with fewer than two meals is not a tracked day worth closing from here; deleting
-          down to one meal mid-close also folds the panel away. */}
-      {closing && today.meals.length >= 2 && (
+      {/* Deleting or correcting a meal mid-close can narrow the day back under the window that
+          offered closing, and the panel folds away with the button that opened it. */}
+      {closing && closable && (
         <div className="close-day">
           <ChoiceFieldset question={drinkingQuestion} selectedId={drinkingChoiceId}
                           onPick={(choice) => setDrinkingChoiceId(choice.id)} />
