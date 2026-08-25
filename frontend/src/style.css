@@ -88,9 +88,11 @@ td.high-score, .tracker-dashboard .high-score .value, .meal-list .high-grade { c
 /* The score cell is the open-day-view control, apart from the delete button it also carries. */
 td.view-day { cursor: pointer; }
 
-/* The read-only day view sits above the history table on the same white card styling as the
-   live tracker, so a past day reads as the same surface. */
-.day-view { background: #fff; border-radius: 8px; padding: 1rem; margin: 0.5rem 0 1rem; }
+/* The live tracker and the read-only day view of a past day are the same surface, so they share
+   one card style. White alone barely separates them from the page background, so they carry the
+   same hairline border the fieldsets and trend panels use. */
+.day-tracker, .day-view { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1rem; }
+.day-view { margin: 0.5rem 0 1rem; }
 .day-view header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.4em; }
 .day-view h3 { margin: 0; }
 
@@ -114,10 +116,12 @@ td.view-day { cursor: pointer; }
 .points-slider { display: flex; align-items: center; gap: 0.8rem; }
 .points-slider input[type="range"] { flex: 1; accent-color: var(--danger); background: linear-gradient(to left, #2e7d32, #f9a825, #c62828); height: 6px; border-radius: 3px; appearance: none; }
 .points-slider output { font-weight: 600; min-width: 2ch; text-align: center; }
-.day-tracker { background: #fff; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; }
-/* The tracker is the app's primary daily surface; its header reads slightly larger than the
-   other sections' and sits at half the default heading gap above its dashboard line. */
-.day-tracker h2 { font-size: 1.6rem; margin-bottom: 0.4em; }
+.day-tracker { margin-bottom: 1rem; }
+/* The tracker is the app's primary daily surface, so its header reads slightly larger than the
+   other sections'. Those sit directly on the page and need the default heading margins to
+   separate them; inside the card the padding already sets the space above, and the header sits
+   at half the default gap above its dashboard line. */
+.day-tracker h2 { font-size: 1.6rem; margin: 0 0 0.4em; }
 /* Section header doubles as the collapse toggle; the arrow flips with aria-expanded. */
 .section-toggle { background: none; color: inherit; font: inherit; font-weight: 600; padding: 0; cursor: pointer; }
 .section-toggle::after { content: " ▴"; font-size: 0.8em; }
@@ -140,7 +144,9 @@ td.view-day { cursor: pointer; }
 .tracker-dashboard .value { color: var(--accent); }
 /* The dashboard is already semibold, so the score needs extra weight to stand out. */
 .tracker-dashboard strong { font-weight: 800; }
-.meal-list { list-style: none; padding: 0; }
+/* The list ends the card, so its own bottom margin would double the card's padding there; the
+   top margin stays, separating the meals from the action buttons above them. */
+.meal-list { list-style: none; padding: 0; margin: 1rem 0 0; }
 /* The text cell alone absorbs the row's free space, so every cell after it — the score, then the
    controls — holds the same column down the list however long a label runs. Distributing the
    space between the cells instead would let each one drift with the text it follows. */
