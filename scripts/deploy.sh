@@ -76,7 +76,6 @@ HOSTED_UI_DOMAIN=$(stack_output "${APP}-cognito" HostedUiDomain)
 CLIENT_ID=$(stack_output "${APP}-cognito" UserPoolClientId)
 API_URL=$(stack_output "$APP" ApiUrl)
 FIRST_REMINDER_HOUR=$(stack_output "$APP" FirstReminderHour)
-TRACKER_START_HOUR=$(stack_output "$APP" TrackerStartHour)
 # public/ may be absent on a fresh clone — its only content is this gitignored file.
 mkdir -p frontend/public
 # The allowlist's first entry is the app owner, shown to rejected sign-ins as the access contact.
@@ -89,7 +88,6 @@ window.CONFIG = {
   redirectUri: window.location.origin + "/",
   rootEmail: "${ALLOWED_EMAILS%%,*}",
   firstReminderHour: ${FIRST_REMINDER_HOUR},
-  trackerStartHour: ${TRACKER_START_HOUR},
 };
 EOF
 

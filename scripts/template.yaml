@@ -18,11 +18,6 @@ Parameters:
     Default: '20,22'
     Description: Asia/Jerusalem hours of the daily fill reminders; the first also drives the
       frontend's auto-expanded evening questionnaire via the FirstReminderHour output
-  TrackerStartHour:
-    Type: Number
-    Default: 12
-    Description: First local hour at which the frontend's day tracker opens expanded on a day
-      with no recorded meals, published to the frontend via the TrackerStartHour output
   BotTokenParam:
     Type: String
     Default: /diet-tracker/telegram/bot-token
@@ -321,8 +316,6 @@ Outputs:
     Value: !Sub 'https://${Api}.execute-api.${AWS::Region}.amazonaws.com'
   FirstReminderHour:
     Value: !Select [0, !Split [',', !Ref ReminderHours]]
-  TrackerStartHour:
-    Value: !Ref TrackerStartHour
   FrontendBucket:
     Value: !Ref FrontendBucket
   FrontendUrl:

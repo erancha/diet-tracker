@@ -6,9 +6,6 @@ import { CollapsibleSection } from "./CollapsibleSection";
 import { DayDashboard } from "./DayDashboard";
 import { MealList } from "./MealList";
 
-// Hours since the last meal below which the tracker starts collapsed instead of expanded.
-const REOPEN_GAP_HOURS = 4;
-
 // The meal time the form opens on is the current clock rounded down to a ten-minute mark and
 // pushed back by a typical report lag: a meal is tapped in a few minutes after it was eaten, and
 // its time is an estimate, not a stopwatch reading.
@@ -21,11 +18,9 @@ const REPORT_LAG_MINUTES = 20;
 // form; the dashboard and close-day values come from the vector-pinned client derivation twin,
 // so they always agree with the meal list rendered beside them — the server re-derives on submit
 // and stays the authority.
-export function DayTracker({ questionnaire, trackerStartHour, today, onAddMeal, onUpdateMeal,
+export function DayTracker({ questionnaire, today, onAddMeal, onUpdateMeal,
                              onDeleteMeal, onCloseDay }: {
   questionnaire: Questionnaire;
-  // First local hour at which a day with no recorded meals starts expanded (config.js).
-  trackerStartHour: number;
   today: DayPayload;
   onAddMeal: (meal: NewMeal) => void;
   // Replaces the meal wholesale; a corrected time re-keys it, so the id is the one being replaced.
@@ -58,22 +53,11 @@ export function DayTracker({ questionnaire, trackerStartHour, today, onAddMeal, 
   // from another tab — and the form then goes back to recording a new meal.
   const editing = today.meals.find((m) => m.id === editingId);
 
-  // Right after a meal the tracker has nothing left to ask, so it starts folded to its dashboard
-  // and opens on its own only once the typical between-meals gap (four hours) has passed. A day
-  // with no meals yet stays folded until the configured start hour — mornings need no tracking
-  // prompt. Meals arrive in chronological sort-key order, so the last entry is the latest.
-  const lastMeal = today.meals[today.meals.length - 1];
-  const startCollapsed = lastMeal !== undefined
-    ? Date.now() - Date.parse(lastMeal.at) < REOPEN_GAP_HOURS * 3_600_000
-    : new Date().getHours() < trackerStartHour;
-
   // The meal inputs are the tallest thing here and are worth reading only when there is a meal to
-  // report, so they fold away behind the dashboard, the actions and the meal list. They open with
-  // the tracker itself: the same conditions that decide the tracker is due a meal decide the form
-  // is worth showing. Opening the tracker by hand leaves them folded — the day's figures and its
-  // meal list are what a manual look is usually after. A recorded meal or a sent correction folds
-  // them again, returning the tracker to the state a finished report leaves it in.
-  const [formCollapsed, setFormCollapsed] = useState(startCollapsed);
+  // report, so the tracker opens on the day's figures and its recorded meals with the inputs
+  // folded away behind them. Recording a meal or sending a correction folds them again, and
+  // opening a meal for editing is the one thing that unfolds them on its own.
+  const [formCollapsed, setFormCollapsed] = useState(true);
 
   // Only reachable through the submit button, which renders only once a grade is picked and is
   // disabled while the picked time is still ahead of the clock.
@@ -113,7 +97,7 @@ export function DayTracker({ questionnaire, trackerStartHour, today, onAddMeal, 
   }
 
   return (
-    <CollapsibleSection className="day-tracker" title="יומן היום" defaultCollapsed={startCollapsed}
+    <CollapsibleSection className="day-tracker" title="יומן היום"
                         summary={
       <DayDashboard questionnaire={questionnaire} derived={derived} />
     }>

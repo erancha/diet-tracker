@@ -9,7 +9,6 @@ const cfg: AppConfig = {
   redirectUri: "https://app.example.com/",
   rootEmail: "root@example.com",
   firstReminderHour: 20,
-  trackerStartHour: 12,
 };
 
 describe("logoutUrl", () => {
