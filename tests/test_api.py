@@ -108,11 +108,15 @@ def test_get_days_returns_today_and_yesterday_payloads(env):
     assert payload["yesterday"]["meals"] == []
 
 
-def test_get_days_omits_yesterday_payload_once_submitted(env):
+def test_get_days_keeps_yesterday_floors_once_submitted(env):
     from common.store import Store
-    Store("days", "meals", "state").put_day("u1", days_before(today(), 1), ANSWERS, 3, "t")
+    store = Store("days", "meals", "state")
+    yesterday = days_before(today(), 1)
+    store.add_meal("u1", yesterday, f"{yesterday}T09:10:00+03:00", "grade3", True, False, [])
+    store.put_day("u1", yesterday, ANSWERS, 3, "t")
     payload = body_of(api.handler(request("GET /days"), None))
-    assert payload["yesterday"] is None
+    assert payload["yesterday"]["date"] == yesterday
+    assert payload["yesterday"]["derived"]["vegetables"] == 1
 
 
 def test_delete_day_and_backfill_window_rejection(env):

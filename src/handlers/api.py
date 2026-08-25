@@ -132,9 +132,9 @@ def _history(sub):
     return _response(200, {
         "days": [{"date": d, "answers": a} for d, a in sorted(history.items(), reverse=True)],
         "today": _day_payload(store, questionnaire, sub, day),
-        # Yesterday's floors matter only while yesterday can still be submitted.
-        "yesterday": None if yesterday in history
-        else _day_payload(store, questionnaire, sub, yesterday),
+        # Yesterday stays within the backfill window whether or not it was recorded, and a
+        # recorded day reopens for resubmission, so its floors are needed either way.
+        "yesterday": _day_payload(store, questionnaire, sub, yesterday),
     })
 
 

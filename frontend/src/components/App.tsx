@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { alertMessage, type Api } from "../api";
 import { activeViolations } from "../violations";
-import type { AnswerValue, Derived, NewMeal, Questionnaire } from "../types";
+import type { AnswerValue, NewMeal, Questionnaire } from "../types";
 import { dayEnded, defaultDay, expandQuestionnaire, isoDate, yesterdayOf } from "../dates";
 import { Alerts, type AlertItem } from "./Alerts";
 import { CollapsibleSection } from "./CollapsibleSection";
@@ -104,8 +104,7 @@ export function App({ email, api, reminderHour, onSignOut }: {
   const todaySubmitted = answersByDate.has(todayStr);
   const selectedDate = day === "yesterday" ? yesterdayStr : todayStr;
 
-  const zeroFloors: Derived = { carbs: 0, meals: 0, vegetables: 0, eating_window: 0 };
-  const floors = day === "yesterday" ? (data.yesterday?.derived ?? zeroFloors) : data.today.derived;
+  const floors = day === "yesterday" ? data.yesterday.derived : data.today.derived;
 
   const submit = (answers: Record<string, AnswerValue>) =>
     submitMutation.mutate({ answers, date: selectedDate });
