@@ -1,0 +1,1228 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<!--
+  Standalone walkthrough of one tracked day, published beside the app at /demo.html and linked
+  from the README. It replays a single session — sign-in, three meals, closing the day, the
+  week's trend — against a rebuilt copy of the app's screen: the components' markup, style.css
+  scoped to .screen with its viewport-dependent values pinned to a 390px phone, and ports of
+  derive.ts, violations.ts, trend.ts and dates.ts, so every figure shown is derived here rather
+  than written in.
+
+  The questionnaire config and the recorded history below are a matched snapshot, not live
+  reads. The narration names specific carb grades and scores, so a later questionnaire version
+  would relabel days that were never answered under it.
+-->
+<title>יום ביומן</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Hebrew:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+
+<style>
+/* ─────────────────────────────────────────────────────────────────────────
+   CHROME — the workbench the device sits on. Single committed visual world:
+   a dark instrument surface, so the app's own green reads as the live thing.
+   ───────────────────────────────────────────────────────────────────────── */
+:root {
+  --c-ink:      #0f1518;
+  --c-panel:    #171f23;
+  --c-raised:   #1e282c;
+  --c-line:     #2b373c;
+  --c-paper:    #eef2ee;
+  --c-muted:    #8a978f;
+  --c-dim:      #5f6b64;
+  --c-live:     #5cb860;
+  --c-alarm:    #e06a5c;
+  --c-wire:     #3d4d54;
+  --sans: "IBM Plex Sans Hebrew", "IBM Plex Sans", "Noto Sans Hebrew", ui-sans-serif, system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--c-ink);
+  color: var(--c-paper);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrap { max-width: 1180px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; }
+
+/* ── masthead ─────────────────────────────────────────────────────────── */
+.masthead { border-bottom: 1px solid var(--c-line); padding-bottom: 1.4rem; margin-bottom: 2.2rem; }
+.eyebrow {
+  font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--c-dim); margin: 0 0 0.5rem;
+}
+.masthead h1 {
+  font-size: clamp(1.9rem, 4.2vw, 2.7rem); font-weight: 600; letter-spacing: -0.02em;
+  margin: 0 0 0.5rem; text-wrap: balance;
+}
+.masthead p { margin: 0; max-width: 62ch; color: var(--c-muted); font-size: 0.98rem; }
+.masthead p strong { color: var(--c-paper); font-weight: 500; }
+
+/* ── workbench grid ───────────────────────────────────────────────────── */
+.bench { display: grid; grid-template-columns: 392px 1fr; gap: 3rem; align-items: start; }
+@media (max-width: 940px) { .bench { grid-template-columns: 1fr; gap: 2.2rem; } }
+
+.rig { position: sticky; top: 1.5rem; display: flex; flex-direction: column; gap: 1rem; }
+@media (max-width: 940px) { .rig { position: static; } }
+
+/* ── the device ───────────────────────────────────────────────────────── */
+.device {
+  width: 392px; max-width: 100%;
+  background: #05090a;
+  border: 1px solid var(--c-wire);
+  border-radius: 26px;
+  padding: 9px;
+  box-shadow: 0 30px 60px -30px rgba(0,0,0,0.9), 0 0 0 1px rgba(255,255,255,0.03) inset;
+}
+.viewport {
+  position: relative;
+  border-radius: 18px;
+  overflow: hidden;
+  background: #fafafa;
+  height: 684px;
+}
+@media (max-width: 420px) { .device { padding: 6px; } .viewport { border-radius: 14px; } }
+
+.statusbar {
+  direction: ltr;
+  height: 26px; background: #fafafa; color: #212121;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 1rem; font-family: var(--mono); font-size: 11px; font-weight: 500;
+  border-bottom: 1px solid rgba(0,0,0,0.05);
+}
+.statusbar .glyphs { letter-spacing: 0.12em; color: #4a4a4a; }
+
+/* The app screen: a real scroll container, 390px wide, RTL. */
+.screen {
+  position: relative;
+  height: calc(684px - 26px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+}
+.screen::-webkit-scrollbar { display: none; }
+.screen > * { pointer-events: none; }
+
+/* Simulated finger. Lives outside the re-rendered screen content. */
+.tap {
+  position: absolute; left: 0; top: 0; width: 26px; height: 26px;
+  margin: -13px 0 0 -13px; border-radius: 50%;
+  border: 2px solid rgba(46,125,50,0.85);
+  background: rgba(46,125,50,0.16);
+  pointer-events: none; opacity: 0; z-index: 6;
+  transition: transform 420ms cubic-bezier(.4,.15,.2,1), opacity 200ms linear;
+}
+.tap.on { opacity: 1; }
+.tap.hit { animation: hit 340ms ease-out; }
+@keyframes hit {
+  0%   { box-shadow: 0 0 0 0 rgba(46,125,50,0.45); transform-origin: center; }
+  100% { box-shadow: 0 0 0 22px rgba(46,125,50,0); }
+}
+
+/* Attention marker, applied to the real element so it tracks every scroll axis. */
+.screen .tour-flash { outline: 2px dashed rgba(198,40,40,0.8); outline-offset: 3px; border-radius: 6px; }
+.screen tr.tour-flash { outline: 0; }
+.screen tr.tour-flash > td { box-shadow: inset 0 2px 0 rgba(198,40,40,0.8), inset 0 -2px 0 rgba(198,40,40,0.8); }
+
+/* ── transport ────────────────────────────────────────────────────────── */
+.transport {
+  background: var(--c-panel); border: 1px solid var(--c-line); border-radius: 12px;
+  padding: 0.85rem 0.9rem 0.9rem;
+}
+.track { height: 3px; background: var(--c-raised); border-radius: 2px; overflow: hidden; margin-bottom: 0.8rem; }
+.track span { display: block; height: 100%; background: var(--c-live); width: 0; transition: width 200ms linear; }
+.controls { display: flex; align-items: center; gap: 0.5rem; }
+.controls button {
+  font-family: var(--sans); font-size: 0.85rem; font-weight: 500;
+  color: var(--c-paper); background: var(--c-raised);
+  border: 1px solid var(--c-line); border-radius: 7px;
+  padding: 0.4rem 0.7rem; cursor: pointer; line-height: 1;
+  transition: background 140ms ease, border-color 140ms ease;
+}
+.controls button:hover { background: #26333a; border-color: var(--c-wire); }
+.controls button:focus-visible { outline: 2px solid var(--c-live); outline-offset: 2px; }
+.controls .primary { background: var(--c-live); border-color: var(--c-live); color: #08110a; font-weight: 600; min-width: 76px; }
+#speed { direction: ltr; font-family: var(--mono); }
+.controls .primary:hover { background: #6fc772; border-color: #6fc772; }
+.controls .clockread { margin-inline-start: auto; direction: ltr; font-family: var(--mono); font-size: 0.78rem; color: var(--c-dim); }
+
+/* ── act rail ─────────────────────────────────────────────────────────── */
+.script { display: flex; flex-direction: column; gap: 0.9rem; }
+
+.act {
+  border: 1px solid var(--c-line); border-radius: 12px; background: var(--c-panel);
+  overflow: hidden; transition: border-color 200ms ease, background 200ms ease;
+}
+.act.live { border-color: var(--c-wire); background: var(--c-raised); }
+.act.done { opacity: 0.62; }
+
+.act > button.head {
+  width: 100%; display: flex; align-items: baseline; gap: 0.8rem;
+  background: none; border: 0; color: inherit; font: inherit; text-align: start;
+  padding: 0.85rem 1rem; cursor: pointer;
+}
+.act > button.head:focus-visible { outline: 2px solid var(--c-live); outline-offset: -3px; }
+.act .no {
+  font-family: var(--sans); font-size: 0.76rem; font-weight: 600;
+  color: var(--c-dim); flex: none; padding-top: 0.15rem;
+}
+.act.live .no { color: var(--c-live); }
+.act .name { font-weight: 600; font-size: 1.05rem; }
+.act .beat {
+  margin-inline-start: auto; direction: ltr; font-family: var(--mono);
+  font-size: 0.7rem; color: var(--c-dim); flex: none; padding-top: 0.2rem;
+}
+
+.act .body { padding: 0 1rem 1rem; padding-inline-start: 4.6rem; }
+.act:not(.live) .body { display: none; }
+
+.caption { margin: 0; font-size: 0.97rem; color: var(--c-paper); max-width: 60ch; min-height: 3.1em; }
+.caption em { color: var(--c-live); font-style: normal; font-weight: 500; }
+.caption code {
+  font-family: var(--mono); font-size: 0.86em; background: #0d1416;
+  border: 1px solid var(--c-line); border-radius: 4px; padding: 0.05em 0.35em;
+}
+
+/* live derived readout */
+.readout {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px;
+  background: var(--c-line); border: 1px solid var(--c-line); border-radius: 9px;
+  overflow: hidden; margin: 1rem 0 0;
+}
+.readout div { background: #101a1d; padding: 0.55rem 0.6rem; }
+.readout dt {
+  font-family: var(--sans); font-size: 0.72rem; font-weight: 500;
+  color: var(--c-dim); margin: 0 0 0.15rem;
+}
+.readout dd {
+  margin: 0; font-family: var(--mono); font-size: 1.15rem; font-weight: 500;
+  color: var(--c-live); font-variant-numeric: tabular-nums;
+}
+.readout dd.hot { color: var(--c-alarm); }
+
+/* ── footer note ──────────────────────────────────────────────────────── */
+.provenance {
+  margin-top: 2.6rem; padding-top: 1.3rem; border-top: 1px solid var(--c-line);
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1.4rem;
+}
+.provenance h3 {
+  font-family: var(--sans); font-size: 0.78rem; letter-spacing: 0.04em;
+  color: var(--c-dim); margin: 0 0 0.4rem; font-weight: 600;
+}
+.provenance p { margin: 0; font-size: 0.88rem; color: var(--c-muted); }
+.provenance a { color: var(--c-live); }
+
+@media (prefers-reduced-motion: reduce) {
+  .tap { transition: none; }
+  .spot.on { animation: none; }
+  .track span { transition: none; }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   THE APP — frontend/src/style.css, scoped to .screen and resolved for a
+   390px viewport (the vw-dependent legend size and the ≥48rem table rules
+   are pinned to that width rather than the artifact's own viewport).
+   ───────────────────────────────────────────────────────────────────────── */
+.screen {
+  --accent: #2e7d32;
+  --danger: #c62828;
+  --viz-series-1: #2a78d6;
+  --viz-series-2: #1baf7a;
+  --viz-series-3: #4a3aa7;
+  --viz-critical: #d03b3b;
+  --viz-grid: #e1e0d9;
+  --viz-baseline: #c3c2b7;
+  --viz-muted: #898781;
+  --column-width: 48rem;
+  direction: rtl;
+  font-family: system-ui, sans-serif;
+  padding: 1rem;
+  background: #fafafa;
+  color: #212121;
+  font-size: 16px;
+  line-height: normal;
+}
+.screen p, .screen ul, .screen h1, .screen h2, .screen h3 { margin: 0 0 1em; }
+.screen h1, .screen h2, .screen h3 { font-weight: bold; line-height: 1.2; }
+.screen h2 { font-size: 1.5em; }
+.screen h3 { font-size: 1.17em; }
+.screen ul { padding-inline-start: 40px; }
+.screen header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 1rem; }
+.screen header > span { display: flex; flex-direction: column; align-items: flex-end; gap: 0.3rem; font-size: 0.8rem; }
+.screen header span button { font-size: inherit; padding: 0.3rem 0.9rem; }
+.screen header .account-actions { display: flex; align-items: center; gap: 0.4rem; }
+.screen header .alarm { background: #ffebee; color: var(--danger); }
+.screen h1 { font-size: 1.4rem; color: var(--accent); }
+.screen .landing { display: flex; flex-direction: column; min-height: calc(684px - 26px - 2rem); }
+.screen .landing-intro { margin-bottom: 0.6rem; }
+.screen .landing-summary { margin-top: 0; }
+.screen .landing-summary li { margin-bottom: 0.6rem; }
+.screen .landing-repo { margin-top: auto; }
+.screen .day-picker, .screen .range-picker { display: flex; gap: 1rem; align-items: center; margin-bottom: 0.75rem; font-size: 0.9rem; }
+.screen fieldset { border: 1px solid #ddd; border-radius: 8px; margin: 0 0 1rem; padding: 0.75rem 1rem; background: #fff; }
+.screen legend { font-weight: 600; padding: 0 0.5rem; white-space: nowrap; font-size: 14.72px; }
+.screen label { display: block; padding: 0.35rem 0; cursor: pointer; }
+.screen button { background: var(--accent); color: #fff; border: 0; border-radius: 8px; padding: 0.6rem 2.5rem; font-size: 1rem; cursor: pointer; font-family: inherit; }
+.screen .alert { background: #ffebee; color: var(--danger); border-radius: 8px; padding: 0.6rem 1rem; margin-bottom: 0.5rem; white-space: pre-line; }
+.screen .ok { background: #e8f5e9; color: var(--accent); border-radius: 8px; padding: 0.6rem 1rem; margin-bottom: 0.5rem; }
+.screen .notice { background: #fff8e1; color: #795500; border-radius: 8px; padding: 0.6rem 1rem; margin-bottom: 0.5rem; }
+.screen .table-wrap { overflow-x: auto; margin-left: 0; }
+.screen table { border-collapse: collapse; min-width: 100%; margin-top: 0.5rem; background: #fff; }
+.screen th, .screen td { --cell-font-size: 0.9rem; border: 1px solid #ddd; padding: 0.4rem 0.6rem; text-align: right; font-size: var(--cell-font-size); }
+.screen th { vertical-align: top; font-size: calc(var(--cell-font-size) - 1pt); }
+.screen .history h2 { margin-bottom: 0.25em; }
+.screen td.violation { background: #ffebee; color: var(--danger); }
+.screen td.high-score, .screen .tracker-dashboard .high-score .value, .screen .meal-list .high-grade { color: var(--danger); }
+.screen .delete-day, .screen .edit-meal, .screen .delete-meal, .screen .close-view { background: none; color: inherit; padding: 0 0.3rem; font-size: 1rem; }
+.screen .delete-day { margin-inline-start: 0.4rem; }
+.screen td.view-day { cursor: pointer; }
+.screen .day-tracker, .screen .day-view { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1rem; }
+.screen .trend { margin: 0 0 1.5rem; }
+.screen .trend-panel { border: 1px solid #ddd; border-radius: 8px; padding: 0.6rem 0.5rem 0.4rem; background: #fff; }
+.screen .trend-panel + .trend-panel { margin-top: 1.75rem; }
+.screen .trend-panel-title { display: flex; align-items: center; gap: 0.35rem; font-size: 12px; font-weight: 700; margin: 0 0 0.15rem; }
+.screen .trend-chip { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.screen .trend-violation-tick { stroke: var(--viz-critical); stroke-width: 2; }
+.screen .trend-legend { display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; margin-bottom: 0.5rem; }
+.screen .trend-legend-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--viz-critical); display: inline-block; }
+.screen .day-tracker { margin-bottom: 1rem; }
+.screen .day-tracker h2 { font-size: 1.6rem; margin: 0 0 0.4em; }
+.screen .section-toggle { background: none; color: inherit; font: inherit; font-weight: 600; padding: 0; cursor: pointer; }
+.screen .section-toggle::after { content: " \25B4"; font-size: 0.8em; }
+.screen .section-toggle[aria-expanded="false"]::after { content: " \25BE"; }
+.screen .meal-form h3 { font-size: 1rem; margin: 0 0 0.5rem; }
+.screen .meal-flags { display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; }
+.screen .meal-flags label { display: inline-flex; align-items: center; gap: 0.3rem; }
+.screen .meal-time { display: block; margin-top: 0.75rem; }
+.screen .tracker-actions { display: flex; gap: 1rem; margin-top: 0.75rem; }
+.screen .tracker-dashboard { display: flex; gap: 1.2rem; flex-wrap: wrap; font-weight: 600; margin-bottom: 0.5rem; }
+.screen .tracker-dashboard .value { color: var(--accent); }
+.screen .tracker-dashboard strong { font-weight: 800; }
+.screen .meal-list { list-style: none; padding: 0; margin: 1rem 0 0; }
+.screen .meal-list li { padding: 0.25rem 0; display: flex; align-items: center; gap: 0.5rem; }
+.screen .meal-list .meal-text { flex: 1; }
+.screen .meal-list .meal-points { flex-shrink: 0; min-width: 4ch; }
+.screen .meal-list .meal-actions { display: flex; align-items: center; flex-shrink: 0; }
+.screen input[type="time"] { font-family: inherit; font-size: 1rem; padding: 0.15rem 0.3rem; }
+.screen a { color: #1a5fb4; }
+.screen .close-day { margin-top: 0.75rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="masthead">
+    <p class="eyebrow">diet-tracker · הדמיית שימוש</p>
+    <h1>יום ביומן</h1>
+    <p>
+      מסלול שלם באפליקציה, על מסך טלפון: התחברות עם Google, שלוש ארוחות שנרשמות בזמן שהן קורות,
+      סגירת היום מתוך היומן, וגרף המגמה של השבוע.
+      <strong>ההיסטוריה שמאחורי הכול היא נתונים חיים</strong> — חמישה ימים שנשלחו ושבע־עשרה ארוחות
+      שנקראו היישר מ־DynamoDB.
+    </p>
+  </header>
+
+  <div class="bench">
+    <div class="rig">
+      <div class="device">
+        <div class="viewport" id="viewport">
+          <div class="statusbar">
+            <span id="clock">11:48</span>
+            <span class="glyphs">▮▮▯ ⌁ 78%</span>
+          </div>
+          <div class="screen" id="screen" dir="rtl" lang="he"></div>
+          <div class="tap" id="tap"></div>
+        </div>
+      </div>
+
+      <div class="transport">
+        <div class="track"><span id="progress"></span></div>
+        <div class="controls">
+          <button type="button" class="primary" id="playpause">השהיה</button>
+          <button type="button" id="restart">מהתחלה</button>
+          <button type="button" id="speed">1×</button>
+          <span class="clockread" id="beatread">1 / 27</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="script" id="script"></div>
+  </div>
+
+  <div class="provenance">
+    <div>
+      <h3>ההיסטוריה</h3>
+      <p>הימים 20–24 באוגוסט 2026 והארוחות שלהם הם הרשומות האמיתיות — תשובות, ציוני פחמימות,
+        חלונות אכילה והכול — שנסרקו מהטבלאות החיות <code>DaysTable</code> ו־<code>MealsTable</code>.</p>
+    </div>
+    <div>
+      <h3>היום שנרשם כאן</h3>
+      <p>ה־25 באוגוסט מוצג בהדמיה. שתי הארוחות הראשונות שלו הן אלה שנרשמו בפועל באותו יום;
+        ארוחת הערב והסגירה מודמות כדי להשלים את המסלול.</p>
+    </div>
+    <div>
+      <h3>הניקוד</h3>
+      <p>הפחמימות נמדדות כמו בגולף — כל ארוחה מוסיפה את הנקודות של הדרגה שנבחרה לה, ונמוך יותר עדיף.
+        כל ערך שמופיע כאן מחושב בגזירה של האפליקציה עצמה, ולא נכתב ביד.</p>
+    </div>
+    <div>
+      <h3>המקור</h3>
+      <p><a href="/">לאפליקציה עצמה</a><br>
+        <a href="https://github.com/erancha/diet-tracker" target="_blank" rel="noreferrer">github.com/erancha/diet-tracker</a></p>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* ═══════════════════════════════════════════════════════════════════════
+   config/questionnaire.json, pinned at version 9 — see the head comment on
+   why this walkthrough carries a snapshot rather than reading the live config.
+   ═══════════════════════════════════════════════════════════════════════ */
+const Q = {
+  version: 9,
+  questions: [
+    { id: "drinking", type: "single", text: 'שכפ"צ - שתיה', panel_title: "שתיה (ליטרים)",
+      choices: [
+        { id: "under_2_5l", label: "פחות מ-2.5 ליטר !!", value: 2.0 },
+        { id: "l2_5", label: "2.5 ליטר", value: 2.5 },
+        { id: "l3", label: "3 ליטר", value: 3 },
+        { id: "l3_5", label: "3.5 ליטר", value: 3.5 },
+        { id: "l4", label: "4 ליטר", value: 4 }] },
+    { id: "vegetables", type: "single", text: 'שכפ"צ - כמות ירקות',
+      choices: [
+        { id: "none", label: "אף ארוחה !!", value: 0 },
+        { id: "meals1", label: "ב-1 ארוחות", value: 1 },
+        { id: "meals2", label: "ב-2 ארוחות", value: 2 },
+        { id: "meals3", label: "ב-3 ארוחות", value: 3 }] },
+    { id: "eating_window", type: "single", text: 'שכפ"צ - פתיחת חלון אכילה', panel_title: "חלון אכילה (שעות)",
+      choices: [
+        { id: "h8", label: "8 שעות", value: 8 },
+        { id: "h9", label: "9 שעות", value: 9 },
+        { id: "h10", label: "10 שעות", value: 10 },
+        { id: "h11", label: "11 שעות", value: 11 },
+        { id: "h12", label: "12 שעות", value: 12 },
+        { id: "over_12", label: "מעל 12 שעות !!", value: 13 }] },
+    { id: "meals", type: "single", text: 'שכפ"צ - צמצום מספר ארוחות',
+      choices: [
+        { id: "m2", label: "2 ארוחות", value: 2 },
+        { id: "m3", label: "3 ארוחות", value: 3 },
+        { id: "over_3", label: "מעל 3 ארוחות / נשנושים בין הארוחות !!", value: 4 }] },
+    { id: "carbs", type: "points", text: "פחמימות / קמחים / סוכרים",
+      day_qualifier: "סיכום ציון", meal_qualifier: "דרגת הארוחה",
+      tooltip: "כל ארוחה שנרשמת ביומן מוסיפה את הנקודות של דרגת הפחמימות שנבחרה לה; הציון היומי הוא סכום הנקודות מכל הארוחות. כמו בגולף — המטרה היא ציון נמוך ככל האפשר",
+      panel_qualifier: "ציון, נמוך = טוב", max: 35,
+      additions: [
+        { id: "sweet", label: "כולל מתוק", value: 4 },
+        { id: "alcohol", label: "כולל אלכוהול לא יבש", value: 4 },
+        { id: "nuts", label: "כולל הרבה אגוזים או שקדים", value: 3 }],
+      choices: [
+        { id: "no_carbs", label: "ללא פחמימות (רזה)", value: 0 },
+        { id: "no_carbs_heavy", label: "ללא פחמימות (שמן)", value: 2 },
+        { id: "grade1", label: "דרגה 1 (קטניות)", value: 1 },
+        { id: "grade2", label: "דרגה 2 (שיבולת שועל, קינואה, ..)", value: 2 },
+        { id: "grade3", label: 'דרגה 3 (אורז מלא, תפו"א)', value: 3 },
+        { id: "grade4", label: "דרגה 4 (אורז לבן, בטטה, סלק, תירס)", value: 4 },
+        { id: "grade5", label: "דרגה 5 (פירות): יותר מפרי אחד | כמות משמעותית של מיץ סחוט", value: 5 },
+        { id: "grade6_7", label: "דרגות 6-7 (קמחים מלאים, שיבולת שועל דקה | קמח לבן, סוכר ודומיו): ~ כוס פסטה", value: 6 },
+        { id: "grade7_light", label: "דרגה 7: ~ חטיף אנרגיה בינוני | לחמניה קטנה | פרוסת לחם ~", value: 7 },
+        { id: "grade7_heavy", label: "דרגה 7!: ~ כריך+ | פיצה+ | פרוסת עוגה/עוגיות | קרוטונים+ !!", value: 8 }] }
+  ],
+  rules: [
+    { id: "low_drinking", question_id: "drinking", below: 2.5, consecutive_days: 2, message: "פחות מ-{value} ליטר שתיה {days} ימים ברצוף" },
+    { id: "no_vegetables", question_id: "vegetables", below: 1, consecutive_days: 2, message: "אף ארוחה עם ירקות {days} ימים ברצוף" },
+    { id: "long_eating_window", question_id: "eating_window", at_least: 12.1, consecutive_days: 3, message: "חלון אכילה מעל 12 שעות {days} ימים ברצוף" },
+    { id: "too_many_meals", question_id: "meals", at_least: 4, consecutive_days: 2, message: "מעל 3 ארוחות או נשנושים {days} ימים ברצוף" },
+    { id: "heavy_carbs", question_id: "carbs", at_least: 11, consecutive_days: 2, message: "ציון פחמימות {value} ומעלה {days} ימים ברצוף" }
+  ]
+};
+
+/* Recorded days, newest first, in the shape GET /days returns them. */
+const HISTORY = [
+  { date: "2026-08-24", answers: { carbs: 11, drinking: 4,   meals: 3, vegetables: 2, eating_window: 8 } },
+  { date: "2026-08-23", answers: { carbs: 18, drinking: 4,   meals: 3, vegetables: 3, eating_window: 10.5 } },
+  { date: "2026-08-22", answers: { carbs: 10, drinking: 3.5, meals: 3, vegetables: 2, eating_window: 7.5 } },
+  { date: "2026-08-21", answers: { carbs: 16, drinking: 4,   meals: 3, vegetables: 3, eating_window: 10 } },
+  { date: "2026-08-20", answers: { carbs: 3,  drinking: 3.5, meals: 3, vegetables: 3, eating_window: 8 } }
+];
+
+const TODAY = "2026-08-25";
+const YESTERDAY = "2026-08-24";
+const EMAIL = "erancha@gmail.com";
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Domain — ports of frontend/src/{derive,violations,trend,dates}.ts
+   ═══════════════════════════════════════════════════════════════════════ */
+const carbsQ = Q.questions.find(q => q.id === "carbs");
+const drinkingQ = Q.questions.find(q => q.id === "drinking");
+const WEIGHTS = Object.fromEntries(carbsQ.choices.map(c => [c.id, c.value]));
+const ADDITIONS = Object.fromEntries(carbsQ.additions.map(a => [a.id, a.value]));
+const HIGH_SCORE_FRACTION = 0.3;
+const HIGH_GRADE_THRESHOLD = 3;
+const CLOSE_DAY_MIN_WINDOW_HOURS = 6;
+const TIME_STEP_MINUTES = 10;
+const REPORT_LAG_MINUTES = 20;
+
+function roundToHalfHour(hours) {
+  const halves = hours * 2, whole = Math.floor(halves);
+  if (halves - whole > 0.5) return (whole + 1) / 2;
+  if (halves - whole < 0.5) return whole / 2;
+  return (whole % 2 === 0 ? whole : whole + 1) / 2;
+}
+
+function minutesOf(at) { const [h, m] = at.slice(11, 16).split(":").map(Number); return h * 60 + m; }
+
+function mealWeights(meals) {
+  const chronological = meals.map((meal, index) => ({ meal, index }))
+    .sort((a, b) => minutesOf(a.meal.at) - minutesOf(b.meal.at));
+  const result = new Array(meals.length);
+  let fruits = 0;
+  for (const { meal, index } of chronological) {
+    let weight = WEIGHTS[meal.carbs_choice];
+    if (meal.fruit) { fruits += 1; if (fruits > 1) weight = Math.max(weight, WEIGHTS.grade5); }
+    for (const addition of meal.additions) weight += ADDITIONS[addition];
+    result[index] = weight;
+  }
+  return result;
+}
+
+function deriveDay(meals) {
+  if (meals.length === 0) return { carbs: 0, meals: 0, vegetables: 0, eating_window: 0 };
+  const ordered = [...meals].sort((a, b) => minutesOf(a.at) - minutesOf(b.at));
+  const span = minutesOf(ordered[ordered.length - 1].at) - minutesOf(ordered[0].at);
+  return {
+    carbs: mealWeights(meals).reduce((sum, w) => sum + w, 0),
+    meals: meals.length,
+    vegetables: meals.filter(m => m.vegetables).length,
+    eating_window: roundToHalfHour(span / 60)
+  };
+}
+
+const violates = (rule, value) => rule.at_least !== undefined ? value >= rule.at_least : value < rule.below;
+const isViolating = (id, value) => Q.rules.some(r => r.question_id === id && violates(r, value));
+const isHighScore = (q, value) => q.max !== undefined && value > q.max * HIGH_SCORE_FRACTION;
+
+function valueLabel(q, value) {
+  if (q.type === "points") return String(value);
+  const c = q.choices.find(c => c.value === value);
+  return c ? c.label : String(value);
+}
+function questionTitle(q, scope) {
+  const qualifier = scope === "day" ? q.day_qualifier : scope === "meal" ? q.meal_qualifier : q.panel_qualifier;
+  return qualifier === undefined ? q.text : q.text + " (" + qualifier + ")";
+}
+function panelTitle(q) {
+  if (q.panel_title !== undefined) return q.panel_title;
+  return q.panel_qualifier !== undefined ? questionTitle(q, "panel") : undefined;
+}
+const PANELS = Q.questions.filter(q => panelTitle(q) !== undefined)
+  .sort((a, b) => Number(b.type === "points") - Number(a.type === "points"));
+const STRIP = Q.questions.filter(q => !PANELS.includes(q));
+
+function activeViolations(days) {
+  const newest = days[0];
+  if (!newest || (newest.date !== TODAY && newest.date !== YESTERDAY)) return [];
+  const byDate = new Map(days.map(d => [d.date, d.answers]));
+  return Q.rules.flatMap(rule => {
+    let day = newest.date, streak = 0;
+    for (;;) {
+      const answers = byDate.get(day);
+      const value = answers ? answers[rule.question_id] : undefined;
+      if (value === undefined || !violates(rule, value)) break;
+      streak += 1;
+      day = daysBefore(day, 1);
+    }
+    if (streak < rule.consecutive_days) return [];
+    const threshold = rule.at_least !== undefined ? rule.at_least : rule.below;
+    return [rule.message.replaceAll("{days}", String(streak)).replaceAll("{value}", String(threshold))];
+  });
+}
+
+/* dates.ts */
+const WEEKDAY_LETTERS = ["א", "ב", "ג", "ד", "ה", "ו", "ש"];
+function parseIso(s) { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); }
+function isoDate(d) {
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+}
+function daysBefore(s, n) { const d = parseIso(s); return isoDate(new Date(d.getFullYear(), d.getMonth(), d.getDate() - n)); }
+function dayLabel(s) { const [, m, d] = s.split("-"); return Number(d) + "." + Number(m); }
+function ddmmLabel(s) { const [, m, d] = s.split("-"); return d + "/" + m; }
+function weekdayDdmm(s) { return WEEKDAY_LETTERS[parseIso(s).getDay()] + "׳ " + ddmmLabel(s); }
+function last7Days(end) { return Array.from({ length: 7 }, (_, i) => daysBefore(end, 6 - i)); }
+
+/* trend.ts */
+function shortForm(label) {
+  const m = label.match(/^(מעל|פחות מ-?)\s*(\d+(?:\.\d+)?)/);
+  if (!m) return null;
+  return m[1].endsWith("-") ? m[1] + m[2] : m[1] + " " + m[2];
+}
+function ticksFor(q) {
+  if (q.type === "points") return [0, q.max / 2, q.max].map(v => ({ value: v, label: String(v) }));
+  const values = [...new Set(q.choices.map(c => c.value))].sort((a, b) => a - b);
+  const min = values[0], max = values[values.length - 1], midTarget = (min + max) / 2;
+  const mid = values.reduce((closest, v) => Math.abs(v - midTarget) < Math.abs(closest - midTarget) ? v : closest, min);
+  return [...new Set([min, mid, max])].map(value => {
+    const choice = q.choices.find(c => c.value === value);
+    return { value, label: (choice && shortForm(choice.label)) || String(value) };
+  });
+}
+function domainFor(q, values) {
+  if (q.type === "points") {
+    const dataMax = values.reduce((max, v) => (v !== null && v > max ? v : max), 0);
+    return [-0.5, Math.max(q.max, dataMax) + 0.5];
+  }
+  const cv = q.choices.map(c => c.value);
+  return [Math.min(...cv) - 0.5, Math.max(...cv) + 0.5];
+}
+function liveTrendDay(today, days) {
+  if (today.meals.length === 0 || days.some(d => d.date === today.date)) return null;
+  return { date: today.date, answers: { carbs: today.derived.carbs } };
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Rendering — the DOM the React tree produces, as strings
+   ═══════════════════════════════════════════════════════════════════════ */
+const esc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+const state = {
+  screen: "landing",
+  meals: [],
+  formOpen: false,
+  pick: { carbs_choice: null, vegetables: false, fruit: false, additions: [] },
+  mealTime: "11:30",
+  closing: false,
+  drinking: null,
+  submitted: false,
+  alarmOpen: false,
+  ok: null
+};
+
+function days() {
+  if (!state.submitted) return HISTORY;
+  const derived = deriveDay(state.meals);
+  const answers = {
+    carbs: derived.carbs, meals: derived.meals, vegetables: derived.vegetables,
+    eating_window: derived.eating_window,
+    drinking: drinkingQ.choices.find(c => c.id === state.drinking).value
+  };
+  return [{ date: TODAY, answers }, ...HISTORY];
+}
+
+function landingHtml() {
+  return '<main class="landing">' +
+    "<h1>מעקב תזונה</h1>" +
+    '<p class="landing-intro">אפליקציית SaaS חינמית — יומן ארוחות יומי שעוזר לשמור על הרגלי אכילה בריאים לאורך זמן:</p>' +
+    '<ul class="landing-summary">' +
+      "<li>רישום ארוחות ביומן מעקב יומי, כולל השלמה של יום אתמול למי שנזכר אחרי חצות</li>" +
+      "<li>ערכי היום נגזרים מהיומן: ציון פחמימות / קמחים / סוכרים (נמוך = טוב), מספר ארוחות, ארוחות עם ירקות וחלון האכילה</li>" +
+      "<li>שאלון סוף היום לא יכול להצהיר פחות ממה שנרשם ביומן; יום שתועד במלואו נסגר עם מילוי שתייה בלבד</li>" +
+      "<li>תזכורת כשדיווח של יום חסר, התראה כשכלל תזונה מופר כמה ימים ברצף, סיכום שבועי וגרף מגמה של שבעת הימים האחרונים אחרי כל שליחה</li>" +
+    "</ul>" +
+    '<button type="button" data-t="signin">התחברות עם Google</button>' +
+    '<p class="landing-repo"><a href="#">קוד המקור ב-GitHub</a></p>' +
+  "</main>";
+}
+
+function dashboardHtml(derived) {
+  const hot = isHighScore(carbsQ, derived.carbs) ? ' class="high-score"' : "";
+  return '<div class="tracker-dashboard" data-t="dashboard">' +
+    '<span>ירקות: <span class="value">' + derived.vegetables + "</span></span>" +
+    '<span>חלון: <span class="value">' + derived.eating_window + "</span> שעות</span>" +
+    '<span>ארוחות: <span class="value">' + derived.meals + "</span></span>" +
+    "<strong" + hot + ">ציון: " + '<span class="value">' + derived.carbs + "</span></strong>" +
+  "</div>";
+}
+
+const ADDITION_MARKERS = { sweet: "🍪", alcohol: "🍷", nuts: "🥜" };
+
+function mealListHtml(meals, interactive) {
+  const newestFirst = [...meals].reverse();
+  const points = mealWeights(newestFirst);
+  return '<ul class="meal-list" data-t="meal-list">' + newestFirst.map((meal, i) => {
+    const choice = carbsQ.choices.find(c => c.id === meal.carbs_choice);
+    const time = meal.at.slice(11, 16);
+    const grade = choice.value > HIGH_GRADE_THRESHOLD
+      ? '<span class="high-grade">' + esc(choice.label) + "</span>" : esc(choice.label);
+    const marks = (meal.vegetables ? " · 🥗" : "") + (meal.fruit ? " · 🍎" : "") +
+      meal.additions.map(id => " · " + ADDITION_MARKERS[id]).join("");
+    const actions = interactive
+      ? '<span class="meal-actions"><button type="button" class="edit-meal">✏️</button>' +
+        '<button type="button" class="delete-meal">🗑️</button></span>' : "";
+    return "<li>" +
+      '<span class="meal-text"><strong>' + time + "</strong> · " + grade + marks + "</span>" +
+      '<span class="meal-points"> · ' + points[i] + "</span>" + actions +
+    "</li>";
+  }).join("") + "</ul>";
+}
+
+function choiceFieldsetHtml(q, selectedId, scope, prefix) {
+  return "<fieldset><legend>" + esc(questionTitle(q, scope)) + "</legend>" +
+    q.choices.map(c =>
+      '<label data-t="' + prefix + c.id + '">' +
+        '<input type="radio" tabindex="-1"' + (selectedId === c.id ? " checked" : "") + "> " +
+        esc(c.label) +
+      "</label>").join("") +
+  "</fieldset>";
+}
+
+function trackerHtml() {
+  const derived = deriveDay(state.meals);
+  const closable = derived.eating_window >= CLOSE_DAY_MIN_WINDOW_HOURS;
+  const p = state.pick;
+  let html = '<section class="day-tracker" data-t="tracker">' +
+    '<h2><button type="button" class="section-toggle" aria-expanded="true">יומן היום</button></h2>' +
+    dashboardHtml(derived) +
+    '<section class="meal-form"><h3><button type="button" class="section-toggle" data-t="form-toggle"' +
+      ' aria-expanded="' + (state.formOpen ? "true" : "false") + '">פרטי הארוחה</button></h3>';
+
+  if (state.formOpen) {
+    html += choiceFieldsetHtml(carbsQ, p.carbs_choice, "meal", "grade-") +
+      '<div class="meal-flags">' +
+        '<label data-t="flag-veg"><input type="checkbox" tabindex="-1"' + (p.vegetables ? " checked" : "") + "> כולל ירקות</label>" +
+        '<label data-t="flag-fruit"><input type="checkbox" tabindex="-1"' + (p.fruit ? " checked" : "") + "> כולל פרי</label>" +
+        carbsQ.additions.map(a =>
+          '<label data-t="flag-' + a.id + '"><input type="checkbox" tabindex="-1"' +
+          (p.additions.includes(a.id) ? " checked" : "") + "> " + esc(a.label) + "</label>").join("") +
+      "</div>" +
+      '<label class="meal-time" data-t="meal-time">שעת הארוחה ' +
+        '<input type="time" tabindex="-1" value="' + state.mealTime + '"></label>';
+  }
+  html += "</section>";
+
+  html += '<div class="tracker-actions">';
+  if (p.carbs_choice !== null) html += '<button type="button" data-t="record">רישום ארוחה</button>';
+  if (closable) html += '<button type="button" data-t="close-day">סגירת יום</button>';
+  html += "</div>";
+
+  html += mealListHtml(state.meals, true);
+
+  if (state.closing && closable) {
+    html += '<div class="close-day" data-t="close-panel">' +
+      choiceFieldsetHtml(drinkingQ, state.drinking, "day", "drink-") +
+      '<button type="button" data-t="confirm"' + (state.drinking === null ? " disabled" : "") +
+      ">אישור וסגירה</button></div>";
+  }
+  return html + "</section>";
+}
+
+/* ── trend chart: the Recharts geometry, drawn as SVG ─────────────────── */
+const CHART_W = 340, Y_AXIS_W = 78, MARGIN_R = 14, TOP = 6, AXIS_H = 30;
+
+function trendPanelHtml(q, dayStrs, byDate, index, showXAxis) {
+  const color = "var(--viz-series-" + (index + 1) + ")";
+  const points = dayStrs.map(date => {
+    const day = byDate.get(date);
+    const has = day && q.id in day.answers;
+    const value = has ? day.answers[q.id] : null;
+    return { date, label: dayLabel(date), value, violating: has && isViolating(q.id, value) };
+  });
+  const h = showXAxis ? 122 : 104;
+  const plotBottom = showXAxis ? h - AXIS_H : h - 6;
+  const plotH = plotBottom - TOP;
+  const [d0, d1] = domainFor(q, points.map(p => p.value));
+  const ticks = ticksFor(q);
+  const x = i => Y_AXIS_W + i * ((CHART_W - MARGIN_R - Y_AXIS_W) / (points.length - 1));
+  const y = v => TOP + ((d1 - v) / (d1 - d0)) * plotH;
+
+  let svg = '<svg width="' + CHART_W + '" height="' + h + '" viewBox="0 0 ' + CHART_W + " " + h +
+    '" role="img" aria-label="' + esc(panelTitle(q)) + '">';
+
+  ticks.forEach(t => {
+    svg += '<line x1="' + Y_AXIS_W + '" y1="' + y(t.value).toFixed(1) + '" x2="' + (CHART_W - MARGIN_R) +
+      '" y2="' + y(t.value).toFixed(1) + '" stroke="var(--viz-grid)"></line>';
+    svg += '<text x="' + (Y_AXIS_W - 5) + '" y="' + (y(t.value) + 4).toFixed(1) +
+      '" text-anchor="end" font-size="11" fill="var(--viz-muted)" font-family="system-ui, sans-serif">' +
+      esc(t.label) + "</text>";
+  });
+
+  /* connectNulls={false}: the line breaks wherever a day has no record. */
+  let run = [];
+  const flush = () => {
+    if (run.length > 1) {
+      svg += '<polyline fill="none" stroke="' + color + '" stroke-width="2" points="' +
+        run.map(p => p.join(",")).join(" ") + '"></polyline>';
+    }
+    run = [];
+  };
+  points.forEach((p, i) => {
+    if (p.value === null) { flush(); return; }
+    run.push([x(i).toFixed(1), y(p.value).toFixed(1)]);
+  });
+  flush();
+
+  points.forEach((p, i) => {
+    if (p.value === null) return;
+    svg += '<circle data-t="dot-' + q.id + "-" + p.date + '" cx="' + x(i).toFixed(1) + '" cy="' + y(p.value).toFixed(1) +
+      '" r="' + (p.violating ? 4.5 : 4) + '" fill="' + (p.violating ? "var(--viz-critical)" : color) + '"></circle>';
+  });
+
+  if (showXAxis) {
+    svg += '<line x1="' + Y_AXIS_W + '" y1="' + plotBottom + '" x2="' + (CHART_W - MARGIN_R) +
+      '" y2="' + plotBottom + '" stroke="var(--viz-baseline)"></line>';
+    points.forEach((p, i) => {
+      svg += '<text x="' + x(i).toFixed(1) + '" y="' + (plotBottom + 16) +
+        '" text-anchor="middle" font-size="11" fill="var(--viz-muted)" font-family="system-ui, sans-serif">' +
+        p.label + "</text>";
+    });
+  }
+  svg += "</svg>";
+
+  return '<div class="trend-panel" data-t="panel-' + q.id + '">' +
+    '<div class="trend-panel-title"><span class="trend-chip" style="background:' + color + '"></span>' +
+    esc(panelTitle(q)) + "</div>" + svg + "</div>";
+}
+
+function trendHtml() {
+  const list = days();
+  const todayPayload = { date: TODAY, meals: state.meals, derived: deriveDay(state.meals) };
+  const live = liveTrendDay(todayPayload, list);
+  const dayStrs = last7Days(live ? live.date : list[0].date);
+  const byDate = new Map(list.map(d => [d.date, d]));
+  if (live) byDate.set(live.date, live);
+
+  let html = '<div class="trend" dir="ltr" data-t="trend">' +
+    '<div class="trend-legend"><span class="trend-legend-dot"></span> חריגה</div>';
+  PANELS.forEach((q, i) => { html += trendPanelHtml(q, dayStrs, byDate, i, i === PANELS.length - 1); });
+
+  /* The violations strip: one tick per non-charted question that broke a rule that day. */
+  const stripW = CHART_W, stripH = 22;
+  let strip = '<svg width="' + stripW + '" height="' + stripH + '" aria-hidden="true">';
+  dayStrs.forEach((date, i) => {
+    const day = byDate.get(date);
+    const hits = day ? STRIP.filter(q => q.id in day.answers && isViolating(q.id, day.answers[q.id])) : [];
+    const cx = Y_AXIS_W + i * ((stripW - MARGIN_R - Y_AXIS_W) / (dayStrs.length - 1));
+    hits.forEach((_, j) => {
+      const tx = cx + (j - (hits.length - 1) / 2) * 5;
+      strip += '<line class="trend-violation-tick" x1="' + tx + '" y1="7" x2="' + tx + '" y2="15"></line>';
+    });
+  });
+  return html + strip + "</svg></div>";
+}
+
+function historyTableHtml() {
+  const list = days();
+  const visible = list.filter(d => d.date >= daysBefore(TODAY, 6));
+  return '<div class="table-wrap" data-t="table"><table><thead><tr><th>תאריך</th>' +
+    Q.questions.map(q => "<th>" + esc(questionTitle(q, "day")) + "</th>").join("") +
+    "</tr></thead><tbody>" +
+    visible.map(day =>
+      '<tr data-t="row-' + day.date + '"><td>' + weekdayDdmm(day.date) + "</td>" +
+      Q.questions.map(q => {
+        const value = day.answers[q.id];
+        if (value === undefined) return "<td>—</td>";
+        const classes = q.type === "points"
+          ? [isHighScore(q, value) && "high-score", "view-day"].filter(Boolean).join(" ")
+          : (isViolating(q.id, value) ? "violation" : "");
+        return "<td" + (classes ? ' class="' + classes + '"' : "") + ">" +
+          esc(valueLabel(q, value)) + (q.type === "points" ? " 📖" : "") + "</td>";
+      }).join("") + "</tr>").join("") +
+    "</tbody></table></div>";
+}
+
+function appHtml() {
+  const list = days();
+  const violations = activeViolations(list);
+  let html = "<header><h1>שאלון תזונה יומי</h1><span>" + EMAIL +
+    '<span class="account-actions">';
+  if (violations.length > 0) {
+    html += '<button type="button" class="alarm" data-t="alarm">🔔 ' + violations.length + "</button>";
+  }
+  html += '<button type="button">התנתקות</button></span></span></header>';
+  if (state.alarmOpen) {
+    html += violations.map(m => '<div class="alert" data-t="alarm-msg">' + esc(m) + "</div>").join("");
+  }
+
+  html += "<main>";
+  html += "<div>" + (state.ok ? '<div class="ok" data-t="ok">' + esc(state.ok) + "</div>" : "") + "</div>";
+  if (!state.submitted) html += trackerHtml();
+  html += '<section><h2><button type="button" class="section-toggle" aria-expanded="false">שאלון סוף יום</button></h2></section>';
+  html += '<section class="history"><h2><button type="button" class="section-toggle" aria-expanded="true">היסטוריה</button></h2>' +
+    trendHtml() + historyTableHtml() + "</section>";
+  return html + "</main>";
+}
+
+const screenEl = document.getElementById("screen");
+function render() {
+  const keep = screenEl.scrollTop;
+  screenEl.innerHTML = state.screen === "landing" ? landingHtml() : appHtml();
+  screenEl.scrollTop = keep;
+  paintReadout();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   The script — four acts, twenty-seven beats
+   ═══════════════════════════════════════════════════════════════════════ */
+const ACTS = [
+  { name: "התחברות" },
+  { name: "שלוש ארוחות" },
+  { name: "סגירת היום" },
+  { name: "השבוע" }
+];
+
+const M1 = { id: "m1", at: TODAY + "T11:35:00+03:00", carbs_choice: "grade1", vegetables: true, fruit: false, additions: [] };
+const M2 = { id: "m2", at: TODAY + "T15:40:00+03:00", carbs_choice: "grade1", vegetables: true, fruit: false, additions: [] };
+const M3 = { id: "m3", at: TODAY + "T20:10:00+03:00", carbs_choice: "grade3", vegetables: true, fruit: false, additions: [] };
+
+const BEATS = [
+  { act: 0, hold: 2800, clock: "11:47",
+    cap: "מסך הפתיחה מסכם בארבע שורות מה האפליקציה עושה, ואז מפנה את הדרך.",
+    apply() { Object.assign(state, { screen: "landing" }); } },
+
+  { act: 0, hold: 2400, tap: "signin", clock: "11:48",
+    cap: "ההתחברות עוברת במסך Google המתארח של Cognito. כתובת שאינה ברשימת ההיתר נדחית כבר ב־pre-signup, ומקבלת את הכתובת שאליה אפשר לפנות.",
+    apply() { state.screen = "app"; } },
+
+  { act: 0, hold: 3600, tap: "alarm", scroll: "top",
+    cap: "הפעמון סופר חריגות <em>פעילות</em>, והוא שורד רענון של הדף — בניגוד לבאנר שעולה רק אחרי שליחה.",
+    apply() { state.alarmOpen = true; } },
+
+  { act: 0, hold: 3600, scroll: "alarm-msg",
+    cap: "יומיים ברצף עם ציון פחמימות 11 ומעלה. הצד הלקוח הולך על אותו רצף שהשרת הולך עליו, מתוך אותו קובץ <code>rules</code>, כך שהפעמון והנקודות האדומות בגרף לא יכולים לסתור זה את זה.",
+    apply() {} },
+
+  { act: 0, hold: 1400, tap: "alarm",
+    cap: "נרשם. ממשיכים אל היום עצמו.",
+    apply() { state.alarmOpen = false; } },
+
+  /* ── Act 1 ── */
+  { act: 1, hold: 2600, scroll: "tracker",
+    cap: "יומן היום נפתח על הערכים שלו ועל הארוחות שנרשמו בו. עדיין לא נרשם דבר, ולכן כל ערך מראה אפס.",
+    apply() {} },
+
+  { act: 1, hold: 2000, tap: "form-toggle", clock: "11:52",
+    cap: "שדות הארוחה הם הדבר הגבוה ביותר בכרטיס, וכדאי לקרוא אותם רק כשיש ארוחה לדווח — ולכן הם מקופלים עד שמבקשים אותם.",
+    apply() { state.formOpen = true; state.mealTime = "11:30"; } },
+
+  { act: 1, hold: 2600, tap: "grade-grade1", scroll: "grade-grade1",
+    cap: "הצהריים הם קטניות — פחמימות דרגה 1, נקודה אחת. הסולם מגיע עד דרגה 7 בשמונה נקודות, וציון היום הוא הסכום.",
+    apply() { state.pick.carbs_choice = "grade1"; } },
+
+  { act: 1, hold: 2000, tap: "flag-veg",
+    cap: "עם ירקות. היום סופר <em>ארוחות</em> עם ירקות, לא כמויות — שלוש מתוך שלוש היא המטרה.",
+    apply() { state.pick.vegetables = true; } },
+
+  { act: 1, hold: 3000, tap: "meal-time",
+    cap: "הבורר נפתח על 11:30 — השעון מעוגל כלפי מטה ונדחף עשרים דקות אחורה, כי ארוחה נרשמת אחרי שאוכלים אותה. בפועל היא התחילה ב־11:35.",
+    apply() { state.mealTime = "11:35"; } },
+
+  { act: 1, hold: 2400, tap: "record",
+    cap: "נרשמה. השדות מתקפלים בחזרה והערכים מתעדכנים במקום: ארוחה אחת, נקודה אחת, ארוחה אחת עם ירקות.",
+    apply() { state.meals = [M1]; state.formOpen = false; state.pick = { carbs_choice: null, vegetables: false, fruit: false, additions: [] }; } },
+
+  { act: 1, hold: 1700, tap: "form-toggle", clock: "16:05",
+    cap: "אחר צהריים מאוחר, ארוחה שנייה.",
+    apply() { state.formOpen = true; state.mealTime = "15:40"; } },
+
+  { act: 1, hold: 1800, tap: "grade-grade1",
+    cap: "שוב קטניות — עוד נקודה בודדת.",
+    apply() { state.pick.carbs_choice = "grade1"; } },
+
+  { act: 1, hold: 2000, tap: "flag-veg",
+    cap: "ושוב ירקות. השעה שהוצעה נפלה הפעם בדיוק על 15:40, אז אין מה לתקן.",
+    apply() { state.pick.vegetables = true; } },
+
+  { act: 1, hold: 2800, tap: "record",
+    cap: "שתי ארוחות, שתי נקודות, חלון אכילה של ארבע שעות. עדיין אין כפתור סגירת יום — ארבע שעות הן יום שעוד אוכלים אותו, לא יום שנגמר.",
+    apply() { state.meals = [M1, M2]; state.formOpen = false; state.pick = { carbs_choice: null, vegetables: false, fruit: false, additions: [] }; } },
+
+  { act: 1, hold: 1700, tap: "form-toggle", clock: "20:34",
+    cap: "ארוחת ערב.",
+    apply() { state.formOpen = true; state.mealTime = "20:10"; } },
+
+  { act: 1, hold: 2600, tap: "grade-grade3", scroll: "grade-grade3",
+    cap: "אורז מלא — דרגה 3, שלוש נקודות. כל דרגה שמעל 3 צובעת את שורת הארוחה באדום.",
+    apply() { state.pick.carbs_choice = "grade3"; } },
+
+  { act: 1, hold: 1700, tap: "flag-veg",
+    cap: "ירקות, שלוש מתוך שלוש.",
+    apply() { state.pick.vegetables = true; } },
+
+  { act: 1, hold: 2800, tap: "record",
+    cap: "שלוש ארוחות. ציון 5, כולן עם ירקות, והחלון משתרע עכשיו על 8.5 שעות.",
+    apply() { state.meals = [M1, M2, M3]; state.formOpen = false; state.pick = { carbs_choice: null, vegetables: false, fruit: false, additions: [] }; } },
+
+  { act: 1, hold: 3800, scroll: "close-day", flash: "close-day",
+    cap: "ורק <em>עכשיו</em> מופיע כפתור סגירת היום. הוא מוצע רק אחרי שהארוחות שנרשמו משתרעות על שש שעות — מתחת לזה היום עדיין נאכל, והערכים שלו היו נסגרים מוקדם מדי.",
+    apply() {} },
+
+  /* ── Act 2 ── */
+  { act: 2, hold: 3000, tap: "close-day",
+    cap: "יום שתועד ארוחה־ארוחה כבר ענה על ארבע מתוך חמש השאלות. נשארה רק השתייה.",
+    apply() { state.closing = true; } },
+
+  { act: 2, hold: 2400, tap: "drink-l3_5", scroll: "close-panel",
+    cap: "3.5 ליטר. פחות מ־2.5 ליטר יומיים ברצף הוא חוק בפני עצמו, וכאן הוא נעקף בנוחות.",
+    apply() { state.drinking = "l3_5"; } },
+
+  { act: 2, hold: 3200, tap: "confirm", clock: "20:41",
+    cap: "נשלח. השרת גוזר מחדש את היום מתוך הארוחות השמורות — המספרים בצד הלקוח הם משוב, לעולם לא הרשומה — ומריץ שוב את כל חוקי הסף.",
+    apply() {
+      state.submitted = true;
+      state.closing = false;
+      state.ok = "נשמר לתאריך " + TODAY + "! אין חריגות היום ✔";
+    } },
+
+  { act: 2, hold: 4000, scroll: "top",
+    cap: "שום חוק לא הופר. כרטיס היומן פורש לערב, הבאנר הירוק מאשר את התאריך — והפעמון נעלם: ציון 5 שבר את רצף הפחמימות בן היומיים.",
+    apply() {} },
+
+  /* ── Act 3 ── */
+  { act: 3, hold: 4000, scroll: "trend",
+    cap: "שבעה ימים, שלושה פאנלים שחולקים אותן עמודות יום: ציון הפחמימות למעלה, אחריו השתייה, ואחריה חלון האכילה.",
+    apply() {} },
+
+  { act: 3, hold: 4800, scroll: "panel-carbs", flash: "panel-carbs",
+    cap: "נקודות אדומות הן ימים שהפרו חוק: 21, 23 ו־24 באוגוסט הגיעו כולם לסף הפחמימות, 11 ומעלה. ה־19 באוגוסט הוא פער אמיתי, ולכן הקו נשבר במקום לגשר עליו — והיום סוגר את השבוע על 5.",
+    apply() {} },
+
+  { act: 3, hold: 4000, scroll: "table", flash: "row-" + TODAY,
+    cap: "אותו שבוע כטבלה, מהחדש לישן. בטלפון היא נגללת לצדדים: עמודת התאריך עוגנת בקצה הימני, וחמש התשובות רצות ממנה שמאלה.",
+    apply() {} },
+
+  { act: 3, hold: 4600, scroll: "table", hscroll: "table", flash: "row-" + TODAY,
+    cap: "בקצה הרחוק יושבת עמודת הציון — 18, 16 ו־11 באדום, וה־5 של היום בשחור רגיל. נגיעה בכל אחד מהם פותחת מחדש את יומן הארוחות של אותו יום, לקריאה בלבד.",
+    apply() {} }
+];
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Player
+   ═══════════════════════════════════════════════════════════════════════ */
+const tapEl = document.getElementById("tap");
+const clockEl = document.getElementById("clock");
+const progressEl = document.getElementById("progress");
+const beatreadEl = document.getElementById("beatread");
+const playpauseEl = document.getElementById("playpause");
+const speedEl = document.getElementById("speed");
+const scriptEl = document.getElementById("script");
+
+const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+let cursor = 0;
+let playing = true;
+let speed = 1;
+let token = 0;
+
+function buildScript() {
+  scriptEl.innerHTML = ACTS.map((act, i) =>
+    '<section class="act" data-act="' + i + '">' +
+      '<button type="button" class="head">' +
+        '<span class="no">מערכה ' + (i + 1) + "</span>" +
+        '<span class="name">' + act.name + "</span>" +
+        '<span class="beat" data-beatcount></span>' +
+      "</button>" +
+      '<div class="body">' +
+        '<p class="caption"></p>' +
+        '<dl class="readout">' +
+          "<div><dt>ציון</dt><dd data-r=\"carbs\">0</dd></div>" +
+          "<div><dt>ארוחות</dt><dd data-r=\"meals\">0</dd></div>" +
+          "<div><dt>עם ירקות</dt><dd data-r=\"vegetables\">0</dd></div>" +
+          "<div><dt>חלון (שעות)</dt><dd data-r=\"eating_window\">0</dd></div>" +
+        "</dl>" +
+      "</div>" +
+    "</section>").join("");
+
+  scriptEl.querySelectorAll(".act .head").forEach((head, i) => {
+    head.addEventListener("click", () => seekToAct(i));
+  });
+}
+
+function paintReadout() {
+  const derived = state.submitted
+    ? { carbs: days()[0].answers.carbs, meals: days()[0].answers.meals,
+        vegetables: days()[0].answers.vegetables, eating_window: days()[0].answers.eating_window }
+    : deriveDay(state.meals);
+  scriptEl.querySelectorAll("[data-r]").forEach(node => {
+    const key = node.getAttribute("data-r");
+    node.textContent = derived[key];
+    node.classList.toggle("hot", key === "carbs" && isHighScore(carbsQ, derived.carbs));
+  });
+}
+
+function paintScript(beatIndex) {
+  const beat = BEATS[beatIndex];
+  scriptEl.querySelectorAll(".act").forEach((node, i) => {
+    node.classList.toggle("live", i === beat.act);
+    node.classList.toggle("done", i < beat.act);
+    if (i === beat.act) {
+      node.querySelector(".caption").innerHTML = beat.cap;
+      const within = BEATS.filter(b => b.act === i);
+      node.querySelector("[data-beatcount]").textContent =
+        (within.indexOf(beat) + 1) + " / " + within.length;
+    }
+  });
+  progressEl.style.width = ((beatIndex + 1) / BEATS.length * 100) + "%";
+  beatreadEl.textContent = (beatIndex + 1) + " / " + BEATS.length;
+}
+
+function target(name) { return screenEl.querySelector('[data-t="' + name + '"]'); }
+
+function wait(ms) {
+  return new Promise(resolve => setTimeout(resolve, reduced ? Math.min(ms, 400) : ms / speed));
+}
+
+function scrollTo(name) {
+  if (name === "top") { smoothScroll(0); return; }
+  const el = target(name);
+  if (!el) return;
+  const top = el.offsetTop - 90;
+  smoothScroll(Math.max(0, Math.min(top, screenEl.scrollHeight - screenEl.clientHeight)));
+}
+
+function smoothScroll(top) {
+  screenEl.scrollTo({ top, behavior: reduced ? "auto" : "smooth" });
+}
+
+function placeCursor(el) {
+  const top = el.offsetTop + el.offsetHeight / 2 - screenEl.scrollTop + 26;
+  const left = el.offsetLeft + Math.min(el.offsetWidth / 2, 90);
+  tapEl.style.transform = "translate(" + left + "px," + top + "px)";
+  tapEl.classList.add("on");
+}
+
+/* Marks the element itself, so it stays put through vertical and horizontal scrolling. */
+function flash(name) {
+  const el = target(name);
+  if (el) el.classList.add("tour-flash");
+}
+
+/* The history table outruns a phone's width; this walks it to its far (score) column. */
+function hscroll(name) {
+  const el = target(name);
+  if (!el) return;
+  const max = el.scrollWidth - el.clientWidth;
+  el.scrollTo({ left: getComputedStyle(el).direction === "rtl" ? -max : max,
+                behavior: reduced ? "auto" : "smooth" });
+}
+
+/* Applies a beat with no animation and no waiting — used when seeking. */
+function applyInstant(beat) {
+  beat.apply();
+  if (beat.clock) clockEl.textContent = beat.clock;
+  render();
+}
+
+async function runBeat(index, mine) {
+  const beat = BEATS[index];
+  paintScript(index);
+
+  if (beat.scroll) { scrollTo(beat.scroll); await wait(500); }
+  if (token !== mine) return;
+
+  if (beat.tap) {
+    const el = target(beat.tap);
+    if (el) {
+      const visibleTop = el.offsetTop - screenEl.scrollTop;
+      if (visibleTop < 40 || visibleTop > screenEl.clientHeight - 60) {
+        smoothScroll(Math.max(0, el.offsetTop - 200));
+        await wait(450);
+        if (token !== mine) return;
+      }
+      placeCursor(el);
+      await wait(reduced ? 60 : 460);
+      if (token !== mine) return;
+      tapEl.classList.remove("hit");
+      void tapEl.offsetWidth;
+      tapEl.classList.add("hit");
+      await wait(reduced ? 40 : 240);
+      if (token !== mine) return;
+    }
+  } else {
+    tapEl.classList.remove("on");
+  }
+
+  beat.apply();
+  if (beat.clock) clockEl.textContent = beat.clock;
+  render();
+
+  /* render() pins scrollTop to wherever a smooth scroll had reached, so re-issue it to settle. */
+  if (beat.scroll) scrollTo(beat.scroll);
+  if (beat.tap) {
+    const again = target(beat.tap);
+    if (again) placeCursor(again); else tapEl.classList.remove("on");
+  }
+  if (beat.hscroll) { await wait(450); if (token !== mine) return; hscroll(beat.hscroll); await wait(400); if (token !== mine) return; }
+  if (beat.flash) flash(beat.flash);
+
+  await wait(beat.hold);
+}
+
+async function loop() {
+  const mine = ++token;
+  while (playing && token === mine && cursor < BEATS.length) {
+    await runBeat(cursor, mine);
+    if (token !== mine) return;
+    cursor += 1;
+  }
+  if (token === mine && cursor >= BEATS.length) {
+    playing = false;
+    playpauseEl.textContent = "שוב";
+    tapEl.classList.remove("on");
+  }
+}
+
+function resetState() {
+  Object.assign(state, {
+    screen: "landing", meals: [], formOpen: false,
+    pick: { carbs_choice: null, vegetables: false, fruit: false, additions: [] },
+    mealTime: "11:30", closing: false, drinking: null, submitted: false,
+    alarmOpen: false, ok: null
+  });
+  clockEl.textContent = "11:47";
+  screenEl.scrollTop = 0;
+  tapEl.classList.remove("on");
+}
+
+function seekToAct(actIndex) {
+  token += 1;
+  const start = BEATS.findIndex(b => b.act === actIndex);
+  resetState();
+  for (let i = 0; i < start; i += 1) applyInstant(BEATS[i]);
+  render();
+  cursor = start;
+  playing = true;
+  playpauseEl.textContent = "השהיה";
+  paintScript(cursor);
+  loop();
+}
+
+playpauseEl.addEventListener("click", () => {
+  if (cursor >= BEATS.length) { restart(); return; }
+  playing = !playing;
+  playpauseEl.textContent = playing ? "השהיה" : "ניגון";
+  if (playing) loop(); else token += 1;
+});
+
+function restart() {
+  token += 1;
+  resetState();
+  render();
+  cursor = 0;
+  playing = true;
+  playpauseEl.textContent = "השהיה";
+  paintScript(0);
+  loop();
+}
+document.getElementById("restart").addEventListener("click", restart);
+
+speedEl.addEventListener("click", () => {
+  speed = speed === 1 ? 2 : speed === 2 ? 0.5 : 1;
+  speedEl.textContent = speed === 0.5 ? "0.5×" : speed + "×";
+});
+
+buildScript();
+render();
+paintScript(0);
+loop();
+</script>
+</body>
+</html>

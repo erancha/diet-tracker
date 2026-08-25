@@ -3,6 +3,10 @@
 Free multi-user SaaS: a serverless Hebrew diet tracker built around an intraday meal log, scored
 in points golf-style — lower is better.
 
+**[Walk through a tracked day](https://dwyjxouhdjlxp.cloudfront.net/demo.html)** — an animated
+replay of one session on a phone screen: sign-in, three meals logged as they happen, the day
+closed from the tracker, and the week's trend over recorded history.
+
 ## Overview
 
 - Meals are logged as they happen and can be backfilled to yesterday for after-midnight logging.
