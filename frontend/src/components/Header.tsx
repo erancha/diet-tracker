@@ -12,13 +12,16 @@ export function Header({ email, onSignOut, activeViolations }: {
       <header>
         <h1>שאלון תזונה יומי</h1>
         <span>
-          {email} <button type="button" onClick={onSignOut}>התנתקות</button>
-          {activeViolations.length > 0 && (
-            <button type="button" className="alarm" aria-label="חריגות פעילות"
-                    onClick={() => setAlarmOpen((open) => !open)}>
-              🔔 {activeViolations.length}
-            </button>
-          )}
+          {email}
+          <span className="account-actions">
+            {activeViolations.length > 0 && (
+              <button type="button" className="alarm" aria-label="חריגות פעילות"
+                      onClick={() => setAlarmOpen((open) => !open)}>
+                🔔 {activeViolations.length}
+              </button>
+            )}
+            <button type="button" onClick={onSignOut}>התנתקות</button>
+          </span>
         </span>
       </header>
       {alarmOpen && activeViolations.map((message) => (
