@@ -100,14 +100,15 @@ export function App({ email, api, reminderHour, onSignOut }: {
 
   const questionnaire = questionnaireQuery.data;
   const data = historyQuery.data;
-  const submittedDates = new Set(data.days.map((d) => d.date));
-  const todaySubmitted = submittedDates.has(todayStr);
+  const answersByDate = new Map(data.days.map((d) => [d.date, d.answers]));
+  const todaySubmitted = answersByDate.has(todayStr);
+  const selectedDate = day === "yesterday" ? yesterdayStr : todayStr;
 
   const zeroFloors: Derived = { carbs: 0, meals: 0, vegetables: 0, eating_window: 0 };
   const floors = day === "yesterday" ? (data.yesterday?.derived ?? zeroFloors) : data.today.derived;
 
   const submit = (answers: Record<string, AnswerValue>) =>
-    submitMutation.mutate({ answers, date: day === "yesterday" ? yesterdayStr : todayStr });
+    submitMutation.mutate({ answers, date: selectedDate });
 
   return (
     <>
@@ -129,11 +130,13 @@ export function App({ email, api, reminderHour, onSignOut }: {
                             defaultCollapsed={!expandQuestionnaire(now, reminderHour, data.today.meals.length, todaySubmitted)}>
           <DayPicker todayStr={todayStr} yesterdayStr={yesterdayStr} value={day}
                      todaySelectable={todaySelectable} reminderHour={reminderHour} onChange={setDay} />
+          {/* Re-keyed per day so switching between today and yesterday reseeds the form from the
+              newly selected day's saved answers. */}
           <QuestionnaireForm
             key={day}
             questionnaire={questionnaire}
             floors={floors}
-            resubmitting={submittedDates.has(day === "yesterday" ? yesterdayStr : todayStr)}
+            stored={answersByDate.get(selectedDate)}
             onSubmit={submit}
             onValidationError={(message) => setAlerts([{ kind: "alert", message }])}
           />

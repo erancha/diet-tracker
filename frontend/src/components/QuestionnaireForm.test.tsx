@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { QuestionnaireForm } from "./QuestionnaireForm";
-import type { Derived, Questionnaire } from "../types";
+import type { AnswerValue, Derived, Questionnaire } from "../types";
 
 const questionnaire: Questionnaire = {
   version: 3,
@@ -18,8 +18,9 @@ const questionnaire: Questionnaire = {
 };
 const zeroFloors: Derived = { carbs: 0, meals: 0, vegetables: 0, eating_window: 0 };
 
-function renderForm(floors: Derived = zeroFloors, onSubmit = vi.fn(), resubmitting = false) {
-  render(<QuestionnaireForm questionnaire={questionnaire} floors={floors} resubmitting={resubmitting}
+function renderForm(floors: Derived = zeroFloors, onSubmit = vi.fn(),
+                    stored?: Record<string, AnswerValue>) {
+  render(<QuestionnaireForm questionnaire={questionnaire} floors={floors} stored={stored}
                             onSubmit={onSubmit} onValidationError={vi.fn()} />);
   return onSubmit;
 }
@@ -69,13 +70,45 @@ describe("QuestionnaireForm", () => {
   });
 
   it("warns that submitting again overwrites when the day is already recorded", () => {
-    renderForm(zeroFloors, vi.fn(), true);
+    renderForm(zeroFloors, vi.fn(), { drinking: 3, meals: 4, carbs: 7 });
     expect(screen.getByText("היום הזה כבר נשלח — שליחה חוזרת תחליף את התשובות שנשמרו")).toBeInTheDocument();
+  });
+
+  it("checks the saved answers of a recorded day being edited", () => {
+    renderForm(zeroFloors, vi.fn(), { drinking: 3, meals: 4, carbs: 7 });
+    expect(screen.getByLabelText("3 ליטר")).toBeChecked();
+    expect(screen.getByLabelText("מעל 3")).toBeChecked();
+    expect(screen.getByRole("slider")).toHaveValue("7");
+  });
+
+  it("resubmits a recorded day unchanged", () => {
+    const onSubmit = renderForm(zeroFloors, vi.fn(), { drinking: 3, meals: 4, carbs: 7 });
+    fireEvent.click(screen.getByRole("button", { name: "שליחה" }));
+    expect(onSubmit).toHaveBeenCalledWith({ drinking: 3, meals: 4, carbs: 7 });
+  });
+
+  it("seats a saved value no choice carries in scale order", () => {
+    renderForm(zeroFloors, vi.fn(), { drinking: 3, meals: 2.5, carbs: 7 });
+    expect(screen.getAllByRole("radio").map((radio) => radio.parentElement!.textContent!.trim()))
+      .toEqual(["2.5 ליטר", "3 ליטר", "2 ארוחות", "2.5", "3 ארוחות", "מעל 3"]);
+  });
+
+  it("offers a saved value no choice carries as a checked option", () => {
+    // A day closed from the tracker stores its computed figures, which need not land on the scale.
+    const onSubmit = renderForm(zeroFloors, vi.fn(), { drinking: 3, meals: 2.5, carbs: 7 });
+    expect(screen.getByLabelText("2.5")).toBeChecked();
+    fireEvent.click(screen.getByRole("button", { name: "שליחה" }));
+    expect(onSubmit).toHaveBeenCalledWith({ drinking: 3, meals: 2.5, carbs: 7 });
   });
 
   it("shows no overwrite warning for a day without a record", () => {
     renderForm();
     expect(screen.queryByText("היום הזה כבר נשלח — שליחה חוזרת תחליף את התשובות שנשמרו")).toBeNull();
+  });
+
+  it("checks nothing for a day without a record", () => {
+    renderForm();
+    for (const radio of screen.getAllByRole("radio")) expect(radio).not.toBeChecked();
   });
 
   it("does not synthesize an extra choice while a real choice is still enabled", () => {

@@ -1,14 +1,15 @@
 import { useRef, useState } from "react";
-import type { Choice, Derived, Questionnaire } from "../types";
+import type { AnswerValue, Choice, Derived, Questionnaire } from "../types";
 import { questionTitle } from "../violations";
-import { ChoiceFieldset } from "./ChoiceFieldset";
+import { ChoiceFieldset, fieldsetChoices } from "./ChoiceFieldset";
 import { PointsSlider } from "./PointsSlider";
 
 interface Props {
   questionnaire: Questionnaire;
   floors: Derived;
-  // The selected day already has a stored record, so submitting replaces its answers.
-  resubmitting: boolean;
+  // The selected day's saved answers, or undefined for a day with no record yet. A recorded day
+  // opens on its own figures, so submitting from here replaces them rather than starting over.
+  stored?: Record<string, AnswerValue>;
   onSubmit: (answers: Record<string, number>) => void;
   onValidationError: (message: string) => void;
 }
@@ -16,17 +17,22 @@ interface Props {
 // Renders the day-end questionnaire: single questions as radio groups floored by the day's
 // recorded meals, points questions as sliders pinned to the recorded sum. Radio questions rely
 // on native required-field validation; sliders always hold a value, starting at their floor.
-export function QuestionnaireForm({ questionnaire, floors, resubmitting, onSubmit, onValidationError }: Props) {
+// Both state hooks seed once from the stored answers, so the caller re-keys this component when
+// the selected day changes.
+export function QuestionnaireForm({ questionnaire, floors, stored, onSubmit, onValidationError }: Props) {
   const formRef = useRef<HTMLFormElement>(null);
   const floorOf = (questionId: string): number =>
     questionId in floors ? floors[questionId as keyof Derived] : 0;
-  const [answers, setAnswers] = useState<Record<string, number>>(() =>
-    Object.fromEntries(questionnaire.questions
+  const [answers, setAnswers] = useState<Record<string, number>>(() => ({
+    ...Object.fromEntries(questionnaire.questions
       .filter((q) => q.type === "points")
-      .map((q) => [q.id, floorOf(q.id)])));
+      .map((q) => [q.id, floorOf(q.id)])),
+    ...stored,
+  }));
   // Single-type answers store their choice id alongside the numeric answer above: two choices
   // can share a value, and only the id tells the radio group which one is checked.
-  const [selectedIds, setSelectedIds] = useState<Record<string, string>>({});
+  const [selectedIds, setSelectedIds] = useState<Record<string, string>>(() =>
+    stored === undefined ? {} : storedSelections(questionnaire, floorOf, stored));
 
   const pickPoints = (questionId: string, value: number) =>
     setAnswers((a) => ({ ...a, [questionId]: value }));
@@ -50,7 +56,7 @@ export function QuestionnaireForm({ questionnaire, floors, resubmitting, onSubmi
 
   return (
     <form ref={formRef}>
-      {resubmitting && (
+      {stored !== undefined && (
         <p className="notice">היום הזה כבר נשלח — שליחה חוזרת תחליף את התשובות שנשמרו</p>
       )}
       {questionnaire.questions.map((question) =>
@@ -59,9 +65,24 @@ export function QuestionnaireForm({ questionnaire, floors, resubmitting, onSubmi
                         floor={floorOf(question.id)} onChange={(v) => pickPoints(question.id, v)} />
         ) : (
           <ChoiceFieldset key={question.id} question={question} selectedId={selectedIds[question.id]}
-                          floor={floorOf(question.id)} onPick={(c) => pickChoice(question.id, c)} />
+                          floor={floorOf(question.id)} stored={stored?.[question.id]}
+                          onPick={(c) => pickChoice(question.id, c)} />
         ))}
       <button type="button" onClick={handleSubmit}>שליחה</button>
     </form>
   );
+}
+
+// The radio-group selections a recorded day opens on: each single question's saved value matched
+// to the option carrying it. fieldsetChoices synthesizes an option for a value outside the scale,
+// so every saved value has one to match — a value with no option at all is a config/data fault
+// and throws here rather than opening the day silently short an answer. The day-level single
+// questions carry distinct values, so a value identifies its option.
+function storedSelections(questionnaire: Questionnaire, floorOf: (questionId: string) => number,
+                          stored: Record<string, AnswerValue>): Record<string, string> {
+  return Object.fromEntries(questionnaire.questions
+    .filter((question) => question.type === "single" && question.id in stored)
+    .map((question) => [question.id,
+      fieldsetChoices(question, floorOf(question.id), stored[question.id])
+        .find((choice) => choice.value === stored[question.id])!.id]));
 }
