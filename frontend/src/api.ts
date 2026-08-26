@@ -1,7 +1,7 @@
 // Typed client for the authenticated backend API, bound to the signed-in user's tokens, plus the
 // Hebrew alert text the UI shows when a request fails.
 
-import { redirectToLogin, type Tokens } from "./auth";
+import { isUnexpired, redirectToLogin, type Tokens } from "./auth";
 import type { AppConfig } from "./config";
 import type { AnswerValue, DayPayload, HistoryResponse, NewMeal, SubmitResult } from "./types";
 
@@ -57,7 +57,12 @@ export function createApi(
     // Hosted UI session cookie outlasts the ID token, so re-running the login redirect usually
     // completes silently and lands back with a fresh token. The promise never settles: the page is
     // navigating away, and rejecting would flash an error alert during the redirect.
-    if (response.status === 401) {
+    //
+    // A 401 on a token still inside its lifetime is a different fault: the API rejects a token this
+    // client considers good, as when the stack is redeployed under a new user pool while an older
+    // config.js is still cached. Signing in again would only produce another rejected token, so
+    // that case falls through to the error below instead of cycling through the Hosted UI forever.
+    if (response.status === 401 && !isUnexpired(tokens)) {
       sessionStorage.removeItem("tokens");
       reauthenticate();
       return new Promise<T>(() => {});

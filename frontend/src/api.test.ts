@@ -33,6 +33,23 @@ describe("createApi", () => {
     expect(reauthenticate).toHaveBeenCalledOnce();
   });
 
+  it("surfaces a 401 under a token still within its lifetime instead of re-authenticating", async () => {
+    const live: Tokens = { id_token: "token", expires_at: Date.now() + 3_600_000 };
+    sessionStorage.setItem("tokens", JSON.stringify(live));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("Unauthorized", { status: 401 })));
+    const reauthenticate = vi.fn();
+
+    const outcome = await Promise.race([
+      createApi(cfg, live, reauthenticate).getDays().then(() => "resolved", (e: unknown) => e),
+      new Promise((resolve) => setTimeout(() => resolve("pending"), 10)),
+    ]);
+
+    expect(outcome).toBeInstanceOf(ApiError);
+    expect((outcome as ApiError).status).toBe(401);
+    expect(reauthenticate).not.toHaveBeenCalled();
+    expect(sessionStorage.getItem("tokens")).not.toBeNull();
+  });
+
   it("sends an edited meal as a whole-meal PUT under the meal's own path", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response('{"date": "2026-08-22"}'));
     vi.stubGlobal("fetch", fetchMock);

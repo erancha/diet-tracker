@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
-import { AuthError, ensureSignedIn, logoutUrl, signOut } from "./auth";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { AuthError, ensureSignedIn, logoutUrl, redirectToLogin, signOut } from "./auth";
 import type { AppConfig } from "./config";
 
 const cfg: AppConfig = {
@@ -11,6 +11,8 @@ const cfg: AppConfig = {
   firstReminderHour: 20,
   firstMealHour: 11,
 };
+
+afterEach(() => vi.unstubAllGlobals());
 
 describe("logoutUrl", () => {
   it("points at the Cognito logout endpoint with the client id and encoded return address", () => {
@@ -54,6 +56,40 @@ describe("ensureSignedIn", () => {
     history.replaceState(null, "", "/");
 
     await expect(ensureSignedIn(cfg)).resolves.toBeNull();
+  });
+
+  it("raises AuthError and drops the spent code from the address bar when the exchange fails", async () => {
+    sessionStorage.removeItem("tokens");
+    sessionStorage.setItem("pkce_verifier", "verifier");
+    history.replaceState(null, "", "/?code=abc123");
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("", { status: 400 })));
+
+    const err = await ensureSignedIn({ ...cfg, redirectUri: `${location.origin}/` }).then(
+      () => { throw new Error("resolved instead of rejecting"); },
+      (e: unknown) => e,
+    );
+
+    expect(err).toBeInstanceOf(AuthError);
+    expect((err as AuthError).message).toBe(
+      "ההתחברות לא הושלמה — יש לרענן את הדף ולהתחבר מחדש (token exchange failed: 400)",
+    );
+    expect(location.search).toBe("");
+  });
+});
+
+describe("redirectToLogin", () => {
+  it("navigates once for concurrent expiries, with the challenge bound to the stored verifier", async () => {
+    const navigate = vi.fn();
+
+    await Promise.all([redirectToLogin(cfg, navigate), redirectToLogin(cfg, navigate)]);
+
+    expect(navigate).toHaveBeenCalledOnce();
+    const digest = await crypto.subtle.digest(
+      "SHA-256", new TextEncoder().encode(sessionStorage.getItem("pkce_verifier")!),
+    );
+    const expected = btoa(String.fromCharCode(...new Uint8Array(digest)))
+      .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    expect(new URL(navigate.mock.calls[0][0]).searchParams.get("code_challenge")).toBe(expected);
   });
 });
 
