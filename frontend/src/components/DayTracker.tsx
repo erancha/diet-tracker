@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { expandMealForm } from "../dates";
 import { carbsScales, deriveDay } from "../derive";
 import type { DayPayload, Meal, NewMeal, Questionnaire } from "../types";
@@ -25,11 +25,13 @@ const CLOSE_DAY_MIN_WINDOW_HOURS = 6;
 // form; the dashboard and close-day values come from the vector-pinned client derivation twin,
 // so they always agree with the meal list rendered beside them — the server re-derives on submit
 // and stays the authority.
-export function DayTracker({ questionnaire, today, firstMealHour, onAddMeal, onUpdateMeal,
-                             onDeleteMeal, onCloseDay }: {
+export function DayTracker({ questionnaire, today, firstMealHour, headerAside, onAddMeal,
+                             onUpdateMeal, onDeleteMeal, onCloseDay }: {
   questionnaire: Questionnaire;
   today: DayPayload;
   firstMealHour: number;
+  // Shares the tracker's title row, for a neighbouring section folded down to its own title line.
+  headerAside?: ReactNode;
   onAddMeal: (meal: NewMeal) => void;
   // Replaces the meal wholesale; a corrected time re-keys it, so the id is the one being replaced.
   onUpdateMeal: (id: string, meal: NewMeal) => void;
@@ -109,7 +111,7 @@ export function DayTracker({ questionnaire, today, firstMealHour, onAddMeal, onU
   }
 
   return (
-    <CollapsibleSection className="day-tracker" title="יומן היום"
+    <CollapsibleSection className="day-tracker" title="יומן היום" headerAside={headerAside}
                         summary={
       <DayDashboard questionnaire={questionnaire} derived={derived} />
     }>

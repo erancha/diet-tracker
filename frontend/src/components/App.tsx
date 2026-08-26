@@ -124,6 +124,29 @@ export function App({ email, api, reminderHour, firstMealHour, onSignOut }: {
   const submit = (answers: Record<string, AnswerValue>) =>
     submitMutation.mutate({ answers, date: selectedDate });
 
+  // Folded, the day-end section is one title line, so it rides in the tracker's header row instead
+  // of costing a row of its own; open, it needs the page width and returns to its own row below.
+  // Its heading level follows that move, keeping the document outline ordered either way.
+  const daySummaryFoldedIntoTracker = !todaySubmitted && !questionnaireOpen;
+  const daySummarySection = (
+    <CollapsibleSection title="שאלון סיכום יום" collapsed={!questionnaireOpen}
+                        headingLevel={daySummaryFoldedIntoTracker ? 3 : 2}
+                        onToggle={() => setQuestionnaireCollapsed(questionnaireOpen)}>
+      <DayPicker todayStr={todayStr} yesterdayStr={yesterdayStr} value={day}
+                 todaySelectable={todaySelectable} reminderHour={reminderHour} onChange={setDay} />
+      {/* Re-keyed per day so switching between today and yesterday reseeds the form from the
+          newly selected day's saved answers. */}
+      <QuestionnaireForm
+        key={day}
+        questionnaire={questionnaire}
+        floors={floors}
+        stored={answersByDate.get(selectedDate)}
+        onSubmit={submit}
+        onValidationError={(message) => setAlerts([{ kind: "alert", message }])}
+      />
+    </CollapsibleSection>
+  );
+
   return (
     <>
       <Header email={email} onSignOut={onSignOut}
@@ -139,23 +162,10 @@ export function App({ email, api, reminderHour, firstMealHour, onSignOut }: {
             onUpdateMeal={(id, meal) => updateMealMutation.mutate({ id, meal })}
             onDeleteMeal={(id) => deleteMealMutation.mutate(id)}
             onCloseDay={(answers) => submitMutation.mutate({ answers, date: todayStr })}
+            headerAside={daySummaryFoldedIntoTracker ? daySummarySection : undefined}
           />
         )}
-        <CollapsibleSection title="שאלון סיכום יום" collapsed={!questionnaireOpen}
-                            onToggle={() => setQuestionnaireCollapsed(questionnaireOpen)}>
-          <DayPicker todayStr={todayStr} yesterdayStr={yesterdayStr} value={day}
-                     todaySelectable={todaySelectable} reminderHour={reminderHour} onChange={setDay} />
-          {/* Re-keyed per day so switching between today and yesterday reseeds the form from the
-              newly selected day's saved answers. */}
-          <QuestionnaireForm
-            key={day}
-            questionnaire={questionnaire}
-            floors={floors}
-            stored={answersByDate.get(selectedDate)}
-            onSubmit={submit}
-            onValidationError={(message) => setAlerts([{ kind: "alert", message }])}
-          />
-        </CollapsibleSection>
+        {!daySummaryFoldedIntoTracker && daySummarySection}
         <CollapsibleSection title="היסטוריה" className="history">
           {data.days.length > 0 && (
             <TrendChart questionnaire={questionnaire} days={data.days} today={data.today} endDate={data.days[0].date} />

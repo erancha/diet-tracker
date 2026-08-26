@@ -32,4 +32,15 @@ describe("CollapsibleSection", () => {
     fireEvent.click(screen.getByRole("button", { name: "כותרת" }));
     expect(screen.getByText("גוף")).toBeInTheDocument();
   });
+
+  it("seats a header aside on the title's own row", () => {
+    render(
+      <CollapsibleSection title="כותרת" headerAside={<span>נלווה</span>}>
+        <p>גוף</p>
+      </CollapsibleSection>,
+    );
+    const row = screen.getByRole("heading", { name: "כותרת" }).parentElement!;
+    expect(row).toHaveClass("section-header");
+    expect(row).toContainElement(screen.getByText("נלווה"));
+  });
 });

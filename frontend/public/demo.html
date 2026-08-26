@@ -250,8 +250,9 @@ body {
 
 /* ─────────────────────────────────────────────────────────────────────────
    THE APP — frontend/src/style.css, scoped to .screen and resolved for a
-   390px viewport (the vw-dependent legend size and the ≥48rem table rules
-   are pinned to that width rather than the artifact's own viewport).
+   390px viewport (the vw-dependent legend and shared-header-row sizes and the
+   ≥48rem table rules are pinned to that width rather than the artifact's own
+   viewport).
    ───────────────────────────────────────────────────────────────────────── */
 .screen {
   --accent: #2e7d32;
@@ -317,6 +318,9 @@ body {
 .screen .trend-legend-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--viz-critical); display: inline-block; }
 .screen .day-tracker { margin-bottom: 1rem; }
 .screen .day-tracker h2 { font-size: 1.6rem; margin: 0 0 0.4em; }
+.screen .section-header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 1rem; }
+.screen .section-header h3 { margin: 0; }
+.screen .day-tracker .section-header h2, .screen .day-tracker .section-header h3 { font-size: 21.3px; }
 .screen .section-toggle { background: none; color: inherit; font: inherit; font-weight: 600; padding: 0; cursor: pointer; }
 .screen .section-toggle::after { content: " \25B4"; font-size: 0.8em; }
 .screen .section-toggle[aria-expanded="false"]::after { content: " \25BE"; }
@@ -701,12 +705,23 @@ function choiceFieldsetHtml(q, selectedId, scope, prefix) {
   "</fieldset>";
 }
 
+// The day-end questionnaire is never opened in the demo, so it is always the one folded title
+// line: a heading beside the tracker's own title while the tracker shows, its own row once the
+// day is submitted and the tracker is gone.
+function daySummaryHtml(level) {
+  return "<section><h" + level + '><button type="button" class="section-toggle"' +
+    ' aria-expanded="false">שאלון סיכום יום</button></h' + level + "></section>";
+}
+
 function trackerHtml() {
   const derived = deriveDay(state.meals);
   const closable = derived.eating_window >= CLOSE_DAY_MIN_WINDOW_HOURS;
   const p = state.pick;
   let html = '<section class="day-tracker" data-t="tracker">' +
-    '<h2><button type="button" class="section-toggle" aria-expanded="true">יומן היום</button></h2>' +
+    '<div class="section-header">' +
+      '<h2><button type="button" class="section-toggle" aria-expanded="true">יומן היום</button></h2>' +
+      daySummaryHtml(3) +
+    "</div>" +
     dashboardHtml(derived) +
     '<section class="meal-form"><h3><button type="button" class="section-toggle" data-t="form-toggle"' +
       ' aria-expanded="' + (state.formOpen ? "true" : "false") + '">פרטי הארוחה</button></h3>';
@@ -870,8 +885,7 @@ function appHtml() {
 
   html += "<main>";
   html += "<div>" + (state.ok ? '<div class="ok" data-t="ok">' + esc(state.ok) + "</div>" : "") + "</div>";
-  if (!state.submitted) html += trackerHtml();
-  html += '<section><h2><button type="button" class="section-toggle" aria-expanded="false">שאלון סיכום יום</button></h2></section>';
+  html += state.submitted ? daySummaryHtml(2) : trackerHtml();
   html += '<section class="history"><h2><button type="button" class="section-toggle" aria-expanded="true">היסטוריה</button></h2>' +
     trendHtml() + historyTableHtml() + "</section>";
   return html + "</main>";

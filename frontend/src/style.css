@@ -129,6 +129,16 @@ td.view-day { cursor: pointer; }
    separate them; inside the card the padding already sets the space above, and the header sits
    at half the default gap above its dashboard line. */
 .day-tracker h2 { font-size: 1.6rem; margin: 0 0 0.4em; }
+/* A section title sharing its row with a neighbouring section folded down to its own title line.
+   Baselines align so both titles sit on one text line; the row wraps only where they cannot fit
+   side by side at all. */
+.section-header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 1rem; }
+.section-header h3 { margin: 0; }
+/* Both titles on the shared row read at one size, so the row is a single header line rather than a
+   title with a smaller tag beside it. Two titles at 1.6rem outrun a phone, so below ~28rem they
+   scale with the viewport instead of wrapping — the slope the fieldset legends use, keeping a few
+   percent of clearance down to 320px-wide screens once the body and card paddings are taken out. */
+.day-tracker .section-header h2, .day-tracker .section-header h3 { font-size: min(1.6rem, 7vw - 6px); }
 /* Section header doubles as the collapse toggle; the arrow flips with aria-expanded. */
 .section-toggle { background: none; color: inherit; font: inherit; font-weight: 600; padding: 0; cursor: pointer; }
 .section-toggle::after { content: " ▴"; font-size: 0.8em; }

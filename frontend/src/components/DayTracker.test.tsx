@@ -590,4 +590,15 @@ describe("DayTracker", () => {
                          onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     expect(screen.getByRole("button", { name: "סגירת יום" })).toBeInTheDocument();
   });
+
+  it("seats a header aside on the tracker's own title row", () => {
+    render(<DayTracker questionnaire={questionnaire} today={trackedDay}
+                       firstMealHour={NO_AUTO_OPEN_HOUR}
+                       headerAside={<span>שאלון מקופל</span>}
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    const row = screen.getByRole("heading", { name: "יומן היום" }).parentElement!;
+    expect(row).toHaveClass("section-header");
+    expect(row).toContainElement(screen.getByText("שאלון מקופל"));
+  });
 });
