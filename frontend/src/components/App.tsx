@@ -140,7 +140,7 @@ export function App({ email, api, reminderHour, onSignOut }: {
             onCloseDay={(answers) => submitMutation.mutate({ answers, date: todayStr })}
           />
         )}
-        <CollapsibleSection title="שאלון סוף יום" collapsed={!questionnaireOpen}
+        <CollapsibleSection title="שאלון סיכום יום" collapsed={!questionnaireOpen}
                             onToggle={() => setQuestionnaireCollapsed(questionnaireOpen)}>
           <DayPicker todayStr={todayStr} yesterdayStr={yesterdayStr} value={day}
                      todaySelectable={todaySelectable} reminderHour={reminderHour} onChange={setDay} />

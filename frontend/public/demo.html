@@ -872,7 +872,7 @@ function appHtml() {
   html += "<main>";
   html += "<div>" + (state.ok ? '<div class="ok" data-t="ok">' + esc(state.ok) + "</div>" : "") + "</div>";
   if (!state.submitted) html += trackerHtml();
-  html += '<section><h2><button type="button" class="section-toggle" aria-expanded="false">שאלון סוף יום</button></h2></section>';
+  html += '<section><h2><button type="button" class="section-toggle" aria-expanded="false">שאלון סיכום יום</button></h2></section>';
   html += '<section class="history"><h2><button type="button" class="section-toggle" aria-expanded="true">היסטוריה</button></h2>' +
     trendHtml() + historyTableHtml() + "</section>";
   return html + "</main>";
