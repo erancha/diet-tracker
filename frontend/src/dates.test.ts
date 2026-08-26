@@ -108,21 +108,42 @@ describe("expandMealForm", () => {
   const eleven = new Date(2026, 7, 18, 11, 0);
   const beforeEleven = new Date(2026, 7, 18, 10, 59);
   const firstMealHour = 11;
+  const mealGapHours = 4;
+  // Absolute instants on both sides of the comparison, so the gap between a meal and the clock is
+  // the same wherever the test runs.
+  const mealAt = (hour: number, minute = 0) => ({ at: new Date(2026, 7, 18, hour, minute).toISOString() });
 
   it("expands from the first-meal hour on a day with nothing recorded", () => {
-    expect(expandMealForm(eleven, firstMealHour, 0)).toBe(true);
+    expect(expandMealForm(eleven, firstMealHour, mealGapHours, [])).toBe(true);
   });
 
   it("stays collapsed before the first-meal hour", () => {
-    expect(expandMealForm(beforeEleven, firstMealHour, 0)).toBe(false);
+    expect(expandMealForm(beforeEleven, firstMealHour, mealGapHours, [])).toBe(false);
   });
 
   it("respects a different configured first-meal hour", () => {
-    expect(expandMealForm(beforeEleven, 10, 0)).toBe(true);
+    expect(expandMealForm(beforeEleven, 10, mealGapHours, [])).toBe(true);
   });
 
-  it("stays collapsed once the day has a recorded meal", () => {
-    expect(expandMealForm(eleven, firstMealHour, 1)).toBe(false);
+  it("stays collapsed while the last recorded meal is younger than the gap", () => {
+    expect(expandMealForm(eleven, firstMealHour, mealGapHours, [mealAt(7, 1)])).toBe(false);
+  });
+
+  it("expands once the gap since the last recorded meal is reached", () => {
+    expect(expandMealForm(eleven, firstMealHour, mealGapHours, [mealAt(7)])).toBe(true);
+  });
+
+  it("measures the gap from the latest meal whatever order the meals arrive in", () => {
+    expect(expandMealForm(eleven, firstMealHour, mealGapHours, [mealAt(10), mealAt(6)])).toBe(false);
+  });
+
+  it("expands on a stale meal even before the first-meal hour", () => {
+    expect(expandMealForm(beforeEleven, firstMealHour, mealGapHours, [mealAt(6)])).toBe(true);
+  });
+
+  it("respects a different configured gap", () => {
+    expect(expandMealForm(eleven, firstMealHour, 2, [mealAt(8, 30)])).toBe(true);
+    expect(expandMealForm(eleven, firstMealHour, 6, [mealAt(8, 30)])).toBe(false);
   });
 });
 

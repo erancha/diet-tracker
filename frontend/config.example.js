@@ -8,4 +8,5 @@ window.CONFIG = {
   rootEmail: "<app-owner-email>",
   firstReminderHour: 20,
   firstMealHour: 11,
+  mealGapHours: 4,
 };

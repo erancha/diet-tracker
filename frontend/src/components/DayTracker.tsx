@@ -25,11 +25,12 @@ const CLOSE_DAY_MIN_WINDOW_HOURS = 6;
 // form; the dashboard and close-day values come from the vector-pinned client derivation twin,
 // so they always agree with the meal list rendered beside them — the server re-derives on submit
 // and stays the authority.
-export function DayTracker({ questionnaire, today, firstMealHour, headerAside, onAddMeal,
-                             onUpdateMeal, onDeleteMeal, onCloseDay }: {
+export function DayTracker({ questionnaire, today, firstMealHour, mealGapHours, headerAside,
+                             onAddMeal, onUpdateMeal, onDeleteMeal, onCloseDay }: {
   questionnaire: Questionnaire;
   today: DayPayload;
   firstMealHour: number;
+  mealGapHours: number;
   // Shares the tracker's title row, for a neighbouring section folded down to its own title line.
   headerAside?: ReactNode;
   onAddMeal: (meal: NewMeal) => void;
@@ -66,12 +67,11 @@ export function DayTracker({ questionnaire, today, firstMealHour, headerAside, o
 
   // The meal inputs are the tallest thing here and are worth reading only when there is a meal to
   // report, so the tracker opens on the day's figures and its recorded meals with the inputs
-  // folded away behind them — unless the day has passed its first-meal hour with nothing recorded,
-  // when reporting one is the likeliest reason for the visit. This decides only where the section
-  // opens: recording a meal or sending a correction folds the inputs again, and opening a meal for
-  // editing unfolds them.
+  // folded away behind them — unless a meal is overdue, when reporting one is the likeliest reason
+  // for the visit. This decides only where the section opens: recording a meal or sending a
+  // correction folds the inputs again, and opening a meal for editing unfolds them.
   const [formCollapsed, setFormCollapsed] =
-    useState(() => !expandMealForm(new Date(), firstMealHour, today.meals.length));
+    useState(() => !expandMealForm(new Date(), firstMealHour, mealGapHours, today.meals));
 
   // Only reachable through the submit button, which renders only once a grade is picked and is
   // disabled while the picked time is still ahead of the clock.

@@ -11,6 +11,7 @@ const cfg: AppConfig = {
   rootEmail: "root@example.com",
   firstReminderHour: 20,
   firstMealHour: 11,
+  mealGapHours: 4,
 };
 
 const tokens: Tokens = { id_token: "token", expires_at: 0 };

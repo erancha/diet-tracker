@@ -54,11 +54,19 @@ export function expandQuestionnaire(now: Date, reminderHour: number, mealsRecord
   return dayEnded(now, reminderHour) && mealsRecorded === 0 && !todaySubmitted;
 }
 
-// A day still carrying no meal by firstMealHour is overdue for one, so the tracker's meal inputs
-// open expanded instead of waiting behind their fold. The first recorded meal is what that hour
-// waits for, so from then on the inputs stay folded however late the day gets.
-export function expandMealForm(now: Date, firstMealHour: number, mealsRecorded: number): boolean {
-  return now.getHours() >= firstMealHour && mealsRecorded === 0;
+const MS_PER_HOUR = 3_600_000;
+
+// A meal is overdue in two ways, and either one opens the tracker's meal inputs expanded instead of
+// leaving them behind their fold: a day still carrying nothing by firstMealHour, and a day whose
+// most recent meal is mealGapHours or more behind the clock. The gap is measured from when the meal
+// was eaten, and stands on its own — a stale meal opens the inputs however early in the day it is.
+//
+// Meals are dated, not ordered, so the latest one is found by time rather than by position.
+export function expandMealForm(now: Date, firstMealHour: number, mealGapHours: number,
+                               meals: readonly { at: string }[]): boolean {
+  if (meals.length === 0) return now.getHours() >= firstMealHour;
+  const lastMeal = Math.max(...meals.map((m) => Date.parse(m.at)));
+  return now.getTime() - lastMeal >= mealGapHours * MS_PER_HOUR;
 }
 
 // The questionnaire closes a finished day, so the day it opens on is the last one that ended:

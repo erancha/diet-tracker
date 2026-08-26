@@ -23,6 +23,12 @@ Parameters:
     Default: 11
     Description: Asia/Jerusalem hour by which the day's first meal is expected; from then on the
       frontend opens the tracker's meal inputs expanded on a day with nothing recorded
+  MealGapHours:
+    Type: Number
+    Default: 4
+    Description: Hours a day may go without a meal before the next one counts as overdue; once the
+      most recent recorded meal is this far behind, the frontend opens the tracker's meal inputs
+      expanded
   BotTokenParam:
     Type: String
     Default: /diet-tracker/telegram/bot-token
@@ -327,5 +333,7 @@ Outputs:
     Value: !Ref FrontendBucket
   FrontendUrl:
     Value: !Sub 'https://${Distribution.DomainName}'
+  MealGapHours:
+    Value: !Ref MealGapHours
   DistributionId:
     Value: !Ref Distribution

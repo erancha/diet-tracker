@@ -15,6 +15,9 @@ export interface AppConfig {
   // Local hour by which the day's first meal is expected; from then on a day with nothing recorded
   // opens the tracker's meal inputs expanded.
   firstMealHour: number;
+  // Hours a day may go without a meal before the next one counts as overdue; once the most recent
+  // recorded meal is this far behind the clock, the tracker's meal inputs open expanded.
+  mealGapHours: number;
 }
 
 declare global {

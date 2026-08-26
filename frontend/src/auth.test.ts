@@ -10,6 +10,7 @@ const cfg: AppConfig = {
   rootEmail: "root@example.com",
   firstReminderHour: 20,
   firstMealHour: 11,
+  mealGapHours: 4,
 };
 
 afterEach(() => vi.unstubAllGlobals());

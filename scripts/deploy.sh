@@ -77,6 +77,7 @@ CLIENT_ID=$(stack_output "${APP}-cognito" UserPoolClientId)
 API_URL=$(stack_output "$APP" ApiUrl)
 FIRST_REMINDER_HOUR=$(stack_output "$APP" FirstReminderHour)
 FIRST_MEAL_HOUR=$(stack_output "$APP" FirstMealHour)
+MEAL_GAP_HOURS=$(stack_output "$APP" MealGapHours)
 # public/ may be absent on a fresh clone — its only content is this gitignored file.
 mkdir -p frontend/public
 # The allowlist's first entry is the app owner, shown to rejected sign-ins as the access contact.
@@ -90,6 +91,7 @@ window.CONFIG = {
   rootEmail: "${ALLOWED_EMAILS%%,*}",
   firstReminderHour: ${FIRST_REMINDER_HOUR},
   firstMealHour: ${FIRST_MEAL_HOUR},
+  mealGapHours: ${MEAL_GAP_HOURS},
 };
 EOF
 
