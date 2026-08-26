@@ -3,7 +3,7 @@ import type { Meal, Questionnaire } from "../types";
 import { HIGH_GRADE_THRESHOLD } from "../violations";
 
 // Row marker per addition id; a retired id falls back to its raw id, like retired grade choices.
-const ADDITION_MARKERS: Record<string, string> = { sweet: "🍪", alcohol: "🍷", nuts: "🥜" };
+const ADDITION_MARKERS: Record<string, string> = { sweet: "🍪", alcohol: "🍷", nuts: "🥜", fat: "🥑" };
 
 // A day's meal list rendered newest first — the top row is the meal just recorded, the one the
 // user checks, corrects or deletes — each row ending with the meal's effective points so the rows
@@ -36,8 +36,10 @@ export function MealList({ questionnaire, meals, onEdit, onDelete }: {
         const choice = carbsQuestion.choices.find((c) => c.id === meal.carbs_choice);
         return (
           <li key={meal.id}>
+            {/* Outside the text cell, so the row lays time and description out as two columns and
+                a description too long for one line wraps against its own edge, not the time's. */}
+            <strong className="meal-at">{timeOf(meal.at)}</strong>
             <span className="meal-text">
-              <strong>{timeOf(meal.at)}</strong> ·{" "}
               <span className={choice !== undefined && choice.value > HIGH_GRADE_THRESHOLD
                 ? "high-grade" : undefined}>
                 {choice?.label ?? meal.carbs_choice}

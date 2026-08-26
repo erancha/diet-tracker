@@ -1,7 +1,7 @@
 {
-  "weights": { "no_carbs": 0, "no_carbs_heavy": 2, "grade1": 1, "grade2": 2, "grade3": 3, "grade4": 4,
+  "weights": { "no_carbs": 0, "grade1": 1, "grade2": 2, "grade3": 3, "grade4": 4,
                "grade5": 5, "grade6_7": 6, "grade7_light": 7, "grade7_heavy": 8 },
-  "addition_values": { "sweet": 4, "alcohol": 4, "nuts": 3 },
+  "addition_values": { "sweet": 4, "alcohol": 4, "nuts": 3, "fat": 2 },
   "vectors": [
     { "name": "empty day", "meals": [],
       "derived": { "carbs": 0, "meals": 0, "vegetables": 0, "eating_window": 0 } },
@@ -14,9 +14,12 @@
         { "at": "2026-08-20T19:00:00+03:00", "carbs_choice": "grade7_light", "vegetables": false, "fruit": false, "additions": [] },
         { "at": "2026-08-20T21:24:00+03:00", "carbs_choice": "grade1", "vegetables": false, "fruit": false, "additions": ["alcohol"] } ],
       "derived": { "carbs": 16, "meals": 4, "vegetables": 2, "eating_window": 12 } },
-    { "name": "a heavy no-carb meal scores its weight despite carrying no carbs", "meals": [
-        { "at": "2026-08-20T13:00:00+03:00", "carbs_choice": "no_carbs_heavy", "vegetables": true, "fruit": false, "additions": [] } ],
+    { "name": "a fat addition scores a meal that carries no carb source at all", "meals": [
+        { "at": "2026-08-20T13:00:00+03:00", "carbs_choice": "no_carbs", "vegetables": true, "fruit": false, "additions": ["fat"] } ],
       "derived": { "carbs": 2, "meals": 1, "vegetables": 1, "eating_window": 0 } },
+    { "name": "a fat addition prices the same on a meal that does carry a carb grade", "meals": [
+        { "at": "2026-08-20T13:00:00+03:00", "carbs_choice": "grade3", "vegetables": true, "fruit": false, "additions": ["fat"] } ],
+      "derived": { "carbs": 5, "meals": 1, "vegetables": 1, "eating_window": 0 } },
     { "name": "same-minute meals", "meals": [
         { "at": "2026-08-20T12:00:00+03:00", "carbs_choice": "grade3", "vegetables": false, "fruit": false, "additions": [] },
         { "at": "2026-08-20T12:00:00+03:00", "carbs_choice": "no_carbs", "vegetables": false, "fruit": false, "additions": ["nuts"] } ],

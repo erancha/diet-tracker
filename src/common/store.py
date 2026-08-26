@@ -19,6 +19,29 @@ def _from_dynamo(value):
     return value
 
 
+# Carb grades the questionnaire has retired, each mapped to the grade and addition that now
+# express it. The pair carries the same combined weight the grade did, so rewriting a stored meal
+# to it leaves the historical day score untouched.
+_RETIRED_GRADES = {"no_carbs_heavy": ("no_carbs", "fat")}
+
+
+def _meal_from_item(item) -> dict:
+    """One stored meal in the shape the app reads it.
+
+    Meals recorded before an attribute existed legally lack it: fruit predates the fruit flag,
+    and additions supersede the boolean sweet flag, so a legacy sweet meal reads as a single
+    sweet addition. A meal recorded under a retired grade reads as its current equivalent, so
+    nothing downstream is handed a grade id the questionnaire no longer offers."""
+    carbs_choice = item["carbs_choice"]
+    additions = item.get("additions", ["sweet"] if item.get("sweet", False) else [])
+    if carbs_choice in _RETIRED_GRADES:
+        carbs_choice, addition = _RETIRED_GRADES[carbs_choice]
+        additions = [*additions, addition]
+    return {"id": item["sk"].split("#", 1)[1], "at": item["at"], "carbs_choice": carbs_choice,
+            "vegetables": item["vegetables"], "fruit": item.get("fruit", False),
+            "additions": additions}
+
+
 class Store:
     def __init__(self, days_table, meals_table, state_table, dynamodb=None):
         resource = dynamodb or boto3.resource("dynamodb")
@@ -64,15 +87,7 @@ class Store:
     def get_meals(self, user_sub, day) -> list:
         response = self._meals.query(
             KeyConditionExpression=Key("pk").eq(user_sub) & Key("sk").begins_with(f"{day}#"))
-        # Meals recorded before an attribute existed legally lack it: fruit predates the fruit
-        # flag, and additions supersede the boolean sweet flag, so a legacy sweet meal reads as
-        # a single sweet addition.
-        return [{"id": item["sk"].split("#", 1)[1], "at": item["at"],
-                 "carbs_choice": item["carbs_choice"], "vegetables": item["vegetables"],
-                 "fruit": item.get("fruit", False),
-                 "additions": item.get("additions",
-                                       ["sweet"] if item.get("sweet", False) else [])}
-                for item in response["Items"]]
+        return [_meal_from_item(item) for item in response["Items"]]
 
     def replace_meal(self, user_sub, day, meal_id, at, carbs_choice, vegetables, fruit,
                      additions) -> str:

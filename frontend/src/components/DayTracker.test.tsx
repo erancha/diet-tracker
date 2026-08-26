@@ -535,6 +535,19 @@ describe("DayTracker", () => {
     expect(screen.getByText("13:30").closest("li")).toHaveTextContent("דרגה 4 · 🍎 · 4");
   });
 
+  it("gives each meal's time its own cell, so a wrapped description never runs under it", () => {
+    render(<DayTracker questionnaire={questionnaire} today={trackedDay}
+                       firstMealHour={NO_AUTO_OPEN_HOUR}
+                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    const time = screen.getByText("09:10");
+    expect(time).toHaveClass("meal-at");
+    // The description is a sibling of the time rather than its container, so the row lays the two
+    // out as columns and every line of a wrapped description shares one edge.
+    expect(time.closest("li")!.querySelector(".meal-text")).not.toHaveTextContent("09:10");
+  });
+
   it("gives each meal's points their own cell so the scores hold a column", () => {
     render(<DayTracker questionnaire={questionnaire} today={trackedDay}
                        firstMealHour={NO_AUTO_OPEN_HOUR}
@@ -564,8 +577,8 @@ describe("DayTracker", () => {
     const additionsDay: DayPayload = {
       date: "2026-08-20",
       meals: [{ id: "a", at: "2026-08-20T09:10:00+03:00", carbs_choice: "grade4",
-                vegetables: false, fruit: false, additions: ["sweet", "alcohol", "nuts"] }],
-      derived: { carbs: 15, meals: 1, vegetables: 0, eating_window: 0 },
+                vegetables: false, fruit: false, additions: ["sweet", "alcohol", "nuts", "fat"] }],
+      derived: { carbs: 17, meals: 1, vegetables: 0, eating_window: 0 },
     };
     render(<DayTracker questionnaire={questionnaire} today={additionsDay}
                        firstMealHour={NO_AUTO_OPEN_HOUR}
@@ -573,7 +586,7 @@ describe("DayTracker", () => {
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     expect(screen.getByText("09:10").closest("li"))
-      .toHaveTextContent("דרגה 4 · 🍪 · 🍷 · 🥜 · 15");
+      .toHaveTextContent("דרגה 4 · 🍪 · 🍷 · 🥜 · 🥑 · 17");
   });
 
   it("marks each meal's delete button with the compact delete-meal style", () => {

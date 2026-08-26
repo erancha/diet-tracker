@@ -23,11 +23,21 @@ least that grade's weight, and never lowered when the meal's own grade is alread
 ## Additions
 
 A meal may carry additions — accompaniments that are not a grade of their own: a sweet, non-dry
-alcohol, or too many nuts. Each addition pays its configured surcharge (the carbs question's
-`additions` in the config) on top of the meal's grade, after any fruit escalation. The surcharge
-keeps the base grade meaningful: an excellent meal with a cookie stays cheaper than a heavy meal
-with one, while an addition on every meal still compounds into a poor day score. Meals stored
-before additions existed are read with the legacy sweet flag mapped to a single sweet addition.
+alcohol, too many nuts, or a heavy load of fat. Each addition pays its configured surcharge (the
+carbs question's `additions` in the config) on top of the meal's grade, after any fruit
+escalation. The surcharge keeps the base grade meaningful: an excellent meal with a cookie stays
+cheaper than a heavy meal with one, while an addition on every meal still compounds into a poor
+day score.
+
+Fat is an addition rather than a grade because it is orthogonal to the carb scale — the grades
+rank a meal by its carb source, and a meal carries fat independently of which source it drew on.
+As a grade it could only be recorded on a meal with no carb source at all, leaving the fat in a
+plate of rice and avocado unscored.
+
+Meals stored under a shape the config has since moved past are read as their current equivalent:
+the legacy sweet flag maps to a single sweet addition, and the retired heavy no-carb grade maps
+to the plain no-carb grade carrying the fat addition. Each mapping preserves the meal's combined
+weight, so retiring a grade never restates a day's recorded score.
 
 ## Day lifecycle
 

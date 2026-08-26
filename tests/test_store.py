@@ -58,6 +58,24 @@ def test_meal_stored_with_the_legacy_sweet_flag_reads_as_a_sweet_addition(store,
     assert store.get_meals("u1", "2026-08-20")[0]["additions"] == ["sweet"]
 
 
+def test_meal_stored_with_the_retired_heavy_no_carb_grade_reads_as_a_fat_addition(store, ddb):
+    ddb.Table("meals").put_item(Item={
+        "pk": "u1", "sk": "2026-08-20#09:10:00-abc123",
+        "at": "2026-08-20T09:10:00+03:00", "carbs_choice": "no_carbs_heavy", "vegetables": True,
+        "fruit": False, "additions": []})
+    meal = store.get_meals("u1", "2026-08-20")[0]
+    assert meal["carbs_choice"] == "no_carbs"
+    assert meal["additions"] == ["fat"]
+
+
+def test_retired_heavy_no_carb_grade_keeps_the_additions_already_recorded(store, ddb):
+    ddb.Table("meals").put_item(Item={
+        "pk": "u1", "sk": "2026-08-20#09:10:00-abc123",
+        "at": "2026-08-20T09:10:00+03:00", "carbs_choice": "no_carbs_heavy", "vegetables": True,
+        "fruit": False, "additions": ["sweet"]})
+    assert store.get_meals("u1", "2026-08-20")[0]["additions"] == ["sweet", "fat"]
+
+
 def test_same_second_meals_get_distinct_ids(store):
     ids = {store.add_meal("u1", "2026-08-20", "2026-08-20T12:00:00+03:00", "grade3", False, False, [])
            for _ in range(5)}

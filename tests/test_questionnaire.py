@@ -31,17 +31,19 @@ def minimal(**overrides):
 
 def test_repo_config_loads_with_numeric_choices_and_threshold_rules():
     q = load(CONFIG)
-    assert q.version == 9
+    assert q.version == 10
     carbs = q.question("carbs")
     assert carbs.type == "points" and carbs.max == 35
     assert carbs.day_title == f"{carbs.text} ({carbs.day_qualifier})"
     assert q.question("drinking").day_title == q.question("drinking").text
     assert q.carb_weights()["grade7_heavy"] == 8
-    assert q.carb_weights()["no_carbs_heavy"] == 2
     assert q.carb_weights()["grade1"] == 1
     assert q.carb_weights()["grade2"] == 2
     assert "grade1_2" not in q.carb_weights()
-    assert q.addition_values() == {"sweet": 4, "alcohol": 4, "nuts": 3}
+    # Fat is an accompaniment of any grade, not a grade of its own, so it never returns to the
+    # scale as the heavy no-carb grade it replaced.
+    assert "no_carbs_heavy" not in q.carb_weights()
+    assert q.addition_values() == {"sweet": 4, "alcohol": 4, "nuts": 3, "fat": 2}
     # Additions are accompaniments, never grades — they must not leak into the grade picker.
     assert not set(q.addition_values()) & set(q.carb_weights())
     assert {r.id for r in q.rules} == {

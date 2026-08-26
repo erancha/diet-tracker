@@ -177,6 +177,10 @@ td.view-day { cursor: pointer; }
    controls — holds the same column down the list however long a label runs. Distributing the
    space between the cells instead would let each one drift with the text it follows. */
 .meal-list li { padding: 0.25rem 0; display: flex; align-items: center; gap: 0.5rem; }
+/* The time opens the row as its own cell so the description beside it wraps against its own edge
+   rather than back under the time. Pinned to the row's top, since a description running to two
+   lines would otherwise centre the time against the middle of the pair. */
+.meal-list .meal-at { flex-shrink: 0; align-self: flex-start; }
 .meal-list .meal-text { flex: 1; }
 /* Sized for the widest score the carb scale reaches, so a two-digit day does not shift the column. */
 .meal-list .meal-points { flex-shrink: 0; min-width: 4ch; }

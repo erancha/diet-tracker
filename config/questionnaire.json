@@ -1,5 +1,5 @@
 {
-  "version": 9,
+  "version": 10,
   "questions": [
     {
       "id": "drinking",
@@ -61,11 +61,11 @@
       "additions": [
         { "id": "sweet", "label": "כולל מתוק", "value": 4 },
         { "id": "alcohol", "label": "כולל אלכוהול לא יבש", "value": 4 },
-        { "id": "nuts", "label": "כולל הרבה אגוזים או שקדים", "value": 3 }
+        { "id": "nuts", "label": "כולל הרבה אגוזים או שקדים", "value": 3 },
+        { "id": "fat", "label": "כולל הרבה שומן (אבוקדו, טחינה, גבינה שמנה, טיגון)", "value": 2 }
       ],
       "choices": [
-        { "id": "no_carbs", "label": "ללא פחמימות (רזה)", "value": 0 },
-        { "id": "no_carbs_heavy", "label": "ללא פחמימות (שמן)", "value": 2 },
+        { "id": "no_carbs", "label": "ללא מקור פחמימה (ירקות, חלבון, שומן)", "value": 0 },
         { "id": "grade1", "label": "דרגה 1 (קטניות)", "value": 1 },
         { "id": "grade2", "label": "דרגה 2 (שיבולת שועל, קינואה, ..)", "value": 2 },
         { "id": "grade3", "label": "דרגה 3 (אורז מלא, תפו\"א)", "value": 3 },

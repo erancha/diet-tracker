@@ -337,6 +337,7 @@ body {
 .screen .tracker-dashboard strong { font-weight: 800; }
 .screen .meal-list { list-style: none; padding: 0; margin: 1rem 0 0; }
 .screen .meal-list li { padding: 0.25rem 0; display: flex; align-items: center; gap: 0.5rem; }
+.screen .meal-list .meal-at { flex-shrink: 0; align-self: flex-start; }
 .screen .meal-list .meal-text { flex: 1; }
 .screen .meal-list .meal-points { flex-shrink: 0; min-width: 4ch; }
 .screen .meal-list .meal-actions { display: flex; align-items: center; flex-shrink: 0; }
@@ -459,10 +460,10 @@ const Q = {
       additions: [
         { id: "sweet", label: "כולל מתוק", value: 4 },
         { id: "alcohol", label: "כולל אלכוהול לא יבש", value: 4 },
-        { id: "nuts", label: "כולל הרבה אגוזים או שקדים", value: 3 }],
+        { id: "nuts", label: "כולל הרבה אגוזים או שקדים", value: 3 },
+        { id: "fat", label: "כולל הרבה שומן (אבוקדו, טחינה, גבינה שמנה, טיגון)", value: 2 }],
       choices: [
-        { id: "no_carbs", label: "ללא פחמימות (רזה)", value: 0 },
-        { id: "no_carbs_heavy", label: "ללא פחמימות (שמן)", value: 2 },
+        { id: "no_carbs", label: "ללא מקור פחמימה (ירקות, חלבון, שומן)", value: 0 },
         { id: "grade1", label: "דרגה 1 (קטניות)", value: 1 },
         { id: "grade2", label: "דרגה 2 (שיבולת שועל, קינואה, ..)", value: 2 },
         { id: "grade3", label: 'דרגה 3 (אורז מלא, תפו"א)', value: 3 },
@@ -684,7 +685,7 @@ function dashboardHtml(derived) {
   "</div>";
 }
 
-const ADDITION_MARKERS = { sweet: "🍪", alcohol: "🍷", nuts: "🥜" };
+const ADDITION_MARKERS = { sweet: "🍪", alcohol: "🍷", nuts: "🥜", fat: "🥑" };
 
 function mealListHtml(meals, interactive) {
   const newestFirst = [...meals].reverse();
@@ -700,7 +701,8 @@ function mealListHtml(meals, interactive) {
       ? '<span class="meal-actions"><button type="button" class="edit-meal">✏️</button>' +
         '<button type="button" class="delete-meal">🗑️</button></span>' : "";
     return "<li>" +
-      '<span class="meal-text"><strong>' + time + "</strong> · " + grade + marks + "</span>" +
+      '<strong class="meal-at">' + time + "</strong>" +
+      '<span class="meal-text">' + grade + marks + "</span>" +
       '<span class="meal-points"> · ' + points[i] + "</span>" + actions +
     "</li>";
   }).join("") + "</ul>";

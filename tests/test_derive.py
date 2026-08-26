@@ -4,9 +4,20 @@ from pathlib import Path
 import pytest
 
 from common.derive import Derived, derive
+from common.questionnaire import load
 
+CONFIG = Path(__file__).parent.parent / "config" / "questionnaire.json"
 FIXTURE = json.loads(
     (Path(__file__).parent.parent / "config" / "derive-vectors.json").read_text(encoding="utf-8"))
+
+
+def test_vector_scoring_tables_are_the_repo_configs():
+    # The vectors carry their own copies of the scoring tables so both runtimes can replay them
+    # without loading the config. Retiring or repricing a grade in the config must reach them:
+    # left to drift, the vectors would keep passing against a scale the app no longer serves.
+    questionnaire = load(CONFIG)
+    assert FIXTURE["weights"] == questionnaire.carb_weights()
+    assert FIXTURE["addition_values"] == questionnaire.addition_values()
 
 
 @pytest.mark.parametrize("vector", FIXTURE["vectors"], ids=lambda v: v["name"])

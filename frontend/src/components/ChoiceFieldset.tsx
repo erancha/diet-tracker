@@ -11,7 +11,7 @@ import { questionTitle, valueLabel } from "../violations";
 //
 // Each synthesized option is seated before the first choice worth more than it, so a group reads
 // as one ordered scale rather than a list with a stray value after its end. Configured choices
-// keep their config order, which the carbs grade picker relies on to rank equal-valued grades.
+// keep their config order, which is the only thing that ranks choices a config prices alike.
 export function fieldsetChoices(question: Question, floor?: number, stored?: number): Choice[] {
   const offScale: number[] = [];
   if (floor !== undefined && question.choices.every((choice) => choice.value < floor)) {
