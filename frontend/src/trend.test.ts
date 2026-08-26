@@ -1,39 +1,26 @@
 import { describe, expect, it } from "vitest";
-import { domainFor, liveTrendDay, shortForm, ticksFor } from "./trend";
+import { domainFor, liveTrendDay, ticksFor } from "./trend";
 import { fixtureQuestionnaire, trackedDay } from "./test-fixtures";
 import type { Question } from "./types";
 
 const drinking = fixtureQuestionnaire.questions[0];
 const window_ = fixtureQuestionnaire.questions[1];
 
-describe("shortForm", () => {
-  it("shortens an open-ended upper bound", () => {
-    expect(shortForm("מעל 12 שעות !!")).toBe("מעל 12");
-  });
-
-  it("shortens an open-ended lower bound, keeping the hyphenated prefix", () => {
-    expect(shortForm("פחות מ-2.5 ליטר !!")).toBe("פחות מ-2.5");
-  });
-
-  it("returns null for a plain quantity label", () => {
-    expect(shortForm("3 ליטר")).toBeNull();
-  });
-});
-
 describe("ticksFor", () => {
-  it("picks min, midpoint-nearest, and max choice values with bound-aware labels", () => {
-    expect(ticksFor(drinking)).toEqual([
-      { value: 2, label: "פחות מ-2.5" },
-      { value: 3, label: "3" },
-      { value: 4, label: "4" },
-    ]);
+  it("picks the lowest, midpoint-nearest, and highest measured choice values", () => {
+    const hourLadder: Question = {
+      id: "window", type: "single", text: "חלון אכילה",
+      choices: [8, 9, 10, 11, 12].map((h) => ({ id: `h${h}`, label: `${h} שעות`, value: h })),
+    };
+    expect(ticksFor(hourLadder)).toEqual([8, 10, 12]);
   });
 
-  it("collapses to two ticks when min and mid coincide", () => {
-    expect(ticksFor(window_)).toEqual([
-      { value: 8, label: "8" },
-      { value: 13, label: "מעל 12" },
-    ]);
+  it("leaves out an open-ended bound so no gridline lands on its sentinel value", () => {
+    expect(ticksFor(drinking)).toEqual([3, 4]);
+  });
+
+  it("collapses to a single tick when only one measured choice remains", () => {
+    expect(ticksFor(window_)).toEqual([8]);
   });
 });
 
@@ -43,7 +30,7 @@ describe("ticksFor points questions", () => {
       id: "carbs", type: "points", text: "פחמימות", max: 30,
       choices: [{ id: "no_carbs", label: "ללא", value: 0 }],
     };
-    expect(ticksFor(carbs).map((t) => t.value)).toEqual([0, 15, 30]);
+    expect(ticksFor(carbs)).toEqual([0, 15, 30]);
   });
 });
 

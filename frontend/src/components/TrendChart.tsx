@@ -7,7 +7,7 @@ import { isViolating, panelTitle, questionTitle, trendPanels, valueLabel } from 
 // Shared horizontal geometry across the panels and the violations strip: the panels reserve the
 // y-axis width axis-side, the strip (which has no y-axis) reserves it as left margin, so every
 // chart plots the 7 day columns at identical x positions.
-const Y_AXIS_WIDTH = 78;
+const Y_AXIS_WIDTH = 40;
 const MARGIN_RIGHT = 14;
 
 interface PanelPoint {
@@ -94,8 +94,6 @@ function TrendPanel({ questionnaire, question, dayStrs, dayByDate, index, showXA
   const color = `var(--viz-series-${index + 1})`;
   const data = panelData(questionnaire, question, dayStrs, dayByDate);
   const domain = domainFor(question, data.map((d) => d.value));
-  const ticks = ticksFor(question);
-  const labelFor = new Map(ticks.map((t) => [t.value, t.label]));
   return (
     <div className="trend-panel">
       <div className="trend-panel-title">
@@ -115,8 +113,7 @@ function TrendPanel({ questionnaire, question, dayStrs, dayByDate, index, showXA
           />
           <YAxis
             domain={domain}
-            ticks={ticks.map((t) => t.value)}
-            tickFormatter={(v: number) => labelFor.get(v) ?? String(v)}
+            ticks={ticksFor(question)}
             width={Y_AXIS_WIDTH}
             tickLine={false}
             axisLine={false}
