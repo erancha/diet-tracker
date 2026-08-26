@@ -31,7 +31,11 @@ h1 { font-size: 1.4rem; color: var(--accent); }
    browsers without svh support. */
 .landing { display: flex; flex-direction: column; min-height: calc(100vh - 2rem); min-height: calc(100svh - 2rem); }
 .landing-intro { margin-bottom: 0.6rem; }
-.landing-summary { margin-top: 0; }
+/* On a phone the bullets wrap several times, so the marker column is trimmed well below the browser
+   default to widen the text measure. From tablet width up the line has room either way, and the
+   default indent returns. */
+.landing-summary { margin-top: 0; padding-inline-start: 1.2rem; }
+@media (min-width: 48rem) { .landing-summary { padding-inline-start: revert; } }
 .landing-summary li { margin-bottom: 0.6rem; }
 .landing-repo { margin-top: auto; }
 .day-picker, .range-picker { display: flex; gap: 1rem; align-items: center; margin-bottom: 0.75rem; font-size: 0.9rem; }
