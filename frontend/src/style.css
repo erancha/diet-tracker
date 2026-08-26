@@ -25,11 +25,7 @@ header .account-actions { display: flex; align-items: center; gap: 0.4rem; }
    accent button green. */
 header .alarm { background: #ffebee; color: var(--danger); }
 h1 { font-size: 1.4rem; color: var(--accent); }
-/* The landing fills the visible viewport (minus the body's 1rem padding) so the repo link's auto
-   top margin pushes it to the bottom of the page. svh keeps the link above the fold on mobile,
-   where vh includes the area behind the collapsible URL bar; the vh line is the fallback for
-   browsers without svh support. */
-.landing { display: flex; flex-direction: column; min-height: calc(100vh - 2rem); min-height: calc(100svh - 2rem); }
+.landing { display: flex; flex-direction: column; }
 .landing-intro { margin-bottom: 0.6rem; }
 /* On a phone the bullets wrap several times, so the marker column is trimmed well below the browser
    default to widen the text measure. From tablet width up the line has room either way, and the
@@ -37,7 +33,20 @@ h1 { font-size: 1.4rem; color: var(--accent); }
 .landing-summary { margin-top: 0; padding-inline-start: 1.2rem; }
 @media (min-width: 48rem) { .landing-summary { padding-inline-start: revert; } }
 .landing-summary li { margin-bottom: 0.6rem; }
-.landing-repo { margin-top: auto; }
+/* The column stretches its children, which is what a phone wants from the screen's single action:
+   a full-bleed target is the easiest to hit. Across the wider measure the same button reads as a
+   banner rather than a control, so from tablet width up it falls back to its content width, on the
+   start edge where the text begins. */
+@media (min-width: 48rem) { .landing button { align-self: flex-start; } }
+/* Reference table closing the landing, and the repo link below it. Both sit off the sign-in button
+   by the same gap, so the table reads as its own block rather than as a tail on the summary. The
+   global table rule sizes for the wide history grid, so the min-width is dropped here — two narrow
+   columns would otherwise overflow a phone into horizontal scroll. */
+.landing-principles, .landing-repo { margin-top: 2.5rem; }
+.landing-principles { min-width: 0; width: 100%; }
+.landing-principles caption { text-align: start; font-weight: 600; margin-bottom: 0.4rem; }
+/* The principle's bold initial opens its row, so the column reads down as the acronym. */
+.landing-principles td:first-child { white-space: nowrap; }
 .day-picker, .range-picker { display: flex; gap: 1rem; align-items: center; margin-bottom: 0.75rem; font-size: 0.9rem; }
 .day-picker label, .range-picker label { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0; cursor: pointer; }
 .range-picker { margin-top: 0.5rem; }

@@ -10,12 +10,17 @@ closed from the tracker, and the week's trend over recorded history.
 ## Overview
 
 - Meals are logged as they happen and can be backfilled to yesterday for after-midnight logging.
-- The day's summary values derive from the log: carb score, meal count, vegetable meals, and the
-  eating window between first and last meal.
+- The day's summary values derive from the log: three of the four principles — vegetable meals, the
+  eating window between first and last meal, and the meal count — plus the carb score.
 - Recorded meals floor the day-summary questionnaire — a day can admit more than was tracked, never
-  less — and a fully tracked day closes from the tracker with only water entered.
-- Proactive nudges: fill reminders while a day is unsubmitted, threshold alerts over consecutive
-  violating days, a weekly averages digest, and a 7-day trend chart after each submit.
+  less — and a fully tracked day closes from the tracker with only water entered, the one principle
+  the log cannot derive.
+- Proactive nudges: fill reminders while a day is unsubmitted, threshold alerts when a principle or
+  the carb score stays past its limit for consecutive days, a weekly averages digest, and a 7-day
+  trend chart after each submit.
+- The four principles are the שכפ"צ acronym the questions carry as a prefix — water intake,
+  vegetable portions, a short eating window, fewer meals — spelled out in a table closing the
+  signed-out landing.
 
 ## Tech stack
 

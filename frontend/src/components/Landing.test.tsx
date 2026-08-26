@@ -11,11 +11,32 @@ describe("Landing", () => {
     expect(screen.getAllByRole("listitem").length).toBeGreaterThan(0);
   });
 
-  it("mentions each tracked value once across the summary bullets", () => {
-    render(<Landing onSignIn={() => {}} />);
+  it("spells the שכפ\"צ acronym down its principles table, after the app summary", () => {
+    const { container } = render(<Landing onSignIn={() => {}} />);
 
-    const summaryText = screen
-      .getAllByRole("listitem")
+    const principles = [...container.querySelectorAll(".landing-principles tbody tr")]
+      .map((row) => row.querySelector("td")!.textContent!.trim());
+    expect(principles).toHaveLength(4);
+    expect(principles.map((p) => p[0]).join("")).toBe("שכפצ");
+
+    const summary = container.querySelector(".landing-summary")!;
+    const table = container.querySelector(".landing-principles")!;
+    expect(summary.compareDocumentPosition(table) & Node.DOCUMENT_POSITION_FOLLOWING)
+      .toBeTruthy();
+  });
+
+  it("points the acronym's first mention at the table that spells it out", () => {
+    const { container } = render(<Landing onSignIn={() => {}} />);
+
+    const link = container.querySelector(".landing-intro a")!;
+    expect(container.querySelector(".landing-principles")!.id)
+      .toBe(link.getAttribute("href")!.slice(1));
+  });
+
+  it("mentions each tracked value once across the summary bullets", () => {
+    const { container } = render(<Landing onSignIn={() => {}} />);
+
+    const summaryText = [...container.querySelectorAll(".landing-summary li")]
       .map((item) => item.textContent)
       .join(" ");
     for (const term of ["פחמימות / קמחים / סוכרים", "ירקות"]) {

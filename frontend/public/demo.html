@@ -251,7 +251,7 @@ body {
 /* ─────────────────────────────────────────────────────────────────────────
    THE APP — frontend/src/style.css, scoped to .screen and resolved for a
    390px viewport (the vw-dependent legend and shared-header-row sizes and the
-   ≥48rem table rules are pinned to that width rather than the artifact's own
+   ≥48rem rules are pinned to that width rather than the artifact's own
    viewport).
    ───────────────────────────────────────────────────────────────────────── */
 .screen {
@@ -284,11 +284,14 @@ body {
 .screen header .account-actions { display: flex; align-items: center; gap: 0.4rem; }
 .screen header .alarm { background: #ffebee; color: var(--danger); }
 .screen h1 { font-size: 1.4rem; color: var(--accent); }
-.screen .landing { display: flex; flex-direction: column; min-height: calc(684px - 26px - 2rem); }
+.screen .landing { display: flex; flex-direction: column; }
 .screen .landing-intro { margin-bottom: 0.6rem; }
 .screen .landing-summary { margin-top: 0; padding-inline-start: 1.2rem; }
 .screen .landing-summary li { margin-bottom: 0.6rem; }
-.screen .landing-repo { margin-top: auto; }
+.screen .landing-principles, .screen .landing-repo { margin-top: 2.5rem; }
+.screen .landing-principles { min-width: 0; width: 100%; }
+.screen .landing-principles caption { text-align: start; font-weight: 600; margin-bottom: 0.4rem; }
+.screen .landing-principles td:first-child { white-space: nowrap; }
 .screen .day-picker, .screen .range-picker { display: flex; gap: 1rem; align-items: center; margin-bottom: 0.75rem; font-size: 0.9rem; }
 .screen fieldset { border: 1px solid #ddd; border-radius: 8px; margin: 0 0 1rem; padding: 0.75rem 1rem; background: #fff; }
 .screen legend { font-weight: 600; padding: 0 0.5rem; white-space: nowrap; font-size: 14.72px; }
@@ -651,14 +654,22 @@ function days() {
 function landingHtml() {
   return '<main class="landing">' +
     "<h1>מעקב תזונה</h1>" +
-    '<p class="landing-intro">אפליקציית SaaS חינמית — יומן ארוחות יומי שעוזר לשמור על הרגלי אכילה בריאים לאורך זמן:</p>' +
+    '<p class="landing-intro">אפליקציית SaaS חינמית — יומן ארוחות יומי שעוזר לשמור על הרגלי אכילה בריאים לאורך זמן, סביב ארבעת עקרונות השכפ"צ (<a href="#landing-principles">בטבלה שבסוף העמוד</a>):</p>' +
     '<ul class="landing-summary">' +
       "<li>רישום ארוחות ביומן מעקב יומי, כולל השלמה של יום אתמול למי שנזכר אחרי חצות</li>" +
-      "<li>ערכי סיכום היום נגזרים מהיומן: ציון פחמימות / קמחים / סוכרים (נמוך = טוב), מספר ארוחות, ארוחות עם ירקות וחלון האכילה</li>" +
-      "<li>שאלון סיכום היום אינו יכול להצהיר פחות ממה שנרשם ביומן; יום שתועד במלואו נסגר עם מילוי שתייה בלבד</li>" +
-      "<li>האפליקציה כולל תזכורת כשדיווח של יום חסר, התראה כשכלל תזונתי מופר כמה ימים ברצף, סיכום שבועי וגרף מגמה של שבעת הימים האחרונים אחרי כל שליחה</li>" +
+      "<li>ערכי סיכום היום נגזרים מהיומן: שלושה מעקרונות השכפ\"צ — כמות הירקות, חלון האכילה ומספר הארוחות — לצד ציון פחמימות / קמחים / סוכרים (נמוך = טוב)</li>" +
+      "<li>שאלון סיכום היום אינו יכול להצהיר פחות ממה שנרשם ביומן; יום שתועד במלואו נסגר עם מילוי שתיית המים בלבד — העיקרון היחיד שאינו נגזר מהיומן</li>" +
+      "<li>האפליקציה כוללת תזכורת כשדיווח של יום חסר, התראה כשעיקרון שכפ\"צ או ציון הפחמימות חורגים כמה ימים ברצף, סיכום שבועי וגרף מגמה של שבעת הימים האחרונים אחרי כל שליחה</li>" +
     "</ul>" +
     '<button type="button" data-t="signin">התחברות עם Google</button>' +
+    '<table class="landing-principles" id="landing-principles">' +
+      '<caption>שכפ"צ - העקרונות המרכזיים של המעקב</caption>' +
+      "<thead><tr><th>העיקרון</th><th>היעד היומי</th></tr></thead><tbody>" +
+      "<tr><td><strong>ש</strong>תיית מים</td><td>2.5 ליטר ומעלה</td></tr>" +
+      "<tr><td><strong>כ</strong>מות ירקות</td><td>ירקות בשתי ארוחות לפחות</td></tr>" +
+      "<tr><td><strong>פ</strong>תיחת חלון אכילה</td><td>עד 12 שעות מהארוחה הראשונה ועד האחרונה</td></tr>" +
+      "<tr><td><strong>צ</strong>מצום מספר ארוחות</td><td>2-3 ארוחות, בלי נשנושים ביניהן</td></tr>" +
+      "</tbody></table>" +
     '<p class="landing-repo"><a href="#">קוד המקור ב-GitHub</a></p>' +
   "</main>";
 }
@@ -915,7 +926,7 @@ const M3 = { id: "m3", at: TODAY + "T20:10:00+03:00", carbs_choice: "grade3", ve
 
 const BEATS = [
   { act: 0, hold: 2800, clock: "11:47",
-    cap: "מסך הפתיחה מסכם בארבע שורות מה האפליקציה עושה, ואז מפנה את הדרך.",
+    cap: "מסך הפתיחה מסכם מה האפליקציה עושה, מפנה את הדרך, ומסיים בטבלת עקרונות השכפ\"צ שהמעקב בנוי סביבם.",
     apply() { Object.assign(state, { screen: "landing" }); } },
 
   { act: 0, hold: 2400, tap: "signin", clock: "11:48",
