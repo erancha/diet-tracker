@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { expandMealForm } from "../dates";
+import { clockTimeOf, expandMealForm } from "../dates";
 import { carbsScales, deriveDay } from "../derive";
 import type { DayPayload, Meal, NewMeal, Questionnaire } from "../types";
 import { ChoiceFieldset } from "./ChoiceFieldset";
@@ -65,6 +65,10 @@ export function DayTracker({ questionnaire, today, firstMealHour, mealGapHours, 
   // from another tab — and the form then goes back to recording a new meal.
   const editing = today.meals.find((m) => m.id === editingId);
 
+  // Whether the form still matches the meal it opened on — what separates an exit from a discard,
+  // for the one button that serves as both.
+  const editDiverged = editing !== undefined && formDiverged(editing);
+
   // The meal inputs are the tallest thing here and are worth reading only when there is a meal to
   // report, so the tracker opens on the day's figures and its recorded meals with the inputs
   // folded away behind them — unless a meal is overdue, when reporting one is the likeliest reason
@@ -89,6 +93,24 @@ export function DayTracker({ questionnaire, today, firstMealHour, mealGapHours, 
     setFormCollapsed(true);
   }
 
+  // Discarding a correction is unrecoverable — the form holds the only copy of the edits — and the
+  // button doing it sits beside the one that commits them. So it asks first, but only once the form
+  // has actually moved off the stored meal: backing out of an untouched correction loses nothing,
+  // and a dialog there would train the user to dismiss the one that matters.
+  function cancelEdit() {
+    if (editDiverged && !window.confirm("לבטל את השינויים? מה שערכת יאבד.")) return;
+    clearForm();
+  }
+
+  function formDiverged(meal: Meal): boolean {
+    return carbsChoiceId !== meal.carbs_choice
+        || vegetables !== meal.vegetables
+        || fruit !== meal.fruit
+        || mealTime !== clockTimeOf(meal.at)
+        || pickedAdditions.size !== meal.additions.length
+        || meal.additions.some((id) => !pickedAdditions.has(id));
+  }
+
   function clearForm() {
     setCarbsChoiceId(undefined);
     setVegetables(false);
@@ -105,7 +127,7 @@ export function DayTracker({ questionnaire, today, firstMealHour, mealGapHours, 
     setVegetables(meal.vegetables);
     setFruit(meal.fruit);
     setPickedAdditions(new Set(meal.additions));
-    setMealTime(meal.at.slice(11, 16));
+    setMealTime(clockTimeOf(meal.at));
     setEditingId(meal.id);
     setFormCollapsed(false);
   }
@@ -160,12 +182,13 @@ export function DayTracker({ questionnaire, today, firstMealHour, mealGapHours, 
           </button>
         )}
         {editing !== undefined && (
-          <button type="button" onClick={clearForm}>
-            ביטול עריכה
+          <button type="button" className={editDiverged ? "quiet destructive" : "quiet"}
+                  onClick={cancelEdit}>
+            {editDiverged ? "ביטול שינויים" : "יציאה מעריכה"}
           </button>
         )}
         {closable && (
-          <button type="button" onClick={() => setClosing((c) => !c)}>
+          <button type="button" className="quiet" onClick={() => setClosing((c) => !c)}>
             סגירת יום
           </button>
         )}

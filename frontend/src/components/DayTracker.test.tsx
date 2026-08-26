@@ -51,7 +51,9 @@ const openMealForm = () =>
   fireEvent.click(screen.getByRole("button", { name: "פרטי הארוחה" }));
 
 describe("DayTracker", () => {
-  afterEach(() => vi.useRealTimers());
+  // Cases here spy on window.confirm; without a restore the spy and its call log outlive the case
+  // that installed it, and a later one reads another case's dialog answer as its own.
+  afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); });
 
   it("starts expanded on an empty day whatever the hour", () => {
     atLocalTime(9);
@@ -257,20 +259,70 @@ describe("DayTracker", () => {
     expect(screen.queryByRole("button", { name: "עדכון ארוחה" })).toBeNull();
   });
 
-  it("cancels an edit without sending it and restores the default meal time", () => {
+  it("cancels an untouched edit without a dialog and restores the default meal time", () => {
     atLocalTime(19, 5);
     const onUpdateMeal = vi.fn();
+    const confirmSpy = vi.spyOn(window, "confirm");
     render(<DayTracker questionnaire={questionnaire} today={trackedDay}
                        firstMealHour={NO_AUTO_OPEN_HOUR}
                        mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={onUpdateMeal} onDeleteMeal={vi.fn()}
                        onCloseDay={vi.fn()} />);
     fireEvent.click(screen.getByRole("button", { name: "עריכת ארוחה 13:30" }));
-    fireEvent.click(screen.getByRole("button", { name: "ביטול עריכה" }));
+    expect(screen.getByRole("button", { name: "יציאה מעריכה" })).not.toHaveClass("destructive");
+    fireEvent.click(screen.getByRole("button", { name: "יציאה מעריכה" }));
+    expect(confirmSpy).not.toHaveBeenCalled();
     expect(onUpdateMeal).not.toHaveBeenCalled();
     expect(screen.getByLabelText("שעת הארוחה")).toHaveValue("18:40");
     expect(screen.getByLabelText("דרגה 4")).not.toBeChecked();
     expect(screen.queryByRole("button", { name: "עדכון ארוחה" })).toBeNull();
+  });
+
+  it("keeps a diverged edit when its discard dialog is dismissed", () => {
+    atLocalTime(19, 5);
+    vi.spyOn(window, "confirm").mockReturnValue(false);
+    render(<DayTracker questionnaire={questionnaire} today={trackedDay}
+                       firstMealHour={NO_AUTO_OPEN_HOUR}
+                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()} onDeleteMeal={vi.fn()}
+                       onCloseDay={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "עריכת ארוחה 13:30" }));
+    fireEvent.click(screen.getByLabelText("כולל ירקות"));
+    expect(screen.getByRole("button", { name: "ביטול שינויים" })).toHaveClass("destructive");
+    fireEvent.click(screen.getByRole("button", { name: "ביטול שינויים" }));
+    expect(screen.getByRole("button", { name: "עדכון ארוחה" })).toBeInTheDocument();
+    expect(screen.getByLabelText("כולל ירקות")).toBeChecked();
+    expect(screen.getByLabelText("שעת הארוחה")).toHaveValue("13:30");
+  });
+
+  it("discards a diverged edit once its dialog is confirmed", () => {
+    atLocalTime(19, 5);
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+    render(<DayTracker questionnaire={questionnaire} today={trackedDay}
+                       firstMealHour={NO_AUTO_OPEN_HOUR}
+                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()} onDeleteMeal={vi.fn()}
+                       onCloseDay={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "עריכת ארוחה 13:30" }));
+    fireEvent.change(screen.getByLabelText("שעת הארוחה"), { target: { value: "12:00" } });
+    fireEvent.click(screen.getByRole("button", { name: "ביטול שינויים" }));
+    expect(confirmSpy).toHaveBeenCalledOnce();
+    expect(screen.queryByRole("button", { name: "עדכון ארוחה" })).toBeNull();
+    expect(screen.getByLabelText("שעת הארוחה")).toHaveValue("18:40");
+  });
+
+  it("treats a re-picked addition as a divergence worth confirming", () => {
+    atLocalTime(19, 5);
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+    render(<DayTracker questionnaire={questionnaire} today={trackedDay}
+                       firstMealHour={NO_AUTO_OPEN_HOUR}
+                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()} onDeleteMeal={vi.fn()}
+                       onCloseDay={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "עריכת ארוחה 13:30" }));
+    fireEvent.click(screen.getByLabelText("כולל מתוק"));
+    fireEvent.click(screen.getByRole("button", { name: "ביטול שינויים" }));
+    expect(confirmSpy).toHaveBeenCalledOnce();
   });
 
   it("falls back to recording when the meal being edited is deleted", () => {
@@ -468,7 +520,7 @@ describe("DayTracker", () => {
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     fireEvent.click(screen.getByRole("button", { name: "עריכת ארוחה 13:30" }));
-    fireEvent.click(screen.getByRole("button", { name: "ביטול עריכה" }));
+    fireEvent.click(screen.getByRole("button", { name: "יציאה מעריכה" }));
 
     expect(screen.getByRole("button", { name: "פרטי הארוחה" }))
       .toHaveAttribute("aria-expanded", "true");
@@ -589,14 +641,14 @@ describe("DayTracker", () => {
       .toHaveTextContent("דרגה 4 · 🍪 · 🍷 · 🥜 · 🥑 · 17");
   });
 
-  it("marks each meal's delete button with the compact delete-meal style", () => {
+  it("marks each meal's row controls with the compact icon-only style", () => {
     render(<DayTracker questionnaire={questionnaire} today={trackedDay}
                        firstMealHour={NO_AUTO_OPEN_HOUR}
                        mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
-    for (const button of screen.getAllByRole("button", { name: /מחיקת ארוחה/ })) {
-      expect(button).toHaveClass("delete-meal");
+    for (const button of screen.getAllByRole("button", { name: /מחיקת ארוחה|עריכת ארוחה/ })) {
+      expect(button).toHaveClass("icon-only");
     }
   });
 

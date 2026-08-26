@@ -1,6 +1,8 @@
+import { clockTimeOf } from "../dates";
 import { carbsScales, mealWeights } from "../derive";
 import type { Meal, Questionnaire } from "../types";
 import { HIGH_GRADE_THRESHOLD } from "../violations";
+import { Icon } from "./Icon";
 
 // Row marker per addition id; a retired id falls back to its raw id, like retired grade choices.
 const ADDITION_MARKERS: Record<string, string> = { sweet: "🍪", alcohol: "🍷", nuts: "🥜", fat: "🥑" };
@@ -17,7 +19,6 @@ export function MealList({ questionnaire, meals, onEdit, onDelete }: {
   onDelete?: (id: string) => void;
 }) {
   const carbsQuestion = questionnaire.questions.find((q) => q.id === "carbs")!;
-  const timeOf = (at: string) => at.slice(11, 16);
   const newestFirst = [...meals].reverse();
 
   // A history day may reference a choice or addition id retired by a later questionnaire
@@ -38,7 +39,7 @@ export function MealList({ questionnaire, meals, onEdit, onDelete }: {
           <li key={meal.id}>
             {/* Outside the text cell, so the row lays time and description out as two columns and
                 a description too long for one line wraps against its own edge, not the time's. */}
-            <strong className="meal-at">{timeOf(meal.at)}</strong>
+            <strong className="meal-at">{clockTimeOf(meal.at)}</strong>
             <span className="meal-text">
               <span className={choice !== undefined && choice.value > HIGH_GRADE_THRESHOLD
                 ? "high-grade" : undefined}>
@@ -58,17 +59,17 @@ export function MealList({ questionnaire, meals, onEdit, onDelete }: {
             {/* Grouped into one cell so the pencil and bin travel together as the row's controls. */}
             <span className="meal-actions">
               {onEdit && (
-                <button type="button" className="edit-meal"
-                        aria-label={`עריכת ארוחה ${timeOf(meal.at)}`}
+                <button type="button" className="icon-only"
+                        aria-label={`עריכת ארוחה ${clockTimeOf(meal.at)}`}
                         onClick={() => onEdit(meal)}>
-                  ✏️
+                  <Icon name="edit" />
                 </button>
               )}
               {onDelete && (
-                <button type="button" className="delete-meal"
-                        aria-label={`מחיקת ארוחה ${timeOf(meal.at)}`}
+                <button type="button" className="icon-only"
+                        aria-label={`מחיקת ארוחה ${clockTimeOf(meal.at)}`}
                         onClick={() => { if (window.confirm("למחוק את הארוחה?")) onDelete(meal.id); }}>
-                  🗑️
+                  <Icon name="remove" />
                 </button>
               )}
             </span>

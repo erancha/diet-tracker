@@ -8,6 +8,12 @@ export function parseIsoDate(s: string): Date {
   return new Date(y, m - 1, d);
 }
 
+// Wall-clock "HH:MM" of a meal's local ISO timestamp — the format the meal-time input reads and
+// writes, so a stored meal and the form editing it compare directly.
+export function clockTimeOf(at: string): string {
+  return at.slice(11, 16);
+}
+
 export function dayLabel(s: string): string {
   const [, m, d] = s.split("-");
   return `${Number(d)}.${Number(m)}`;

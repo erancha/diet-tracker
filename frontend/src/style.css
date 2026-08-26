@@ -23,7 +23,8 @@ header span button { font-size: inherit; padding: 0.3rem 0.9rem; }
 header .account-actions { display: flex; align-items: center; gap: 0.4rem; }
 /* The alarm is a warning indicator, not an action, so it wears the alert palette instead of the
    accent button green. */
-header .alarm { background: #ffebee; color: var(--danger); }
+header .alarm { --btn-bg: #ffebee; --btn-fg: var(--danger); --btn-border: #f3c9cc;
+                display: inline-flex; align-items: center; gap: 0.25rem; }
 /* The app title, on both the landing and the signed-in chrome. It reads above every section heading
    below it — including the tracker's enlarged one — so the page opens on its name rather than on
    whichever section happens to shout loudest. The viewport term keeps it off the account box on a
@@ -63,7 +64,40 @@ fieldset { border: 1px solid #ddd; border-radius: 8px; margin: 0 0 1rem; padding
    screens after the body, fieldset and legend paddings are taken out. */
 legend { font-weight: 600; padding: 0 0.5rem; white-space: nowrap; font-size: min(1rem, 4.8vw - 4px); }
 label { display: block; padding: 0.35rem 0; cursor: pointer; }
-button { background: var(--accent); color: #fff; border: 0; border-radius: 8px; padding: 0.6rem 2.5rem; font-size: 1rem; cursor: pointer; }
+/* Filled accent marks the action that writes; the variants exist so a control standing beside one
+   cannot be mistaken for it. A variant sets only the palette triple, which the shared interaction
+   states below read — so hover, focus and disabled are painted once for every variant there is. */
+button {
+  --btn-bg: var(--accent);
+  --btn-fg: #fff;
+  --btn-border: var(--accent);
+  background: var(--btn-bg); color: var(--btn-fg); border: 1px solid var(--btn-border);
+  border-radius: 8px; padding: 0.6rem 2.5rem; font-size: 1rem; cursor: pointer;
+}
+/* Outlined: a control that leaves or reveals rather than commits — cancelling a correction,
+   opening the close-day panel, signing out. Cancel shares the tracker's action row with the filled
+   submit, and the two must not read alike. */
+button.quiet { --btn-bg: #fff; --btn-fg: var(--accent); --btn-border: #b6d0b8; }
+/* The escape hatch once it has something to destroy, since one button serves both that and the
+   exit that costs nothing. */
+button.quiet.destructive { --btn-fg: var(--danger); --btn-border: #e6b3b3; }
+/* Glyph-only row and chrome controls: no box until a pointer or the keyboard reaches them, so a
+   list of meals reads as data rather than as a column of buttons. */
+button.icon-only {
+  --btn-bg: transparent; --btn-fg: inherit; --btn-border: transparent;
+  display: inline-flex; padding: 0.3rem; border-radius: 50%;
+}
+/* Darkening whatever the variant painted keeps one hover rule for every filled or outlined
+   button. The transparent variant has no fill to darken and takes a wash instead. */
+button:hover:not(:disabled) { filter: brightness(0.93); }
+button.icon-only:hover:not(:disabled) { --btn-bg: #eceff1; filter: none; }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* The meal submit renders disabled whenever the picked time is still ahead of the clock, so the
+   block shows on the control itself, alongside the notice that gives its reason. */
+button:disabled { --btn-bg: #e4e4e4; --btn-fg: #9a9a9a; --btn-border: #d8d8d8; cursor: not-allowed; }
+/* The negative vertical-align seats a glyph on the text baseline where one sits inline, as in the
+   history score cell; inside the flex icon buttons it has no effect. */
+.icon { width: 1.1em; height: 1.1em; vertical-align: -0.18em; }
 /* pre-line keeps newlines in alert messages (e.g. the sign-in rejection's contact note). */
 .alert { background: #ffebee; color: var(--danger); border-radius: 8px; padding: 0.6rem 1rem; margin-bottom: 0.5rem; white-space: pre-line; }
 .ok { background: #e8f5e9; color: var(--accent); border-radius: 8px; padding: 0.6rem 1rem; margin-bottom: 0.5rem; }
@@ -100,10 +134,6 @@ td.violation { background: #ffebee; color: var(--danger); }
    rather than the whole item, so the alarm sits on the number its label merely names, and its
    specificity outranks the green that figure otherwise carries. */
 td.high-score, .tracker-dashboard .high-score .value, .meal-list .high-grade { color: var(--danger); }
-/* The pencil, trash and close glyphs can render as monochrome outlines that take the CSS text
-   color, so they must inherit the surrounding text rather than the global button rule's white,
-   or they vanish on the white background. */
-.delete-day, .edit-meal, .delete-meal, .close-view { background: none; color: inherit; padding: 0 0.3rem; font-size: 1rem; }
 .delete-day { margin-inline-start: 0.4rem; }
 /* The score cell is the open-day-view control, apart from the delete button it also carries. */
 td.view-day { cursor: pointer; }
@@ -153,7 +183,8 @@ td.view-day { cursor: pointer; }
    percent of clearance down to 320px-wide screens once the body and card paddings are taken out. */
 .day-tracker .section-header h2, .day-tracker .section-header h3 { font-size: min(1.6rem, 7vw - 6px); }
 /* Section header doubles as the collapse toggle; the arrow flips with aria-expanded. */
-.section-toggle { background: none; color: inherit; font: inherit; font-weight: 600; padding: 0; cursor: pointer; }
+.section-toggle { --btn-bg: transparent; --btn-fg: inherit; --btn-border: transparent;
+                  font: inherit; font-weight: 600; padding: 0; cursor: pointer; }
 .section-toggle::after { content: " ▴"; font-size: 0.8em; }
 .section-toggle[aria-expanded="false"]::after { content: " ▾"; }
 /* Body-sized against the tracker's larger heading, so the fold reads as a row inside the panel
@@ -189,3 +220,7 @@ td.view-day { cursor: pointer; }
 /* Sized for the widest score the carb scale reaches, so a two-digit day does not shift the column. */
 .meal-list .meal-points { flex-shrink: 0; min-width: 4ch; }
 .meal-list .meal-actions { display: flex; align-items: center; flex-shrink: 0; }
+/* A tap target comfortable on a phone stands taller than the row's text. The negative block margin
+   keeps it out of the line box, leaving the row's height set by that text — which is what the
+   top-pinned time above measures itself against. */
+.meal-list .meal-actions button { padding: 0.35rem; margin-block: -0.35rem; }

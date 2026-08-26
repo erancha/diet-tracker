@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { APP_TITLE } from "../appTitle";
+import { Icon } from "./Icon";
 
 // App chrome: the title, the account box, and — while rule violations are still active — an
 // alarm that survives reloads, unlike the transient post-submit banner. The alarm starts closed
@@ -18,10 +19,10 @@ export function Header({ email, onSignOut, activeViolations }: {
             {activeViolations.length > 0 && (
               <button type="button" className="alarm" aria-label="חריגות פעילות"
                       onClick={() => setAlarmOpen((open) => !open)}>
-                🔔 {activeViolations.length}
+                <Icon name="alarm" /> {activeViolations.length}
               </button>
             )}
-            <button type="button" onClick={onSignOut}>התנתקות</button>
+            <button type="button" className="quiet" onClick={onSignOut}>התנתקות</button>
           </span>
         </span>
       </header>

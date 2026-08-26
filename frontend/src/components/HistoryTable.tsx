@@ -2,6 +2,7 @@ import { useState, type KeyboardEvent } from "react";
 import type { Day, Questionnaire } from "../types";
 import { daysBefore, weekdayDdmmLabel } from "../dates";
 import { isHighScore, isViolating, questionTitle, valueLabel } from "../violations";
+import { Icon } from "./Icon";
 
 // Window lengths the reader can choose between, shortest first. The longest is bounded by the
 // API's 30-day lookback — nothing older reaches the history response to be shown.
@@ -28,12 +29,12 @@ interface Props {
 // activation must stop at the button instead of also opening the day it deletes.
 function DeleteDayButton({ date, onDelete }: { date: string; onDelete: (date: string) => void }) {
   return (
-    <button type="button" className="delete-day" aria-label={`מחיקת הרשומה של ${date}`}
+    <button type="button" className="icon-only delete-day" aria-label={`מחיקת הרשומה של ${date}`}
       onKeyDown={(e) => e.stopPropagation()}
       onClick={(e) => {
         e.stopPropagation();
         if (window.confirm(`למחוק את הרשומה של ${date}?`)) onDelete(date);
-      }}>🗑️</button>
+      }}><Icon name="remove" /></button>
   );
 }
 
@@ -128,7 +129,7 @@ export function HistoryTable({ questionnaire, days, today, deletableDates, viewe
                           },
                         })}>
                       {cellText(q.id, value)}
-                      {viewable && " 📖"}
+                      {viewable && <>{" "}<Icon name="openDay" /></>}
                       {deletion}
                     </td>
                   );
