@@ -10,9 +10,9 @@ closed from the tracker, and the week's trend over recorded history.
 ## Overview
 
 - Meals are logged as they happen and can be backfilled to yesterday for after-midnight logging.
-- The day's values derive from the log: carb score, meal count, vegetable meals, and the eating
-  window between first and last meal.
-- Recorded meals floor the end-of-day questionnaire — a day can admit more than was tracked, never
+- The day's summary values derive from the log: carb score, meal count, vegetable meals, and the
+  eating window between first and last meal.
+- Recorded meals floor the day-summary questionnaire — a day can admit more than was tracked, never
   less — and a fully tracked day closes from the tracker with only water entered.
 - Proactive nudges: fill reminders while a day is unsubmitted, threshold alerts over consecutive
   violating days, a weekly averages digest, and a 7-day trend chart after each submit.

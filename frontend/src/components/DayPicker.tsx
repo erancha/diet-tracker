@@ -18,7 +18,7 @@ export function DayPicker({ todayStr, yesterdayStr, value, todaySelectable, remi
     <div className="day-picker">
       <label>
         <input type="radio" name="day" checked={value === "today"} disabled={!todaySelectable}
-               title={todaySelectable ? undefined : `שאלון סוף היום נפתח מ-${reminderHour}:00`}
+               title={todaySelectable ? undefined : `שאלון סיכום היום נפתח מ-${reminderHour}:00`}
                onChange={() => onChange("today")} />
         {" "}היום ({ddmmLabel(todayStr)})
       </label>
