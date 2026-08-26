@@ -39,6 +39,10 @@ before additions existed are read with the legacy sweet flag mapped to a single 
   last one that did: today from the first evening reminder hour (the stack's `ReminderHours`)
   onward, yesterday for the whole stretch before it, including the small hours after midnight.
   Today stays disabled in the day picker until that hour.
+- **Overdue first meal** — the tracker's meal inputs sit folded behind the day's figures and its
+  meal list, and open expanded once the day passes its first-meal hour (the stack's
+  `FirstMealHour`) with nothing recorded. Recording the first meal settles the day, so from then
+  on the inputs stay folded whatever the hour.
 - **Backfill** — entries can be backfilled to yesterday, so after-midnight meals land on the day
   they belong to.
 

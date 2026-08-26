@@ -12,6 +12,9 @@ export interface AppConfig {
   // First hour (local) of the stack's daily fill reminders; from then on an untracked,
   // unsubmitted day opens the day-end questionnaire expanded.
   firstReminderHour: number;
+  // Local hour by which the day's first meal is expected; from then on a day with nothing recorded
+  // opens the tracker's meal inputs expanded.
+  firstMealHour: number;
 }
 
 declare global {

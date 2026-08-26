@@ -54,6 +54,13 @@ export function expandQuestionnaire(now: Date, reminderHour: number, mealsRecord
   return dayEnded(now, reminderHour) && mealsRecorded === 0 && !todaySubmitted;
 }
 
+// A day still carrying no meal by firstMealHour is overdue for one, so the tracker's meal inputs
+// open expanded instead of waiting behind their fold. The first recorded meal is what that hour
+// waits for, so from then on the inputs stay folded however late the day gets.
+export function expandMealForm(now: Date, firstMealHour: number, mealsRecorded: number): boolean {
+  return now.getHours() >= firstMealHour && mealsRecorded === 0;
+}
+
 // The questionnaire closes a finished day, so the day it opens on is the last one that ended:
 // today from the evening reminder onward, yesterday for the whole stretch before it — the small
 // hours after midnight included, when the day just ended is the one awaiting answers.

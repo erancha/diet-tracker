@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { expandMealForm } from "../dates";
 import { carbsScales, deriveDay } from "../derive";
 import type { DayPayload, Meal, NewMeal, Questionnaire } from "../types";
 import { ChoiceFieldset } from "./ChoiceFieldset";
@@ -24,10 +25,11 @@ const CLOSE_DAY_MIN_WINDOW_HOURS = 6;
 // form; the dashboard and close-day values come from the vector-pinned client derivation twin,
 // so they always agree with the meal list rendered beside them — the server re-derives on submit
 // and stays the authority.
-export function DayTracker({ questionnaire, today, onAddMeal, onUpdateMeal,
+export function DayTracker({ questionnaire, today, firstMealHour, onAddMeal, onUpdateMeal,
                              onDeleteMeal, onCloseDay }: {
   questionnaire: Questionnaire;
   today: DayPayload;
+  firstMealHour: number;
   onAddMeal: (meal: NewMeal) => void;
   // Replaces the meal wholesale; a corrected time re-keys it, so the id is the one being replaced.
   onUpdateMeal: (id: string, meal: NewMeal) => void;
@@ -62,9 +64,12 @@ export function DayTracker({ questionnaire, today, onAddMeal, onUpdateMeal,
 
   // The meal inputs are the tallest thing here and are worth reading only when there is a meal to
   // report, so the tracker opens on the day's figures and its recorded meals with the inputs
-  // folded away behind them. Recording a meal or sending a correction folds them again, and
-  // opening a meal for editing is the one thing that unfolds them on its own.
-  const [formCollapsed, setFormCollapsed] = useState(true);
+  // folded away behind them — unless the day has passed its first-meal hour with nothing recorded,
+  // when reporting one is the likeliest reason for the visit. This decides only where the section
+  // opens: recording a meal or sending a correction folds the inputs again, and opening a meal for
+  // editing unfolds them.
+  const [formCollapsed, setFormCollapsed] =
+    useState(() => !expandMealForm(new Date(), firstMealHour, today.meals.length));
 
   // Only reachable through the submit button, which renders only once a grade is picked and is
   // disabled while the picked time is still ahead of the clock.

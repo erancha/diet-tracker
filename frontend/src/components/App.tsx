@@ -19,8 +19,8 @@ import { TrendChart } from "./TrendChart";
 // and deletion, day submission with tracked floors, day deletion — plus the submit → alerts flow
 // and the day-end section's fold it closes; the components below it hold no server state of their
 // own.
-export function App({ email, api, reminderHour, onSignOut }: {
-  email: string; api: Api; reminderHour: number; onSignOut: () => void;
+export function App({ email, api, reminderHour, firstMealHour, onSignOut }: {
+  email: string; api: Api; reminderHour: number; firstMealHour: number; onSignOut: () => void;
 }) {
   const queryClient = useQueryClient();
   const [now] = useState(() => new Date());
@@ -134,6 +134,7 @@ export function App({ email, api, reminderHour, onSignOut }: {
           <DayTracker
             questionnaire={questionnaire}
             today={data.today}
+            firstMealHour={firstMealHour}
             onAddMeal={(meal) => mealMutation.mutate(meal)}
             onUpdateMeal={(id, meal) => updateMealMutation.mutate({ id, meal })}
             onDeleteMeal={(id) => deleteMealMutation.mutate(id)}

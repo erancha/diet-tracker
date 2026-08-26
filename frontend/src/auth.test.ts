@@ -9,6 +9,7 @@ const cfg: AppConfig = {
   redirectUri: "https://app.example.com/",
   rootEmail: "root@example.com",
   firstReminderHour: 20,
+  firstMealHour: 11,
 };
 
 describe("logoutUrl", () => {

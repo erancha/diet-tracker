@@ -10,6 +10,7 @@ const cfg: AppConfig = {
   redirectUri: "https://app.example.com/",
   rootEmail: "root@example.com",
   firstReminderHour: 20,
+  firstMealHour: 11,
 };
 
 const tokens: Tokens = { id_token: "token", expires_at: 0 };

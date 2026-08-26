@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dayEnded, dayLabel, daysBefore, ddmmLabel, defaultDay, expandQuestionnaire, isoDate, last7Days, parseIsoDate, weekdayDdmmLabel } from "./dates";
+import { dayEnded, dayLabel, daysBefore, ddmmLabel, defaultDay, expandMealForm, expandQuestionnaire, isoDate, last7Days, parseIsoDate, weekdayDdmmLabel } from "./dates";
 
 describe("isoDate", () => {
   it("formats a local date as YYYY-MM-DD with zero padding", () => {
@@ -101,6 +101,28 @@ describe("defaultDay", () => {
 
   it("follows a different configured reminder hour", () => {
     expect(defaultDay(new Date(2026, 7, 18, 19, 0), 19)).toBe("today");
+  });
+});
+
+describe("expandMealForm", () => {
+  const eleven = new Date(2026, 7, 18, 11, 0);
+  const beforeEleven = new Date(2026, 7, 18, 10, 59);
+  const firstMealHour = 11;
+
+  it("expands from the first-meal hour on a day with nothing recorded", () => {
+    expect(expandMealForm(eleven, firstMealHour, 0)).toBe(true);
+  });
+
+  it("stays collapsed before the first-meal hour", () => {
+    expect(expandMealForm(beforeEleven, firstMealHour, 0)).toBe(false);
+  });
+
+  it("respects a different configured first-meal hour", () => {
+    expect(expandMealForm(beforeEleven, 10, 0)).toBe(true);
+  });
+
+  it("stays collapsed once the day has a recorded meal", () => {
+    expect(expandMealForm(eleven, firstMealHour, 1)).toBe(false);
   });
 });
 

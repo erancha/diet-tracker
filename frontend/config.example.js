@@ -7,5 +7,5 @@ window.CONFIG = {
   redirectUri: window.location.origin + "/",
   rootEmail: "<app-owner-email>",
   firstReminderHour: 20,
-  trackerStartHour: 12,
+  firstMealHour: 11,
 };
