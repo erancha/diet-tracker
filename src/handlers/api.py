@@ -233,13 +233,13 @@ def _delete_meal(sub, date, meal_id):
 
 
 def _alert(email, violations):
-    text = "התראות תזונה:\n" + "\n".join(f"• {v.message}" for v in violations)
+    text = notify.violation_text(violations)
     ssm = boto3.client("ssm")
     telegram = notify.telegram_config(ssm, os.environ["BOT_TOKEN_PARAM"], os.environ["CHAT_MAP_PARAM"])
     if telegram is not None:
         token, chat_map = telegram
         notify.send_telegram(token, users.chat_id_for(chat_map, email), text)
-    notify.send_email(boto3.client("ses"), os.environ["SES_SENDER"], email, "התראת תזונה — מעקב תזונה", text)
+    notify.send_email(boto3.client("ses"), os.environ["SES_SENDER"], email, notify.ALERT_SUBJECT, text)
 
 
 def _response(status, body):

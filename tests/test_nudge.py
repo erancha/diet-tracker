@@ -68,6 +68,21 @@ def test_rules_job_alerts_on_streak_and_dedups(env):
     assert sent == []
 
 
+def test_rules_job_sends_the_shared_alert_subject_and_body(env, monkeypatch):
+    e, _ = env
+    mails = []
+    monkeypatch.setattr(nudge.notify, "send_email",
+                        lambda ses, sender, to, subject, body: mails.append((subject, body)))
+    for offset in (2, 1, 0):
+        e.store.put_day("u1", days_before(today(), offset), VIOLATING, 1, "t")
+
+    nudge._rules_job(e)
+
+    subject, body = mails[0]
+    assert subject == nudge.notify.ALERT_SUBJECT
+    assert body.startswith("התראות תזונה:\n•")
+
+
 def test_rules_job_evaluates_as_of_latest_submitted_day(env):
     e, sent = env
     # Streak completed yesterday; today unsubmitted. The nightly job must still catch it.

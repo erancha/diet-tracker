@@ -5,7 +5,19 @@ import boto3
 import pytest
 from moto import mock_aws
 
-from common import notify
+from common import notify, rules
+
+
+def test_violation_text_leads_the_bullets_with_a_header():
+    violations = [
+        rules.Violation("drinking", 2, "פחות מ-2.5 ליטר שתיה 2 ימים ברצוף"),
+        rules.Violation("carbs", 3, "ציון פחמימות 11 ומעלה 3 ימים ברצוף"),
+    ]
+    assert notify.violation_text(violations) == (
+        "התראות תזונה:\n"
+        "• פחות מ-2.5 ליטר שתיה 2 ימים ברצוף\n"
+        "• ציון פחמימות 11 ומעלה 3 ימים ברצוף"
+    )
 
 
 def test_send_email_via_ses():

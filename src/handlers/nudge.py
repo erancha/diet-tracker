@@ -74,8 +74,7 @@ def _rules_job(env):
         state = env.store.get_nudge_state(user.sub)
         violations = rules.due_alerts(env.questionnaire, history, as_of, state)
         if violations:
-            text = "התראות תזונה:\n" + "\n".join(f"• {v.message}" for v in violations)
-            _send(env, user, "התראת תזונה — מעקב תזונה", text)
+            _send(env, user, notify.ALERT_SUBJECT, notify.violation_text(violations))
             env.store.put_nudge_state(user.sub, rules.mark_alerted(state, violations, as_of))
 
 
@@ -83,4 +82,5 @@ def _weekly(env):
     day = today()
     for user in env.users:
         history = env.store.get_days_range(user.sub, days_before(day, 6), day)
-        _send(env, user, "סיכום שבועי — מעקב תזונה", digest.weekly_text(env.questionnaire, history))
+        _send(env, user, f"סיכום שבועי — {notify.APP_NAME}",
+              digest.weekly_text(env.questionnaire, history))

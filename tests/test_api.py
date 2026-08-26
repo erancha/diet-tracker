@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+from common import rules
 from common.dates import days_before, today
 from handlers import api
 
@@ -21,6 +22,23 @@ def env(monkeypatch, ddb):
     alerts = []
     monkeypatch.setattr(api, "_alert", lambda email, violations: alerts.append((email, violations)))
     return alerts
+
+
+def test_alert_sends_the_shared_subject_and_body(monkeypatch):
+    monkeypatch.setenv("BOT_TOKEN_PARAM", "/token")
+    monkeypatch.setenv("CHAT_MAP_PARAM", "/chat-map")
+    monkeypatch.setenv("SES_SENDER", "me@x.com")
+    monkeypatch.setattr(api.boto3, "client", lambda service: None)
+    monkeypatch.setattr(api.notify, "telegram_config", lambda ssm, token, chat_map: None)
+    sent = {}
+    monkeypatch.setattr(api.notify, "send_email",
+                        lambda ses, sender, to, subject, body: sent.update(subject=subject, body=body))
+
+    violations = [rules.Violation("drinking", 2, "פחות מ-2.5 ליטר שתיה 2 ימים ברצוף")]
+    api._alert("a@gmail.com", violations)
+
+    assert sent["subject"] == api.notify.ALERT_SUBJECT
+    assert sent["body"] == api.notify.violation_text(violations)
 
 
 def request(route, body=None, path_params=None):

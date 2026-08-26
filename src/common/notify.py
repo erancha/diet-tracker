@@ -1,5 +1,5 @@
-"""Delivery primitives for the nudge channels: SES email (always on) and the optional Telegram
-Bot API.
+"""Outbound notification: what the app says in a message, and the channels that carry it — SES
+email (always on) and the optional Telegram Bot API.
 
 Telegram is called with stdlib urllib so the Lambdas carry no third-party HTTP dependency,
 keeping cold starts minimal. send_email and send_telegram raise on failure and log a
@@ -13,6 +13,16 @@ import urllib.request
 from common.log import get_logger
 
 logger = get_logger(__name__)
+
+# The frontend states the product name independently in frontend/src/appTitle.ts.
+APP_NAME = "מעקב תזונה"
+
+ALERT_SUBJECT = f"התראת תזונה — {APP_NAME}"
+
+
+def violation_text(violations) -> str:
+    """Render tripped rules as the message body."""
+    return "התראות תזונה:\n" + "\n".join(f"• {v.message}" for v in violations)
 
 
 def send_email(ses_client, sender, recipient, subject, body) -> None:
