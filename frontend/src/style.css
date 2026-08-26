@@ -48,7 +48,9 @@ h1 { font-size: min(2.1rem, 9vw); color: var(--accent); }
    global table rule sizes for the wide history grid, so the min-width is dropped here — two narrow
    columns would otherwise overflow a phone into horizontal scroll. */
 .landing-principles, .landing-repo { margin-top: 2.5rem; }
-.landing-principles { min-width: 0; width: 100%; }
+/* The block is reference material below the screen's single action, so it is toned off the body
+   text rather than competing with the summary above the button for the reader's first pass. */
+.landing-principles { min-width: 0; width: 100%; color: #5f5f5f; }
 .landing-principles caption { text-align: start; font-weight: 600; margin-bottom: 0.4rem; }
 /* The principle's bold initial opens its row, so the column reads down as the acronym. */
 .landing-principles td:first-child { white-space: nowrap; }
