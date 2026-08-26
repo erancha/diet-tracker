@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { clockTimeOf, expandMealForm } from "../dates";
 import { carbsScales, deriveDay } from "../derive";
+import { mayDiscardEdits } from "../edits";
 import type { DayPayload, Meal, NewMeal, Questionnaire } from "../types";
 import { ChoiceFieldset } from "./ChoiceFieldset";
 import { CollapsibleSection } from "./CollapsibleSection";
@@ -93,12 +94,10 @@ export function DayTracker({ questionnaire, today, firstMealHour, mealGapHours, 
     setFormCollapsed(true);
   }
 
-  // Discarding a correction is unrecoverable — the form holds the only copy of the edits — and the
-  // button doing it sits beside the one that commits them. So it asks first, but only once the form
-  // has actually moved off the stored meal: backing out of an untouched correction loses nothing,
-  // and a dialog there would train the user to dismiss the one that matters.
+  // The button doing this sits beside the one that commits the correction, so it asks through the
+  // shared discard guard before spending what the form holds.
   function cancelEdit() {
-    if (editDiverged && !window.confirm("לבטל את השינויים? מה שערכת יאבד.")) return;
+    if (!mayDiscardEdits(editDiverged)) return;
     clearForm();
   }
 
@@ -175,7 +174,7 @@ export function DayTracker({ questionnaire, today, firstMealHour, mealGapHours, 
       {/* Sits outside the fold that hides the picker: it is the only account of why the submit
           button is disabled, and that button shows either way. */}
       {mealTimeIsFuture && <p className="notice">לא ניתן לרשום ארוחה בשעה עתידית</p>}
-      <div className="tracker-actions">
+      <div className="form-actions">
         {carbsChoiceId !== undefined && (
           <button type="button" disabled={mealTimeIsFuture} onClick={submitMeal}>
             {editing !== undefined ? "עדכון ארוחה" : "רישום ארוחה"}

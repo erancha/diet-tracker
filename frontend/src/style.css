@@ -75,7 +75,7 @@ button {
   border-radius: 8px; padding: 0.6rem 2.5rem; font-size: 1rem; cursor: pointer;
 }
 /* Outlined: a control that leaves or reveals rather than commits — cancelling a correction,
-   opening the close-day panel, signing out. Cancel shares the tracker's action row with the filled
+   opening the close-day panel, signing out. Cancel shares a form's action row with the filled
    submit, and the two must not read alike. */
 button.quiet { --btn-bg: #fff; --btn-fg: var(--accent); --btn-border: #b6d0b8; }
 /* The escape hatch once it has something to destroy, since one button serves both that and the
@@ -195,9 +195,10 @@ td.view-day { cursor: pointer; }
 .meal-flags label { display: inline-flex; align-items: center; gap: 0.3rem; }
 /* The meal-time picker takes its own line so the checkbox row above keeps its wrap layout. */
 .meal-time { display: block; margin-top: 0.75rem; }
-/* The top margin separates the action buttons from the checkbox row above them, so the
-   checkboxes don't read as attached to the buttons. */
-.tracker-actions { display: flex; gap: 1rem; margin-top: 0.75rem; }
+/* The row a form closes with: the filled control that commits beside the quiet ones that leave,
+   reveal or discard. The top margin holds it off the inputs above, which would otherwise read as
+   attached to the buttons. */
+.form-actions { display: flex; gap: 1rem; margin-top: 0.75rem; }
 .tracker-dashboard { display: flex; gap: 1.2rem; flex-wrap: wrap; font-weight: 600; margin-bottom: 0.5rem; }
 /* Color falls on the figures alone, their labels staying body-colored chrome. The accent green
    reads as a measurement rather than a verdict, leaving red to mean only the high-score alarm —

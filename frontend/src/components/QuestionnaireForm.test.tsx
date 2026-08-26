@@ -1,5 +1,5 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { QuestionnaireForm } from "./QuestionnaireForm";
 import type { AnswerValue, Derived, Questionnaire } from "../types";
 
@@ -19,13 +19,22 @@ const questionnaire: Questionnaire = {
 const zeroFloors: Derived = { carbs: 0, meals: 0, vegetables: 0, eating_window: 0 };
 
 function renderForm(floors: Derived = zeroFloors, onSubmit = vi.fn(),
-                    stored?: Record<string, AnswerValue>) {
+                    stored?: Record<string, AnswerValue>, onPendingChange = vi.fn()) {
   render(<QuestionnaireForm questionnaire={questionnaire} floors={floors} stored={stored}
-                            onSubmit={onSubmit} onValidationError={vi.fn()} />);
+                            onSubmit={onSubmit} onValidationError={vi.fn()}
+                            onPendingChange={onPendingChange} />);
   return onSubmit;
 }
 
+const DISCARD_LABEL = "ביטול שינויים";
+
 describe("QuestionnaireForm", () => {
+  // What the discard prompt is answered with, per case; the cases that never reach it leave it
+  // at false, the answer that changes nothing.
+  let confirmed = false;
+  beforeEach(() => vi.spyOn(window, "confirm").mockImplementation(() => confirmed));
+  afterEach(() => vi.restoreAllMocks());
+
   it("disables radio choices below the floor", () => {
     renderForm({ ...zeroFloors, meals: 3 });
     expect(screen.getByLabelText("2 ארוחות")).toBeDisabled();
@@ -115,5 +124,58 @@ describe("QuestionnaireForm", () => {
     renderForm({ ...zeroFloors, meals: 4 });
     // drinking has 2 radios and meals 3; a synthesized option would add a sixth.
     expect(screen.getAllByRole("radio")).toHaveLength(5);
+  });
+
+  it("reports unsaved edits to the owner of the fold and the day picker", () => {
+    const onPendingChange = vi.fn();
+    renderForm(zeroFloors, vi.fn(), undefined, onPendingChange);
+    fireEvent.click(screen.getByLabelText("3 ליטר"));
+    expect(onPendingChange).toHaveBeenLastCalledWith(true);
+  });
+
+  it("reports nothing pending once the form is gone", () => {
+    const onPendingChange = vi.fn();
+    renderForm(zeroFloors, vi.fn(), undefined, onPendingChange);
+    fireEvent.click(screen.getByLabelText("3 ליטר"));
+    cleanup();
+    expect(onPendingChange).toHaveBeenLastCalledWith(false);
+  });
+
+  it("offers no discard on a form still holding what it opened on", () => {
+    renderForm();
+    expect(screen.queryByRole("button", { name: DISCARD_LABEL })).toBeNull();
+  });
+
+  it("offers to discard the edits once an answer changes", () => {
+    renderForm();
+    fireEvent.click(screen.getByLabelText("3 ליטר"));
+    expect(screen.getByRole("button", { name: DISCARD_LABEL })).toBeInTheDocument();
+  });
+
+  it("withdraws the discard when an edited answer returns to the saved one", () => {
+    renderForm(zeroFloors, vi.fn(), { drinking: 3, meals: 4, carbs: 7 });
+    const slider = screen.getByRole("slider");
+    fireEvent.change(slider, { target: { value: "9" } });
+    fireEvent.change(slider, { target: { value: "7" } });
+    expect(screen.queryByRole("button", { name: DISCARD_LABEL })).toBeNull();
+  });
+
+  it("restores the answers the form opened on once the discard is confirmed", () => {
+    confirmed = true;
+    renderForm(zeroFloors, vi.fn(), { drinking: 3, meals: 4, carbs: 7 });
+    fireEvent.click(screen.getByLabelText("2.5 ליטר"));
+    fireEvent.change(screen.getByRole("slider"), { target: { value: "9" } });
+    fireEvent.click(screen.getByRole("button", { name: DISCARD_LABEL }));
+    expect(screen.getByLabelText("3 ליטר")).toBeChecked();
+    expect(screen.getByRole("slider")).toHaveValue("7");
+  });
+
+  it("keeps the edits when the discard is declined", () => {
+    confirmed = false;
+    renderForm(zeroFloors, vi.fn(), { drinking: 3, meals: 4, carbs: 7 });
+    fireEvent.change(screen.getByRole("slider"), { target: { value: "9" } });
+    fireEvent.click(screen.getByRole("button", { name: DISCARD_LABEL }));
+    expect(screen.getByRole("slider")).toHaveValue("9");
+    expect(screen.getByRole("button", { name: DISCARD_LABEL })).toBeInTheDocument();
   });
 });

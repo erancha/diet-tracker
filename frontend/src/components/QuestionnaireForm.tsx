@@ -1,5 +1,6 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { AnswerValue, Choice, Derived, Questionnaire } from "../types";
+import { mayDiscardEdits } from "../edits";
 import { questionTitle } from "../violations";
 import { ChoiceFieldset, fieldsetChoices } from "./ChoiceFieldset";
 import { PointsSlider } from "./PointsSlider";
@@ -12,27 +13,56 @@ interface Props {
   stored?: Record<string, AnswerValue>;
   onSubmit: (answers: Record<string, number>) => void;
   onValidationError: (message: string) => void;
+  // Raised while the answers differ from the ones the form opened on. The form's own discard
+  // button covers the deliberate route out; the fold this form sits in and the day it is keyed by
+  // live above it and discard just as thoroughly, so their owner needs the divergence to guard
+  // them too.
+  onPendingChange: (pending: boolean) => void;
 }
 
 // Renders the day-end questionnaire: single questions as radio groups floored by the day's
 // recorded meals, points questions as sliders pinned to the recorded sum. Radio questions rely
 // on native required-field validation; sliders always hold a value, starting at their floor.
-// Both state hooks seed once from the stored answers, so the caller re-keys this component when
-// the selected day changes.
-export function QuestionnaireForm({ questionnaire, floors, stored, onSubmit, onValidationError }: Props) {
+// The state seeds once from the stored answers, so the caller re-keys this component when the
+// selected day changes; answers edited since are restorable from here and reported up as pending.
+export function QuestionnaireForm({ questionnaire, floors, stored, onSubmit, onValidationError,
+                                    onPendingChange }: Props) {
   const formRef = useRef<HTMLFormElement>(null);
   const floorOf = (questionId: string): number =>
     questionId in floors ? floors[questionId as keyof Derived] : 0;
-  const [answers, setAnswers] = useState<Record<string, number>>(() => ({
+  // The answers the form opened on, held apart from the live ones so an edit is recognizable as
+  // such and restorable from them. A day with no record opens on its sliders' floors.
+  const [openedOn] = useState<Record<string, number>>(() => ({
     ...Object.fromEntries(questionnaire.questions
       .filter((q) => q.type === "points")
       .map((q) => [q.id, floorOf(q.id)])),
     ...stored,
   }));
+  const [answers, setAnswers] = useState(openedOn);
   // Single-type answers store their choice id alongside the numeric answer above: two choices
   // can share a value, and only the id tells the radio group which one is checked.
-  const [selectedIds, setSelectedIds] = useState<Record<string, string>>(() =>
+  const [openedOnSelections] = useState<Record<string, string>>(() =>
     stored === undefined ? {} : storedSelections(questionnaire, floorOf, stored));
+  const [selectedIds, setSelectedIds] = useState(openedOnSelections);
+
+  // Values alone decide this: a radio pick landing on the value already held would submit the
+  // same day, so it is not an edit worth offering to undo.
+  const pendingEdits = Object.keys({ ...openedOn, ...answers })
+    .some((questionId) => answers[questionId] !== openedOn[questionId]);
+
+  useEffect(() => {
+    onPendingChange(pendingEdits);
+    // Unmounting is the fold closing or the day switching: whatever was held here went with it.
+    return () => onPendingChange(false);
+  }, [pendingEdits, onPendingChange]);
+
+  // Restoring both hooks to what they were seeded with puts the form back where it opened,
+  // radio groups included — the discard is offered only while there is something to restore.
+  function discardEdits() {
+    if (!mayDiscardEdits(pendingEdits)) return;
+    setAnswers(openedOn);
+    setSelectedIds(openedOnSelections);
+  }
 
   const pickPoints = (questionId: string, value: number) =>
     setAnswers((a) => ({ ...a, [questionId]: value }));
@@ -68,7 +98,14 @@ export function QuestionnaireForm({ questionnaire, floors, stored, onSubmit, onV
                           floor={floorOf(question.id)} stored={stored?.[question.id]}
                           onPick={(c) => pickChoice(question.id, c)} />
         ))}
-      <button type="button" onClick={handleSubmit}>שליחה</button>
+      <div className="form-actions">
+        <button type="button" onClick={handleSubmit}>שליחה</button>
+        {pendingEdits && (
+          <button type="button" className="quiet destructive" onClick={discardEdits}>
+            ביטול שינויים
+          </button>
+        )}
+      </div>
     </form>
   );
 }

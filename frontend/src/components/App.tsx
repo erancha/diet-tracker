@@ -4,6 +4,7 @@ import { alertMessage, type Api } from "../api";
 import { activeViolations } from "../violations";
 import type { AnswerValue, NewMeal, Questionnaire } from "../types";
 import { dayEnded, defaultDay, expandQuestionnaire, isoDate, yesterdayOf } from "../dates";
+import { mayDiscardEdits } from "../edits";
 import { Alerts, type AlertItem } from "./Alerts";
 import { CollapsibleSection } from "./CollapsibleSection";
 import { DayPicker, type DayChoice } from "./DayPicker";
@@ -16,9 +17,10 @@ import { TrendChart } from "./TrendChart";
 
 // Top-level screen: owns the server data (questionnaire config, day history, today's and
 // yesterday's meal payloads, on-demand past-day payloads) and every mutation — meal recording
-// and deletion, day submission with tracked floors, day deletion — plus the submit → alerts flow
-// and the day-end section's fold it closes; the components below it hold no server state of their
-// own.
+// and deletion, day submission with tracked floors, day deletion — plus the submit → alerts flow,
+// the day-end section's fold it closes, and the guard that keeps that fold and the day picker from
+// throwing away answers the day-end form has not submitted; the components below it hold no server
+// state of their own.
 export function App({ email, api, reminderHour, firstMealHour, mealGapHours, onSignOut }: {
   email: string; api: Api; reminderHour: number; firstMealHour: number; mealGapHours: number;
   onSignOut: () => void;
@@ -35,6 +37,10 @@ export function App({ email, api, reminderHour, firstMealHour, mealGapHours, onS
   // folding the answered form away behind its confirmation. Null until then, because the fold the
   // section opens on reads the day's state, which is not known before the history loads.
   const [questionnaireCollapsed, setQuestionnaireCollapsed] = useState<boolean | null>(null);
+  // Whether the day-end form holds answers it has not submitted. The form is unmounted by the
+  // fold and reseeded by the day switch, both owned here, so its edits survive neither — this is
+  // what lets the two ask before spending them.
+  const [pendingAnswers, setPendingAnswers] = useState(false);
   const todaySelectable = dayEnded(now, reminderHour);
   const [day, setDay] = useState<DayChoice>(() => defaultDay(now, reminderHour));
 
@@ -129,12 +135,16 @@ export function App({ email, api, reminderHour, firstMealHour, mealGapHours, onS
   // of costing a row of its own; open, it needs the page width and returns to its own row below.
   // Its heading level follows that move, keeping the document outline ordered either way.
   const daySummaryFoldedIntoTracker = !todaySubmitted && !questionnaireOpen;
+  const toggleDaySummary = () => {
+    if (mayDiscardEdits(pendingAnswers)) setQuestionnaireCollapsed(questionnaireOpen);
+  };
   const daySummarySection = (
     <CollapsibleSection title="שאלון סיכום יום" collapsed={!questionnaireOpen}
                         headingLevel={daySummaryFoldedIntoTracker ? 3 : 2}
-                        onToggle={() => setQuestionnaireCollapsed(questionnaireOpen)}>
+                        onToggle={toggleDaySummary}>
       <DayPicker todayStr={todayStr} yesterdayStr={yesterdayStr} value={day}
-                 todaySelectable={todaySelectable} reminderHour={reminderHour} onChange={setDay} />
+                 todaySelectable={todaySelectable} reminderHour={reminderHour}
+                 onChange={(next) => { if (mayDiscardEdits(pendingAnswers)) setDay(next); }} />
       {/* Re-keyed per day so switching between today and yesterday reseeds the form from the
           newly selected day's saved answers. */}
       <QuestionnaireForm
@@ -144,6 +154,7 @@ export function App({ email, api, reminderHour, firstMealHour, mealGapHours, onS
         stored={answersByDate.get(selectedDate)}
         onSubmit={submit}
         onValidationError={(message) => setAlerts([{ kind: "alert", message }])}
+        onPendingChange={setPendingAnswers}
       />
     </CollapsibleSection>
   );
