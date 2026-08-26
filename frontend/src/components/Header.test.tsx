@@ -4,6 +4,12 @@ import userEvent from "@testing-library/user-event";
 import { Header } from "./Header";
 
 describe("Header", () => {
+  it("titles the signed-in app with the same name the landing page shows", () => {
+    render(<Header email="a@b.com" onSignOut={vi.fn()} activeViolations={[]} />);
+
+    expect(screen.getByRole("heading", { name: "מעקב תזונה" })).toBeInTheDocument();
+  });
+
   it("invokes onSignOut when the sign-out button is clicked", async () => {
     const onSignOut = vi.fn();
     render(<Header email="a@b.com" onSignOut={onSignOut} activeViolations={[]} />);

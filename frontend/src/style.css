@@ -24,7 +24,11 @@ header .account-actions { display: flex; align-items: center; gap: 0.4rem; }
 /* The alarm is a warning indicator, not an action, so it wears the alert palette instead of the
    accent button green. */
 header .alarm { background: #ffebee; color: var(--danger); }
-h1 { font-size: 1.4rem; color: var(--accent); }
+/* The app title, on both the landing and the signed-in chrome. It reads above every section heading
+   below it — including the tracker's enlarged one — so the page opens on its name rather than on
+   whichever section happens to shout loudest. The viewport term keeps it off the account box on a
+   narrow phone. */
+h1 { font-size: min(2.1rem, 9vw); color: var(--accent); }
 .landing { display: flex; flex-direction: column; }
 .landing-intro { margin-bottom: 0.6rem; }
 /* On a phone the bullets wrap several times, so the marker column is trimmed well below the browser

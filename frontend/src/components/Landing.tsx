@@ -7,12 +7,14 @@
  * with the acronym's first mention linking down to it.
  * Rendered instead of the questionnaire until sign-in completes.
  */
+import { APP_TITLE } from "../appTitle";
+
 // Ties the intro's link to the table it jumps to, so neither can drift from the other.
 const PRINCIPLES_ID = "landing-principles";
 export function Landing({ onSignIn }: { onSignIn: () => void }) {
   return (
     <main className="landing">
-      <h1>מעקב תזונה</h1>
+      <h1>{APP_TITLE}</h1>
       <p className="landing-intro">
         אפליקציית SaaS חינמית — יומן ארוחות יומי שעוזר לשמור על הרגלי אכילה בריאים לאורך זמן,
         סביב ארבעת עקרונות השכפ"צ (<a href={`#${PRINCIPLES_ID}`}>בטבלה שבסוף העמוד</a>):

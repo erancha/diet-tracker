@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { APP_TITLE } from "../appTitle";
 
 // App chrome: the title, the account box, and — while rule violations are still active — an
 // alarm that survives reloads, unlike the transient post-submit banner. The alarm starts closed
@@ -10,7 +11,7 @@ export function Header({ email, onSignOut, activeViolations }: {
   return (
     <>
       <header>
-        <h1>שאלון תזונה יומי</h1>
+        <h1>{APP_TITLE}</h1>
         <span>
           {email}
           <span className="account-actions">
