@@ -588,28 +588,27 @@ function weekdayDdmm(s) { return WEEKDAY_LETTERS[parseIso(s).getDay()] + "׳ " +
 function last7Days(end) { return Array.from({ length: 7 }, (_, i) => daysBefore(end, 6 - i)); }
 
 /* trend.ts */
-function shortForm(label) {
-  const m = label.match(/^(מעל|פחות מ-?)\s*(\d+(?:\.\d+)?)/);
-  if (!m) return null;
-  return m[1].endsWith("-") ? m[1] + m[2] : m[1] + " " + m[2];
-}
+const OPEN_BOUND_LABEL = /^(מעל|פחות מ-?)\s*\d/;
+const EDGE_PADDING = 0.08;
 function ticksFor(q) {
-  if (q.type === "points") return [0, q.max / 2, q.max].map(v => ({ value: v, label: String(v) }));
-  const values = [...new Set(q.choices.map(c => c.value))].sort((a, b) => a - b);
+  if (q.type === "points") return [0, q.max / 2, q.max];
+  const measured = q.choices.filter(c => !OPEN_BOUND_LABEL.test(c.label));
+  const values = [...new Set(measured.map(c => c.value))].sort((a, b) => a - b);
   const min = values[0], max = values[values.length - 1], midTarget = (min + max) / 2;
   const mid = values.reduce((closest, v) => Math.abs(v - midTarget) < Math.abs(closest - midTarget) ? v : closest, min);
-  return [...new Set([min, mid, max])].map(value => {
-    const choice = q.choices.find(c => c.value === value);
-    return { value, label: (choice && shortForm(choice.label)) || String(value) };
-  });
+  return [...new Set([min, mid, max])];
 }
 function domainFor(q, values) {
   if (q.type === "points") {
     const dataMax = values.reduce((max, v) => (v !== null && v > max ? v : max), 0);
     return [-0.5, Math.max(q.max, dataMax) + 0.5];
   }
-  const cv = q.choices.map(c => c.value);
-  return [Math.min(...cv) - 0.5, Math.max(...cv) + 0.5];
+  const ticks = ticksFor(q);
+  const plotted = values.filter(v => v !== null);
+  const min = Math.min(ticks[0], ...plotted);
+  const max = Math.max(ticks[ticks.length - 1], ...plotted);
+  const padding = (max - min) * EDGE_PADDING;
+  return [min - padding, max + padding];
 }
 function liveTrendDay(today, days) {
   if (today.meals.length === 0 || days.some(d => d.date === today.date)) return null;
@@ -743,7 +742,7 @@ function trackerHtml() {
 }
 
 /* ── trend chart: the Recharts geometry, drawn as SVG ─────────────────── */
-const CHART_W = 340, Y_AXIS_W = 78, MARGIN_R = 14, TOP = 6, AXIS_H = 30;
+const CHART_W = 340, Y_AXIS_W = 40, MARGIN_R = 14, TOP = 6, AXIS_H = 30;
 
 function trendPanelHtml(q, dayStrs, byDate, index, showXAxis) {
   const color = "var(--viz-series-" + (index + 1) + ")";
@@ -765,11 +764,11 @@ function trendPanelHtml(q, dayStrs, byDate, index, showXAxis) {
     '" role="img" aria-label="' + esc(panelTitle(q)) + '">';
 
   ticks.forEach(t => {
-    svg += '<line x1="' + Y_AXIS_W + '" y1="' + y(t.value).toFixed(1) + '" x2="' + (CHART_W - MARGIN_R) +
-      '" y2="' + y(t.value).toFixed(1) + '" stroke="var(--viz-grid)"></line>';
-    svg += '<text x="' + (Y_AXIS_W - 5) + '" y="' + (y(t.value) + 4).toFixed(1) +
+    svg += '<line x1="' + Y_AXIS_W + '" y1="' + y(t).toFixed(1) + '" x2="' + (CHART_W - MARGIN_R) +
+      '" y2="' + y(t).toFixed(1) + '" stroke="var(--viz-grid)"></line>';
+    svg += '<text x="' + (Y_AXIS_W - 5) + '" y="' + (y(t) + 4).toFixed(1) +
       '" text-anchor="end" font-size="11" fill="var(--viz-muted)" font-family="system-ui, sans-serif">' +
-      esc(t.label) + "</text>";
+      String(t) + "</text>";
   });
 
   /* connectNulls={false}: the line breaks wherever a day has no record. */

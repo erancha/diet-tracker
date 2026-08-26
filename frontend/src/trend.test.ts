@@ -53,8 +53,16 @@ describe("liveTrendDay", () => {
 });
 
 describe("domainFor", () => {
-  it("keeps the choice-value domain for single questions, ignoring plotted data", () => {
-    expect(domainFor(drinking, [2, 3, null])).toEqual([1.5, 4.5]);
+  it("spans the gridlines alone when every day plots between them", () => {
+    const [low, high] = domainFor(drinking, [3, 4, null]);
+    expect(low).toBeCloseTo(2.92);
+    expect(high).toBeCloseTo(4.08);
+  });
+
+  it("reaches past a gridline for a day plotted beyond it", () => {
+    const [low, high] = domainFor(drinking, [2, 3, null]);
+    expect(low).toBeCloseTo(1.84);
+    expect(high).toBeCloseTo(4.16);
   });
 
   it("spans the configured max for a points question even when day totals stay under it", () => {

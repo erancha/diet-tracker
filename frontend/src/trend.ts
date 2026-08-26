@@ -37,15 +37,27 @@ export function ticksFor(question: Question): number[] {
   return [...new Set([min, mid, max])];
 }
 
+// Breathing room past each end of the plotted span, as a fraction of it, so a dot sitting on the
+// outermost gridline or on the extreme day still draws clear of the panel edge.
+const EDGE_PADDING = 0.08;
+
 // The panel's y-axis bounds. A points question's plotted value is a summed day total, not a
 // choice value, and can run past the highest individual choice (e.g. two heavy-carbs meals) —
 // its domain spans the configured max, extended further if a day total still exceeds that.
-// Single-type questions plot one choice value per day, so their domain stays choice-bound.
+//
+// Other questions span their gridlines, so the outermost measured choices stay on screen as the
+// reference the days are read against, extended to whatever the week actually plots past them: a
+// day answering an open-ended bound, or a computed value between choices. Days keep their true
+// linear spacing, and a bound nobody answered this week costs the panel no height.
 export function domainFor(question: Question, values: (number | null)[]): [number, number] {
   if (question.type === "points") {
     const dataMax = values.reduce<number>((max, v) => (v !== null && v > max ? v : max), 0);
     return [-0.5, Math.max(question.max!, dataMax) + 0.5];
   }
-  const choiceValues = question.choices.map((c) => c.value);
-  return [Math.min(...choiceValues) - 0.5, Math.max(...choiceValues) + 0.5];
+  const ticks = ticksFor(question);
+  const plotted = values.filter((v) => v !== null);
+  const min = Math.min(ticks[0], ...plotted);
+  const max = Math.max(ticks[ticks.length - 1], ...plotted);
+  const padding = (max - min) * EDGE_PADDING;
+  return [min - padding, max + padding];
 }
