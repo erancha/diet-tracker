@@ -1,4 +1,4 @@
-"""Scheduled nudge jobs: fill reminders, nightly rule evaluation, weekly digest.
+"""Scheduled nudge jobs: fill reminders, nightly rule evaluation, weekly digest, weekly weigh-in.
 
 EventBridge Scheduler invokes this handler with {"job": ...}; each job iterates every user in
 the pool. NudgeEnv gathers all AWS-derived inputs once so job logic stays pure and testable."""
@@ -8,10 +8,9 @@ from dataclasses import dataclass
 
 import boto3
 
-from common import digest, notify, rules, users
+from common import appconfig, digest, notify, rules, users, weight
 from common.dates import days_before, today
 from common.log import get_logger
-from common.questionnaire import load
 from common.rules import LOOKBACK_DAYS
 from common.store import Store
 
@@ -29,7 +28,8 @@ class NudgeEnv:
 
 
 def handler(event, context):
-    jobs = {"reminder": _reminder, "rules": _rules_job, "weekly": _weekly}
+    jobs = {"reminder": _reminder, "rules": _rules_job, "weekly": _weekly,
+            "weigh_in": _weigh_in}
     env = _build_env()
     logger.info("job=%s starting users=%d", event["job"], len(env.users))
     jobs[event["job"]](env)
@@ -39,8 +39,9 @@ def handler(event, context):
 def _build_env() -> NudgeEnv:
     ssm = boto3.client("ssm")
     return NudgeEnv(
-        store=Store(os.environ["DAYS_TABLE"], os.environ["MEALS_TABLE"], os.environ["STATE_TABLE"]),
-        questionnaire=load(os.environ["QUESTIONNAIRE_PATH"]),
+        store=Store(os.environ["DAYS_TABLE"], os.environ["MEALS_TABLE"], os.environ["STATE_TABLE"],
+                    os.environ["WEIGHTS_TABLE"]),
+        questionnaire=appconfig.load(os.environ["APP_CONFIG_PATH"]).questionnaire,
         users=users.list_users(boto3.client("cognito-idp"), os.environ["USER_POOL_ID"]),
         telegram=notify.telegram_config(ssm, os.environ["BOT_TOKEN_PARAM"], os.environ["CHAT_MAP_PARAM"]),
         ses=boto3.client("ses"),
@@ -84,3 +85,13 @@ def _weekly(env):
         history = env.store.get_days_range(user.sub, days_before(day, 6), day)
         _send(env, user, f"סיכום שבועי — {notify.APP_NAME}",
               digest.weekly_text(env.questionnaire, history))
+
+
+def _weigh_in(env):
+    """Weekly weigh-in reminder. Someone who already stepped on the scale within the week has
+    done the thing being asked of them, so the schedule's own week is the window that decides."""
+    day = today()
+    for user in env.users:
+        if env.store.get_weights_range(user.sub, days_before(day, 6), day):
+            continue
+        _send(env, user, weight.REMINDER_SUBJECT, weight.REMINDER_TEXT)

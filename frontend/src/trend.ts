@@ -13,22 +13,17 @@ export function liveTrendDay(today: DayPayload, days: Day[]): Day | null {
   return { date: today.date, answers: { carbs: today.derived.carbs } };
 }
 
-// A choice phrased as an open-ended bound ("מעל 12 שעות", "פחות מ-2.5 ליטר") answers for
-// everything past the ladder's last measured step, so its stored value is a sentinel one step
-// beyond that step rather than a quantity of its own.
-const OPEN_BOUND_LABEL = /^(מעל|פחות מ-?)\s*\d/;
-
 // Points questions get fixed 0 / midpoint / max gridlines over their day-total scale. Other
 // questions get two or three gridlines at the lowest, nearest-to-midpoint, and highest measured
-// choice value. The open-ended bounds are left out: they mark no position on the scale, so a day
-// answering one plots past the outermost gridline — inside the padding domainFor keeps for it —
-// and reads as beyond that bound.
+// choice value. The choices the config marks as open-ended bounds are left out: they mark no
+// position on the scale, so a day answering one plots past the outermost gridline — inside the
+// padding domainFor keeps for it — and reads as beyond that bound.
 export function ticksFor(question: Question): number[] {
   if (question.type === "points") {
     const max = question.max!;
     return [0, max / 2, max];
   }
-  const measured = question.choices.filter((c) => !OPEN_BOUND_LABEL.test(c.label));
+  const measured = question.choices.filter((c) => c.bound !== true);
   const values = [...new Set(measured.map((c) => c.value))].sort((a, b) => a - b);
   const min = values[0];
   const max = values[values.length - 1];

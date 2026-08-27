@@ -1,11 +1,9 @@
-"""Loads and validates the questionnaire config — the single source of truth for questions,
-numeric choice values (meal-point weights for carbs), and threshold alert rules shared by the
-API, the nudge jobs, and the frontend."""
+"""Parses and validates the questionnaire element of the app config — the single source of truth
+for questions, numeric choice values (meal-point weights for carbs), and threshold alert rules
+shared by the API, the nudge jobs, and the frontend. Reading the file is appconfig's job."""
 
-import json
 from dataclasses import dataclass
 from numbers import Number
-from pathlib import Path
 
 
 @dataclass(frozen=True)
@@ -13,9 +11,32 @@ class Choice:
     id: str
     label: str
     value: float
+    # A choice phrased as an open-ended bound answers for everything past the ladder's last
+    # measured step, so its value is a sentinel one step beyond rather than a quantity. Mirrors
+    # the bound field frontend/src/types.ts declares.
+    bound: bool = False
 
 
 QUESTION_TYPES = {"single", "points"}
+
+
+@dataclass(frozen=True)
+class SmallPortion:
+    """The reduced-quantity option a carbs choice may be recorded at.
+
+    The grade ladder ranks a meal by its carb source alone, so quantity is recorded separately: a
+    meal marked as a small portion counts its grade's weight at `percent`. It is offered only from
+    `from_value` up, where a lighter helping is a distinction worth drawing and the reduced weight
+    still lands above zero."""
+    label: str
+    from_value: float
+    percent: float
+
+    def offered_for(self, weight: float) -> bool:
+        return weight >= self.from_value
+
+    def weigh(self, weight: float) -> float:
+        return weight * self.percent / 100
 
 
 @dataclass(frozen=True)
@@ -28,6 +49,9 @@ class Question:
     # config also carries a meal_qualifier for the frontend's per-meal picker; the backend never
     # renders a meal-scope heading, so it is not modeled here.
     day_qualifier: str | None
+    # What the question measures, named in the day-scope heading — see day_title. Mirrors the
+    # unit field frontend/src/types.ts declares.
+    unit: str | None
     # Present only on questions charted as a trend panel.
     panel_title: str | None
     # Present only on points questions: the day-end slider's top of scale. Meal sums may
@@ -37,18 +61,23 @@ class Question:
     # too many nuts), each with the point cost it adds on top of the meal's grade. Not choices,
     # so they never appear in the grade picker or carb_weights().
     additions: tuple[Choice, ...] | None
+    # Present only on the carbs question: the quantity axis the grade ladder does not carry.
+    small_portion: "SmallPortion | None"
 
     @property
     def day_title(self) -> str:
         """The question's day-scope heading — the base text plus the day qualifier when one is
-        declared. Mirrors questionTitle(question, "day") in frontend/src/violations.ts."""
-        if self.day_qualifier is None:
+        declared, else the unit it measures in. Mirrors questionTitle(question, "day") in
+        frontend/src/violations.ts."""
+        qualifier = self.day_qualifier if self.day_qualifier is not None else self.unit
+        if qualifier is None:
             return self.text
-        return f"{self.text} ({self.day_qualifier})"
+        return f"{self.text} ({qualifier})"
 
     def value_label(self, value) -> str:
-        """The choice label for an exactly-matching value, else the number itself as text —
-        stored values between choice anchors (e.g. a computed 10.4h window) are legal. A points
+        """The choice label for an exactly-matching value. Stored values between choice anchors,
+        or past them, are legal — the meal log derives them — and carry the question's unit so a
+        computed 10.4h window reads as an eating window rather than a bare number. A points
         question stores a summed score, not a picked choice, so its value is always rendered as
         the number: a score of 3 happening to equal grade3's per-meal weight does not mean
         grade3 was eaten."""
@@ -57,7 +86,9 @@ class Question:
         for choice in self.choices:
             if choice.value == value:
                 return choice.label
-        return f"{value:g}"
+        if self.unit is None:
+            return f"{value:g}"
+        return f"{value:g} {self.unit}"
 
 
 @dataclass(frozen=True)
@@ -106,6 +137,13 @@ class Questionnaire:
             raise ValueError("carbs question must declare additions")
         return {addition.id: addition.value for addition in additions}
 
+    def small_portion(self) -> SmallPortion:
+        """The carbs question's reduced-portion option; the config must declare it."""
+        declared = self.question("carbs").small_portion
+        if declared is None:
+            raise ValueError("carbs question must declare small_portion")
+        return declared
+
     def validate_answers(self, answers: dict, floors: dict | None = None) -> None:
         """Rejects answers outside each question's domain: a single question accepts only its
         choice values, a points question its 0..max range. A value equal to its entry in floors
@@ -140,8 +178,7 @@ class Questionnaire:
                     f"({question.max})")
 
 
-def load(path) -> Questionnaire:
-    raw = json.loads(Path(path).read_text(encoding="utf-8"))
+def parse(raw: dict) -> Questionnaire:
     questions = []
     for q in raw["questions"]:
         if q.get("type") not in QUESTION_TYPES:
@@ -154,10 +191,16 @@ def load(path) -> Questionnaire:
                 raise ValueError(f"addition {a['id']!r} of question {q['id']!r} needs a numeric value")
         questions.append(Question(
             id=q["id"], type=q["type"], text=q["text"],
-            choices=tuple(Choice(id=c["id"], label=c["label"], value=c["value"]) for c in q["choices"]),
-            day_qualifier=q.get("day_qualifier"), panel_title=q.get("panel_title"), max=q.get("max"),
+            choices=tuple(Choice(id=c["id"], label=c["label"], value=c["value"],
+                                 bound=c.get("bound", False)) for c in q["choices"]),
+            day_qualifier=q.get("day_qualifier"), unit=q.get("unit"),
+            panel_title=q.get("panel_title"), max=q.get("max"),
             additions=tuple(Choice(id=a["id"], label=a["label"], value=a["value"])
                             for a in q["additions"]) if "additions" in q else None,
+            small_portion=SmallPortion(label=q["small_portion"]["label"],
+                                       from_value=q["small_portion"]["from_value"],
+                                       percent=q["small_portion"]["percent"])
+            if "small_portion" in q else None,
         ))
     questions = tuple(questions)
     rules = []

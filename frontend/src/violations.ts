@@ -48,21 +48,36 @@ export function isHighScore(question: Question, value: number): boolean {
   return question.max !== undefined && value > question.max * HIGH_SCORE_FRACTION;
 }
 
-// The choice label for an exactly-matching value, else the number itself — stored values
-// between choice anchors (e.g. a computed 10.4h window) are legal. A points question stores a
-// summed score, not a picked choice, so its value is always shown as the number: a score of 3
-// happening to equal grade3's per-meal weight does not mean grade3 was eaten.
+// The choice label for an exactly-matching value, for the places that show a value on its own —
+// a radio option, a chart tooltip — where nothing else names the unit. Stored values between
+// choice anchors, or past them, are legal, since the meal log derives them, and carry the unit
+// themselves. A points question stores a summed score, not a picked choice, so its value is
+// always shown as the number: a score of 3 happening to equal grade3's per-meal weight does not
+// mean grade3 was eaten.
 export function valueLabel(question: Question, value: number): string {
   if (question.type === "points") return String(value);
-  return question.choices.find((c) => c.value === value)?.label ?? String(value);
+  const choice = question.choices.find((c) => c.value === value);
+  if (choice !== undefined) return choice.label;
+  return question.unit === undefined ? String(value) : `${value} ${question.unit}`;
+}
+
+// The same value under a heading that already names the unit: the number alone, so a column of
+// them reads as a column of quantities rather than repeating the unit down every row. A choice
+// phrased as an open-ended bound is not a quantity — its wording is the only thing that says what
+// it means — so it keeps its label whatever the heading says.
+export function headedValue(question: Question, value: number): string {
+  if (question.type === "points") return String(value);
+  const choice = question.choices.find((c) => c.value === value);
+  return choice?.bound === true ? choice.label : String(value);
 }
 
 // A question's heading for one scope. The config stores the base text once; a scope that shifts
 // its meaning (a day heading shows a summed score, a tracker meal a single grade, a trend panel
-// a charted score) declares a qualifier, appended here in parentheses. The same day-scope
-// composition exists server-side as Question.day_title for digest emails.
+// a charted score) declares a qualifier, appended here in parentheses. A day heading with no
+// qualifier of its own names the unit instead, which is what lets the values beneath it drop it.
+// The same day-scope composition exists server-side as Question.day_title for digest emails.
 export function questionTitle(question: Question, scope: "day" | "meal" | "panel"): string {
-  const qualifier = scope === "day" ? question.day_qualifier
+  const qualifier = scope === "day" ? question.day_qualifier ?? question.unit
     : scope === "meal" ? question.meal_qualifier
     : question.panel_qualifier;
   return qualifier === undefined ? question.text : `${question.text} (${qualifier})`;

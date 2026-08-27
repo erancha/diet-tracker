@@ -4,7 +4,7 @@
 
 Each meal is recorded as it happens with a timestamp, a carb grade, whether it included
 vegetables or fruit, and its additions (see below). Every carb grade carries a point weight defined in
-`config/questionnaire.json`; the day's carb score is the sum of its meals' weights. Scoring is
+`config/app.json`; the day's carb score is the sum of its meals' weights. Scoring is
 golf-style: lower is better.
 
 The day's four tracked values all derive from the meal log:
@@ -65,11 +65,38 @@ authority, `frontend/src/derive.ts` client-side for live dashboard feedback. Bot
 must satisfy the shared test vectors in `config/derive-vectors.json`, keeping the two runtimes in
 lockstep.
 
+## Weight
+
+The weight log runs beside the day tracker rather than inside it. A weight is measured, not
+judged: it enters no day score, no questionnaire floor, and no threshold alert, so a climbing
+weight is something the chart shows rather than a nudge that fires.
+
+- **One measurement per calendar day**, in kilograms, recorded for today. Re-recording replaces
+  the day's value, which is how a mistyped weight is corrected.
+- **A single current target**, revised in place. The chart draws it as a reference line and the
+  section's at-a-glance summary reads the latest weight against it. A user who has never set one
+  has no target, and the chart draws no line.
+- **Deletion at any date.** Day records and meals are confined to a today-and-yesterday window
+  because they feed scoring and the derived floors that validate a submission. A weight feeds
+  neither, so removing an old one restates nothing — and a measurement logged against the wrong
+  day would otherwise have no way out of the chart.
+- **Chart span** — the chart opens on the configured number of months and offers wider spans only
+  where the recorded series actually reaches past them.
+- **Weigh-in reminder** — a weekly nudge on the configured weekday and hour, skipping any user who
+  already recorded a weight within the last seven days. It reaches the user by email, and by
+  Telegram where that channel is configured, rather than waiting in the app.
+
 ## Versioned configuration
 
-`config/questionnaire.json` is a single versioned config holding the questionnaire questions,
-their numeric choice values (the carb meal-point weights among them), and the threshold alert
-rules.
+`config/app.json` is the app's single versioned config. Its `questionnaire` element holds the
+questions, their numeric choice values (the carb meal-point weights among them), and the threshold
+alert rules; its `version` is stamped on every submitted day, so it tracks the questions and their
+values alone. Its `weight` element holds the weigh-in weekday and hour, the chart's opening span,
+and the kilogram bounds both the API and the frontend input constrain to.
+
+Both runtimes read the same file: the Lambda package carries it, and the frontend fetches it from
+its own origin. The weigh-in weekday and hour are the one part `scripts/deploy.sh` also lifts out
+at deploy time, because an EventBridge cron expression is fixed when the stack deploys.
 
 ## Nudges
 
@@ -80,4 +107,6 @@ Scheduled jobs (EventBridge Scheduler, Asia/Jerusalem) run alongside the tracker
   plus Telegram when a bot token is configured (see
   [Development & deployment](development.md#telegram-optional)).
 - **Weekly digest** — a weekly averages summary.
+- **Weigh-in reminder** — a weekly prompt to step on the scale, skipped for anyone who already
+  recorded a weight that week, on the same channels as the alerts above.
 - **Trend chart** — a 7-day trend chart after each submit.

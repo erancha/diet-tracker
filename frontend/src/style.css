@@ -10,8 +10,15 @@
   --viz-muted: #898781;
   --column-width: 48rem;
 }
-body { font-family: system-ui, sans-serif; max-width: var(--column-width); margin: 0 auto; padding: 1rem; background: #fafafa; color: #212121; }
-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 1rem; }
+/* The top edge is tighter than the other three: both screens open on the app title, which sits
+   directly on this padding with no heading margin of its own, so a full rem here would read as a
+   gap before the page starts rather than as its edge. */
+body { font-family: system-ui, sans-serif; max-width: var(--column-width); margin: 0 auto; padding: 0.6rem 1rem 1rem; background: #fafafa; color: #212121; }
+/* The title's own heading margins are dropped: the body's top padding already sets the page's
+   edge, and the weight line below reads as the title's own status line rather than as a separate
+   block, so the row closes tight on both sides. */
+header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.35rem; }
+header h1 { margin-bottom: 0; }
 /* The account box sits on the page's left edge (flex end in this RTL layout) and stacks the
    email above a single row of account buttons; align-items flex-end keeps both on the box's
    left edge rather than right-aligned per RTL default. It is auxiliary chrome, so it reads
@@ -29,9 +36,13 @@ header .alarm { --btn-bg: #ffebee; --btn-fg: var(--danger); --btn-border: #f3c9c
    below it — including the tracker's enlarged one — so the page opens on its name rather than on
    whichever section happens to shout loudest. The viewport term keeps it off the account box on a
    narrow phone. */
-h1 { font-size: min(2.1rem, 9vw); color: var(--accent); }
+h1 { font-size: min(2.1rem, 9vw); color: var(--accent); margin-top: 0; }
 .landing { display: flex; flex-direction: column; }
-.landing-intro { margin-bottom: 0.6rem; }
+/* Half the browser's default gap between the title and the summary it introduces. The column is a
+   flex container, so these margins stand rather than collapsing into each other — the intro's own
+   share is halved alongside the title's. */
+.landing h1 { margin-bottom: 0.335em; }
+.landing-intro { margin-top: 0.5em; margin-bottom: 0.6rem; }
 /* On a phone the bullets wrap several times, so the marker column is trimmed well below the browser
    default to widen the text measure. From tablet width up the line has room either way, and the
    default indent returns. */
@@ -111,8 +122,19 @@ button:disabled { --btn-bg: #e4e4e4; --btn-fg: #9a9a9a; --btn-border: #d8d8d8; c
    least 20% wider than the column when space allows — so cells wrap only when truly out of
    space, with horizontal scroll as the fallback. */
 .table-wrap { overflow-x: auto; margin-left: min(0px, calc(3rem - (100vw - 100%) / 2)); }
+/* A history cell holds one short answer whose words belong together — "ב-2 ארוחות", "7.5 שעות",
+   a weekday beside its date. Breaking one costs the row twice its height to save a few pixels of
+   width, so the cells keep their line and the wrapper scrolls instead, which is what it is for.
+   Headers are exempt: they are long, they stack by design, and holding them to one line would
+   near-triple the table's width. The landing's reference table sits outside this wrapper, its
+   sentence-length cells still free to wrap. */
+.table-wrap td { white-space: nowrap; }
 table { border-collapse: collapse; min-width: min(calc(var(--column-width) * 1.2), 100%); margin-top: 0.5rem; background: #fff; }
-th, td { --cell-font-size: 0.9rem; border: 1px solid #ddd; padding: 0.4rem 0.6rem; text-align: right; font-size: var(--cell-font-size); }
+/* A pixel under the 0.9rem the cells would otherwise read at, so the history grid's many columns
+   hold their values without wrapping and the landing's reference table stays subordinate to the
+   page around it. */
+th, td { --cell-font-size: calc(0.9rem - 1px); border: 1px solid #ddd; padding: 0.4rem 0.6rem;
+         text-align: right; font-size: var(--cell-font-size); }
 /* Header texts wrap to different line counts; top alignment keeps the shared שכפ"צ prefix on
    one visual row instead of shorter headers floating mid-cell. The slightly smaller size keeps
    the long question titles subordinate to the answer data. */
@@ -120,16 +142,19 @@ th { vertical-align: top; font-size: calc(var(--cell-font-size) - 1pt); }
 /* From tablet width up, all columns but the last two take a fixed width, so their long headers
    wrap instead of dictating column width and the freed space goes to the last two columns —
    which in the current questionnaire carry the long answers (a positional assumption; reorder
-   the config with long-answered questions elsewhere and this rule needs revisiting). The weekday
-   and date stay together on one line. On phones the fixed width would floor the columns and force
-   horizontal scrolling, so it is off there. */
+   the config with long-answered questions elsewhere and this rule needs revisiting). On phones the
+   fixed width would floor the columns and force horizontal scrolling, so it is off there. */
 @media (min-width: 48rem) {
   th:not(:nth-last-child(-n+2)) { width: 8rem; }
-  tbody td:first-child { white-space: nowrap; }
 }
-/* Together with the table's 0.5rem top margin this puts the history table at about half the
-   default heading gap, so the section header sits close to the data it labels. */
+/* Half the browser's default heading gap, so each section header sits close to the data it
+   labels — for history, together with the table's own 0.5rem top margin. */
 .history h2 { margin-bottom: 0.25em; }
+/* History follows the tracker card and would otherwise stack its heading against it. The
+   heading's own margin is what shows through — section padding would stop it collapsing and so
+   add the gap twice — hence the browser's default restated plus the extra rem. The weight section
+   opens the page and needs no such separation. */
+.history h2 { margin-top: calc(0.83em + 1rem); }
 td.violation { background: #ffebee; color: var(--danger); }
 /* Above-threshold carb scores read as red text pinned to the score itself: the history score
    cell, the dashboard total, and a meal's grade text. In the dashboard it reaches the figure
@@ -212,7 +237,12 @@ td.view-day { cursor: pointer; }
 /* The row a form closes with: the filled control that commits beside the quiet ones that leave,
    reveal or discard. The top margin holds it off the inputs above, which would otherwise read as
    attached to the buttons. */
-.form-actions { display: flex; gap: 1rem; margin-top: 0.75rem; }
+.form-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 0.75rem; }
+/* Two or three labelled controls share this row, and the global button's 2.5rem side padding
+   leaves a phone too little width for their labels — each would break across two lines. Here the
+   padding gives way to the text, which stays whole; a row that still cannot hold every control
+   drops one to the next line rather than breaking a label or running off the edge. */
+.form-actions button { padding-inline: 1rem; white-space: nowrap; }
 .tracker-dashboard { display: flex; gap: 1.2rem; flex-wrap: wrap; font-weight: 600; margin-bottom: 0.5rem; }
 /* Color falls on the figures alone, their labels staying body-colored chrome. The accent green
    reads as a measurement rather than a verdict, leaving red to mean only the high-score alarm —
@@ -239,3 +269,58 @@ td.view-day { cursor: pointer; }
    keeps it out of the line box, leaving the row's height set by that text — which is what the
    top-pinned time above measures itself against. */
 .meal-list .meal-actions button { padding: 0.35rem; margin-block: -0.35rem; }
+
+/* The day's weighing: a label, an input and its button on one line, wrapping onto the next only
+   where a phone cannot hold them side by side. It is a paragraph, so the vertical margin is set
+   rather than left to the browser's 1em — the section is a handful of short rows and reads as one
+   block at half that. */
+.weight-today { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin: 0.5rem 0; }
+.weight-today button { padding: 0.5rem 1.5rem; }
+/* The word יעד inside the summary line is the control that opens the target for editing, so the
+   line reads as a sentence and the section spends no row on a value revised a few times a year.
+   Underlined rather than boxed: a button's padding here would spend the width this arrangement is
+   meant to save. Follows the section toggle in recolouring on hover, since a transparent
+   background has no fill for the shared brightness hover to darken. */
+.weight-target-toggle { --btn-bg: transparent; --btn-fg: inherit; --btn-border: transparent;
+                        font: inherit; padding: 0; cursor: pointer;
+                        text-decoration: underline; text-underline-offset: 0.2em; }
+.weight-target-toggle:hover:not(:disabled) { --btn-fg: var(--accent); filter: none; }
+/* A target nobody has set yet is an absence, not a figure, so it reads as chrome rather than
+   taking the accent the value carries. */
+.weight-target-unset { color: #5f5f5f; }
+/* Commits the target from inside the summary line. A worded button would push the line onto a
+   second row on a phone, which is the whole thing this arrangement avoids, so the confirmation is
+   a glyph seated on the text baseline. */
+.weight-target-commit { --btn-fg: var(--accent); padding: 0.15rem; margin-block: -0.15rem; }
+.weight-today input { width: 6rem; padding: 0.5rem; font-size: 1rem;
+                      border: 1px solid #ccc; border-radius: 8px; }
+/* The target's input sits in running text rather than in a control row, so it is sized to the
+   figure it holds and set back to the body weight the surrounding line is not. */
+.weight-summary input { width: 5rem; padding: 0.2rem 0.4rem; font-size: 1rem; font-weight: 400;
+                        border: 1px solid #ccc; border-radius: 8px; vertical-align: baseline; }
+/* Already-recorded is a statement about the day, not a second value to act on, so it reads as
+   chrome beside the input that would replace it. */
+.weight-recorded { font-size: 0.85rem; color: #5f5f5f; }
+/* The section reads as one line under the app title: the latest weight heads it, doubling as the
+   toggle, and the distance to the target follows on the same row. The heading is sized to the
+   body rather than to a section title, since the line is a status reading and not a banner; the
+   row starts at the leading edge instead of pushing the aside to the far end, so the two read as
+   one sentence. */
+.weight .section-header { justify-content: flex-start; align-items: baseline; gap: 0.35rem;
+                          flex-wrap: wrap; }
+.weight h2 { font-size: 1.05rem; margin: 0 0 0.5rem; }
+/* Folded, the section is the one line, so this is the gap to the tracker card below it; open, the
+   heading's own margin spaces its contents and this closes the section off. */
+.weight { margin-bottom: 1rem; }
+/* Inline flow rather than a flex row: it is a sentence whose parts carry their own spacing, and
+   the target's input has to sit inside that sentence. As on the tracker dashboard, the accent
+   lands on the figures alone; units and phrasing read as body-coloured chrome. */
+.weight-summary { font-weight: 600; }
+.weight-summary .value { color: var(--accent); }
+/* The measurements behind the chart. Each row puts the date, the weight and the delete control in
+   fixed cells so the column holds down the list however the values vary. */
+.weight-entries { list-style: none; padding: 0; margin: 0.5rem 0 0; }
+.weight-entries li { display: flex; align-items: center; gap: 0.75rem; padding: 0.125rem 0; }
+.weight-entries .weight-entry-date { min-width: 6ch; }
+.weight-entries .weight-entry-kg { flex: 1; font-weight: 600; }
+.weight-entries button { padding: 0.35rem; margin-block: -0.35rem; }

@@ -25,14 +25,29 @@ describe("HistoryTable", () => {
     expect(screen.queryByText("2026-08-17")).not.toBeInTheDocument();
   });
 
-  it("marks a violating exact-match answer with its choice label", () => {
+  // An open-ended bound is not a quantity, so it keeps its wording where other answers reduce to
+  // their number — "2" under a ליטר header would claim two litres were drunk.
+  it("marks a violating open-ended answer with its choice label", () => {
     render(<HistoryTable questionnaire={fixtureQuestionnaire} days={days} {...defaults} />);
     expect(screen.getByText("פחות מ-2.5 ליטר !!")).toHaveClass("violation");
   });
 
+  it("names the unit once in the column header, not in every cell under it", () => {
+    const measured = [{ date: "2026-08-17", answers: { drinking: 3, window: 8 } }];
+    render(<HistoryTable questionnaire={fixtureQuestionnaire} days={measured} {...defaults} />);
+    expect(screen.getByText("חלון אכילה (שעות)")).toBeInTheDocument();
+    expect(screen.getByText("שתיה (ליטר)")).toBeInTheDocument();
+    // Both answers read as the quantity alone; their choice labels would repeat the header.
+    expect(screen.getByText("8")).toBeInTheDocument();
+    expect(screen.getByText("3")).toBeInTheDocument();
+    expect(screen.queryByText("8 שעות")).toBeNull();
+    expect(screen.queryByText("3 ליטר")).toBeNull();
+  });
+
   it("exposes a question's tooltip on its column header", () => {
     render(<HistoryTable questionnaire={fixtureQuestionnaire} days={days} {...defaults} />);
-    expect(screen.getByText("חלון אכילה")).toHaveAttribute("title", "מהארוחה הראשונה עד האחרונה");
+    expect(screen.getByText("חלון אכילה (שעות)"))
+      .toHaveAttribute("title", "מהארוחה הראשונה עד האחרונה");
   });
 
   it("renders a dash for questions without an answer", () => {

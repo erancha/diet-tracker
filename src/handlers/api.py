@@ -1,6 +1,6 @@
 """HTTP API handler: day submission with meal-derived floors and synchronous rule alerts,
-history with per-day read-only lookups, day deletion, and intraday meal reporting with
-whole-meal corrections.
+history with per-day read-only lookups, day deletion, intraday meal reporting with whole-meal
+corrections, and the weight log — measurements and the target the chart reads them against.
 
 The caller's identity comes exclusively from the JWT claims the API Gateway authorizer
 verified — the request body never names a user."""
@@ -12,11 +12,10 @@ from datetime import date, datetime
 
 import boto3
 
-from common import notify, rules, users
+from common import appconfig, notify, rules, users, weight
 from common.dates import days_before, now_iso, today
 from common.derive import derive
 from common.log import get_logger
-from common.questionnaire import load
 from common.rules import LOOKBACK_DAYS
 from common.store import Store
 
@@ -44,15 +43,37 @@ def handler(event, context):
                             json.loads(event["body"]))
     if route == "DELETE /meals/{date}/{id}":
         return _delete_meal(sub, event["pathParameters"]["date"], event["pathParameters"]["id"])
+    if route == "GET /weight":
+        return _weight(sub)
+    if route == "PUT /weight":
+        return _record_weight(sub, json.loads(event["body"]))
+    if route == "PUT /weight/target":
+        return _set_target(sub, json.loads(event["body"]))
+    if route == "DELETE /weight/{date}":
+        return _delete_weight(sub, event["pathParameters"]["date"])
     raise ValueError(f"unhandled route {route!r}")
 
 
+def _config():
+    return appconfig.load(os.environ["APP_CONFIG_PATH"])
+
+
 def _questionnaire():
-    return load(os.environ["QUESTIONNAIRE_PATH"])
+    return _config().questionnaire
 
 
 def _store():
-    return Store(os.environ["DAYS_TABLE"], os.environ["MEALS_TABLE"], os.environ["STATE_TABLE"])
+    return Store(os.environ["DAYS_TABLE"], os.environ["MEALS_TABLE"], os.environ["STATE_TABLE"],
+                 os.environ["WEIGHTS_TABLE"])
+
+
+def _reject_malformed_date(chosen):
+    """The 400 response for a path date that is not an ISO calendar date, or None when it is."""
+    try:
+        date.fromisoformat(chosen)
+    except ValueError:
+        return _response(400, {"error": f"{chosen!r} is not a valid ISO date"})
+    return None
 
 
 def _backfill_window():
@@ -75,7 +96,8 @@ def _day_payload(store, questionnaire, sub, day) -> dict:
     meals = store.get_meals(sub, day)
     return {"date": day, "meals": meals,
             "derived": asdict(derive(meals, questionnaire.carb_weights(),
-                                     questionnaire.addition_values()))}
+                                     questionnaire.addition_values(),
+                                     questionnaire.small_portion()))}
 
 
 def _submit(sub, email, body):
@@ -88,7 +110,7 @@ def _submit(sub, email, body):
         return rejection
     store = _store()
     floors = derive(store.get_meals(sub, chosen), questionnaire.carb_weights(),
-                    questionnaire.addition_values())
+                    questionnaire.addition_values(), questionnaire.small_portion())
     try:
         questionnaire.validate_answers(answers, floors=asdict(floors))
     except ValueError as error:
@@ -141,10 +163,9 @@ def _history(sub):
 def _get_day(sub, chosen):
     """Read-only tracker payload for any stored day, however old — fetched on demand when a
     history row is opened."""
-    try:
-        date.fromisoformat(chosen)
-    except ValueError:
-        return _response(400, {"error": f"{chosen!r} is not a valid ISO date"})
+    rejection = _reject_malformed_date(chosen)
+    if rejection is not None:
+        return rejection
     return _response(200, _day_payload(_store(), _questionnaire(), sub, chosen))
 
 
@@ -165,6 +186,8 @@ def _meal_rejection(body, day, questionnaire):
         return _response(400, {"error": "vegetables must be a boolean"})
     if not isinstance(body["fruit"], bool):
         return _response(400, {"error": "fruit must be a boolean"})
+    if not isinstance(body["small_portion"], bool):
+        return _response(400, {"error": "small_portion must be a boolean"})
     if not isinstance(body["additions"], list):
         return _response(400, {"error": "additions must be a list"})
     unknown = [a for a in body["additions"] if a not in questionnaire.addition_values()]
@@ -190,7 +213,7 @@ def _add_meal(sub, body):
     if store.has_day(sub, day):
         return _response(409, {"error": f"{day} is already submitted"})
     store.add_meal(sub, day, body["at"], body["carbs_choice"], body["vegetables"], body["fruit"],
-                   body["additions"])
+                   body["additions"], body["small_portion"])
     return _response(200, _day_payload(store, questionnaire, sub, day))
 
 
@@ -211,7 +234,8 @@ def _update_meal(sub, date, meal_id, body):
         return _response(409, {"error": f"{day} is already submitted"})
     try:
         store.replace_meal(sub, day, meal_id, body["at"], body["carbs_choice"],
-                           body["vegetables"], body["fruit"], body["additions"])
+                           body["vegetables"], body["fruit"], body["additions"],
+                           body["small_portion"])
     except KeyError:
         return _response(404, {"error": f"no meal {meal_id!r} for {day}"})
     return _response(200, _day_payload(store, questionnaire, sub, day))
@@ -230,6 +254,52 @@ def _delete_meal(sub, date, meal_id):
     except KeyError:
         return _response(404, {"error": f"no meal {meal_id!r} for {day}"})
     return _response(200, _day_payload(store, _questionnaire(), sub, day))
+
+
+def _weight_payload(store, sub) -> dict:
+    """The weight section's whole view: every measurement in chart order, and the target they are
+    read against — null for a user who has never set one."""
+    weights = store.get_weights(sub)
+    return {"target": store.get_target(sub),
+            "entries": [{"date": day, "kg": kg} for day, kg in sorted(weights.items())]}
+
+
+def _weight(sub):
+    return _response(200, _weight_payload(_store(), sub))
+
+
+def _stored_weight(sub, body, store_value):
+    """Validates a weight body and writes it through store_value, replying with the whole weight
+    payload. Recording a measurement and setting the target differ only in where the kilograms
+    land, so they share the rejection and the reply."""
+    rejection = weight.rejection(body["kg"], _config().weight.limits)
+    if rejection is not None:
+        return _response(400, {"error": rejection})
+    store = _store()
+    store_value(store, body["kg"])
+    return _response(200, _weight_payload(store, sub))
+
+
+def _record_weight(sub, body):
+    return _stored_weight(sub, body, lambda store, kg: store.put_weight(sub, today(), kg))
+
+
+def _set_target(sub, body):
+    return _stored_weight(sub, body, lambda store, kg: store.put_target(sub, kg))
+
+
+def _delete_weight(sub, chosen):
+    """Removes one measurement, at any date. Unlike a day record or a meal, a weight feeds no
+    derivation and no rule streak, so removing an old one restates nothing."""
+    rejection = _reject_malformed_date(chosen)
+    if rejection is not None:
+        return rejection
+    store = _store()
+    try:
+        store.delete_weight(sub, chosen)
+    except KeyError:
+        return _response(404, {"error": f"no weight recorded for {chosen}"})
+    return _response(200, _weight_payload(store, sub))
 
 
 def _alert(email, violations):

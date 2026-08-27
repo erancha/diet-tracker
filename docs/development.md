@@ -17,6 +17,13 @@ setup, copy `frontend/config.example.js` there.
 screen and a snapshot of the questionnaire and recorded history matched to each other, because its
 narration names specific carb grades and scores.
 
+## Configuration
+
+`config/app.json` is read by both runtimes — the Lambda package carries it, `sync-frontend.sh`
+publishes it at the site origin root, and the Vite dev server serves it from the same source file.
+Editing the weigh-in weekday or hour needs a `deploy.sh` run, which is where those two values reach
+the EventBridge schedule; everything else in the file takes effect on the next frontend sync.
+
 ## Backend tests
 
 `scripts/test.sh` runs the backend pytest suite.

@@ -7,7 +7,7 @@ const carbs: Question = {
   day_qualifier: "סיכום ציון", meal_qualifier: "דרגת הארוחה",
   choices: [
     { id: "no_carbs", label: "ללא פחמימות", value: 0 },
-    { id: "grade3", label: "דרגה 3", value: 3 },
+    { id: "carb_grade_3", label: "דרגה 3", value: 3 },
   ],
 };
 const meals: Question = {
@@ -118,6 +118,20 @@ describe("activeViolations", () => {
 describe("valueLabel", () => {
   it("maps exact choice values to labels for single-choice questions", () => {
     expect(valueLabel(meals, 3)).toBe("3 ארוחות");
+    expect(valueLabel(meals, 2.5)).toBe("2.5");
+  });
+
+  it("carries the unit on a derived value no choice names", () => {
+    // A window the meal log computed between the choices, and one past the whole ladder: both
+    // would otherwise read as bare numbers beside labelled values in the same column.
+    const window: Question = { ...meals, id: "eating_window", unit: "שעות",
+                               choices: [{ id: "h8", label: "8 שעות", value: 8 }] };
+    expect(valueLabel(window, 8)).toBe("8 שעות");
+    expect(valueLabel(window, 7.5)).toBe("7.5 שעות");
+    expect(valueLabel(window, 13.5)).toBe("13.5 שעות");
+  });
+
+  it("leaves a unitless question's unmatched value as the bare number", () => {
     expect(valueLabel(meals, 2.5)).toBe("2.5");
   });
 

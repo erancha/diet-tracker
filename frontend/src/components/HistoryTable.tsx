@@ -1,7 +1,7 @@
 import { useState, type KeyboardEvent } from "react";
 import type { Day, Questionnaire } from "../types";
 import { daysBefore, weekdayDdmmLabel } from "../dates";
-import { isHighScore, isViolating, questionTitle, valueLabel } from "../violations";
+import { headedValue, isHighScore, isViolating, questionTitle } from "../violations";
 import { Icon } from "./Icon";
 
 // Window lengths the reader can choose between, shortest first. The longest is bounded by the
@@ -81,7 +81,7 @@ function RangePicker({ ranges, value, onChange }: {
 export function HistoryTable({ questionnaire, days, today, deletableDates, viewedDate, onDelete, onView }: Props) {
   const [range, setRange] = useState<Range>(RANGES[0]);
   const cellText = (questionId: string, value: number) =>
-    valueLabel(questionnaire.questions.find((q) => q.id === questionId)!, value);
+    headedValue(questionnaire.questions.find((q) => q.id === questionId)!, value);
 
   const offered = offeredRanges(days, today);
   // Deleting the last day beyond the chosen range withdraws that range mid-choice; the window

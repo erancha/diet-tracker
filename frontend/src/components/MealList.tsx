@@ -24,10 +24,10 @@ export function MealList({ questionnaire, meals, onEdit, onDelete }: {
   // A history day may reference a choice or addition id retired by a later questionnaire
   // version, making its weights unknowable here; per-meal points render only when the whole day
   // still resolves.
-  const { weights, additionValues } = carbsScales(carbsQuestion);
+  const { weights, additionValues, smallPortion } = carbsScales(carbsQuestion);
   const points = meals.every((m) => weights[m.carbs_choice] !== undefined
       && m.additions.every((a) => additionValues[a] !== undefined))
-    ? mealWeights(newestFirst, weights, additionValues)
+    ? mealWeights(newestFirst, weights, additionValues, smallPortion)
     : undefined;
 
   return (

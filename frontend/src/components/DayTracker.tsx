@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { clockTimeOf, expandMealForm } from "../dates";
-import { carbsScales, deriveDay } from "../derive";
+import { carbsScales, deriveDay, smallPortionOffered } from "../derive";
 import { mayDiscardEdits } from "../edits";
 import type { DayPayload, Meal, NewMeal, Questionnaire } from "../types";
 import { ChoiceFieldset } from "./ChoiceFieldset";
@@ -46,6 +46,7 @@ export function DayTracker({ questionnaire, today, firstMealHour, mealGapHours, 
   const [vegetables, setVegetables] = useState(false);
   const [fruit, setFruit] = useState(false);
   const [pickedAdditions, setPickedAdditions] = useState<Set<string>>(new Set());
+  const [smallPortion, setSmallPortion] = useState(false);
   const [closing, setClosing] = useState(false);
   const [drinkingChoiceId, setDrinkingChoiceId] = useState<string | undefined>(undefined);
   const [mealTime, setMealTime] = useState(() => defaultMealTime(new Date()));
@@ -53,8 +54,12 @@ export function DayTracker({ questionnaire, today, firstMealHour, mealGapHours, 
 
   // Today's meals always resolve against the current questionnaire, so deriveDay's throw on an
   // unknown id is a real config/data fault, not a legal state — let the error boundary show it.
-  const { weights, additionValues } = carbsScales(carbsQuestion);
-  const derived = deriveDay(today.meals, weights, additionValues);
+  const { weights, additionValues, smallPortion: portionRule } = carbsScales(carbsQuestion);
+  const derived = deriveDay(today.meals, weights, additionValues, portionRule);
+  // The lighter grades are not worth splitting by helping, so the box appears only where it moves
+  // the score — and the flag goes with it, so a grade switched down cannot leave one stuck on.
+  const offersSmallPortion = carbsChoiceId !== undefined
+    && smallPortionOffered(portionRule, weights[carbsChoiceId]);
   const closable = derived.eating_window >= CLOSE_DAY_MIN_WINDOW_HOURS;
 
   // A meal cannot have been eaten yet, so the day's own clock caps the picker. Both values are
@@ -85,7 +90,8 @@ export function DayTracker({ questionnaire, today, firstMealHour, mealGapHours, 
     const meal: NewMeal = { at: localIso(atClockTime(new Date(), mealTime)),
                             carbs_choice: carbsChoiceId!, vegetables, fruit,
                             additions: carbsQuestion.additions!
-                              .filter((a) => pickedAdditions.has(a.id)).map((a) => a.id) };
+                              .filter((a) => pickedAdditions.has(a.id)).map((a) => a.id),
+                            small_portion: offersSmallPortion && smallPortion };
     if (editing !== undefined) onUpdateMeal(editing.id, meal);
     else onAddMeal(meal);
     clearForm();
@@ -106,6 +112,7 @@ export function DayTracker({ questionnaire, today, firstMealHour, mealGapHours, 
         || vegetables !== meal.vegetables
         || fruit !== meal.fruit
         || mealTime !== clockTimeOf(meal.at)
+        || (offersSmallPortion && smallPortion) !== meal.small_portion
         || pickedAdditions.size !== meal.additions.length
         || meal.additions.some((id) => !pickedAdditions.has(id));
   }
@@ -115,6 +122,7 @@ export function DayTracker({ questionnaire, today, firstMealHour, mealGapHours, 
     setVegetables(false);
     setFruit(false);
     setPickedAdditions(new Set());
+    setSmallPortion(false);
     setMealTime(defaultMealTime(new Date()));
     setEditingId(undefined);
   }
@@ -126,6 +134,7 @@ export function DayTracker({ questionnaire, today, firstMealHour, mealGapHours, 
     setVegetables(meal.vegetables);
     setFruit(meal.fruit);
     setPickedAdditions(new Set(meal.additions));
+    setSmallPortion(meal.small_portion);
     setMealTime(clockTimeOf(meal.at));
     setEditingId(meal.id);
     setFormCollapsed(false);
@@ -152,6 +161,13 @@ export function DayTracker({ questionnaire, today, firstMealHour, mealGapHours, 
                    onChange={(e) => setFruit(e.target.checked)} />
             {" "}כולל פרי
           </label>
+          {offersSmallPortion && (
+            <label>
+              <input type="checkbox" checked={smallPortion}
+                     onChange={(e) => setSmallPortion(e.target.checked)} />
+              {" "}{carbsQuestion.small_portion!.label}
+            </label>
+          )}
           {carbsQuestion.additions!.map((addition) => (
             <label key={addition.id}>
               <input type="checkbox" checked={pickedAdditions.has(addition.id)}

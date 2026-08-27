@@ -1,10 +1,13 @@
-import json
+from pathlib import Path
 
 import boto3
 import pytest
 from moto import mock_aws
 
-from common.questionnaire import load
+from common.questionnaire import parse
+
+# The repo's own app config, loaded by the tests that assert on what the app actually ships.
+APP_CONFIG = Path(__file__).parent.parent / "config" / "app.json"
 
 
 def _table(ddb, name, with_sort_key=True):
@@ -19,20 +22,21 @@ def _table(ddb, name, with_sort_key=True):
 
 @pytest.fixture
 def ddb():
-    """Mocked DynamoDB resource with the app's three tables pre-created (days and meals keyed by
-    pk+sk, state by pk only). The AWS mock stays active for the whole test, so code under test may
-    also build its own boto3 clients."""
+    """Mocked DynamoDB resource with the app's four tables pre-created (days, meals, and weights
+    keyed by pk+sk, state by pk only). The AWS mock stays active for the whole test, so code under
+    test may also build its own boto3 clients."""
     with mock_aws():
         resource = boto3.resource("dynamodb", region_name="eu-central-1")
         _table(resource, "days")
         _table(resource, "meals")
         _table(resource, "state", with_sort_key=False)
+        _table(resource, "weights")
         yield resource
 
 
 @pytest.fixture
-def numeric_questionnaire(tmp_path):
-    """Loads a minimal two-question numeric questionnaire, independent of the repo config, with
+def numeric_questionnaire():
+    """A minimal two-question numeric questionnaire, independent of the repo config, with
     one at_least rule and one below rule so both comparators stay under test."""
     raw = {
         "version": 1,
@@ -60,6 +64,4 @@ def numeric_questionnaire(tmp_path):
              "consecutive_days": 2, "message": "low drinking {days} days in a row"},
         ],
     }
-    path = tmp_path / "numeric_questionnaire.json"
-    path.write_text(json.dumps(raw), encoding="utf-8")
-    return load(path)
+    return parse(raw)

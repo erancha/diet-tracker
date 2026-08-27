@@ -2,7 +2,7 @@ import { CartesianGrid, Line, LineChart, ResponsiveContainer, Scatter, ScatterCh
 import type { Day, DayPayload, Question, Questionnaire } from "../types";
 import { dayLabel, last7Days } from "../dates";
 import { domainFor, liveTrendDay, ticksFor } from "../trend";
-import { isViolating, panelTitle, questionTitle, trendPanels, valueLabel } from "../violations";
+import { headedValue, isViolating, panelTitle, questionTitle, trendPanels, valueLabel } from "../violations";
 
 // Shared horizontal geometry across the panels and the violations strip: the panels reserve the
 // y-axis width axis-side, the strip (which has no y-axis) reserves it as left margin, so every
@@ -42,7 +42,7 @@ function stripData(questionnaire: Questionnaire, otherQuestions: Question[], day
     const violations = day
       ? otherQuestions
           .filter((q) => q.id in day.answers && isViolating(questionnaire, q.id, day.answers[q.id]))
-          .map((q) => `${questionTitle(q, "day")}: ${valueLabel(q, day.answers[q.id])}`)
+          .map((q) => `${questionTitle(q, "day")}: ${headedValue(q, day.answers[q.id])}`)
       : [];
     return { label: dayLabel(date), y: 0, violations };
   });

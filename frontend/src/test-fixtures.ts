@@ -17,9 +17,10 @@ export const fixtureQuestionnaire: Questionnaire = {
       id: "drinking",
       type: "single",
       text: "שתיה",
+      unit: "ליטר",
       panel_title: "שתיה (ליטרים)",
       choices: [
-        { id: "low", label: "פחות מ-2.5 ליטר !!", value: 2 },
+        { id: "low", label: "פחות מ-2.5 ליטר !!", value: 2, bound: true },
         { id: "mid", label: "3 ליטר", value: 3 },
         { id: "high", label: "4 ליטר", value: 4 },
       ],
@@ -28,11 +29,12 @@ export const fixtureQuestionnaire: Questionnaire = {
       id: "window",
       type: "single",
       text: "חלון אכילה",
+      unit: "שעות",
       panel_title: "חלון אכילה (שעות)",
       tooltip: "מהארוחה הראשונה עד האחרונה",
       choices: [
         { id: "h8", label: "8 שעות", value: 8 },
-        { id: "over", label: "מעל 12 שעות !!", value: 13 },
+        { id: "over", label: "מעל 12 שעות !!", value: 13, bound: true },
       ],
     },
   ],
@@ -42,8 +44,9 @@ export const fixtureQuestionnaire: Questionnaire = {
 };
 
 // Questionnaire as the tracker components consume it: a per-meal carbs points question (two
-// choices sharing a numeric value, to catch id/value mix-ups) with surcharge additions, plus a
-// drinking question for day close. The at_least carbs rule keeps the violation/high-score
+// choices sharing a numeric value, to catch id/value mix-ups; one grade either side of the
+// small-portion threshold) with surcharge additions and the portion rule, plus a drinking
+// question for day close. The at_least carbs rule keeps the violation/high-score
 // styling interplay under test in the history table.
 export const trackerQuestionnaire: Questionnaire = {
   version: 3,
@@ -56,9 +59,11 @@ export const trackerQuestionnaire: Questionnaire = {
                   { id: "nuts", label: "כולל הרבה אגוזים או שקדים", value: 3 },
                   { id: "fat", label: "כולל הרבה שומן", value: 2 }],
       tooltip: "המטרה היא ציון נמוך", day_qualifier: "סיכום ציון", meal_qualifier: "דרגת הארוחה",
+      small_portion: { label: "כמות קטנה", from_value: 5, percent: 50 },
       choices: [{ id: "no_carbs", label: "ללא פחמימות", value: 0 },
-                { id: "grade4", label: "דרגה 4", value: 4 },
-                { id: "grade4b", label: "דרגה 4!", value: 4 }] },
+                { id: "carb_grade_4", label: "דרגה 4", value: 4 },
+                { id: "grade4b", label: "דרגה 4!", value: 4 },
+                { id: "carb_grade_7", label: "דרגה 7", value: 7 }] },
   ],
   rules: [
     { id: "heavy_carbs", question_id: "carbs", at_least: 8, consecutive_days: 2, message: "m" },
@@ -70,8 +75,8 @@ export const trackerQuestionnaire: Questionnaire = {
 export const trackedDay: DayPayload = {
   date: "2026-08-20",
   meals: [
-    { id: "a", at: "2026-08-20T09:10:00+03:00", carbs_choice: "no_carbs", vegetables: true, fruit: false, additions: [] },
-    { id: "b", at: "2026-08-20T13:30:00+03:00", carbs_choice: "grade4", vegetables: false, fruit: true, additions: [] },
+    { id: "a", at: "2026-08-20T09:10:00+03:00", carbs_choice: "no_carbs", vegetables: true, fruit: false, additions: [], small_portion: false },
+    { id: "b", at: "2026-08-20T13:30:00+03:00", carbs_choice: "carb_grade_4", vegetables: false, fruit: true, additions: [], small_portion: false },
   ],
   derived: { carbs: 4, meals: 2, vegetables: 1, eating_window: 4.5 },
 };

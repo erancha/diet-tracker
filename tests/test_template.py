@@ -30,3 +30,34 @@ def test_every_routed_method_is_allowed_by_the_apis_cors_rules():
               if event["Type"] == "HttpApi"}
     allowed = set(api["Properties"]["CorsConfiguration"]["AllowMethods"])
     assert routed - allowed == set()
+
+
+def _load_template():
+    return yaml.load(TEMPLATE.read_text(), Loader=_CloudFormationLoader)
+
+
+def test_weigh_in_schedule_defaults_agree_with_the_app_config():
+    # deploy.sh passes config/app.json's weigh-in slot as parameter overrides, so the template's
+    # own defaults never reach a deployed stack. Left to drift they would still mislead anyone
+    # reading the template for when the reminder fires.
+    from common import appconfig
+
+    from conftest import APP_CONFIG
+    parameters = _load_template()["Parameters"]
+    weigh_in = appconfig.load(APP_CONFIG).weight.weigh_in
+    assert parameters["WeighInWeekday"]["Default"] == weigh_in.weekday
+    assert parameters["WeighInHour"]["Default"] == weigh_in.hour
+
+
+def test_every_scheduled_job_name_is_one_the_nudge_handler_dispatches():
+    # A schedule invoking a job the handler has no entry for fails only when it fires, hours or
+    # days after the deploy that introduced it.
+    import json
+
+    from handlers import nudge
+
+    template = _load_template()
+    scheduled = {json.loads(resource["Properties"]["Target"]["Input"])["job"]
+                 for resource in template["Resources"].values()
+                 if resource["Type"] == "AWS::Scheduler::Schedule"}
+    assert scheduled == {"reminder", "rules", "weekly", "weigh_in"}

@@ -2,6 +2,10 @@ import { useState, type ReactNode } from "react";
 
 type Shared = {
   title: string;
+  // Accessible name for the toggle, where the visible title is a value rather than a name — a
+  // heading reading "106.7 ק״ג" says nothing about what it opens. Contains the visible text, so
+  // the two do not disagree. Defaults to the title.
+  label?: string;
   summary?: ReactNode;
   // Rides at the far end of the title's own row, for a control that belongs beside the heading
   // rather than inside the fold — it stays on screen whether the section is open or folded.
@@ -21,7 +25,7 @@ type CallerManaged = Shared & { collapsed: boolean; onToggle: () => void; defaul
 // Section whose heading toggles the body; `summary` (when given) stays visible while collapsed,
 // serving as the section's at-a-glance line.
 export function CollapsibleSection(props: SelfManaged | CallerManaged) {
-  const { title, summary, headerAside, children, className, headingLevel = 2 } = props;
+  const { title, label, summary, headerAside, children, className, headingLevel = 2 } = props;
   const [selfCollapsed, setSelfCollapsed] = useState(props.defaultCollapsed === true);
 
   const collapsed = props.collapsed === undefined ? selfCollapsed : props.collapsed;
@@ -33,7 +37,7 @@ export function CollapsibleSection(props: SelfManaged | CallerManaged) {
   const heading = (
     <Heading>
       <button type="button" className="section-toggle" aria-expanded={!collapsed}
-              onClick={toggle}>
+              aria-label={label} onClick={toggle}>
         {title}
       </button>
     </Heading>

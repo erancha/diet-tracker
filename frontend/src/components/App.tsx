@@ -2,7 +2,7 @@ import { useCallback, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { alertMessage, type Api } from "../api";
 import { activeViolations } from "../violations";
-import type { AnswerValue, NewMeal, Questionnaire } from "../types";
+import type { AnswerValue, AppConfigFile, NewMeal, WeightPayload } from "../types";
 import { dayEnded, defaultDay, expandQuestionnaire, isoDate, yesterdayOf } from "../dates";
 import { mayDiscardEdits } from "../edits";
 import { Alerts, type AlertItem } from "./Alerts";
@@ -14,10 +14,12 @@ import { Header } from "./Header";
 import { HistoryTable } from "./HistoryTable";
 import { QuestionnaireForm } from "./QuestionnaireForm";
 import { TrendChart } from "./TrendChart";
+import { WeightSection } from "./WeightSection";
 
-// Top-level screen: owns the server data (questionnaire config, day history, today's and
-// yesterday's meal payloads, on-demand past-day payloads) and every mutation — meal recording
-// and deletion, day submission with tracked floors, day deletion — plus the submit → alerts flow,
+// Top-level screen: owns the server data (app config, day history, today's and yesterday's meal
+// payloads, on-demand past-day payloads, the weight log) and every mutation — meal recording and
+// deletion, day submission with tracked floors, day deletion, weight recording, retargeting and
+// deletion — plus the submit → alerts flow,
 // the day-end section's fold it closes, and the guard that keeps that fold and the day picker from
 // throwing away answers the day-end form has not submitted; the components below it hold no server
 // state of their own.
@@ -44,16 +46,17 @@ export function App({ email, api, reminderHour, firstMealHour, mealGapHours, onS
   const todaySelectable = dayEnded(now, reminderHour);
   const [day, setDay] = useState<DayChoice>(() => defaultDay(now, reminderHour));
 
-  const questionnaireQuery = useQuery({
-    queryKey: ["questionnaire"],
-    queryFn: async (): Promise<Questionnaire> => {
-      const response = await fetch("questionnaire.json");
-      if (!response.ok) throw new Error(`questionnaire.json → ${response.status}`);
+  const configQuery = useQuery({
+    queryKey: ["app-config"],
+    queryFn: async (): Promise<AppConfigFile> => {
+      const response = await fetch("app.json");
+      if (!response.ok) throw new Error(`app.json → ${response.status}`);
       return response.json();
     },
     staleTime: Infinity,
   });
   const historyQuery = useQuery({ queryKey: ["days"], queryFn: api.getDays });
+  const weightQuery = useQuery({ queryKey: ["weight"], queryFn: api.getWeight });
 
   // The history row whose read-only day view is open, or null when none is.
   const [viewedDate, setViewedDate] = useState<string | null>(null);
@@ -109,15 +112,37 @@ export function App({ email, api, reminderHour, firstMealHour, mealGapHours, onS
     onError: errorAlert("מחיקת הארוחה נכשלה"),
   });
 
-  if (questionnaireQuery.isPending || historyQuery.isPending) {
+  // Every weight mutation replies with the whole weight payload, so the cache takes the reply
+  // rather than refetching what the server just handed back.
+  const onWeightSuccess = (payload: WeightPayload) => queryClient.setQueryData(["weight"], payload);
+
+  const recordWeightMutation = useMutation({
+    mutationFn: api.recordWeight,
+    onSuccess: onWeightSuccess,
+    onError: errorAlert("שמירת המשקל נכשלה"),
+  });
+
+  const setTargetMutation = useMutation({
+    mutationFn: api.setWeightTarget,
+    onSuccess: onWeightSuccess,
+    onError: errorAlert("עדכון משקל היעד נכשל"),
+  });
+
+  const deleteWeightMutation = useMutation({
+    mutationFn: api.deleteWeight,
+    onSuccess: onWeightSuccess,
+    onError: errorAlert("מחיקת השקילה נכשלה"),
+  });
+
+  if (configQuery.isPending || historyQuery.isPending || weightQuery.isPending) {
     return <main>טוען…</main>;
   }
-  if (questionnaireQuery.isError || historyQuery.isError) {
-    const error = (questionnaireQuery.error ?? historyQuery.error)!;
+  if (configQuery.isError || historyQuery.isError || weightQuery.isError) {
+    const error = (configQuery.error ?? historyQuery.error ?? weightQuery.error)!;
     return <main><div className="alert">{alertMessage("טעינת הנתונים נכשלה", error)}</div></main>;
   }
 
-  const questionnaire = questionnaireQuery.data;
+  const questionnaire = configQuery.data.questionnaire;
   const data = historyQuery.data;
   const answersByDate = new Map(data.days.map((d) => [d.date, d.answers]));
   const todaySubmitted = answersByDate.has(todayStr);
@@ -165,6 +190,14 @@ export function App({ email, api, reminderHour, firstMealHour, mealGapHours, onS
               activeViolations={activeViolations(questionnaire, data.days, todayStr, yesterdayStr)} />
       <main>
         <Alerts items={alerts} onDismiss={dismissAlerts} />
+        <WeightSection
+          weight={weightQuery.data}
+          settings={configQuery.data.weight}
+          now={now}
+          onRecord={(kg) => recordWeightMutation.mutate(kg)}
+          onSetTarget={(kg) => setTargetMutation.mutate(kg)}
+          onDelete={(date) => deleteWeightMutation.mutate(date)}
+        />
         {!todaySubmitted && (
           <DayTracker
             questionnaire={questionnaire}

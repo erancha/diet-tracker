@@ -54,8 +54,8 @@ describe("createApi", () => {
   it("sends an edited meal as a whole-meal PUT under the meal's own path", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response('{"date": "2026-08-22"}'));
     vi.stubGlobal("fetch", fetchMock);
-    const meal = { at: "2026-08-22T13:30:00+03:00", carbs_choice: "grade4", vegetables: true,
-                   fruit: false, additions: ["sweet"] };
+    const meal = { at: "2026-08-22T13:30:00+03:00", carbs_choice: "carb_grade_4", vegetables: true,
+                   fruit: false, additions: ["sweet"], small_portion: false };
 
     await createApi(cfg, tokens).updateMeal("2026-08-22", "13:30:00-abcdef", meal);
 
@@ -63,6 +63,25 @@ describe("createApi", () => {
     expect(url).toBe("https://api.example.com/meals/2026-08-22/13:30:00-abcdef");
     expect(init.method).toBe("PUT");
     expect(JSON.parse(init.body)).toEqual(meal);
+  });
+
+  it("puts a weight under the collection path and the target under its own", async () => {
+    const fetchMock = vi.fn(async (_url: string, _init: RequestInit) =>
+      new Response('{"target": null, "entries": []}'));
+    vi.stubGlobal("fetch", fetchMock);
+    const api = createApi(cfg, tokens);
+
+    await api.recordWeight(76.5);
+    await api.setWeightTarget(72);
+    await api.deleteWeight("2026-08-20");
+
+    expect(fetchMock.mock.calls.map(([url, init]) => [init.method, url])).toEqual([
+      ["PUT", "https://api.example.com/weight"],
+      ["PUT", "https://api.example.com/weight/target"],
+      ["DELETE", "https://api.example.com/weight/2026-08-20"],
+    ]);
+    expect(JSON.parse(String(fetchMock.mock.calls[0][1].body))).toEqual({ kg: 76.5 });
+    expect(JSON.parse(String(fetchMock.mock.calls[1][1].body))).toEqual({ kg: 72 });
   });
 
   it("rejects with an ApiError carrying the status and the diagnostic detail on a non-ok response", async () => {

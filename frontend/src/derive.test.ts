@@ -11,7 +11,7 @@ const fixture = JSON.parse(
 describe("deriveDay", () => {
   for (const vector of fixture.vectors) {
     it(vector.name, () => {
-      expect(deriveDay(vector.meals, fixture.weights, fixture.addition_values)).toEqual(vector.derived);
+      expect(deriveDay(vector.meals, fixture.weights, fixture.addition_values, fixture.small_portion)).toEqual(vector.derived);
     });
   }
 });
@@ -19,24 +19,24 @@ describe("deriveDay", () => {
 describe("mealWeights", () => {
   for (const vector of fixture.vectors) {
     it(`sums to the day's carb score — ${vector.name}`, () => {
-      const perMeal = mealWeights(vector.meals, fixture.weights, fixture.addition_values);
+      const perMeal = mealWeights(vector.meals, fixture.weights, fixture.addition_values, fixture.small_portion);
       expect(perMeal.reduce((sum, w) => sum + w, 0)).toBe(vector.derived.carbs);
     });
   }
 
   it("aligns results with the input order, not chronological order", () => {
     const meals = [
-      { at: "2026-08-20T20:00:00+03:00", carbs_choice: "grade6_7", vegetables: false, fruit: false, additions: [] },
-      { at: "2026-08-20T08:00:00+03:00", carbs_choice: "no_carbs", vegetables: false, fruit: false, additions: [] },
+      { at: "2026-08-20T20:00:00+03:00", carbs_choice: "carb_grade_6", vegetables: false, fruit: false, additions: [], small_portion: false },
+      { at: "2026-08-20T08:00:00+03:00", carbs_choice: "no_carbs", vegetables: false, fruit: false, additions: [], small_portion: false },
     ];
-    expect(mealWeights(meals, fixture.weights, fixture.addition_values)).toEqual([6, 0]);
+    expect(mealWeights(meals, fixture.weights, fixture.addition_values, fixture.small_portion)).toEqual([6, 0]);
   });
 
   it("escalates the chronologically later fruit meal even when listed first", () => {
     const meals = [
-      { at: "2026-08-20T13:00:00+03:00", carbs_choice: "grade1", vegetables: false, fruit: true, additions: [] },
-      { at: "2026-08-20T09:00:00+03:00", carbs_choice: "grade1", vegetables: false, fruit: true, additions: [] },
+      { at: "2026-08-20T13:00:00+03:00", carbs_choice: "carb_grade_1", vegetables: false, fruit: true, additions: [], small_portion: false },
+      { at: "2026-08-20T09:00:00+03:00", carbs_choice: "carb_grade_1", vegetables: false, fruit: true, additions: [], small_portion: false },
     ];
-    expect(mealWeights(meals, fixture.weights, fixture.addition_values)).toEqual([5, 1]);
+    expect(mealWeights(meals, fixture.weights, fixture.addition_values, fixture.small_portion)).toEqual([5, 1]);
   });
 });

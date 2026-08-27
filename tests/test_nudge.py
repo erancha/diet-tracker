@@ -1,16 +1,15 @@
 import dataclasses
 import logging
-from pathlib import Path
-
 import pytest
 
+from conftest import APP_CONFIG
+
+from common import appconfig
 from common.dates import days_before, today
-from common.questionnaire import load
 from common.store import Store
 from common.users import User
 from handlers import nudge
 
-CONFIG = Path(__file__).parent.parent / "config" / "questionnaire.json"
 VIOLATING = {"drinking": 3, "vegetables": 2, "eating_window": 13, "meals": 3, "carbs": 3}
 CLEAN = {"drinking": 3, "vegetables": 2, "eating_window": 10, "meals": 3, "carbs": 3}
 
@@ -24,8 +23,10 @@ def env(monkeypatch, ddb):
     monkeypatch.setenv("DAYS_TABLE", "days")
     monkeypatch.setenv("MEALS_TABLE", "meals")
     monkeypatch.setenv("STATE_TABLE", "state")
+    monkeypatch.setenv("WEIGHTS_TABLE", "weights")
     e = nudge.NudgeEnv(
-        store=Store("days", "meals", "state"), questionnaire=load(CONFIG),
+        store=Store("days", "meals", "state", "weights"),
+        questionnaire=appconfig.load(APP_CONFIG).questionnaire,
         users=[User("u1", "a@gmail.com"), User("u2", "b@gmail.com")],
         telegram=("TOKEN", {"a@gmail.com": "111", "b@gmail.com": "222"}),
         ses=None, sender="me@x.com",
@@ -101,3 +102,26 @@ def test_weekly_sends_digest_to_every_user(env):
     assert any("סיכום שבועי" in text for _, _, text in sent)
     assert any("ממוצע" in text for _, _, text in sent)
     assert any("לא מולאו שאלונים השבוע" in text for _, _, text in sent)
+
+
+def test_weigh_in_targets_only_users_without_a_weight_this_week(env):
+    e, sent = env
+    e.store.put_weight("u1", days_before(today(), 6), 77.4)
+    nudge._weigh_in(e)
+    assert [(kind, target) for kind, target, _ in sent] == [("tg", "222"), ("mail", "b@gmail.com")]
+    assert sent[0][2] == nudge.weight.REMINDER_TEXT
+
+
+def test_a_weight_older_than_the_week_no_longer_excuses_the_reminder(env):
+    e, sent = env
+    e.store.put_weight("u1", days_before(today(), 7), 77.4)
+    e.store.put_weight("u2", today(), 90)
+    nudge._weigh_in(e)
+    assert [target for _, target, _ in sent] == ["111", "a@gmail.com"]
+
+
+def test_the_weigh_in_job_is_dispatchable_by_name(env, monkeypatch):
+    e, sent = env
+    monkeypatch.setattr(nudge, "_build_env", lambda: e)
+    nudge.handler({"job": "weigh_in"}, None)
+    assert len(sent) == 4

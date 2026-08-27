@@ -11,6 +11,9 @@ import { APP_TITLE } from "../appTitle";
 
 // Ties the intro's link to the table it jumps to, so neither can drift from the other.
 const PRINCIPLES_ID = "landing-principles";
+// The carb-grade ladder, published beside the app from frontend/public. The summary already names
+// the score, so the grades hang off that name rather than costing the page a bullet of its own.
+const CARB_GRADES_PATH = "carb-grades.html";
 export function Landing({ onSignIn }: { onSignIn: () => void }) {
   return (
     <main className="landing">
@@ -25,15 +28,20 @@ export function Landing({ onSignIn }: { onSignIn: () => void }) {
         </li>
         <li>
           ערכי סיכום היום נגזרים מהיומן: שלושה מעקרונות השכפ"צ — כמות הירקות, חלון האכילה ומספר
-          הארוחות — לצד ציון פחמימות / קמחים / סוכרים (נמוך = טוב)
+          הארוחות — לצד ציון{" "}
+          <a href={CARB_GRADES_PATH} target="_blank" rel="noreferrer">פחמימות / קמחים / סוכרים</a>
+          {" "}(נמוך = טוב)
         </li>
         <li>
           שאלון סיכום היום אינו יכול להצהיר פחות ממה שנרשם ביומן; יום שתועד במלואו נסגר עם מילוי
           שתיית המים בלבד — העיקרון היחיד שאינו נגזר מהיומן
         </li>
         <li>
-          האפליקציה כוללת תזכורת כשדיווח של יום חסר, התראה כשעיקרון שכפ"צ או ציון הפחמימות חורגים
-          כמה ימים ברצף, סיכום שבועי וגרף מגמה של שבעת הימים האחרונים אחרי כל שליחה
+          גרף משקל שבועי: שקילה מול משקל יעד
+        </li>
+        <li>
+          תזכורות והתראות נשלחות במייל: תזכורת כשדיווח של יום חסר, תזכורת שקילה שבועית, התראה
+          כשציון הפחמימות חורג כמה ימים ברצף וסיכום שבועי
         </li>
       </ul>
       <button type="button" onClick={onSignIn}>התחברות עם Google</button>

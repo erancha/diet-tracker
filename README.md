@@ -15,16 +15,21 @@ closed from the tracker, and the week's trend over recorded history.
 - Recorded meals floor the day-summary questionnaire — a day can admit more than was tracked, never
   less — and a fully tracked day closes from the tracker with only water entered, the one principle
   the log cannot derive.
-- Proactive nudges: fill reminders while a day is unsubmitted, threshold alerts when a principle or
-  the carb score stays past its limit for consecutive days, a weekly averages digest, and a 7-day
-  trend chart after each submit.
+- A weight log runs alongside the day tracker on its own weekly rhythm: measurements charted
+  against a target the user sets. Weight is measured, not scored — it enters no day score and no
+  alert.
+- Proactive nudges leave the app by email, and by Telegram where a bot token is configured: fill
+  reminders while a day is unsubmitted, a weekly weigh-in reminder that skips anyone already
+  weighed this week, threshold alerts when a principle or the carb score stays past its limit for
+  consecutive days, and a weekly averages digest. The 7-day trend chart after each submit is the
+  one nudge shown in the app itself.
 - The four principles are the שכפ"צ acronym the questions carry as a prefix — water intake,
   vegetable portions, a short eating window, fewer meals — spelled out in a table closing the
   signed-out landing.
 
 ## Tech stack
 
-- **Backend** — Python 3.13 Lambdas behind an HTTP API, three DynamoDB tables, EventBridge
+- **Backend** — Python 3.13 Lambdas behind an HTTP API, four DynamoDB tables, EventBridge
   Scheduler (Asia/Jerusalem)
 - **Frontend** — React (TypeScript + Vite) RTL app on S3 + CloudFront, Recharts, TanStack Query
 - **Auth** — Cognito Google sign-in gated by a small allowlist
@@ -43,9 +48,9 @@ graph LR
     U((User)) --> FE[React RTL frontend<br/>S3 + CloudFront]
     FE -->|Google sign-in| COG[Cognito]
     COG -->|allowlist| PRE[presignup Lambda]
-    FE -->|JWT| API[HTTP API<br/>/days · /meals]
+    FE -->|JWT| API[HTTP API<br/>/days · /meals · /weight]
     API --> APIL[api Lambda]
-    APIL --> DB[(DynamoDB<br/>days · meals · nudge state)]
+    APIL --> DB[(DynamoDB<br/>days · meals · nudge state · weights)]
     SCH[EventBridge Scheduler<br/>Asia/Jerusalem] --> NUDGE[nudge Lambda]
     NUDGE --> DB
     NUDGE --> SES[SES email]
@@ -54,8 +59,10 @@ graph LR
 
 Meal scoring is implemented once per runtime — `src/common/derive.py` (the authority) and
 `frontend/src/derive.ts` (live dashboard feedback) — and both must satisfy the shared vectors in
-`config/derive-vectors.json`. Questions, their numeric choice values, and the threshold alert
-rules are one versioned config: `config/questionnaire.json`.
+`config/derive-vectors.json`. `config/app.json` is the app-level config both runtimes read: the
+questionnaire element holds the questions, their numeric choice values, and the threshold alert
+rules; the weight element holds the weigh-in schedule, the chart's opening span, and the kilogram
+bounds the API and the input both constrain to.
 
 ## Details
 

@@ -13,7 +13,7 @@ const emptyDay: DayPayload = {
 const dayWithMealHoursAgo = (hours: number): DayPayload => ({
   date: "2026-08-20",
   meals: [{ id: "m", at: new Date(Date.now() - hours * 3_600_000).toISOString(),
-            carbs_choice: "no_carbs", vegetables: false, fruit: false, additions: [] }],
+            carbs_choice: "no_carbs", vegetables: false, fruit: false, additions: [], small_portion: false }],
   derived: { carbs: 0, meals: 1, vegetables: 0, eating_window: 0 },
 });
 
@@ -139,9 +139,49 @@ describe("DayTracker", () => {
     fireEvent.click(screen.getByLabelText("כולל אלכוהול לא יבש"));
     fireEvent.click(screen.getByRole("button", { name: "רישום ארוחה" }));
     expect(onAddMeal).toHaveBeenCalledWith(expect.objectContaining({
-      carbs_choice: "grade4", vegetables: true, fruit: true, additions: ["sweet", "alcohol"] }));
+      carbs_choice: "carb_grade_4", vegetables: true, fruit: true, additions: ["sweet", "alcohol"], small_portion: false }));
     // Carries a UTC offset — the test runs on an arbitrary real date, with the clock unpinned.
     expect(onAddMeal.mock.calls[0][0].at).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$/);
+  });
+
+  it("offers the small portion only on grades worth splitting by helping", () => {
+    render(<DayTracker questionnaire={questionnaire} today={emptyDay}
+                       firstMealHour={NO_AUTO_OPEN_HOUR}
+                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    openMealForm();
+    expect(screen.queryByLabelText("כמות קטנה")).toBeNull();
+    fireEvent.click(screen.getByLabelText("דרגה 4"));
+    expect(screen.queryByLabelText("כמות קטנה")).toBeNull();
+    fireEvent.click(screen.getByLabelText("דרגה 7"));
+    expect(screen.getByLabelText("כמות קטנה")).toBeInTheDocument();
+  });
+
+  it("records the small portion, and drops it when the grade no longer offers one", () => {
+    const onAddMeal = vi.fn();
+    render(<DayTracker questionnaire={questionnaire} today={emptyDay}
+                       firstMealHour={NO_AUTO_OPEN_HOUR}
+                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       onAddMeal={onAddMeal} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    openMealForm();
+    fireEvent.click(screen.getByLabelText("דרגה 7"));
+    fireEvent.click(screen.getByLabelText("כמות קטנה"));
+    fireEvent.click(screen.getByRole("button", { name: "רישום ארוחה" }));
+    expect(onAddMeal).toHaveBeenCalledWith(expect.objectContaining({
+      carbs_choice: "carb_grade_7", small_portion: true }));
+
+    // Recording folds the inputs away, so the second half opens them again.
+    openMealForm();
+    // Ticked on a grade that offers it, then switched to one that does not: the box goes, and the
+    // flag must not travel with the meal that gets recorded instead.
+    fireEvent.click(screen.getByLabelText("דרגה 7"));
+    fireEvent.click(screen.getByLabelText("כמות קטנה"));
+    fireEvent.click(screen.getByLabelText("דרגה 4"));
+    fireEvent.click(screen.getByRole("button", { name: "רישום ארוחה" }));
+    expect(onAddMeal).toHaveBeenLastCalledWith(expect.objectContaining({
+      carbs_choice: "carb_grade_4", small_portion: false }));
   });
 
   it("records the picked choice id even when another choice shares its numeric value", () => {
@@ -254,7 +294,7 @@ describe("DayTracker", () => {
     fireEvent.click(screen.getByLabelText("כולל מתוק"));
     fireEvent.click(screen.getByRole("button", { name: "עדכון ארוחה" }));
     expect(onUpdateMeal).toHaveBeenCalledWith("b", expect.objectContaining({
-      carbs_choice: "grade4", vegetables: true, fruit: true, additions: ["sweet"] }));
+      carbs_choice: "carb_grade_4", vegetables: true, fruit: true, additions: ["sweet"], small_portion: false }));
     expect(onUpdateMeal.mock.calls[0][1].at).toMatch(/T12:00:00[+-]\d{2}:\d{2}$/);
     expect(screen.queryByRole("button", { name: "עדכון ארוחה" })).toBeNull();
   });
@@ -628,8 +668,8 @@ describe("DayTracker", () => {
   it("shows a marker per addition on a recorded meal", () => {
     const additionsDay: DayPayload = {
       date: "2026-08-20",
-      meals: [{ id: "a", at: "2026-08-20T09:10:00+03:00", carbs_choice: "grade4",
-                vegetables: false, fruit: false, additions: ["sweet", "alcohol", "nuts", "fat"] }],
+      meals: [{ id: "a", at: "2026-08-20T09:10:00+03:00", carbs_choice: "carb_grade_4",
+                vegetables: false, fruit: false, additions: ["sweet", "alcohol", "nuts", "fat"], small_portion: false }],
       derived: { carbs: 17, meals: 1, vegetables: 0, eating_window: 0 },
     };
     render(<DayTracker questionnaire={questionnaire} today={additionsDay}

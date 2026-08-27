@@ -20,7 +20,7 @@ rm -rf build/lambda
 mkdir -p build/lambda
 cp -r src/. build/lambda/
 find build/lambda -type d -name __pycache__ -exec rm -rf {} +
-cp config/questionnaire.json build/lambda/
+cp config/app.json build/lambda/
 
 stack_output() {
   local out
@@ -46,6 +46,13 @@ deploy_cognito() {
       AllowedEmails="$ALLOWED_EMAILS" CallbackUrls="$callbacks" DomainPrefix="diet-trk${ENV_SUFFIX}"
 }
 
+# The weigh-in reminder's slot is declared in config/app.json, but an EventBridge cron expression
+# is fixed when the stack deploys — so the values are lifted out here rather than restated in the
+# template's defaults.
+app_config() {
+  python3 -c "import json; print(json.load(open('config/app.json'))$1)"
+}
+
 deploy_main() {
   local origins="http://localhost:8000"
   [ -n "$1" ] && origins="${origins},$1"
@@ -59,7 +66,9 @@ deploy_main() {
     --stack-name "$APP" --capabilities CAPABILITY_IAM CAPABILITY_AUTO_EXPAND --no-fail-on-empty-changeset \
     --parameter-overrides SesSender="$SES_SENDER" AllowedOrigins="$origins" \
       UserPoolId="$user_pool_id" \
-      UserPoolClientId="$user_pool_client_id"
+      UserPoolClientId="$user_pool_client_id" \
+      WeighInWeekday="$(app_config "['weight']['weigh_in']['weekday']")" \
+      WeighInHour="$(app_config "['weight']['weigh_in']['hour']")"
 }
 
 FRONTEND_URL=$(stack_output "$APP" FrontendUrl)

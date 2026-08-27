@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>דרגות הפחמימות — מעקב תזונה</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 40rem; margin: 0 auto;
+         padding: 0.6rem 1rem 2rem; background: #fafafa; color: #212121; }
+  h1 { font-size: min(1.8rem, 8vw); color: #2e7d32; margin: 0.5rem 0 0.25em; }
+  .lead { margin: 0 0 1.5rem; color: #5f5f5f; }
+  .end { font-size: 0.8rem; font-weight: 600; color: #c62828; margin: 0 0 0.4rem; }
+  .end.bottom { margin: 0.4rem 0 0; }
+  ol { list-style: none; padding: 0; margin: 0; border-inline-start: 2px solid #f3c9cc; }
+  li { display: flex; align-items: baseline; gap: 0.75rem; padding: 0.5rem 0 0.5rem 0; }
+  .rung { flex: 0 0 2rem; height: 2rem; border-radius: 50%; background: #c62828; color: #fff;
+           font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
+  .foods { line-height: 1.4; }
+  .note { margin-top: 1.75rem; padding: 0.9rem 1rem; background: #fff; border: 1px solid #ddd;
+           border-radius: 8px; line-height: 1.6; }
+  .note h2 { font-size: 1rem; color: #c62828; margin: 0 0 0.5rem; }
+  .placeholder { margin-top: 1.5rem; font-size: 0.8rem; color: #898781; }
+</style>
+</head>
+<body>
+<h1>דרגות הפחמימות</h1>
+<p class="lead">הסולם שלפיו נבחרת דרגת הפחמימות של כל ארוחה ביומן.</p>
+<p class="end">▲ הלפטיניות ביותר</p>
+<ol id="ladder"></ol>
+<p class="end bottom">▼ הכי פחות לפטיניות</p>
+<div class="note">
+  <h2>מהי פחמימה "לפטינית" יותר?</h2>
+  <p>ככל שהפחמימה יותר שלמה ומורכבת, כך הסיבים בה גבוהים יותר, הספיגה איטית יותר, וכמות
+  האינסולין שמופרשת נמוכה יותר — וכך היא נחשבת "לפטינית" יותר.</p>
+</div>
+<p class="placeholder">עמוד זה משחזר את תרשים הדרגות; ישולב בו התרשים המקורי.</p>
+<script>
+  // The ladder is the questionnaire's own carbs choices, read from the config this page is
+  // published beside — so a grade renamed or re-listed there reaches this page with it, rather
+  // than leaving a hand-copied duplicate behind to drift.
+  fetch("app.json").then((r) => {
+    if (!r.ok) throw new Error(`app.json → ${r.status}`);
+    return r.json();
+  }).then((config) => {
+    const carbs = config.questionnaire.questions.find((q) => q.id === "carbs");
+    document.getElementById("ladder").replaceChildren(...carbs.choices
+      .filter((c) => c.id.startsWith("carb_grade_"))
+      .map((c) => {
+        const row = document.createElement("li");
+        const rung = document.createElement("span");
+        rung.className = "rung";
+        rung.textContent = c.value;
+        const foods = document.createElement("span");
+        foods.className = "foods";
+        // The label leads with the grade the rung already shows; the foods are what follows it.
+        foods.textContent = c.label.replace(/^[^(]*\(|\)$/g, "");
+        row.append(rung, foods);
+        return row;
+      }));
+  }).catch((err) => {
+    document.getElementById("ladder").textContent = `טעינת הדרגות נכשלה (${err.message})`;
+  });
+</script>
+</body>
+</html>

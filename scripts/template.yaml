@@ -29,6 +29,18 @@ Parameters:
     Description: Hours a day may go without a meal before the next one counts as overdue; once the
       most recent recorded meal is this far behind, the frontend opens the tracker's meal inputs
       expanded
+  WeighInWeekday:
+    Type: String
+    AllowedValues: [SUN, MON, TUE, WED, THU, FRI, SAT]
+    Default: THU
+    Description: Day the weekly weigh-in reminder fires. Declared in config/app.json under
+      weight.weigh_in; scripts/deploy.sh passes it here because an EventBridge cron expression is
+      fixed at deploy time
+  WeighInHour:
+    Type: Number
+    Default: 8
+    Description: Asia/Jerusalem hour of the weekly weigh-in reminder, from the same config/app.json
+      declaration as WeighInWeekday
   BotTokenParam:
     Type: String
     Default: /diet-tracker/telegram/bot-token
@@ -52,7 +64,8 @@ Globals:
         DAYS_TABLE: !Ref DaysTable
         MEALS_TABLE: !Ref MealsTable
         STATE_TABLE: !Ref NudgeStateTable
-        QUESTIONNAIRE_PATH: /var/task/questionnaire.json
+        WEIGHTS_TABLE: !Ref WeightsTable
+        APP_CONFIG_PATH: /var/task/app.json
         BOT_TOKEN_PARAM: !Ref BotTokenParam
         CHAT_MAP_PARAM: !Ref ChatMapParam
         SES_SENDER: !Ref SesSender
@@ -98,6 +111,23 @@ Resources:
           KeyType: HASH
       AttributeDefinitions:
         - AttributeName: pk
+          AttributeType: S
+
+  # Holds both item kinds of the weight log: one measurement per calendar day under its ISO date,
+  # and the user's single target under the sort key "target", which sorts past every date.
+  WeightsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: pk
+          KeyType: HASH
+        - AttributeName: sk
+          KeyType: RANGE
+      AttributeDefinitions:
+        - AttributeName: pk
+          AttributeType: S
+        - AttributeName: sk
           AttributeType: S
 
   Api:
@@ -167,6 +197,30 @@ Resources:
             ApiId: !Ref Api
             Method: DELETE
             Path: /meals/{date}/{id}
+        GetWeight:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref Api
+            Method: GET
+            Path: /weight
+        RecordWeight:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref Api
+            Method: PUT
+            Path: /weight
+        SetWeightTarget:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref Api
+            Method: PUT
+            Path: /weight/target
+        DeleteWeight:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref Api
+            Method: DELETE
+            Path: /weight/{date}
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref DaysTable
@@ -174,6 +228,8 @@ Resources:
             TableName: !Ref MealsTable
         - DynamoDBCrudPolicy:
             TableName: !Ref NudgeStateTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref WeightsTable
         - !Ref NotifyPolicy
 
   NudgeFunction:
@@ -188,6 +244,8 @@ Resources:
             TableName: !Ref MealsTable
         - DynamoDBCrudPolicy:
             TableName: !Ref NudgeStateTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref WeightsTable
         - !Ref NotifyPolicy
         - Statement:
             - Effect: Allow
@@ -268,6 +326,18 @@ Resources:
         Arn: !GetAtt NudgeFunction.Arn
         RoleArn: !GetAtt SchedulerRole.Arn
         Input: '{"job": "weekly"}'
+
+  WeighInSchedule:
+    Type: AWS::Scheduler::Schedule
+    Properties:
+      ScheduleExpression: !Sub 'cron(0 ${WeighInHour} ? * ${WeighInWeekday} *)'
+      ScheduleExpressionTimezone: Asia/Jerusalem
+      FlexibleTimeWindow:
+        Mode: 'OFF'
+      Target:
+        Arn: !GetAtt NudgeFunction.Arn
+        RoleArn: !GetAtt SchedulerRole.Arn
+        Input: '{"job": "weigh_in"}'
 
   FrontendBucket:
     Type: AWS::S3::Bucket
