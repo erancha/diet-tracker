@@ -314,9 +314,11 @@ td.view-day { cursor: pointer; }
 .weight .section-header { justify-content: flex-start; align-items: baseline; gap: 0.35rem;
                           flex-wrap: wrap; }
 .weight h2 { font-size: 1.05rem; margin: 0 0 0.5rem; }
-/* Folded, the section is the one line, so this is the gap to the tracker card below it; open, the
-   heading's own margin spaces its contents and this closes the section off. */
+/* Folded, the section is the one line, so this is the gap to the tracker card below it. */
 .weight { margin-bottom: 1rem; }
+/* Open, the section ends on the measurements list: bare rows with no card edge of their own,
+   which at the folded gap read as the top of the tracker card below them. */
+.weight:has(.section-toggle[aria-expanded="true"]) { margin-bottom: 2rem; }
 /* Inline flow rather than a flex row: it is a sentence whose parts carry their own spacing, and
    the target's input has to sit inside that sentence. As on the tracker dashboard, the accent
    lands on the figures alone; units and phrasing read as body-coloured chrome. */
