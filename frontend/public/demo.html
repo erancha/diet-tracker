@@ -69,8 +69,8 @@ body {
 }
 .about-toggle:hover { color: var(--c-paper); }
 .about-toggle:focus-visible { outline: 2px solid var(--c-live); outline-offset: 3px; }
-.about-toggle::after { content: " \25BE"; font-size: 0.8em; }
-.about-toggle[aria-expanded="true"]::after { content: " \25B4"; }
+.about-toggle::before { content: "◂ "; font-size: 0.9em; }
+.about-toggle[aria-expanded="true"]::before { content: "▾ "; }
 .about { display: grid; gap: 1.3rem; margin-bottom: 1.6rem; }
 .about[hidden] { display: none; }
 .lede { margin: 0; max-width: 62ch; color: var(--c-muted); font-size: 0.95rem; }
@@ -289,7 +289,7 @@ body {
 .screen .landing-summary { margin-top: 0; padding-inline-start: 1.2rem; }
 .screen .landing-summary li { margin-bottom: 0.6rem; }
 .screen .landing-principles, .screen .landing-repo { margin-top: 2.5rem; }
-.screen .landing-principles { min-width: 0; width: 100%; }
+.screen .landing-principles { min-width: 0; width: 100%; color: #5f5f5f; }
 .screen .landing-principles caption { text-align: start; font-weight: 600; margin-bottom: 0.4rem; }
 .screen .landing-principles td:first-child { white-space: nowrap; }
 .screen .day-picker, .screen .range-picker { display: flex; gap: 1rem; align-items: center; margin-bottom: 0.75rem; font-size: 0.9rem; }
@@ -331,13 +331,16 @@ body {
 .screen .section-header h3 { margin: 0; }
 .screen .day-tracker .section-header h2, .screen .day-tracker .section-header h3 { font-size: 21.3px; }
 .screen .section-toggle { --btn-bg: transparent; --btn-fg: inherit; --btn-border: transparent; font: inherit; font-weight: 600; padding: 0; cursor: pointer; }
-.screen .section-toggle::after { content: " \25B4"; font-size: 0.8em; }
-.screen .section-toggle[aria-expanded="false"]::after { content: " \25BE"; }
-.screen .meal-form h3 { font-size: 1rem; margin: 0 0 0.5rem; }
+.screen .section-toggle::before { content: "▾ "; font-size: 0.9em; }
+.screen .section-toggle[aria-expanded="false"]::before { content: "◂ "; }
+.screen .section-toggle:hover:not(:disabled) { --btn-fg: var(--accent); filter: none; }
+.screen .meal-form h3 { font-size: 1.1rem; margin: 1rem 0 0.5rem; }
+.screen .meal-form h3:last-child { margin-bottom: 0; }
+.screen .form-actions:empty, .screen .meal-list:empty { display: none; }
 .screen .meal-flags { display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; }
 .screen .meal-flags label { display: inline-flex; align-items: center; gap: 0.3rem; }
 .screen .meal-time { display: block; margin-top: 0.75rem; }
-.screen .tracker-actions { display: flex; gap: 1rem; margin-top: 0.75rem; }
+.screen .form-actions { display: flex; gap: 1rem; margin-top: 0.75rem; }
 .screen .tracker-dashboard { display: flex; gap: 1.2rem; flex-wrap: wrap; font-weight: 600; margin-bottom: 0.5rem; }
 .screen .tracker-dashboard .value { color: var(--accent); }
 .screen .tracker-dashboard strong { font-weight: 800; }
@@ -773,7 +776,7 @@ function trackerHtml() {
   }
   html += "</section>";
 
-  html += '<div class="tracker-actions">';
+  html += '<div class="form-actions">';
   if (p.carbs_choice !== null) html += '<button type="button" data-t="record">רישום ארוחה</button>';
   if (closable) html += '<button type="button" class="quiet" data-t="close-day">סגירת יום</button>';
   html += "</div>";
