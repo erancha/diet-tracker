@@ -65,6 +65,11 @@ h1 { font-size: min(2.1rem, 9vw); color: var(--accent); margin-top: 0; }
 .landing-principles caption { text-align: start; font-weight: 600; margin-bottom: 0.4rem; }
 /* The principle's bold initial opens its row, so the column reads down as the acronym. */
 .landing-principles td:first-child { white-space: nowrap; }
+/* Two words naming the columns, against rows of sentence-length values. The global header size
+   sits a point under the cells, sized for the history grid whose long question titles have to
+   stay subordinate to their answers; here that reading is inverted, so the row is set above the
+   values it names instead. */
+.landing-principles th { font-size: calc(var(--cell-font-size) + 2px); }
 .day-picker, .range-picker { display: flex; gap: 1rem; align-items: center; margin-bottom: 0.75rem; font-size: 0.9rem; }
 .day-picker label, .range-picker label { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0; cursor: pointer; }
 .range-picker { margin-top: 0.5rem; }
