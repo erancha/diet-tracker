@@ -189,9 +189,16 @@ td.view-day { cursor: pointer; }
                   font: inherit; font-weight: 600; padding: 0; cursor: pointer; }
 .section-toggle::after { content: " ▴"; font-size: 0.8em; }
 .section-toggle[aria-expanded="false"]::after { content: " ▾"; }
-/* Body-sized against the tracker's larger heading, so the fold reads as a row inside the panel
-   rather than as a section of its own. */
-.meal-form h3 { font-size: 1rem; margin: 0 0 0.5rem; }
+/* Kept near body size against the tracker's larger heading, so the fold reads as a row inside
+   the panel rather than as a section of its own; its top margin joins the dashboard's bottom
+   margin for a 1.5rem gap above. */
+.meal-form h3 { font-size: 1.1rem; margin: 1rem 0 0.5rem; }
+/* Folded, the heading is the card's last visible element; dropping its bottom margin leaves the
+   same 1rem card padding below it as above the tracker title. */
+.meal-form h3:last-child { margin-bottom: 0; }
+/* A fresh day renders the actions row and meal list with nothing in them; hiding them keeps
+   their margins from deepening the card's bottom gap past its top padding. */
+.form-actions:empty, .meal-list:empty { display: none; }
 /* Five config-driven checkboxes must wrap on narrow phones instead of spilling off-screen. */
 .meal-flags { display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; }
 .meal-flags label { display: inline-flex; align-items: center; gap: 0.3rem; }
