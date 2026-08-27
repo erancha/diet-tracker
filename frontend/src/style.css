@@ -184,11 +184,16 @@ td.view-day { cursor: pointer; }
    scale with the viewport instead of wrapping — the slope the fieldset legends use, keeping a few
    percent of clearance down to 320px-wide screens once the body and card paddings are taken out. */
 .day-tracker .section-header h2, .day-tracker .section-header h3 { font-size: min(1.6rem, 7vw - 6px); }
-/* Section header doubles as the collapse toggle; the arrow flips with aria-expanded. */
+/* Section header doubles as the collapse toggle. The disclosure triangle leads the title —
+   its right side in RTL, where native <details> puts it — so an expandable heading is told
+   apart from a plain one at a glance; collapsed it points along the reading direction. The
+   shared brightness hover is invisible on a transparent background over dark text, so hover
+   recolors the title to the accent instead. */
 .section-toggle { --btn-bg: transparent; --btn-fg: inherit; --btn-border: transparent;
                   font: inherit; font-weight: 600; padding: 0; cursor: pointer; }
-.section-toggle::after { content: " ▴"; font-size: 0.8em; }
-.section-toggle[aria-expanded="false"]::after { content: " ▾"; }
+.section-toggle::before { content: "▾ "; font-size: 0.9em; }
+.section-toggle[aria-expanded="false"]::before { content: "◂ "; }
+.section-toggle:hover:not(:disabled) { --btn-fg: var(--accent); filter: none; }
 /* Kept near body size against the tracker's larger heading, so the fold reads as a row inside
    the panel rather than as a section of its own; its top margin joins the dashboard's bottom
    margin for a 1.5rem gap above. */
