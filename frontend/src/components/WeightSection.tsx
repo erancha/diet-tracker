@@ -57,7 +57,7 @@ function TargetReading({ summary, limits, onSet }: {
   return (
     <span className="weight-summary">
       {summary.latest !== null && <>· </>}
-      {summary.gapKg !== null && <><span className="value">{kgLabel(summary.gapKg)}</span>{" "}</>}
+      {summary.gapKg !== null && <><span className="value weight-gap">{kgLabel(summary.gapKg)}</span>{" "}</>}
       {summary.prefix}
       <button type="button" className="weight-target-toggle" aria-expanded={editing}
               aria-label="עריכת יעד" onClick={toggle}>יעד</button>:{" "}
@@ -114,7 +114,13 @@ export function WeightSection({ weight, settings, now, onRecord, onSetTarget, on
   const recordedToday = weight.entries.find((entry) => entry.date === todayStr);
   const summary = summarize(weight.entries, weight.target);
   // Nothing weighed yet leaves no value to head the section with, so it falls back to its name.
-  const heading = summary.latest === null ? "משקל" : `${kgLabel(summary.latest)} ק״ג`;
+  const figure = summary.latest === null ? null : kgLabel(summary.latest);
+  const unit = "ק״ג";
+  // The figure is held apart from its unit so that over target the colour lands on the number
+  // alone, as it does on the distance beside it; the accessible name needs the two as one string.
+  const heading = figure === null
+    ? "משקל"
+    : <><span className="weight-latest">{figure}</span> {unit}</>;
   const spans = offeredSpans(weight.entries, now);
   const active = activeSpan(spans, span);
   const plotted = entriesWithin(weight.entries, active, now);
@@ -123,8 +129,8 @@ export function WeightSection({ weight, settings, now, onRecord, onSetTarget, on
     <CollapsibleSection
       title={heading}
       defaultCollapsed
-      label={summary.latest === null ? "משקל" : `משקל: ${heading}`}
-      className="weight"
+      label={figure === null ? "משקל" : `משקל: ${figure} ${unit}`}
+      className={summary.overTarget ? "weight weight-over-target" : "weight"}
       headerAside={<TargetReading summary={summary} limits={settings.limits} onSet={onSetTarget} />}
     >
       <TodayRow recorded={recordedToday?.kg ?? null} limits={settings.limits} onRecord={onRecord} />

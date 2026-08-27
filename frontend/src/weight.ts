@@ -94,17 +94,25 @@ export interface WeightSummary {
   // What immediately precedes the word יעד. The prefix letter belongs to the phrasing rather than
   // to the control, so the word itself stays one clickable token across all four readings.
   prefix: string;
+  // The latest weight stands above the target by enough for the line to state the distance — the
+  // one reading the section paints as a miss rather than as progress.
+  overTarget: boolean;
 }
 
 export function summarize(entries: WeightEntry[], target: number | null): WeightSummary {
   const latest = entries.length === 0 ? null : entries[entries.length - 1].kg;
-  if (latest === null || target === null) return { latest, target, gapKg: null, prefix: "ה" };
+  if (latest === null || target === null) {
+    return { latest, target, gapKg: null, prefix: "ה", overTarget: false };
+  }
   const gap = latest - target;
-  if (Math.abs(gap) < AT_TARGET_KG) return { latest, target, gapKg: null, prefix: "ב" };
+  if (Math.abs(gap) < AT_TARGET_KG) {
+    return { latest, target, gapKg: null, prefix: "ב", overTarget: false };
+  }
   return {
     latest, target,
     gapKg: Math.abs(gap),
     prefix: gap > 0 ? "מעל ה" : "מתחת ל",
+    overTarget: gap > 0,
   };
 }
 

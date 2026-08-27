@@ -63,6 +63,28 @@ describe("target", () => {
     expect(toggle).toHaveAccessibleName("משקל");
   });
 
+  it("marks the section over target, so the weight and the gap can be painted as one", () => {
+    show({ target: 72, entries: [{ date: TODAY, kg: 76.5 }] });
+    expect(document.querySelector("section.weight")).toHaveClass("weight-over-target");
+  });
+
+  it("wraps the heading's figure alone, so the unit beside it is not painted with it", () => {
+    show({ target: 72, entries: [{ date: TODAY, kg: 76.5 }] });
+    const figure = screen.getByRole("button", { name: /^משקל/ }).querySelector(".weight-latest");
+    expect(figure).toHaveTextContent("76.5");
+    expect(figure).not.toHaveTextContent("ק״ג");
+  });
+
+  it("leaves the mark off below the target", () => {
+    show({ target: 80, entries: [{ date: TODAY, kg: 76.5 }] });
+    expect(document.querySelector("section.weight")).not.toHaveClass("weight-over-target");
+  });
+
+  it("leaves the mark off before there is a target to read against", () => {
+    show({ entries: [{ date: TODAY, kg: 76.5 }] });
+    expect(document.querySelector("section.weight")).not.toHaveClass("weight-over-target");
+  });
+
   it("says so plainly before a target exists", () => {
     show({ entries: [{ date: TODAY, kg: 76.5 }] });
     expect(line().textContent!.replace(/\s+/g, " ")).toContain("היעד: טרם נקבע");

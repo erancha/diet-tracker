@@ -1,7 +1,9 @@
 import { useState, type ReactNode } from "react";
 
 type Shared = {
-  title: string;
+  // Rich rather than plain text, so a heading built from a figure and its unit can paint the two
+  // apart. `label` carries the accessible name, so nothing here has to read as one.
+  title: ReactNode;
   // Accessible name for the toggle, where the visible title is a value rather than a name — a
   // heading reading "106.7 ק״ג" says nothing about what it opens. Contains the visible text, so
   // the two do not disagree. Defaults to the title.

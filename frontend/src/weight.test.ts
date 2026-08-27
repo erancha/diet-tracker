@@ -82,24 +82,24 @@ describe("kgLabel", () => {
 describe("summarize", () => {
   it("reads the latest weight against the target in both directions", () => {
     expect(summarize(SERIES, 72)).toEqual({
-      latest: 76.5, target: 72, gapKg: 4.5, prefix: "מעל ה",
+      latest: 76.5, target: 72, gapKg: 4.5, prefix: "מעל ה", overTarget: true,
     });
     expect(summarize(SERIES, 80)).toEqual({
-      latest: 76.5, target: 80, gapKg: 3.5, prefix: "מתחת ל",
+      latest: 76.5, target: 80, gapKg: 3.5, prefix: "מתחת ל", overTarget: false,
     });
   });
 
   it("states no distance once the gap is too small to show", () => {
-    expect(summarize(SERIES, 76.5)).toEqual({ latest: 76.5, target: 76.5, gapKg: null, prefix: "ב" });
-    expect(summarize(SERIES, 76.48)).toEqual({ latest: 76.5, target: 76.48, gapKg: null, prefix: "ב" });
+    expect(summarize(SERIES, 76.5)).toEqual({ latest: 76.5, target: 76.5, gapKg: null, prefix: "ב", overTarget: false });
+    expect(summarize(SERIES, 76.48)).toEqual({ latest: 76.5, target: 76.48, gapKg: null, prefix: "ב", overTarget: false });
   });
 
   it("still reads before a target exists, so the line can offer to set one", () => {
-    expect(summarize(SERIES, null)).toEqual({ latest: 76.5, target: null, gapKg: null, prefix: "ה" });
+    expect(summarize(SERIES, null)).toEqual({ latest: 76.5, target: null, gapKg: null, prefix: "ה", overTarget: false });
   });
 
   it("still reads before the first weighing, so the target is reachable from the start", () => {
-    expect(summarize([], 72)).toEqual({ latest: null, target: 72, gapKg: null, prefix: "ה" });
-    expect(summarize([], null)).toEqual({ latest: null, target: null, gapKg: null, prefix: "ה" });
+    expect(summarize([], 72)).toEqual({ latest: null, target: 72, gapKg: null, prefix: "ה", overTarget: false });
+    expect(summarize([], null)).toEqual({ latest: null, target: null, gapKg: null, prefix: "ה", overTarget: false });
   });
 });
