@@ -100,11 +100,20 @@ export function DayTracker({ questionnaire, today, firstMealHour, mealGapHours, 
     setFormCollapsed(true);
   }
 
-  // The button doing this sits beside the one that commits the correction, so it asks through the
-  // shared discard guard before spending what the form holds.
-  function cancelEdit() {
-    if (!mayDiscardEdits(editDiverged)) return;
+  // The two ways out of an open correction — the button beside the one that commits it, and
+  // folding the inputs away — both spend what the form holds, so both ask through the shared
+  // discard guard. Reports whether the edit was released; a dismissed dialog keeps it.
+  function discardEdit(): boolean {
+    if (!mayDiscardEdits(editDiverged)) return false;
     clearForm();
+    return true;
+  }
+
+  // Folding the inputs away puts a correction in progress out of sight, so it leaves the edit
+  // first. A dismissed discard dialog keeps the inputs open around what it refused to throw away.
+  function toggleForm() {
+    if (editing !== undefined && !discardEdit()) return;
+    setFormCollapsed((c) => !c);
   }
 
   function formDiverged(meal: Meal): boolean {
@@ -145,9 +154,10 @@ export function DayTracker({ questionnaire, today, firstMealHour, mealGapHours, 
                         summary={
       <DayDashboard questionnaire={questionnaire} derived={derived} />
     }>
-      <CollapsibleSection className="meal-form" title="פרטי ארוחה" headingLevel={3}
+      <CollapsibleSection className="meal-form" headingLevel={3}
+                          title={editing !== undefined ? "עדכון ארוחה" : "הוספת ארוחה"}
                           collapsed={formCollapsed}
-                          onToggle={() => setFormCollapsed((c) => !c)}>
+                          onToggle={toggleForm}>
         <ChoiceFieldset question={carbsQuestion} selectedId={carbsChoiceId} scope="meal"
                         onPick={(choice) => setCarbsChoiceId(choice.id)} />
         <div className="meal-flags">
@@ -193,12 +203,12 @@ export function DayTracker({ questionnaire, today, firstMealHour, mealGapHours, 
       <div className="form-actions">
         {carbsChoiceId !== undefined && (
           <button type="button" disabled={mealTimeIsFuture} onClick={submitMeal}>
-            {editing !== undefined ? "עדכון ארוחה" : "רישום ארוחה"}
+            שמירת ארוחה
           </button>
         )}
         {editing !== undefined && (
           <button type="button" className={editDiverged ? "quiet destructive" : "quiet"}
-                  onClick={cancelEdit}>
+                  onClick={() => discardEdit()}>
             {editDiverged ? "ביטול שינויים" : "יציאה מעריכה"}
           </button>
         )}

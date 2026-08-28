@@ -48,7 +48,7 @@ const NO_AUTO_OPEN_GAP_HOURS = Infinity;
 
 // The meal inputs start folded, so a test that reaches them opens the section first.
 const openMealForm = () =>
-  fireEvent.click(screen.getByRole("button", { name: "פרטי ארוחה" }));
+  fireEvent.click(screen.getByRole("button", { name: "הוספת ארוחה" }));
 
 describe("DayTracker", () => {
   // Cases here spy on window.confirm; without a restore the spy and its call log outlive the case
@@ -131,13 +131,13 @@ describe("DayTracker", () => {
                        onAddMeal={onAddMeal} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     openMealForm();
-    expect(screen.queryByRole("button", { name: "רישום ארוחה" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "שמירת ארוחה" })).toBeNull();
     fireEvent.click(screen.getByLabelText("דרגה 4"));
     fireEvent.click(screen.getByLabelText("כולל ירקות"));
     fireEvent.click(screen.getByLabelText("כולל פרי"));
     fireEvent.click(screen.getByLabelText("כולל מתוק"));
     fireEvent.click(screen.getByLabelText("כולל אלכוהול לא יבש"));
-    fireEvent.click(screen.getByRole("button", { name: "רישום ארוחה" }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירת ארוחה" }));
     expect(onAddMeal).toHaveBeenCalledWith(expect.objectContaining({
       carbs_choice: "carb_grade_4", vegetables: true, fruit: true, additions: ["sweet", "alcohol"], small_portion: false }));
     // Carries a UTC offset — the test runs on an arbitrary real date, with the clock unpinned.
@@ -168,7 +168,7 @@ describe("DayTracker", () => {
     openMealForm();
     fireEvent.click(screen.getByLabelText("דרגה 7"));
     fireEvent.click(screen.getByLabelText("כמות קטנה"));
-    fireEvent.click(screen.getByRole("button", { name: "רישום ארוחה" }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירת ארוחה" }));
     expect(onAddMeal).toHaveBeenCalledWith(expect.objectContaining({
       carbs_choice: "carb_grade_7", small_portion: true }));
 
@@ -179,7 +179,7 @@ describe("DayTracker", () => {
     fireEvent.click(screen.getByLabelText("דרגה 7"));
     fireEvent.click(screen.getByLabelText("כמות קטנה"));
     fireEvent.click(screen.getByLabelText("דרגה 4"));
-    fireEvent.click(screen.getByRole("button", { name: "רישום ארוחה" }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירת ארוחה" }));
     expect(onAddMeal).toHaveBeenLastCalledWith(expect.objectContaining({
       carbs_choice: "carb_grade_4", small_portion: false }));
   });
@@ -193,7 +193,7 @@ describe("DayTracker", () => {
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     openMealForm();
     fireEvent.click(screen.getByLabelText("דרגה 4!"));
-    fireEvent.click(screen.getByRole("button", { name: "רישום ארוחה" }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירת ארוחה" }));
     expect(onAddMeal).toHaveBeenCalledWith(expect.objectContaining({ carbs_choice: "grade4b" }));
   });
 
@@ -230,7 +230,7 @@ describe("DayTracker", () => {
     openMealForm();
     fireEvent.click(screen.getByLabelText("דרגה 4"));
     fireEvent.change(screen.getByLabelText("שעת הארוחה"), { target: { value: "13:00" } });
-    fireEvent.click(screen.getByRole("button", { name: "רישום ארוחה" }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירת ארוחה" }));
     expect(onAddMeal.mock.calls[0][0].at).toMatch(/^2026-08-20T13:00:00[+-]\d{2}:\d{2}$/);
   });
 
@@ -244,9 +244,9 @@ describe("DayTracker", () => {
     openMealForm();
     fireEvent.click(screen.getByLabelText("דרגה 4"));
     fireEvent.change(screen.getByLabelText("שעת הארוחה"), { target: { value: "13:00" } });
-    fireEvent.click(screen.getByRole("button", { name: "רישום ארוחה" }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירת ארוחה" }));
     // Recording folds the inputs away, so the restored default is read back through the header.
-    fireEvent.click(screen.getByRole("button", { name: "פרטי ארוחה" }));
+    fireEvent.click(screen.getByRole("button", { name: "הוספת ארוחה" }));
     expect(screen.getByLabelText("שעת הארוחה")).toHaveValue("15:40");
   });
 
@@ -261,7 +261,7 @@ describe("DayTracker", () => {
     openMealForm();
     fireEvent.click(screen.getByLabelText("דרגה 4"));
     fireEvent.change(screen.getByLabelText("שעת הארוחה"), { target: { value: "14:00" } });
-    expect(screen.getByRole("button", { name: "רישום ארוחה" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "שמירת ארוחה" })).toBeDisabled();
     expect(screen.getByText("לא ניתן לרשום ארוחה בשעה עתידית")).toBeInTheDocument();
   });
 
@@ -277,7 +277,7 @@ describe("DayTracker", () => {
     expect(screen.getByLabelText("כולל פרי")).toBeChecked();
     expect(screen.getByLabelText("כולל ירקות")).not.toBeChecked();
     expect(screen.getByRole("button", { name: "עדכון ארוחה" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "רישום ארוחה" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "הוספת ארוחה" })).toBeNull();
   });
 
   it("sends the edited meal under its own id and returns the form to recording", () => {
@@ -292,7 +292,7 @@ describe("DayTracker", () => {
     fireEvent.change(screen.getByLabelText("שעת הארוחה"), { target: { value: "12:00" } });
     fireEvent.click(screen.getByLabelText("כולל ירקות"));
     fireEvent.click(screen.getByLabelText("כולל מתוק"));
-    fireEvent.click(screen.getByRole("button", { name: "עדכון ארוחה" }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירת ארוחה" }));
     expect(onUpdateMeal).toHaveBeenCalledWith("b", expect.objectContaining({
       carbs_choice: "carb_grade_4", vegetables: true, fruit: true, additions: ["sweet"], small_portion: false }));
     expect(onUpdateMeal.mock.calls[0][1].at).toMatch(/T12:00:00[+-]\d{2}:\d{2}$/);
@@ -382,7 +382,7 @@ describe("DayTracker", () => {
                          onCloseDay={vi.fn()} />);
 
     expect(screen.queryByRole("button", { name: "עדכון ארוחה" })).toBeNull();
-    expect(screen.getByRole("button", { name: "רישום ארוחה" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "הוספת ארוחה" })).toBeInTheDocument();
   });
 
   it("collapses to the dashboard alone and expands back on header toggle", () => {
@@ -398,7 +398,7 @@ describe("DayTracker", () => {
 
     expect(toggle).toHaveAttribute("aria-expanded", "false");
     expect(dashboardFigure("ציון")).toHaveTextContent("ציון: 4");
-    expect(screen.queryByRole("button", { name: "רישום ארוחה" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "שמירת ארוחה" })).toBeNull();
     expect(screen.queryByRole("button", { name: "סגירת יום" })).toBeNull();
     expect(screen.queryByText("דרגה 4")).toBeNull();
 
@@ -413,7 +413,7 @@ describe("DayTracker", () => {
                        mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
-    expect(screen.getByRole("button", { name: "פרטי ארוחה" }))
+    expect(screen.getByRole("button", { name: "הוספת ארוחה" }))
       .toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByLabelText("שעת הארוחה")).toBeNull();
     expect(screen.queryByLabelText("דרגה 4")).toBeNull();
@@ -429,7 +429,7 @@ describe("DayTracker", () => {
                        today={dayWithMealHoursAgo(3)}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
-    expect(screen.getByRole("button", { name: "פרטי ארוחה" }))
+    expect(screen.getByRole("button", { name: "הוספת ארוחה" }))
       .toHaveAttribute("aria-expanded", "false");
   });
 
@@ -440,7 +440,7 @@ describe("DayTracker", () => {
                        today={dayWithMealHoursAgo(5)}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
-    expect(screen.getByRole("button", { name: "פרטי ארוחה" }))
+    expect(screen.getByRole("button", { name: "הוספת ארוחה" }))
       .toHaveAttribute("aria-expanded", "true");
     expect(screen.getByLabelText("שעת הארוחה")).toBeInTheDocument();
   });
@@ -453,9 +453,9 @@ describe("DayTracker", () => {
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     fireEvent.click(screen.getByLabelText("דרגה 4"));
-    fireEvent.click(screen.getByRole("button", { name: "רישום ארוחה" }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירת ארוחה" }));
 
-    expect(screen.getByRole("button", { name: "פרטי ארוחה" }))
+    expect(screen.getByRole("button", { name: "הוספת ארוחה" }))
       .toHaveAttribute("aria-expanded", "false");
   });
 
@@ -466,7 +466,7 @@ describe("DayTracker", () => {
                        mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
-    expect(screen.getByRole("button", { name: "פרטי ארוחה" }))
+    expect(screen.getByRole("button", { name: "הוספת ארוחה" }))
       .toHaveAttribute("aria-expanded", "true");
     expect(screen.getByLabelText("שעת הארוחה")).toBeInTheDocument();
   });
@@ -478,7 +478,7 @@ describe("DayTracker", () => {
                        mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
-    expect(screen.getByRole("button", { name: "פרטי ארוחה" }))
+    expect(screen.getByRole("button", { name: "הוספת ארוחה" }))
       .toHaveAttribute("aria-expanded", "false");
   });
 
@@ -489,7 +489,7 @@ describe("DayTracker", () => {
                        mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
-    expect(screen.getByRole("button", { name: "פרטי ארוחה" }))
+    expect(screen.getByRole("button", { name: "הוספת ארוחה" }))
       .toHaveAttribute("aria-expanded", "false");
   });
 
@@ -500,8 +500,8 @@ describe("DayTracker", () => {
                        mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
-    fireEvent.click(screen.getByRole("button", { name: "פרטי ארוחה" }));
-    expect(screen.getByRole("button", { name: "פרטי ארוחה" }))
+    fireEvent.click(screen.getByRole("button", { name: "הוספת ארוחה" }));
+    expect(screen.getByRole("button", { name: "הוספת ארוחה" }))
       .toHaveAttribute("aria-expanded", "false");
   });
 
@@ -512,14 +512,13 @@ describe("DayTracker", () => {
                        today={dayWithMealHoursAgo(1)}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
-    expect(screen.getByRole("button", { name: "פרטי ארוחה" }))
+    expect(screen.getByRole("button", { name: "הוספת ארוחה" }))
       .toHaveAttribute("aria-expanded", "false");
 
     fireEvent.click(screen.getByRole("button", { name: /^עריכת ארוחה/ }));
 
-    expect(screen.getByRole("button", { name: "פרטי ארוחה" }))
+    expect(screen.getByRole("button", { name: "עדכון ארוחה" }))
       .toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByRole("button", { name: "עדכון ארוחה" })).toBeInTheDocument();
   });
 
   it("folds the meal inputs away once a meal is recorded", () => {
@@ -531,9 +530,9 @@ describe("DayTracker", () => {
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     openMealForm();
     fireEvent.click(screen.getByLabelText("דרגה 4"));
-    fireEvent.click(screen.getByRole("button", { name: "רישום ארוחה" }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירת ארוחה" }));
 
-    expect(screen.getByRole("button", { name: "פרטי ארוחה" }))
+    expect(screen.getByRole("button", { name: "הוספת ארוחה" }))
       .toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByLabelText("שעת הארוחה")).toBeNull();
   });
@@ -546,9 +545,9 @@ describe("DayTracker", () => {
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     fireEvent.click(screen.getByRole("button", { name: "עריכת ארוחה 13:30" }));
-    fireEvent.click(screen.getByRole("button", { name: "עדכון ארוחה" }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירת ארוחה" }));
 
-    expect(screen.getByRole("button", { name: "פרטי ארוחה" }))
+    expect(screen.getByRole("button", { name: "הוספת ארוחה" }))
       .toHaveAttribute("aria-expanded", "false");
   });
 
@@ -562,9 +561,66 @@ describe("DayTracker", () => {
     fireEvent.click(screen.getByRole("button", { name: "עריכת ארוחה 13:30" }));
     fireEvent.click(screen.getByRole("button", { name: "יציאה מעריכה" }));
 
-    expect(screen.getByRole("button", { name: "פרטי ארוחה" }))
+    expect(screen.getByRole("button", { name: "הוספת ארוחה" }))
       .toHaveAttribute("aria-expanded", "true");
     expect(screen.getByLabelText("שעת הארוחה")).toBeInTheDocument();
+  });
+
+  it("leaves an untouched edit when the meal inputs are folded away", () => {
+    atLocalTime(19, 5);
+    const confirmSpy = vi.spyOn(window, "confirm");
+    render(<DayTracker questionnaire={questionnaire} today={trackedDay}
+                       firstMealHour={NO_AUTO_OPEN_HOUR}
+                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "עריכת ארוחה 13:30" }));
+    fireEvent.click(screen.getByRole("button", { name: "עדכון ארוחה" }));
+
+    expect(confirmSpy).not.toHaveBeenCalled();
+    const toggle = screen.getByRole("button", { name: "הוספת ארוחה" });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    // The edit is gone, not merely hidden: the inputs come back on the recording defaults.
+    fireEvent.click(toggle);
+    expect(screen.getByLabelText("שעת הארוחה")).toHaveValue("18:40");
+    expect(screen.getByLabelText("דרגה 4")).not.toBeChecked();
+  });
+
+  it("keeps a diverged edit and its open inputs when the fold's dialog is dismissed", () => {
+    atLocalTime(19, 5);
+    vi.spyOn(window, "confirm").mockReturnValue(false);
+    render(<DayTracker questionnaire={questionnaire} today={trackedDay}
+                       firstMealHour={NO_AUTO_OPEN_HOUR}
+                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "עריכת ארוחה 13:30" }));
+    fireEvent.click(screen.getByLabelText("כולל ירקות"));
+    fireEvent.click(screen.getByRole("button", { name: "עדכון ארוחה" }));
+
+    expect(screen.getByRole("button", { name: "עדכון ארוחה" }))
+      .toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByLabelText("כולל ירקות")).toBeChecked();
+    expect(screen.getByLabelText("שעת הארוחה")).toHaveValue("13:30");
+  });
+
+  it("discards a diverged edit once the fold's dialog is confirmed", () => {
+    atLocalTime(19, 5);
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+    render(<DayTracker questionnaire={questionnaire} today={trackedDay}
+                       firstMealHour={NO_AUTO_OPEN_HOUR}
+                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "עריכת ארוחה 13:30" }));
+    fireEvent.change(screen.getByLabelText("שעת הארוחה"), { target: { value: "12:00" } });
+    fireEvent.click(screen.getByRole("button", { name: "עדכון ארוחה" }));
+
+    expect(confirmSpy).toHaveBeenCalledOnce();
+    const toggle = screen.getByRole("button", { name: "הוספת ארוחה" });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(toggle);
+    expect(screen.getByLabelText("שעת הארוחה")).toHaveValue("18:40");
   });
 
   it("renders the score bold and last in the dashboard", () => {

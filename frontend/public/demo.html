@@ -759,7 +759,7 @@ function trackerHtml() {
     "</div>" +
     dashboardHtml(derived) +
     '<section class="meal-form"><h3><button type="button" class="section-toggle" data-t="form-toggle"' +
-      ' aria-expanded="' + (state.formOpen ? "true" : "false") + '">פרטי ארוחה</button></h3>';
+      ' aria-expanded="' + (state.formOpen ? "true" : "false") + '">הוספת ארוחה</button></h3>';
 
   if (state.formOpen) {
     html += choiceFieldsetHtml(carbsQ, p.carbs_choice, "meal", "grade-") +
@@ -776,7 +776,7 @@ function trackerHtml() {
   html += "</section>";
 
   html += '<div class="form-actions">';
-  if (p.carbs_choice !== null) html += '<button type="button" data-t="record">רישום ארוחה</button>';
+  if (p.carbs_choice !== null) html += '<button type="button" data-t="record">שמירת ארוחה</button>';
   if (closable) html += '<button type="button" class="quiet" data-t="close-day">סגירת יום</button>';
   html += "</div>";
 
