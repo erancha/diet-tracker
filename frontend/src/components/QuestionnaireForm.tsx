@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import type { AnswerValue, Choice, Derived, Questionnaire } from "../types";
 import { mayDiscardEdits } from "../edits";
 import { questionTitle } from "../violations";
@@ -21,13 +21,14 @@ interface Props {
 }
 
 // Renders the day-end questionnaire: single questions as radio groups floored by the day's
-// recorded meals, points questions as sliders pinned to the recorded sum. Radio questions rely
-// on native required-field validation; sliders always hold a value, starting at their floor.
+// recorded meals, points questions as sliders pinned to the recorded sum. Submission validates
+// the radio groups here rather than through the browser's required-field check, whose bubble
+// speaks the browser's UI language inside an all-Hebrew app; sliders always hold a value,
+// starting at their floor.
 // The state seeds once from the stored answers, so the caller re-keys this component when the
 // selected day changes; answers edited since are restorable from here and reported up as pending.
 export function QuestionnaireForm({ questionnaire, floors, stored, onSubmit, onValidationError,
                                     onPendingChange }: Props) {
-  const formRef = useRef<HTMLFormElement>(null);
   const floorOf = (questionId: string): number =>
     questionId in floors ? floors[questionId as keyof Derived] : 0;
   // The answers the form opened on, held apart from the live ones so an edit is recognizable as
@@ -73,8 +74,11 @@ export function QuestionnaireForm({ questionnaire, floors, stored, onSubmit, onV
   };
 
   function handleSubmit() {
-    if (!formRef.current!.reportValidity()) return;
     for (const question of questionnaire.questions) {
+      if (question.type === "single" && selectedIds[question.id] === undefined) {
+        onValidationError(`יש לבחור תשובה לשאלה: ${questionTitle(question, "day")}`);
+        return;
+      }
       const floor = floorOf(question.id);
       if (answers[question.id] < floor) {
         onValidationError(`הערך של ${questionTitle(question, "day")} לא יכול להיות נמוך מ-${floor} שנרשם ביומן`);
@@ -85,7 +89,7 @@ export function QuestionnaireForm({ questionnaire, floors, stored, onSubmit, onV
   }
 
   return (
-    <form ref={formRef}>
+    <form>
       {stored !== undefined && (
         <p className="notice">היום הזה כבר נשלח — שליחה חוזרת תחליף את התשובות שנשמרו</p>
       )}

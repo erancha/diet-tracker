@@ -19,9 +19,10 @@ const questionnaire: Questionnaire = {
 const zeroFloors: Derived = { carbs: 0, meals: 0, vegetables: 0, eating_window: 0 };
 
 function renderForm(floors: Derived = zeroFloors, onSubmit = vi.fn(),
-                    stored?: Record<string, AnswerValue>, onPendingChange = vi.fn()) {
+                    stored?: Record<string, AnswerValue>, onPendingChange = vi.fn(),
+                    onValidationError = vi.fn()) {
   render(<QuestionnaireForm questionnaire={questionnaire} floors={floors} stored={stored}
-                            onSubmit={onSubmit} onValidationError={vi.fn()}
+                            onSubmit={onSubmit} onValidationError={onValidationError}
                             onPendingChange={onPendingChange} />);
   return onSubmit;
 }
@@ -168,6 +169,15 @@ describe("QuestionnaireForm", () => {
     fireEvent.click(screen.getByRole("button", { name: DISCARD_LABEL }));
     expect(screen.getByLabelText("3 ליטר")).toBeChecked();
     expect(screen.getByRole("slider")).toHaveValue("7");
+  });
+
+  it("names the unanswered question in Hebrew instead of leaving it to the browser", () => {
+    const onValidationError = vi.fn();
+    const onSubmit = renderForm(zeroFloors, vi.fn(), undefined, vi.fn(), onValidationError);
+    fireEvent.click(screen.getByLabelText("3 ליטר"));
+    fireEvent.click(screen.getByRole("button", { name: "שליחה" }));
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(onValidationError).toHaveBeenCalledWith("יש לבחור תשובה לשאלה: ארוחות");
   });
 
   it("keeps the edits when the discard is declined", () => {

@@ -5,9 +5,9 @@ import { questionTitle, valueLabel } from "../violations";
 // scale cannot express. Two such values arise, and they coincide whenever the tracker closed the
 // day: a floor topping every choice, so that a group disabled end to end still has something
 // pickable — the server accepts the exact floor off-scale, and an all-disabled group would
-// otherwise skip native required validation and submit without the answer; and a stored answer no
-// choice carries, so that reopening a recorded day shows the figure actually saved rather than a
-// blank group that would drop it on resubmission.
+// otherwise leave the question unanswerable, blocking the submission that validates it; and a
+// stored answer no choice carries, so that reopening a recorded day shows the figure actually
+// saved rather than a blank group that would drop it on resubmission.
 //
 // Each synthesized option is seated before the first choice worth more than it, so a group reads
 // as one ordered scale rather than a list with a stray value after its end. Configured choices
@@ -35,6 +35,10 @@ export function fieldsetChoices(question: Question, floor?: number, stored?: num
 // is what identifies the selection. Choices below the tracked floor are disabled: recorded meals
 // are evidence, and the day-end answer can only admit more, never less. The scope prop picks which
 // heading qualifier the legend carries (a day's summed answer vs. one meal's grade).
+//
+// The required marking states the obligation to assistive tech; the browser's own enforcement is
+// never invoked, since its message speaks the browser's UI language rather than the app's Hebrew.
+// Enclosing forms check their own answers before submitting.
 export function ChoiceFieldset({ question, selectedId, floor, stored, scope = "day", onPick }: {
   question: Question;
   selectedId: string | undefined;
