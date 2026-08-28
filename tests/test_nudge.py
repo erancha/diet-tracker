@@ -127,3 +127,50 @@ def test_the_weigh_in_job_is_dispatchable_by_name(env, monkeypatch):
     monkeypatch.setattr(nudge, "_build_env", lambda: e)
     nudge.handler({"job": "weigh_in"}, None)
     assert len(sent) == 4
+
+
+def record_meal(store, sub, day, at_time="09:10:00"):
+    store.add_meal(sub, day, f"{day}T{at_time}+03:00", "carb_grade_3", True, False, [], False)
+
+
+def test_the_evening_reminder_does_not_yet_call_the_day_open(env):
+    """The day is still being eaten at the first reminder hour, so only the last call names a
+    tracked day open."""
+    e, sent = env
+    record_meal(e.store, "u1", today())
+    e.store.put_day("u2", today(), CLEAN, 1, "t")
+    nudge._reminder(e)
+    assert [text for _, _, text in sent] == [nudge.REMINDER_TEXT, nudge.REMINDER_TEXT]
+
+
+def test_last_call_tells_a_user_who_recorded_meals_that_the_day_is_still_open(env):
+    e, sent = env
+    record_meal(e.store, "u1", today())
+    e.store.put_day("u2", today(), CLEAN, 1, "t")
+    nudge._last_call(e)
+    assert [(target, text) for _, target, text in sent] == [
+        ("111", nudge.OPEN_DAY_TEXT), ("a@gmail.com", nudge.OPEN_DAY_TEXT)]
+
+
+def test_last_call_keeps_the_plain_fill_reminder_for_a_day_with_nothing_recorded(env):
+    e, sent = env
+    e.store.put_day("u2", today(), CLEAN, 1, "t")
+    nudge._last_call(e)
+    assert [text for _, _, text in sent] == [nudge.REMINDER_TEXT, nudge.REMINDER_TEXT]
+
+
+def test_last_call_leaves_a_submitted_day_alone(env):
+    e, sent = env
+    record_meal(e.store, "u1", today())
+    e.store.put_day("u1", today(), CLEAN, 1, "t")
+    e.store.put_day("u2", today(), CLEAN, 1, "t")
+    nudge._last_call(e)
+    assert sent == []
+
+
+def test_the_last_call_job_is_dispatchable_by_name(env, monkeypatch):
+    e, sent = env
+    monkeypatch.setattr(nudge, "_build_env", lambda: e)
+    e.store.put_day("u2", today(), CLEAN, 1, "t")
+    nudge.handler({"job": "last_call"}, None)
+    assert [target for _, target, _ in sent] == ["111", "a@gmail.com"]

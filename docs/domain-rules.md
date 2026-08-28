@@ -117,7 +117,12 @@ at deploy time, because an EventBridge cron expression is fixed when the stack d
 
 Scheduled jobs (EventBridge Scheduler, Asia/Jerusalem) run alongside the tracker:
 
-- **Fill reminders** — sent while a day remains unsubmitted.
+- **Fill reminders** — sent on the stack's `ReminderHours` while a day remains unsubmitted.
+- **Last call** — the night's final reminder, late enough that the day is over in practice and
+  still inside it, so what it asks about is the day the user is living. It reaches the same
+  unsubmitted users the fill reminders do, and tells a user whose meals are already logged that
+  the day is open rather than untracked: everything but the water is recorded, and the
+  questionnaire is what closes it. A day carrying no meals gets the plain reminder.
 - **Threshold alerts** — fire over consecutive days violating the configured thresholds, by email
   plus Telegram when a bot token is configured (see
   [Development & deployment](development.md#telegram-optional)).

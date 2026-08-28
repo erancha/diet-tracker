@@ -46,9 +46,10 @@ deploy_cognito() {
       AllowedEmails="$ALLOWED_EMAILS" CallbackUrls="$callbacks" DomainPrefix="diet-trk${ENV_SUFFIX}"
 }
 
-# The weigh-in reminder's slot is declared in config/app.json, but an EventBridge cron expression
-# is fixed when the stack deploys — so the values are lifted out here rather than restated in the
-# template's defaults.
+# Every hour a schedule's cron is built from is passed on each deploy: CloudFormation keeps the
+# previous value of any parameter a deploy leaves out, so a template default is inert once the
+# stack exists. The reminder hours live here as the one declaration; the weigh-in slot is declared
+# in config/app.json and lifted out because an EventBridge cron is fixed when the stack deploys.
 app_config() {
   python3 -c "import json; print(json.load(open('config/app.json'))$1)"
 }
@@ -67,6 +68,7 @@ deploy_main() {
     --parameter-overrides SesSender="$SES_SENDER" AllowedOrigins="$origins" \
       UserPoolId="$user_pool_id" \
       UserPoolClientId="$user_pool_client_id" \
+      ReminderHours="20" \
       WeighInWeekday="$(app_config "['weight']['weigh_in']['weekday']")" \
       WeighInHour="$(app_config "['weight']['weigh_in']['hour']")"
 }

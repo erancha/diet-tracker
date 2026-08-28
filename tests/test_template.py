@@ -5,6 +5,7 @@ from pathlib import Path
 import yaml
 
 TEMPLATE = Path(__file__).parent.parent / "scripts" / "template.yaml"
+DEPLOY = Path(__file__).parent.parent / "scripts" / "deploy.sh"
 
 
 class _CloudFormationLoader(yaml.SafeLoader):
@@ -60,4 +61,21 @@ def test_every_scheduled_job_name_is_one_the_nudge_handler_dispatches():
     scheduled = {json.loads(resource["Properties"]["Target"]["Input"])["job"]
                  for resource in template["Resources"].values()
                  if resource["Type"] == "AWS::Scheduler::Schedule"}
-    assert scheduled == {"reminder", "rules", "weekly", "weigh_in"}
+    assert scheduled == {"reminder", "last_call", "rules", "weekly", "weigh_in"}
+
+
+def test_every_parameter_a_schedule_reads_is_passed_on_deploy():
+    # CloudFormation keeps a stack's previous parameter value for every parameter a deploy does
+    # not pass, so a changed template default never reaches a stack that already exists. A cron
+    # built from a parameter must therefore have it passed on every deploy, or a retired hour goes
+    # on firing against code that no longer expects it.
+    import re
+
+    template = _load_template()
+    read_by_a_cron = {name
+                      for resource in template["Resources"].values()
+                      if resource["Type"] == "AWS::Scheduler::Schedule"
+                      for name in re.findall(r"\$\{(\w+)\}",
+                                             resource["Properties"]["ScheduleExpression"])}
+    deploy = DEPLOY.read_text()
+    assert [name for name in sorted(read_by_a_cron) if f"{name}=" not in deploy] == []

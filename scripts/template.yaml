@@ -15,9 +15,10 @@ Parameters:
     Default: 'http://localhost:8000'
   ReminderHours:
     Type: String
-    Default: '20,22'
-    Description: Asia/Jerusalem hours of the daily fill reminders; the first also drives the
-      frontend's auto-expanded evening questionnaire via the FirstReminderHour output
+    Description: Asia/Jerusalem hours of the daily fill reminders, whole hours only, passed by
+      scripts/deploy.sh; the first also drives the frontend's auto-expanded evening questionnaire
+      via the FirstReminderHour output. The night's last call runs on its own half-hour schedule
+      past these
   FirstMealHour:
     Type: Number
     Default: 11
@@ -302,6 +303,20 @@ Resources:
         Arn: !GetAtt NudgeFunction.Arn
         RoleArn: !GetAtt SchedulerRole.Arn
         Input: '{"job": "reminder"}'
+
+  LastCallSchedule:
+    Type: AWS::Scheduler::Schedule
+    Properties:
+      # Half past eleven is the last slot at which the day being asked about is still the running
+      # one, so it carries its own minute rather than joining the whole-hour ReminderHours.
+      ScheduleExpression: 'cron(30 23 * * ? *)'
+      ScheduleExpressionTimezone: Asia/Jerusalem
+      FlexibleTimeWindow:
+        Mode: 'OFF'
+      Target:
+        Arn: !GetAtt NudgeFunction.Arn
+        RoleArn: !GetAtt SchedulerRole.Arn
+        Input: '{"job": "last_call"}'
 
   NightlyRulesSchedule:
     Type: AWS::Scheduler::Schedule

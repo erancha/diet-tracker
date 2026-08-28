@@ -25,10 +25,11 @@ closed from the tracker, and the week's trend over recorded history.
   where you stand in that rhythm and opens itself on the weigh-in morning. Weight is measured
   rather than scored, so it changes no day's score and raises no alert.
 - Reminders go out by email, and by Telegram where a bot token is configured: a nudge while a day
-  is still unsubmitted, a weekly weigh-in reminder that skips anyone who already weighed in on the
-  day itself, an alert when a principle or the carb score stays past its limit several days running, and
-  a weekly summary of averages. The one reminder that shows up inside the app is the 7-day trend
-  chart after each submit.
+  is still unsubmitted, a last call at the end of it that says the day is open rather than
+  untracked once its meals are logged, a weekly weigh-in reminder that skips anyone who already
+  weighed in on the day itself, an alert when a principle or the carb score stays past its limit
+  several days running, and a weekly summary of averages. The one reminder that shows up inside
+  the app is the 7-day trend chart after each submit.
 
 ## Tech stack
 
