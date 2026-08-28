@@ -110,15 +110,18 @@ export function HistoryTable({ questionnaire, days, today, deletableDates, viewe
                     && day.date === viewedDate && deletableDates.has(day.date)
                     ? <DeleteDayButton date={day.date} onDelete={onDelete} />
                     : null;
-                  if (!(q.id in day.answers)) return <td key={q.id}>—{deletion}</td>;
+                  const deleteClass = deletion === null ? undefined : "has-delete";
+                  if (!(q.id in day.answers)) return <td key={q.id} className={deleteClass}>—{deletion}</td>;
                   const value = day.answers[q.id];
                   const viewable = q.type === "points";
                   // The score column signals a high total with red text alone; the violation
                   // background stays on the answer columns.
-                  const classes = (q.type === "points"
-                    ? [isHighScore(q, value) && "high-score", viewable && "view-day"]
-                    : [isViolating(questionnaire, q.id, value) && "violation"]
-                  ).filter(Boolean).join(" ");
+                  const classes = [
+                    ...(q.type === "points"
+                      ? [isHighScore(q, value) && "high-score", viewable && "view-day"]
+                      : [isViolating(questionnaire, q.id, value) && "violation"]),
+                    deleteClass,
+                  ].filter(Boolean).join(" ");
                   return (
                     <td key={q.id} className={classes || undefined}
                         {...(viewable && {
@@ -128,8 +131,10 @@ export function HistoryTable({ questionnaire, days, today, deletableDates, viewe
                             if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onView(day.date); }
                           },
                         })}>
-                      {cellText(q.id, value)}
-                      {viewable && <>{" "}<Icon name="openDay" /></>}
+                      {viewable
+                        ? <><span className="day-score">{cellText(q.id, value)}</span>{" "}
+                            <Icon name="openDay" /></>
+                        : cellText(q.id, value)}
                       {deletion}
                     </td>
                   );

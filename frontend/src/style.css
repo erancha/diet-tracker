@@ -126,7 +126,7 @@ button:disabled { --btn-bg: #e4e4e4; --btn-fg: #9a9a9a; --btn-border: #d8d8d8; c
    padding and the margin resolves to 0. The table sizes to its content within that room — at
    least 20% wider than the column when space allows — so cells wrap only when truly out of
    space, with horizontal scroll as the fallback. */
-.table-wrap { overflow-x: auto; margin-left: min(0px, calc(3rem - (100vw - 100%) / 2)); }
+.table-wrap { --delete-pad: 0.3rem; overflow-x: auto; margin-left: min(0px, calc(3rem - (100vw - 100%) / 2)); }
 /* A history cell holds one short answer whose words belong together — "ב-2 ארוחות", "7.5 שעות",
    a weekday beside its date. Breaking one costs the row twice its height to save a few pixels of
    width, so the cells keep their line and the wrapper scrolls instead, which is what it is for.
@@ -144,6 +144,17 @@ th, td { --cell-font-size: calc(0.9rem - 1px); border: 1px solid #ddd; padding: 
    one visual row instead of shorter headers floating mid-cell. The slightly smaller size keeps
    the long question titles subordinate to the answer data. */
 th { vertical-align: top; font-size: calc(var(--cell-font-size) - 1pt); }
+/* A phone has fewer pixels across than the grid's columns want, so the last column — the one the
+   delete control rides in — starts past the scroll edge, showing as a clipped icon. Every cell
+   there runs a further pixel down on tighter padding, and the bin halves its own — which the cell's
+   width reserve follows: enough that a row of plain numeric answers fits a 390px screen outright.
+   A row carrying one of the long bound labels ("פחות מ-2.5 ליטר !!") still overruns and scrolls,
+   since those cells hold their line by the nowrap rule above. The landing's reference table sits
+   outside the wrapper and keeps the page's reading size. */
+@media (max-width: 47.99rem) {
+  .table-wrap { --delete-pad: 0.15rem; }
+  .table-wrap :is(th, td) { --cell-font-size: calc(0.9rem - 2px); padding: 0.3rem; }
+}
 /* From tablet width up, all columns but the last two take a fixed width, so their long headers
    wrap instead of dictating column width and the freed space goes to the last two columns —
    which in the current questionnaire carry the long answers (a positional assumption; reorder
@@ -166,7 +177,17 @@ td.violation { background: #ffebee; color: var(--danger); }
    rather than the whole item, so the alarm sits on the number its label merely names, and its
    specificity outranks the green that figure otherwise carries. */
 td.high-score, .tracker-dashboard .high-score .value, .meal-list .high-grade { color: var(--danger); }
-.delete-day { margin-inline-start: 0.4rem; }
+/* The bin is lifted out of the cell's line and pinned to the cell's far edge, so it holds one
+   position down the column rather than trailing whatever the row's score happens to measure.
+   Out of flow it contributes no width, so the cell reserves its footprint as padding instead: the
+   glyph, the button's padding either side, its inset off the cell edge, and a gap off the score. */
+td.has-delete { position: relative; padding-inline-end: calc(1.1em + 3 * var(--delete-pad) + 0.3rem); }
+button.delete-day { position: absolute; inset-inline-end: var(--delete-pad); top: 50%;
+                    transform: translateY(-50%); padding: var(--delete-pad); }
+/* The score leads a cell that also carries the open-day glyph and, on a deletable row, the bin.
+   Sized for the widest score the carb scale reaches, so a one-digit day does not slide those along
+   and leave the column's glyphs ragged down the table. */
+.day-score { display: inline-block; min-width: 2ch; font-variant-numeric: tabular-nums; }
 /* The score cell is the open-day-view control, apart from the delete button it also carries. */
 td.view-day { cursor: pointer; }
 
