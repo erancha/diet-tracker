@@ -586,6 +586,97 @@ describe("DayTracker", () => {
     expect(screen.getByLabelText("דרגה 4")).not.toBeChecked();
   });
 
+  it("folds an untouched recording form away without asking", () => {
+    atLocalTime(11);
+    const confirmSpy = vi.spyOn(window, "confirm");
+    render(<DayTracker questionnaire={questionnaire} today={emptyDay}
+                       firstMealHour={11}
+                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "הוספת ארוחה" }));
+
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "הוספת ארוחה" }))
+      .toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("keeps a half-composed meal and its open inputs when the fold's dialog is dismissed", () => {
+    atLocalTime(19, 5);
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+    render(<DayTracker questionnaire={questionnaire} today={emptyDay}
+                       firstMealHour={NO_AUTO_OPEN_HOUR}
+                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    openMealForm();
+    fireEvent.click(screen.getByLabelText("דרגה 4"));
+    fireEvent.click(screen.getByRole("button", { name: "הוספת ארוחה" }));
+
+    expect(confirmSpy).toHaveBeenCalledOnce();
+    expect(screen.getByRole("button", { name: "הוספת ארוחה" }))
+      .toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByLabelText("דרגה 4")).toBeChecked();
+  });
+
+  it("resets a half-composed meal once the fold's dialog is confirmed", () => {
+    atLocalTime(19, 5);
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+    render(<DayTracker questionnaire={questionnaire} today={emptyDay}
+                       firstMealHour={NO_AUTO_OPEN_HOUR}
+                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    openMealForm();
+    fireEvent.click(screen.getByLabelText("דרגה 4"));
+    fireEvent.click(screen.getByLabelText("כולל ירקות"));
+    fireEvent.change(screen.getByLabelText("שעת הארוחה"), { target: { value: "12:00" } });
+    const toggle = screen.getByRole("button", { name: "הוספת ארוחה" });
+    fireEvent.click(toggle);
+
+    expect(confirmSpy).toHaveBeenCalledOnce();
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(toggle);
+    expect(screen.getByLabelText("דרגה 4")).not.toBeChecked();
+    expect(screen.getByLabelText("כולל ירקות")).not.toBeChecked();
+    expect(screen.getByLabelText("שעת הארוחה")).toHaveValue("18:40");
+  });
+
+  it("asks before folding away a meal time picked off the opening default", () => {
+    atLocalTime(19, 5);
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+    render(<DayTracker questionnaire={questionnaire} today={emptyDay}
+                       firstMealHour={NO_AUTO_OPEN_HOUR}
+                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    openMealForm();
+    fireEvent.change(screen.getByLabelText("שעת הארוחה"), { target: { value: "17:00" } });
+    fireEvent.click(screen.getByRole("button", { name: "הוספת ארוחה" }));
+
+    expect(confirmSpy).toHaveBeenCalledOnce();
+    expect(screen.getByLabelText("שעת הארוחה")).toHaveValue("17:00");
+  });
+
+  it("unfolds the recording form without asking, whatever the clock has done meanwhile", () => {
+    atLocalTime(19, 5);
+    const confirmSpy = vi.spyOn(window, "confirm");
+    render(<DayTracker questionnaire={questionnaire} today={emptyDay}
+                       firstMealHour={NO_AUTO_OPEN_HOUR}
+                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    openMealForm();
+    fireEvent.click(screen.getByRole("button", { name: "הוספת ארוחה" }));
+    // The default time the folded form was reset to is now half an hour stale; reopening the
+    // inputs must not read that drift as something the user typed.
+    vi.setSystemTime(new Date(2026, 7, 20, 19, 35));
+    openMealForm();
+    fireEvent.click(screen.getByRole("button", { name: "הוספת ארוחה" }));
+
+    expect(confirmSpy).not.toHaveBeenCalled();
+  });
+
   it("keeps a diverged edit and its open inputs when the fold's dialog is dismissed", () => {
     atLocalTime(19, 5);
     vi.spyOn(window, "confirm").mockReturnValue(false);

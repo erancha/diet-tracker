@@ -50,6 +50,9 @@ export function DayTracker({ questionnaire, today, firstMealHour, mealGapHours, 
   const [closing, setClosing] = useState(false);
   const [drinkingChoiceId, setDrinkingChoiceId] = useState<string | undefined>(undefined);
   const [mealTime, setMealTime] = useState(() => defaultMealTime(new Date()));
+  // The time the form last opened on. Held rather than recomputed: the default walks with the
+  // clock, and a freshly derived one would read ten minutes on as a time the user had picked.
+  const [pristineTime, setPristineTime] = useState(mealTime);
   const [editingId, setEditingId] = useState<string | undefined>(undefined);
 
   // Today's meals always resolve against the current questionnaire, so deriveDay's throw on an
@@ -74,6 +77,13 @@ export function DayTracker({ questionnaire, today, firstMealHour, mealGapHours, 
   // Whether the form still matches the meal it opened on — what separates an exit from a discard,
   // for the one button that serves as both.
   const editDiverged = editing !== undefined && formDiverged(editing);
+
+  // A half-composed new meal is worth the same guard as a correction: the form holds the only copy
+  // of it. Its baseline is the blank form recording opens on rather than a stored meal, and the
+  // small-portion box is not among the terms because it exists only once a grade is picked.
+  const newMealDiverged = editing === undefined
+    && (carbsChoiceId !== undefined || vegetables || fruit || pickedAdditions.size > 0
+        || mealTime !== pristineTime);
 
   // The meal inputs are the tallest thing here and are worth reading only when there is a meal to
   // report, so the tracker opens on the day's figures and its recorded meals with the inputs
@@ -100,19 +110,20 @@ export function DayTracker({ questionnaire, today, firstMealHour, mealGapHours, 
     setFormCollapsed(true);
   }
 
-  // The two ways out of an open correction — the button beside the one that commits it, and
-  // folding the inputs away — both spend what the form holds, so both ask through the shared
-  // discard guard. Reports whether the edit was released; a dismissed dialog keeps it.
-  function discardEdit(): boolean {
-    if (!mayDiscardEdits(editDiverged)) return false;
+  // The two ways out of an open form — the button beside the one that commits it, and folding the
+  // inputs away — both spend what the form holds, so both ask through the shared discard guard.
+  // Reports whether the form was released; a dismissed dialog keeps it.
+  function discardForm(): boolean {
+    if (!mayDiscardEdits(editDiverged || newMealDiverged)) return false;
     clearForm();
     return true;
   }
 
-  // Folding the inputs away puts a correction in progress out of sight, so it leaves the edit
-  // first. A dismissed discard dialog keeps the inputs open around what it refused to throw away.
+  // Folding the inputs away puts whatever the form holds out of sight, so it empties the form
+  // first — a correction in progress and a half-composed meal alike. A dismissed discard dialog
+  // keeps the inputs open around what it refused to throw away. Unfolding loses nothing.
   function toggleForm() {
-    if (editing !== undefined && !discardEdit()) return;
+    if (!formCollapsed && !discardForm()) return;
     setFormCollapsed((c) => !c);
   }
 
@@ -132,7 +143,9 @@ export function DayTracker({ questionnaire, today, firstMealHour, mealGapHours, 
     setFruit(false);
     setPickedAdditions(new Set());
     setSmallPortion(false);
-    setMealTime(defaultMealTime(new Date()));
+    const opensOn = defaultMealTime(new Date());
+    setMealTime(opensOn);
+    setPristineTime(opensOn);
     setEditingId(undefined);
   }
 
@@ -208,7 +221,7 @@ export function DayTracker({ questionnaire, today, firstMealHour, mealGapHours, 
         )}
         {editing !== undefined && (
           <button type="button" className={editDiverged ? "quiet destructive" : "quiet"}
-                  onClick={() => discardEdit()}>
+                  onClick={() => discardForm()}>
             {editDiverged ? "ביטול שינויים" : "יציאה מעריכה"}
           </button>
         )}
