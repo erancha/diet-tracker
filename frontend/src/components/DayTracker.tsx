@@ -145,7 +145,7 @@ export function DayTracker({ questionnaire, today, firstMealHour, mealGapHours, 
                         summary={
       <DayDashboard questionnaire={questionnaire} derived={derived} />
     }>
-      <CollapsibleSection className="meal-form" title="פרטי הארוחה" headingLevel={3}
+      <CollapsibleSection className="meal-form" title="פרטי ארוחה" headingLevel={3}
                           collapsed={formCollapsed}
                           onToggle={() => setFormCollapsed((c) => !c)}>
         <ChoiceFieldset question={carbsQuestion} selectedId={carbsChoiceId} scope="meal"
