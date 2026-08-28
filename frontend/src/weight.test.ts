@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { activeSpan, chartDomain, entriesWithin, kgLabel, offeredSpans, summarize } from "./weight";
+import { activeSpan, chartDomain, entriesWithin, kgLabel, offeredSpans, summarize,
+         targetChangePrompt } from "./weight";
 import type { WeightEntry } from "./types";
 
 const TODAY = new Date(2026, 7, 27); // 2026-08-27
@@ -101,5 +102,15 @@ describe("summarize", () => {
   it("still reads before the first weighing, so the target is reachable from the start", () => {
     expect(summarize([], 72)).toEqual({ latest: null, target: 72, gapKg: null, prefix: "ה", overTarget: false });
     expect(summarize([], null)).toEqual({ latest: null, target: null, gapKg: null, prefix: "ה", overTarget: false });
+  });
+});
+
+describe("targetChangePrompt", () => {
+  it("offers to set a target that never existed", () => {
+    expect(targetChangePrompt(72, null)).toBe("לקבוע את משקל היעד ל-72 ק״ג?");
+  });
+
+  it("offers to update one that already stands", () => {
+    expect(targetChangePrompt(72, 75)).toBe("לעדכן את משקל היעד ל-72 ק״ג?");
   });
 });

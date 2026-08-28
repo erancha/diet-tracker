@@ -121,6 +121,11 @@ button:disabled { --btn-bg: #e4e4e4; --btn-fg: #9a9a9a; --btn-border: #d8d8d8; c
 .ok { background: #e8f5e9; color: var(--accent); border-radius: 8px; padding: 0.6rem 1rem; margin-bottom: 0.5rem; }
 /* Informational, not a failure: amber sits between the alert red and the ok green. */
 .notice { background: #fff8e1; color: #795500; border-radius: 8px; padding: 0.6rem 1rem; margin-bottom: 0.5rem; }
+/* The welcome panel is a notice with a heading and a list inside it, so all it adds is the inner
+   spacing: both would otherwise carry their default block margins into the box. */
+.welcome h2 { margin: 0 0 0.4rem; font-size: 1.05rem; }
+.welcome ul { margin: 0; padding-inline-start: 1.2rem; }
+.welcome li + li { margin-top: 0.3rem; }
 /* The wrapper grows past the centered column into the viewport's left gutter (inline-end in this
    RTL layout), stopping 3rem short of the edge; on narrow screens the gutter is only the body
    padding and the margin resolves to 0. The table sizes to its content within that room — at

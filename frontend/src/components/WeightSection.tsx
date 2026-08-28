@@ -30,20 +30,24 @@ function KgInput({ value, limits, label, onChange }: {
 // prefix letter (מעל ה… / מתחת ל… / ב…) stays outside the control, so the clickable word is the
 // same token in every reading.
 //
+// A target that has never been set opens the editor itself: unset, the control is one word in a
+// header line, easy to walk past on the way to the weighing input below it — and a weighing with
+// no target behind it charts nothing to aim at.
+//
 // Committing asks for confirmation — replacing a standing target is not the same act as
 // discarding an untouched draft. Closing on a value that was actually typed raises the discard
 // guard the forms elsewhere share; an untouched input closes silently.
 function TargetReading({ summary, limits, onSet }: {
   summary: WeightSummary; limits: Limits; onSet: (kg: number) => void;
 }) {
-  const [draft, setDraft] = useState<string | null>(null);
+  const [draft, setDraft] = useState<string | null>(summary.target === null ? "" : null);
   const editing = draft !== null;
   const opensOn = summary.target === null ? "" : String(summary.target);
   const kg = editing ? parseKg(draft, limits) : null;
 
   const commit = () => {
     if (kg === null) return;
-    if (window.confirm(targetChangePrompt(kg))) {
+    if (window.confirm(targetChangePrompt(kg, summary.target))) {
       onSet(kg);
       setDraft(null);
     }
@@ -98,13 +102,16 @@ function TodayRow({ recorded, limits, onRecord }: {
 // under one line opening the page above the day tracker. That line is the section's own heading —
 // the latest weight, which is what the reader came for, doubling as the control that opens the
 // rest — followed by the distance to the target and the control that sets it. Both sit outside
-// the fold, which is where the section rests: weight moves weekly while the tracker below it
-// moves through the day, so the line reports and the rest opens on demand, with the target
-// settable either way.
-export function WeightSection({ weight, settings, now, onRecord, onSetTarget, onDelete }: {
+// the fold, which is where the section normally rests: weight moves weekly while the tracker below
+// it moves through the day, so the line reports and the rest opens on demand, with the target
+// settable either way. Whether that resting fold is the right one for the account is the caller's
+// reading, not this section's.
+export function WeightSection({ weight, settings, now, defaultExpanded,
+                                onRecord, onSetTarget, onDelete }: {
   weight: WeightPayload;
   settings: WeightSettings;
   now: Date;
+  defaultExpanded: boolean;
   onRecord: (kg: number) => void;
   onSetTarget: (kg: number) => void;
   onDelete: (date: string) => void;
@@ -128,7 +135,7 @@ export function WeightSection({ weight, settings, now, onRecord, onSetTarget, on
   return (
     <CollapsibleSection
       title={heading}
-      defaultCollapsed
+      defaultCollapsed={!defaultExpanded}
       label={figure === null ? "משקל" : `משקל: ${figure} ${unit}`}
       className={summary.overTarget ? "weight weight-over-target" : "weight"}
       headerAside={<TargetReading summary={summary} limits={settings.limits} onSet={onSetTarget} />}

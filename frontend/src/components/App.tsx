@@ -5,6 +5,8 @@ import { activeViolations } from "../violations";
 import type { AnswerValue, AppConfigFile, NewMeal, WeightPayload } from "../types";
 import { dayEnded, defaultDay, expandQuestionnaire, isoDate, yesterdayOf } from "../dates";
 import { mayDiscardEdits } from "../edits";
+import { TARGET_UNSET_NOTICE } from "../weight";
+import { isFirstVisit } from "../firstVisit";
 import { Alerts, type AlertItem } from "./Alerts";
 import { CollapsibleSection } from "./CollapsibleSection";
 import { DayPicker, type DayChoice } from "./DayPicker";
@@ -15,6 +17,7 @@ import { HistoryTable } from "./HistoryTable";
 import { QuestionnaireForm } from "./QuestionnaireForm";
 import { TrendChart } from "./TrendChart";
 import { WeightSection } from "./WeightSection";
+import { Welcome } from "./Welcome";
 
 // Top-level screen: owns the server data (app config, day history, today's and yesterday's meal
 // payloads, on-demand past-day payloads, the weight log) and every mutation — meal recording and
@@ -23,6 +26,9 @@ import { WeightSection } from "./WeightSection";
 // the day-end section's fold it closes, and the guard that keeps that fold and the day picker from
 // throwing away answers the day-end form has not submitted; the components below it hold no server
 // state of their own.
+//
+// It also reads whether the account has recorded anything yet, because both the greeting and the
+// weight section's opening fold answer to that one reading and must not disagree about it.
 export function App({ email, api, reminderHour, firstMealHour, mealGapHours, onSignOut }: {
   email: string; api: Api; reminderHour: number; firstMealHour: number; mealGapHours: number;
   onSignOut: () => void;
@@ -118,7 +124,10 @@ export function App({ email, api, reminderHour, firstMealHour, mealGapHours, onS
 
   const recordWeightMutation = useMutation({
     mutationFn: api.recordWeight,
-    onSuccess: onWeightSuccess,
+    onSuccess: (payload) => {
+      onWeightSuccess(payload);
+      if (payload.target === null) setAlerts([{ kind: "notice", message: TARGET_UNSET_NOTICE }]);
+    },
     onError: errorAlert("שמירת המשקל נכשלה"),
   });
 
@@ -144,6 +153,7 @@ export function App({ email, api, reminderHour, firstMealHour, mealGapHours, onS
 
   const questionnaire = configQuery.data.questionnaire;
   const data = historyQuery.data;
+  const firstVisit = isFirstVisit(data, weightQuery.data);
   const answersByDate = new Map(data.days.map((d) => [d.date, d.answers]));
   const todaySubmitted = answersByDate.has(todayStr);
   const selectedDate = day === "yesterday" ? yesterdayStr : todayStr;
@@ -190,10 +200,12 @@ export function App({ email, api, reminderHour, firstMealHour, mealGapHours, onS
               activeViolations={activeViolations(questionnaire, data.days, todayStr, yesterdayStr)} />
       <main>
         <Alerts items={alerts} onDismiss={dismissAlerts} />
+        {firstVisit && <Welcome />}
         <WeightSection
           weight={weightQuery.data}
           settings={configQuery.data.weight}
           now={now}
+          defaultExpanded={firstVisit}
           onRecord={(kg) => recordWeightMutation.mutate(kg)}
           onSetTarget={(kg) => setTargetMutation.mutate(kg)}
           onDelete={(date) => deleteWeightMutation.mutate(date)}

@@ -15,11 +15,14 @@ const SETTINGS: WeightSettings = {
 
 const EMPTY: WeightPayload = { target: null, entries: [] };
 
-function show(weight: Partial<WeightPayload> = {}, handlers: {
+interface Handlers {
   onRecord?: (kg: number) => void;
   onSetTarget?: (kg: number) => void;
   onDelete?: (date: string) => void;
-} = {}) {
+}
+
+function renderSection(weight: Partial<WeightPayload> = {}, handlers: Handlers = {},
+                       defaultExpanded = false) {
   render(
     <WeightSection
       weight={{ ...EMPTY, ...weight }}
@@ -28,9 +31,15 @@ function show(weight: Partial<WeightPayload> = {}, handlers: {
       onRecord={handlers.onRecord ?? (() => {})}
       onSetTarget={handlers.onSetTarget ?? (() => {})}
       onDelete={handlers.onDelete ?? (() => {})}
+      defaultExpanded={defaultExpanded}
     />,
   );
-  // The section rests folded; every test below acts on what its toggle opens.
+}
+
+// Renders the section and opens it, since folded is where it rests; the fold's own tests reach for
+// renderSection instead.
+function show(weight: Partial<WeightPayload> = {}, handlers: Handlers = {}) {
+  renderSection(weight, handlers);
   fireEvent.click(screen.getByRole("button", { name: /^משקל/ }));
 }
 
@@ -39,6 +48,18 @@ afterEach(() => vi.restoreAllMocks());
 function line(): HTMLElement {
   return document.querySelector(".weight-summary")!;
 }
+
+describe("opening fold", () => {
+  it("rests folded, so the day tracker below it keeps the top of the page", () => {
+    renderSection();
+    expect(screen.queryByLabelText("המשקל היום")).toBeNull();
+  });
+
+  it("opens itself when told to, so a first-time user meets the weighing and not a fold", () => {
+    renderSection({}, {}, true);
+    expect(screen.getByLabelText("המשקל היום")).toBeInTheDocument();
+  });
+});
 
 describe("target", () => {
   it("heads the section with the weight and reads the target beside it", () => {
@@ -85,9 +106,33 @@ describe("target", () => {
     expect(document.querySelector("section.weight")).not.toHaveClass("weight-over-target");
   });
 
-  it("says so plainly before a target exists", () => {
+  it("opens its editor while no target stands, so it is not a word to walk past", () => {
     show({ entries: [{ date: TODAY, kg: 76.5 }] });
+    expect(screen.getByLabelText("משקל יעד")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "עריכת יעד" })).toHaveAttribute("aria-expanded", "true");
+  });
+
+  it("says so plainly once that editor is closed", () => {
+    show({ entries: [{ date: TODAY, kg: 76.5 }] });
+    fireEvent.click(screen.getByRole("button", { name: "עריכת יעד" }));
     expect(line().textContent!.replace(/\s+/g, " ")).toContain("היעד: טרם נקבע");
+  });
+
+  it("keeps a standing target's editor closed", () => {
+    show({ target: 75 });
+    expect(screen.queryByLabelText("משקל יעד")).toBeNull();
+  });
+
+  it("asks to set, not to update, a target that never stood", () => {
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+    const onSetTarget = vi.fn();
+    show({}, { onSetTarget });
+
+    fireEvent.change(screen.getByLabelText("משקל יעד"), { target: { value: "72" } });
+    fireEvent.click(screen.getByRole("button", { name: "אישור" }));
+
+    expect(confirm).toHaveBeenCalledWith("לקבוע את משקל היעד ל-72 ק״ג?");
+    expect(onSetTarget).toHaveBeenCalledWith(72);
   });
 
   it("offers the target before anything has been weighed", () => {

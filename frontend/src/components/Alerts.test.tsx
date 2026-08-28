@@ -27,6 +27,17 @@ describe("Alerts", () => {
     expect(screen.getByText("חריגה")).toBeInTheDocument();
   });
 
+  it("leaves a batch carrying a notice on screen", () => {
+    const onDismiss = vi.fn();
+    render(<Alerts items={[{ kind: "ok", message: "נשמר" },
+                           { kind: "notice", message: "היעד טרם נקבע" }]} onDismiss={onDismiss} />);
+
+    act(() => vi.advanceTimersByTime(60_000));
+
+    expect(onDismiss).not.toHaveBeenCalled();
+    expect(screen.getByText("היעד טרם נקבע")).toBeInTheDocument();
+  });
+
   it("scrolls a fresh batch into view", () => {
     const scrollIntoView = vi.spyOn(Element.prototype, "scrollIntoView")
       .mockImplementation(() => {});

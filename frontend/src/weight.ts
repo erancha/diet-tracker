@@ -116,11 +116,16 @@ export function summarize(entries: WeightEntry[], target: number | null): Weight
   };
 }
 
-// Wording of the two confirmations the weight section asks for, kept here so each reads the same
+// Wording of the confirmations and notices the weight log raises, kept here so each reads the same
 // wherever it is raised and can be asserted without reaching into a component.
-export function targetChangePrompt(kg: number): string {
-  return `לעדכן את משקל היעד ל-${kgLabel(kg)} ק״ג?`;
+export function targetChangePrompt(kg: number, current: number | null): string {
+  const verb = current === null ? "לקבוע" : "לעדכן";
+  return `${verb} את משקל היעד ל-${kgLabel(kg)} ק״ג?`;
 }
+
+// Raised when a weighing is recorded against no target: without one the chart draws no reference
+// line and the section's own line has no distance to state.
+export const TARGET_UNSET_NOTICE = "משקל היעד טרם נקבע — קבעו יעד כדי לעקוב אחר המרחק ממנו";
 
 export function deleteWeightPrompt(entry: WeightEntry): string {
   return `למחוק את השקילה של ${ddmmLabel(entry.date)} (${kgLabel(entry.kg)} ק״ג)?`;
