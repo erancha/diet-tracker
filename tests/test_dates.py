@@ -1,6 +1,6 @@
 import re
 
-from common.dates import days_before, now_iso, today
+from common.dates import clock_time, days_before, now_iso, today
 
 
 def test_today_is_iso_date():
@@ -9,6 +9,10 @@ def test_today_is_iso_date():
 
 def test_now_iso_carries_jerusalem_offset():
     assert now_iso().endswith(("+02:00", "+03:00"))
+
+
+def test_clock_time_is_a_wall_clock_hour_and_minute():
+    assert re.fullmatch(r"([01]\d|2[0-3]):[0-5]\d", clock_time())
 
 
 def test_days_before():

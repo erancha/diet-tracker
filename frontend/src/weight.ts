@@ -2,7 +2,7 @@
 // line renders, the wording of the confirmations the section raises, and what a typed weight has
 // to satisfy to count. The components hold no arithmetic of their own.
 
-import { ddmmLabel, parseIsoDate } from "./dates";
+import { daysSince, ddmmLabel, isWeighInDay, parseIsoDate, weekdayLetter } from "./dates";
 import type { ChartSpan, WeightEntry } from "./types";
 
 // The spans the range selector offers, in the order it lays them out. Mirrors CHART_SPANS in
@@ -114,6 +114,62 @@ export function summarize(entries: WeightEntry[], target: number | null): Weight
     prefix: gap > 0 ? "מעל ה" : "מתחת ל",
     overTarget: gap > 0,
   };
+}
+
+// Recent weighings the usual hour is read from: few enough to follow a rhythm that has genuinely
+// moved, many enough that one odd hour does not become the rhythm.
+const USUAL_HOUR_SAMPLE = 8;
+
+// Below this many timed weighings there is no habit to name, and reporting one from a couple of
+// readings would dress a coincidence up as a rhythm.
+const USUAL_HOUR_MIN = 3;
+
+function minutesOfDay(hhmm: string): number {
+  const [hours, minutes] = hhmm.split(":").map(Number);
+  return hours * 60 + minutes;
+}
+
+function hhmmOf(minutes: number): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(Math.floor(minutes / 60))}:${pad(minutes % 60)}`;
+}
+
+/**
+ * The hour the user usually weighs at, or null before enough timed weighings exist to name one.
+ * Weighings recorded before the time was kept carry none and sit this out.
+ *
+ * The middle recorded time rather than the average of them: the value shown is then an hour
+ * actually weighed at, and one stray late-evening weighing moves it by nothing.
+ */
+export function usualHour(entries: WeightEntry[]): string | null {
+  const recent = entries
+    .flatMap((entry) => (entry.at === null ? [] : [minutesOfDay(entry.at)]))
+    .slice(-USUAL_HOUR_SAMPLE);
+  if (recent.length < USUAL_HOUR_MIN) return null;
+  return hhmmOf([...recent].sort((a, b) => a - b)[Math.floor(recent.length / 2)]);
+}
+
+// Past a week without weighing, the rhythm has plainly been missed, and how long it has been is
+// worth more to the reader than which weekday comes round next.
+const STALE_DAYS = 7;
+
+/**
+ * Where the reader stands in the weekly rhythm, or null when there is nothing to say — before the
+ * first weighing, and on the weigh-in day once it has been answered.
+ *
+ * The reading reports and never judges: a weight enters no score and raises no alert, so a rhythm
+ * that has slipped is stated as elapsed days, not flagged as a miss.
+ */
+export function rhythmReading(entries: WeightEntry[], weekday: string, now: Date): string | null {
+  if (entries.length === 0) return null;
+  const since = daysSince(entries[entries.length - 1].date, now);
+  const base = since > STALE_DAYS ? `נשקלת לפני ${since} ימים`
+    : !isWeighInDay(now, weekday) ? `השקילה הבאה ביום ${weekdayLetter(weekday)}׳`
+    : since === 0 ? null
+    : "היום יום השקילה";
+  if (base === null) return null;
+  const hour = usualHour(entries);
+  return hour === null ? base : `${base} · בסביבות ${hour}`;
 }
 
 // Wording of the confirmations and notices the weight log raises, kept here so each reads the same

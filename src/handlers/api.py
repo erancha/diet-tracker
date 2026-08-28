@@ -13,7 +13,7 @@ from datetime import date, datetime
 import boto3
 
 from common import appconfig, notify, rules, users, weight
-from common.dates import days_before, now_iso, today
+from common.dates import clock_time, days_before, now_iso, today
 from common.derive import derive
 from common.log import get_logger
 from common.rules import LOOKBACK_DAYS
@@ -261,7 +261,8 @@ def _weight_payload(store, sub) -> dict:
     read against — null for a user who has never set one."""
     weights = store.get_weights(sub)
     return {"target": store.get_target(sub),
-            "entries": [{"date": day, "kg": kg} for day, kg in sorted(weights.items())]}
+            "entries": [{"date": day, **measurement}
+                        for day, measurement in sorted(weights.items())]}
 
 
 def _weight(sub):
@@ -281,7 +282,11 @@ def _stored_weight(sub, body, store_value):
 
 
 def _record_weight(sub, body):
-    return _stored_weight(sub, body, lambda store, kg: store.put_weight(sub, today(), kg))
+    """The weighing and its recording are the same moment, so the time is stamped from the clock
+    rather than taken from the body — which is also what keeps it honest as a record of the hour
+    the user actually steps on the scale."""
+    return _stored_weight(
+        sub, body, lambda store, kg: store.put_weight(sub, today(), kg, clock_time()))
 
 
 def _set_target(sub, body):

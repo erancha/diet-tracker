@@ -61,9 +61,26 @@ describe("opening fold", () => {
   });
 });
 
+describe("rhythm reading", () => {
+  it("names the weigh-in day while the day holds no weighing", () => {
+    show({ entries: [{ date: "2026-08-20", kg: 77, at: "07:30" }] });
+    expect(document.querySelector(".weight-rhythm")).toHaveTextContent("היום יום השקילה");
+  });
+
+  it("drops away once the weigh-in day has been answered", () => {
+    show({ entries: [{ date: TODAY, kg: 76.5, at: "07:30" }] });
+    expect(document.querySelector(".weight-rhythm")).toBeNull();
+  });
+
+  it("says nothing before the first weighing, where there is no rhythm yet", () => {
+    show();
+    expect(document.querySelector(".weight-rhythm")).toBeNull();
+  });
+});
+
 describe("target", () => {
   it("heads the section with the weight and reads the target beside it", () => {
-    show({ target: 72, entries: [{ date: TODAY, kg: 76.5 }] });
+    show({ target: 72, entries: [{ date: TODAY, kg: 76.5, at: null }] });
     // The weight is the toggle; the accessible name still says what the toggle opens.
     const toggle = screen.getByRole("button", { name: /^משקל/ });
     expect(toggle).toHaveTextContent("76.5 ק״ג");
@@ -85,35 +102,35 @@ describe("target", () => {
   });
 
   it("marks the section over target, so the weight and the gap can be painted as one", () => {
-    show({ target: 72, entries: [{ date: TODAY, kg: 76.5 }] });
+    show({ target: 72, entries: [{ date: TODAY, kg: 76.5, at: null }] });
     expect(document.querySelector("section.weight")).toHaveClass("weight-over-target");
   });
 
   it("wraps the heading's figure alone, so the unit beside it is not painted with it", () => {
-    show({ target: 72, entries: [{ date: TODAY, kg: 76.5 }] });
+    show({ target: 72, entries: [{ date: TODAY, kg: 76.5, at: null }] });
     const figure = screen.getByRole("button", { name: /^משקל/ }).querySelector(".weight-latest");
     expect(figure).toHaveTextContent("76.5");
     expect(figure).not.toHaveTextContent("ק״ג");
   });
 
   it("leaves the mark off below the target", () => {
-    show({ target: 80, entries: [{ date: TODAY, kg: 76.5 }] });
+    show({ target: 80, entries: [{ date: TODAY, kg: 76.5, at: null }] });
     expect(document.querySelector("section.weight")).not.toHaveClass("weight-over-target");
   });
 
   it("leaves the mark off before there is a target to read against", () => {
-    show({ entries: [{ date: TODAY, kg: 76.5 }] });
+    show({ entries: [{ date: TODAY, kg: 76.5, at: null }] });
     expect(document.querySelector("section.weight")).not.toHaveClass("weight-over-target");
   });
 
   it("opens its editor while no target stands, so it is not a word to walk past", () => {
-    show({ entries: [{ date: TODAY, kg: 76.5 }] });
+    show({ entries: [{ date: TODAY, kg: 76.5, at: null }] });
     expect(screen.getByLabelText("משקל יעד")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "עריכת יעד" })).toHaveAttribute("aria-expanded", "true");
   });
 
   it("says so plainly once that editor is closed", () => {
-    show({ entries: [{ date: TODAY, kg: 76.5 }] });
+    show({ entries: [{ date: TODAY, kg: 76.5, at: null }] });
     fireEvent.click(screen.getByRole("button", { name: "עריכת יעד" }));
     expect(line().textContent!.replace(/\s+/g, " ")).toContain("היעד: טרם נקבע");
   });
@@ -141,7 +158,7 @@ describe("target", () => {
   });
 
   it("stays reachable once the section is folded away", () => {
-    show({ target: 72, entries: [{ date: TODAY, kg: 76.5 }] });
+    show({ target: 72, entries: [{ date: TODAY, kg: 76.5, at: null }] });
     fireEvent.click(screen.getByRole("button", { name: /^משקל/ }));
     expect(screen.getByRole("button", { name: /^משקל/ })).toHaveAttribute("aria-expanded", "false");
     expect(screen.getByRole("button", { name: "עריכת יעד" })).toBeInTheDocument();
@@ -224,7 +241,7 @@ describe("today's weighing", () => {
   });
 
   it("offers an update, and shows the standing value, once the day holds one", () => {
-    show({ entries: [{ date: TODAY, kg: 76.5 }] });
+    show({ entries: [{ date: TODAY, kg: 76.5, at: null }] });
     expect(screen.getByRole("button", { name: "עדכון" })).toBeInTheDocument();
     expect(screen.getByText("נרשם: 76.5 ק״ג")).toBeInTheDocument();
   });
@@ -239,7 +256,7 @@ describe("today's weighing", () => {
 
 describe("summary line", () => {
   it("keeps the whole reading on screen through the fold", () => {
-    show({ target: 72, entries: [{ date: TODAY, kg: 76.5 }] });
+    show({ target: 72, entries: [{ date: TODAY, kg: 76.5, at: null }] });
     const toggle = screen.getByRole("button", { name: /^משקל/ });
     const reading = () => `${toggle.textContent} ${line().textContent}`.replace(/\s+/g, " ");
     expect(toggle).toHaveAttribute("aria-expanded", "true");

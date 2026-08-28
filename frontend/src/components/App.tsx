@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { alertMessage, type Api } from "../api";
 import { activeViolations } from "../violations";
 import type { AnswerValue, AppConfigFile, NewMeal, WeightPayload } from "../types";
-import { dayEnded, defaultDay, expandQuestionnaire, isoDate, yesterdayOf } from "../dates";
+import { dayEnded, defaultDay, expandQuestionnaire, expandWeightSection, isoDate, yesterdayOf } from "../dates";
 import { mayDiscardEdits } from "../edits";
 import { TARGET_UNSET_NOTICE } from "../weight";
 import { isFirstVisit } from "../firstVisit";
@@ -154,6 +154,10 @@ export function App({ email, api, reminderHour, firstMealHour, mealGapHours, onS
   const questionnaire = configQuery.data.questionnaire;
   const data = historyQuery.data;
   const firstVisit = isFirstVisit(data, weightQuery.data);
+  // The weight section rests folded, and opens for the two occasions it is the reason the page
+  // was loaded: a first visit, and the weigh-in morning while the scale has not been stepped on.
+  const openWeight = firstVisit
+    || expandWeightSection(now, configQuery.data.weight.weigh_in.weekday, weightQuery.data.entries);
   const answersByDate = new Map(data.days.map((d) => [d.date, d.answers]));
   const todaySubmitted = answersByDate.has(todayStr);
   const selectedDate = day === "yesterday" ? yesterdayStr : todayStr;
@@ -205,7 +209,7 @@ export function App({ email, api, reminderHour, firstMealHour, mealGapHours, onS
           weight={weightQuery.data}
           settings={configQuery.data.weight}
           now={now}
-          defaultExpanded={firstVisit}
+          defaultExpanded={openWeight}
           onRecord={(kg) => recordWeightMutation.mutate(kg)}
           onSetTarget={(kg) => setTargetMutation.mutate(kg)}
           onDelete={(date) => deleteWeightMutation.mutate(date)}

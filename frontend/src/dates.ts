@@ -34,6 +34,44 @@ export function weekdayDdmmLabel(s: string): string {
   return `${WEEKDAY_LETTERS[parseIsoDate(s).getDay()]}׳ ${ddmmLabel(s)}`;
 }
 
+const MS_PER_DAY = 86_400_000;
+
+// EventBridge Scheduler's day-of-week tokens, indexed to match Date.getDay() and WEEKDAY_LETTERS
+// above. Mirrors WEEKDAYS in src/common/appconfig.py, which rejects a configured weigh-in weekday
+// naming none of them.
+const WEEKDAY_TOKENS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+
+function weekdayIndexOf(weekday: string): number {
+  const index = WEEKDAY_TOKENS.indexOf(weekday);
+  if (index === -1) {
+    throw new Error(`unknown weekday ${weekday}; expected one of ${WEEKDAY_TOKENS.join(", ")}`);
+  }
+  return index;
+}
+
+export function isWeighInDay(now: Date, weekday: string): boolean {
+  return now.getDay() === weekdayIndexOf(weekday);
+}
+
+export function weekdayLetter(weekday: string): string {
+  return WEEKDAY_LETTERS[weekdayIndexOf(weekday)];
+}
+
+// Whole days from a recorded date to the day now falls in — the calendar distance the rhythm is
+// read in, not an elapsed-hours count.
+export function daysSince(date: string, now: Date): number {
+  const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  return Math.round((midnight.getTime() - parseIsoDate(date).getTime()) / MS_PER_DAY);
+}
+
+// The weigh-in day opens the weight section expanded while the day still holds no weighing — the
+// one morning a week the section is what the user came to the page for. The same treatment
+// expandMealForm gives an overdue meal.
+export function expandWeightSection(now: Date, weekday: string,
+                                    entries: readonly { date: string }[]): boolean {
+  return isWeighInDay(now, weekday) && !entries.some((entry) => entry.date === isoDate(now));
+}
+
 export function yesterdayOf(now: Date): Date {
   return new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
 }

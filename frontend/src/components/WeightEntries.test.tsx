@@ -3,8 +3,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { WeightEntries } from "./WeightEntries";
 
 const ENTRIES = [
-  { date: "2026-08-20", kg: 77.4 },
-  { date: "2026-08-27", kg: 76 },
+  { date: "2026-08-20", kg: 77.4, at: null },
+  { date: "2026-08-27", kg: 76, at: null },
 ];
 
 afterEach(() => vi.restoreAllMocks());
@@ -36,6 +36,18 @@ describe("WeightEntries", () => {
     fireEvent.click(screen.getByRole("button", { name: "מחיקת השקילה של 2026-08-27" }));
 
     expect(onDelete).not.toHaveBeenCalled();
+  });
+
+  it("shows the hour each weighing was taken at, which is what makes the rhythm legible", () => {
+    render(<WeightEntries entries={[{ date: "2026-08-27", kg: 76, at: "07:30" }]}
+                          onDelete={() => {}} />);
+    expect(screen.getByRole("listitem")).toHaveTextContent("07:30");
+  });
+
+  it("holds a dash where a weighing predates the recorded time, keeping the columns aligned", () => {
+    render(<WeightEntries entries={[{ date: "2026-08-27", kg: 76, at: null }]}
+                          onDelete={() => {}} />);
+    expect(document.querySelector(".weight-entry-at")).toHaveTextContent("—");
   });
 
   it("renders nothing when no weight has been recorded", () => {

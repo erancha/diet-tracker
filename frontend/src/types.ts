@@ -140,6 +140,9 @@ export interface SubmitResult {
 export interface WeightEntry {
   date: string;
   kg: number;
+  // Wall-clock "HH:MM" the weighing was recorded at. Null on weighings recorded before the time
+  // was kept — the rhythm reading draws on the ones that carry it and leaves those alone.
+  at: string | null;
 }
 
 export interface WeightPayload {

@@ -1,6 +1,8 @@
 import json
 import logging
+from decimal import Decimal
 
+import boto3
 import pytest
 from conftest import APP_CONFIG
 
@@ -9,6 +11,10 @@ from common.dates import days_before, today
 from handlers import api
 
 ANSWERS = {"drinking": 3, "vegetables": 2, "eating_window": 13, "meals": 3, "carbs": 4}
+
+# Weigh-in stamp the API is pinned to below, so the payload assertions do not straddle the
+# minute boundary a real clock would cross mid-test.
+WEIGH_IN_AT = "07:42"
 
 
 @pytest.fixture
@@ -21,6 +27,7 @@ def env(monkeypatch, ddb):
     monkeypatch.setenv("APP_CONFIG_PATH", str(APP_CONFIG))
     alerts = []
     monkeypatch.setattr(api, "_alert", lambda email, violations: alerts.append((email, violations)))
+    monkeypatch.setattr(api, "clock_time", lambda: WEIGH_IN_AT)
     return alerts
 
 
@@ -285,13 +292,14 @@ def test_weight_starts_empty_with_no_target(env):
 
 def test_recording_a_weight_returns_the_whole_payload(env):
     payload = body_of(record_weight(76.5))
-    assert payload == {"target": None, "entries": [{"date": today(), "kg": 76.5}]}
+    assert payload == {"target": None,
+                       "entries": [{"date": today(), "kg": 76.5, "at": WEIGH_IN_AT}]}
 
 
 def test_re_recording_today_corrects_the_value_rather_than_adding_a_point(env):
     record_weight(765)
     payload = body_of(record_weight(76.5))
-    assert payload["entries"] == [{"date": today(), "kg": 76.5}]
+    assert payload["entries"] == [{"date": today(), "kg": 76.5, "at": WEIGH_IN_AT}]
 
 
 def test_the_target_rides_in_every_weight_payload(env):
@@ -304,9 +312,26 @@ def test_entries_come_back_oldest_first(env):
     from common.store import Store
     store = Store("days", "meals", "state", "weights")
     for day_offset, kg in ((14, 78), (7, 77), (0, 76)):
-        store.put_weight("u1", days_before(today(), day_offset), kg)
+        store.put_weight("u1", days_before(today(), day_offset), kg, "07:30")
     assert [e["date"] for e in get_weight()["entries"]] == [
         days_before(today(), 14), days_before(today(), 7), today()]
+
+
+def test_a_recorded_weight_carries_the_clock_time_it_was_taken_at(env):
+    """The weigh-in time is stamped from the server clock rather than taken from the body: the
+    weighing and the recording are the same moment, and the time is what makes the weekly rhythm
+    readable. test_dates covers the stamp's own format."""
+    entry = body_of(record_weight(76.5))["entries"][-1]
+    assert entry["date"] == today()
+    assert entry["at"] == WEIGH_IN_AT
+
+
+def test_a_weight_stored_before_times_were_kept_reads_with_none(env):
+    from common.store import Store
+    old = days_before(today(), 30)
+    boto3.resource("dynamodb").Table("weights").put_item(
+        Item={"pk": "u1", "sk": old, "kg": Decimal("80")})
+    assert body_of(record_weight(76.5))["entries"][0] == {"date": old, "kg": 80, "at": None}
 
 
 def test_weight_bodies_outside_the_plausible_range_are_rejected(env):
@@ -319,7 +344,7 @@ def test_weight_bodies_outside_the_plausible_range_are_rejected(env):
 def test_deleting_a_weight_works_at_any_date_unlike_a_day_or_a_meal(env):
     from common.store import Store
     old = days_before(today(), 200)
-    Store("days", "meals", "state", "weights").put_weight("u1", old, 80)
+    Store("days", "meals", "state", "weights").put_weight("u1", old, 80, "07:30")
     payload = body_of(api.handler(request("DELETE /weight/{date}", path_params={"date": old}), None))
     assert payload["entries"] == []
 

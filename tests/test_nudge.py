@@ -104,20 +104,22 @@ def test_weekly_sends_digest_to_every_user(env):
     assert any("לא מולאו שאלונים השבוע" in text for _, _, text in sent)
 
 
-def test_weigh_in_targets_only_users_without_a_weight_this_week(env):
+def test_weigh_in_targets_only_users_who_have_not_weighed_on_the_day(env):
     e, sent = env
-    e.store.put_weight("u1", days_before(today(), 6), 77.4)
+    e.store.put_weight("u1", today(), 77.4, "07:20")
     nudge._weigh_in(e)
     assert [(kind, target) for kind, target, _ in sent] == [("tg", "222"), ("mail", "b@gmail.com")]
     assert sent[0][2] == nudge.weight.REMINDER_TEXT
 
 
-def test_a_weight_older_than_the_week_no_longer_excuses_the_reminder(env):
+def test_a_weighing_earlier_in_the_week_no_longer_excuses_the_reminder(env):
+    """The job runs on the weigh-in weekday, so weighing on some other day is the drift the
+    reminder exists to pull back — it silences nothing."""
     e, sent = env
-    e.store.put_weight("u1", days_before(today(), 7), 77.4)
-    e.store.put_weight("u2", today(), 90)
+    e.store.put_weight("u1", days_before(today(), 1), 77.4, "07:30")
+    e.store.put_weight("u2", days_before(today(), 6), 90, "21:00")
     nudge._weigh_in(e)
-    assert [target for _, target, _ in sent] == ["111", "a@gmail.com"]
+    assert [target for _, target, _ in sent] == ["111", "a@gmail.com", "222", "b@gmail.com"]
 
 
 def test_the_weigh_in_job_is_dispatchable_by_name(env, monkeypatch):

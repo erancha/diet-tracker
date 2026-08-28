@@ -88,10 +88,12 @@ def _weekly(env):
 
 
 def _weigh_in(env):
-    """Weekly weigh-in reminder. Someone who already stepped on the scale within the week has
-    done the thing being asked of them, so the schedule's own week is the window that decides."""
+    """Weekly weigh-in reminder. The schedule fires on the configured weigh-in weekday, so the day
+    this job runs is that weekday — and weighing on it is the thing being asked for. A weighing on
+    any other day is the drift the weekly rhythm loses itself to, so only the day's own weighing
+    excuses the reminder."""
     day = today()
     for user in env.users:
-        if env.store.get_weights_range(user.sub, days_before(day, 6), day):
+        if env.store.get_weights_range(user.sub, day, day):
             continue
         _send(env, user, weight.REMINDER_SUBJECT, weight.REMINDER_TEXT)

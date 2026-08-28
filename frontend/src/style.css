@@ -361,8 +361,10 @@ td.view-day { cursor: pointer; }
 .weight-over-target .weight-summary .weight-gap { color: var(--danger); }
 /* The measurements behind the chart. Each row puts the date, the weight and the delete control in
    fixed cells so the column holds down the list however the values vary. */
+.weight-rhythm { margin: 0 0 0.5rem; opacity: 0.8; }
 .weight-entries { list-style: none; padding: 0; margin: 0.5rem 0 0; }
 .weight-entries li { display: flex; align-items: center; gap: 0.75rem; padding: 0.125rem 0; }
 .weight-entries .weight-entry-date { min-width: 6ch; }
+.weight-entries .weight-entry-at { min-width: 5ch; opacity: 0.7; font-variant-numeric: tabular-nums; }
 .weight-entries .weight-entry-kg { flex: 1; font-weight: 600; }
 .weight-entries button { padding: 0.35rem; margin-block: -0.35rem; }

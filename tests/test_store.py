@@ -135,24 +135,33 @@ def test_nudge_state_roundtrip_with_legal_empty_default(store):
 
 
 def test_weight_roundtrip_is_per_day_and_per_user(store):
-    store.put_weight("u1", "2026-08-20", 77.4)
-    store.put_weight("u1", "2026-08-27", 76)
-    store.put_weight("u2", "2026-08-27", 90)
-    assert store.get_weights("u1") == {"2026-08-20": 77.4, "2026-08-27": 76}
-    assert type(store.get_weights("u1")["2026-08-27"]) is int
+    store.put_weight("u1", "2026-08-20", 77.4, "07:30")
+    store.put_weight("u1", "2026-08-27", 76, "07:45")
+    store.put_weight("u2", "2026-08-27", 90, "21:00")
+    assert store.get_weights("u1") == {"2026-08-20": {"kg": 77.4, "at": "07:30"},
+                                       "2026-08-27": {"kg": 76, "at": "07:45"}}
+    assert type(store.get_weights("u1")["2026-08-27"]["kg"]) is int
 
 
-def test_re_recording_a_day_replaces_its_weight(store):
-    store.put_weight("u1", "2026-08-27", 777)
-    store.put_weight("u1", "2026-08-27", 77.7)
-    assert store.get_weights("u1") == {"2026-08-27": 77.7}
+def test_a_weight_recorded_before_times_were_kept_reads_without_one(store, ddb):
+    """Weights predate the clock time, so an item carrying none is a legal stored shape rather
+    than a broken one — the reading that draws on times has to survive meeting it."""
+    ddb.Table("weights").put_item(Item={"pk": "u1", "sk": "2026-08-20", "kg": 77})
+    assert store.get_weights("u1") == {"2026-08-20": {"kg": 77, "at": None}}
+
+
+def test_re_recording_a_day_replaces_its_weight_and_its_time(store):
+    store.put_weight("u1", "2026-08-27", 777, "07:00")
+    store.put_weight("u1", "2026-08-27", 77.7, "08:15")
+    assert store.get_weights("u1") == {"2026-08-27": {"kg": 77.7, "at": "08:15"}}
 
 
 def test_the_target_stays_out_of_every_measurement_query(store):
     store.put_target("u1", 72)
-    store.put_weight("u1", "2026-08-27", 76)
-    assert store.get_weights("u1") == {"2026-08-27": 76}
-    assert store.get_weights_range("u1", "2026-08-21", "2026-08-27") == {"2026-08-27": 76}
+    store.put_weight("u1", "2026-08-27", 76, "07:30")
+    assert store.get_weights("u1") == {"2026-08-27": {"kg": 76, "at": "07:30"}}
+    assert store.get_weights_range("u1", "2026-08-21", "2026-08-27") == {
+        "2026-08-27": {"kg": 76, "at": "07:30"}}
     assert store.get_target("u1") == 72
 
 
@@ -168,16 +177,16 @@ def test_setting_the_target_replaces_the_previous_one(store):
 
 def test_weights_range_bounds_are_inclusive(store):
     for day in ("2026-08-19", "2026-08-20", "2026-08-27", "2026-08-28"):
-        store.put_weight("u1", day, 77)
+        store.put_weight("u1", day, 77, "07:30")
     assert sorted(store.get_weights_range("u1", "2026-08-20", "2026-08-27")) == [
         "2026-08-20", "2026-08-27"]
 
 
 def test_deleting_a_weight_removes_only_that_day(store):
-    store.put_weight("u1", "2026-08-20", 77)
-    store.put_weight("u1", "2026-08-27", 76)
+    store.put_weight("u1", "2026-08-20", 77, "07:30")
+    store.put_weight("u1", "2026-08-27", 76, "07:45")
     store.delete_weight("u1", "2026-08-20")
-    assert store.get_weights("u1") == {"2026-08-27": 76}
+    assert store.get_weights("u1") == {"2026-08-27": {"kg": 76, "at": "07:45"}}
 
 
 def test_deleting_a_day_that_holds_no_weight_raises(store):

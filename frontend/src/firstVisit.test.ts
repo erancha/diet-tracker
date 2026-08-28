@@ -41,7 +41,7 @@ describe("isFirstVisit", () => {
   });
 
   it("fails on a weighing", () => {
-    expect(isFirstVisit(EMPTY_HISTORY, { target: null, entries: [{ date: "2026-08-27", kg: 80 }] }))
+    expect(isFirstVisit(EMPTY_HISTORY, { target: null, entries: [{ date: "2026-08-27", kg: 80, at: null }] }))
       .toBe(false);
   });
 

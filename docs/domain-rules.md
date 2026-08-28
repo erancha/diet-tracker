@@ -71,8 +71,11 @@ The weight log runs beside the day tracker rather than inside it. A weight is me
 judged: it enters no day score, no questionnaire floor, and no threshold alert, so a climbing
 weight is something the chart shows rather than a nudge that fires.
 
-- **One measurement per calendar day**, in kilograms, recorded for today. Re-recording replaces
-  the day's value, which is how a mistyped weight is corrected.
+- **One measurement per calendar day**, in kilograms, recorded for today, carrying the wall-clock
+  time it was taken at. Re-recording replaces the day's value and its time, which is how a
+  mistyped weight is corrected. The time is stamped from the clock rather than typed — the
+  weighing and its recording are the same moment. Weighings recorded before the time was kept
+  carry none and read as absent.
 - **A single current target**, revised in place. The chart draws it as a reference line and the
   section's at-a-glance summary reads the latest weight against it. A user who has never set one
   has no target, and the chart draws no line.
@@ -82,9 +85,21 @@ weight is something the chart shows rather than a nudge that fires.
   day would otherwise have no way out of the chart.
 - **Chart span** — the chart opens on the configured number of months and offers wider spans only
   where the recorded series actually reaches past them.
-- **Weigh-in reminder** — a weekly nudge on the configured weekday and hour, skipping any user who
-  already recorded a weight within the last seven days. It reaches the user by email, and by
-  Telegram where that channel is configured, rather than waiting in the app.
+- **Weigh-in rhythm** — the recommendation the weight log serves is a weighing once a week, on the
+  same weekday and at about the same hour. The section reads back where the user stands in that
+  rhythm: the weigh-in day while it holds no weighing, the next weigh-in day otherwise, how long
+  it has been once a week has passed with none, and the usual hour once enough weighings carry a
+  time to name one. The usual hour is the middle recorded time of the last few weighings, so it
+  names an hour actually weighed at and one stray late weighing does not move it. The reading
+  reports and never judges — a weight raises no alert, so a slipped rhythm is stated as elapsed
+  days rather than flagged.
+- **Weigh-in fold** — the weight section rests folded and opens itself on the weigh-in day while
+  the day holds no weighing, the same treatment an overdue meal gives the tracker's meal inputs.
+- **Weigh-in reminder** — a weekly nudge on the configured weekday and hour, skipping only a user
+  who already recorded a weight that day. The job runs on the weigh-in weekday, so weighing on it
+  is the thing being asked for; a weighing on any other day is the drift the weekly rhythm loses
+  itself to and excuses nothing. It reaches the user by email, and by Telegram where that channel
+  is configured, rather than waiting in the app.
 
 ## Versioned configuration
 
@@ -108,5 +123,5 @@ Scheduled jobs (EventBridge Scheduler, Asia/Jerusalem) run alongside the tracker
   [Development & deployment](development.md#telegram-optional)).
 - **Weekly digest** — a weekly averages summary.
 - **Weigh-in reminder** — a weekly prompt to step on the scale, skipped for anyone who already
-  recorded a weight that week, on the same channels as the alerts above.
+  recorded a weight on the weigh-in day itself, on the same channels as the alerts above.
 - **Trend chart** — a 7-day trend chart after each submit.

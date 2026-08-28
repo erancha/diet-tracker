@@ -51,6 +51,15 @@ def _meal_from_item(item) -> dict:
             "additions": additions, "small_portion": item.get("small_portion", False)}
 
 
+def _weights_by_day(items) -> dict:
+    """Stored weights in the shape the app reads them, keyed by day.
+
+    Weights predate the clock time, so an item recorded before it existed legally carries none and
+    reads as at=None — the same allowance the meal attributes above are read under."""
+    return {item["sk"]: {"kg": _from_dynamo(item["kg"]), "at": item.get("at")}
+            for item in items}
+
+
 class Store:
     def __init__(self, days_table, meals_table, state_table, weights_table, dynamodb=None):
         resource = dynamodb or boto3.resource("dynamodb")
@@ -132,10 +141,12 @@ class Store:
     def put_nudge_state(self, user_sub, state) -> None:
         self._state.put_item(Item={"pk": user_sub, "state": state})
 
-    def put_weight(self, user_sub, day, kg) -> None:
-        """Records the day's weight, replacing whatever it held — re-recording is how a mistyped
-        value is corrected."""
-        self._weights.put_item(Item={"pk": user_sub, "sk": day, "kg": _to_dynamo(kg)})
+    def put_weight(self, user_sub, day, kg, at) -> None:
+        """Records the day's weight and the wall-clock "HH:MM" it was taken at, replacing whatever
+        the day held — re-recording is how a mistyped value is corrected. The date lives in the
+        sort key, so the item keeps the time of day alone rather than a second copy of the day."""
+        self._weights.put_item(
+            Item={"pk": user_sub, "sk": day, "kg": _to_dynamo(kg), "at": at})
 
     def delete_weight(self, user_sub, day) -> None:
         """Removes the day's weight; raises KeyError when that day holds none."""
@@ -150,13 +161,13 @@ class Store:
         bounding the query below it selects the measurements alone."""
         response = self._weights.query(
             KeyConditionExpression=Key("pk").eq(user_sub) & Key("sk").lt(TARGET_KEY))
-        return {item["sk"]: _from_dynamo(item["kg"]) for item in response["Items"]}
+        return _weights_by_day(response["Items"])
 
     def get_weights_range(self, user_sub, start_day, end_day) -> dict:
         """Recorded weights by day across the inclusive range."""
         response = self._weights.query(
             KeyConditionExpression=Key("pk").eq(user_sub) & Key("sk").between(start_day, end_day))
-        return {item["sk"]: _from_dynamo(item["kg"]) for item in response["Items"]}
+        return _weights_by_day(response["Items"])
 
     def get_target(self, user_sub):
         """The user's target weight, or None when they have never set one."""

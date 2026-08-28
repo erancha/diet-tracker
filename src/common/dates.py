@@ -15,5 +15,11 @@ def now_iso() -> str:
     return datetime.now(TZ).isoformat(timespec="seconds")
 
 
+def clock_time() -> str:
+    """Wall-clock "HH:MM" — the time-of-day half of a moment whose date is already known from the
+    key it is stored under."""
+    return datetime.now(TZ).strftime("%H:%M")
+
+
 def days_before(day: str, n: int) -> str:
     return (date.fromisoformat(day) - timedelta(days=n)).isoformat()

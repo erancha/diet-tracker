@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dayEnded, dayLabel, daysBefore, ddmmLabel, defaultDay, expandMealForm, expandQuestionnaire, isoDate, last7Days, parseIsoDate, weekdayDdmmLabel } from "./dates";
+import { dayEnded, dayLabel, daysBefore, daysSince, ddmmLabel, defaultDay, expandMealForm, expandQuestionnaire, expandWeightSection, isWeighInDay, isoDate, last7Days, parseIsoDate, weekdayDdmmLabel, weekdayLetter } from "./dates";
 
 describe("isoDate", () => {
   it("formats a local date as YYYY-MM-DD with zero padding", () => {
@@ -170,5 +170,56 @@ describe("expandQuestionnaire", () => {
 
   it("stays collapsed once today is submitted", () => {
     expect(expandQuestionnaire(eightPm, reminderHour, 0, true)).toBe(false);
+  });
+});
+
+// 2026-08-27 is a Thursday; 2026-08-26 the Wednesday before it.
+const THURSDAY = new Date(2026, 7, 27, 8, 0);
+const WEDNESDAY = new Date(2026, 7, 26, 8, 0);
+
+describe("isWeighInDay", () => {
+  it("matches the configured weekday token against the day now falls on", () => {
+    expect(isWeighInDay(THURSDAY, "THU")).toBe(true);
+    expect(isWeighInDay(WEDNESDAY, "THU")).toBe(false);
+  });
+
+  it("refuses a weekday the config could not have held, rather than never matching", () => {
+    expect(() => isWeighInDay(THURSDAY, "THURSDAY")).toThrow("unknown weekday");
+  });
+});
+
+describe("weekdayLetter", () => {
+  it("names the configured weekday the way the rest of the app writes weekdays", () => {
+    expect(weekdayLetter("THU")).toBe("ה");
+    expect(weekdayLetter("SUN")).toBe("א");
+    expect(weekdayLetter("SAT")).toBe("ש");
+  });
+});
+
+describe("daysSince", () => {
+  it("counts whole calendar days regardless of the hour now sits at", () => {
+    expect(daysSince("2026-08-27", THURSDAY)).toBe(0);
+    expect(daysSince("2026-08-26", THURSDAY)).toBe(1);
+    expect(daysSince("2026-08-20", THURSDAY)).toBe(7);
+  });
+
+  it("counts whole days across a clock shift, where the runner's zone observes one", () => {
+    // Israel moves off DST in the night of 2026-10-24, making that Sunday 25 hours long. The
+    // rounding is what keeps the extra hour from reading as a day and a bit.
+    expect(daysSince("2026-10-24", new Date(2026, 9, 26, 8, 0))).toBe(2);
+  });
+});
+
+describe("expandWeightSection", () => {
+  it("opens on the weigh-in day while the day holds no weighing", () => {
+    expect(expandWeightSection(THURSDAY, "THU", [{ date: "2026-08-20" }])).toBe(true);
+  });
+
+  it("stays folded once the day has been weighed", () => {
+    expect(expandWeightSection(THURSDAY, "THU", [{ date: "2026-08-27" }])).toBe(false);
+  });
+
+  it("stays folded on every other day, weighed or not", () => {
+    expect(expandWeightSection(WEDNESDAY, "THU", [])).toBe(false);
   });
 });

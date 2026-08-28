@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { ChartSpan, WeightPayload, WeightSettings } from "../types";
 import { isoDate } from "../dates";
 import { mayDiscardEdits } from "../edits";
-import { activeSpan, entriesWithin, kgLabel, offeredSpans, parseKg, summarize, targetChangePrompt, type WeightSummary } from "../weight";
+import { activeSpan, entriesWithin, kgLabel, offeredSpans, parseKg, rhythmReading, summarize, targetChangePrompt, type WeightSummary } from "../weight";
 import { CollapsibleSection } from "./CollapsibleSection";
 import { Icon } from "./Icon";
 import { WeightChart } from "./WeightChart";
@@ -128,6 +128,10 @@ export function WeightSection({ weight, settings, now, defaultExpanded,
   const heading = figure === null
     ? "משקל"
     : <><span className="weight-latest">{figure}</span> {unit}</>;
+  // The rhythm reads inside the fold rather than on the header line: the phone-width line already
+  // carries the weight and the target, and the one morning the reading is urgent is the morning
+  // the caller opens the section anyway.
+  const rhythm = rhythmReading(weight.entries, settings.weigh_in.weekday, now);
   const spans = offeredSpans(weight.entries, now);
   const active = activeSpan(spans, span);
   const plotted = entriesWithin(weight.entries, active, now);
@@ -140,6 +144,7 @@ export function WeightSection({ weight, settings, now, defaultExpanded,
       className={summary.overTarget ? "weight weight-over-target" : "weight"}
       headerAside={<TargetReading summary={summary} limits={settings.limits} onSet={onSetTarget} />}
     >
+      {rhythm !== null && <p className="weight-rhythm">{rhythm}</p>}
       <TodayRow recorded={recordedToday?.kg ?? null} limits={settings.limits} onRecord={onRecord} />
       {weight.entries.length > 0 && (
         <WeightChart entries={plotted} target={weight.target} span={active} spans={spans}

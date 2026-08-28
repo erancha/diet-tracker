@@ -4,7 +4,9 @@ import { deleteWeightPrompt, kgLabel } from "../weight";
 import { Icon } from "./Icon";
 
 // The plotted measurements as a list, newest first — the chart's own reading order is oldest
-// first, but a reader looking for the entry to remove starts from the most recent.
+// first, but a reader looking for the entry to remove starts from the most recent. Each row
+// carries the hour it was weighed at, which is what makes a weekly rhythm legible; a weighing
+// recorded before the time was kept holds a dash, keeping the columns aligned.
 //
 // Deletion is offered at every date, however old. A weight feeds no day score and no rule streak,
 // so removing one restates nothing; a measurement logged against the wrong day would otherwise
@@ -19,6 +21,7 @@ export function WeightEntries({ entries, onDelete }: {
       {[...entries].reverse().map((entry) => (
         <li key={entry.date}>
           <span className="weight-entry-date">{weekdayDdmmLabel(entry.date)}</span>
+          <span className="weight-entry-at">{entry.at === null ? "—" : entry.at}</span>
           <span className="weight-entry-kg">{kgLabel(entry.kg)} ק״ג</span>
           <button type="button" className="icon-only"
                   aria-label={`מחיקת השקילה של ${entry.date}`}
