@@ -19,11 +19,11 @@ body { font-family: system-ui, sans-serif; max-width: var(--column-width); margi
    block, so the row closes tight on both sides. */
 header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.35rem; }
 header h1 { margin-bottom: 0; }
-/* The account box sits on the page's left edge (flex end in this RTL layout) and stacks the
-   email above a single row of account buttons; align-items flex-end keeps both on the box's
-   left edge rather than right-aligned per RTL default. It is auxiliary chrome, so it reads
-   smaller than the questionnaire controls and its buttons drop the global button's wide padding. */
-header > span { display: flex; flex-direction: column; align-items: flex-end; gap: 0.3rem; font-size: 0.8rem; }
+/* The account box sits on the page's left edge (flex end in this RTL layout) and holds a single
+   row of account buttons; align-items flex-end keeps that row on the box's left edge rather than
+   right-aligned per RTL default. It is auxiliary chrome, so it reads smaller than the
+   questionnaire controls and its buttons drop the global button's wide padding. */
+header > span { display: flex; flex-direction: column; align-items: flex-end; font-size: 0.8rem; }
 header span button { font-size: inherit; padding: 0.3rem 0.9rem; }
 /* Sign-out and the alarm share one row so the alarm reads as part of the account box rather than
    as a stray control below it. */
@@ -42,16 +42,27 @@ header button.account-trigger[aria-expanded="true"]:not(:disabled) {
    shadow — so its items need none of their own, and it hangs from the box's own edge, which is
    where the control that opened it sits. */
 header .account-menu {
+  --menu-pad: 0.25rem; --menu-text-inset: 0.8rem;
   position: absolute; top: 100%; inset-inline-end: 0; z-index: 10; margin-top: 0.3rem;
-  display: flex; flex-direction: column; min-width: max-content;
-  background: #fff; border: 1px solid #e0e0da; border-radius: 8px; padding: 0.25rem;
+  min-width: max-content;
+  background: #fff; border: 1px solid #e0e0da; border-radius: 8px; padding: var(--menu-pad);
   box-shadow: 0 6px 20px rgb(0 0 0 / 0.13);
+}
+header .account-menu, header .account-menu [role="menu"] { display: flex; flex-direction: column; }
+/* The address labels the menu rather than offering an action, so it is set apart from the items on
+   every axis a pointer reads: smaller, grey against their near-black, and with no hover box of its
+   own. Its rule reaches past the card's padding to both inner edges, so it cuts the card in two
+   rather than underlining one line of text. */
+header .account-email {
+  margin: 0 calc(-1 * var(--menu-pad)) var(--menu-pad);
+  padding: 0.3rem calc(var(--menu-text-inset) + var(--menu-pad)) 0.45rem;
+  font-size: 0.85em; color: #8a8a84; border-block-end: 1px solid #e0e0da;
 }
 /* Items read as a list: no box of their own until a pointer reaches one, and text on the reading
    edge rather than centred the way a standalone button is. */
 header .account-menu button {
   --btn-bg: transparent; --btn-fg: inherit; --btn-border: transparent;
-  text-align: start; padding: 0.45rem 0.8rem; border-radius: 6px; white-space: nowrap;
+  text-align: start; padding: 0.45rem var(--menu-text-inset); border-radius: 6px; white-space: nowrap;
 }
 header .account-menu button:hover:not(:disabled) { --btn-bg: #eceff1; filter: none; }
 /* The alarm is a warning indicator, not an action, so it wears the alert palette instead of the

@@ -6,9 +6,11 @@ import { Icon } from "./Icon";
 // alarm that survives reloads, unlike the transient post-submit banner. The alarm starts closed
 // so the warning presence is visible without leading every visit with the full messages.
 //
-// The account menu holds the two account-level actions: signing out, and the reminder
-// subscription. Leaving is when a user decides they are done being reminded, so the opt-out is
-// offered alongside the exit; it reads as a toggle, so the same menu is also the way back.
+// The account menu names the signed-in address and holds the two account-level actions: signing
+// out, and the reminder subscription. The address is identification rather than chrome the page
+// needs standing, so it appears only when the menu it labels is open. Leaving is when a user
+// decides they are done being reminded, so the opt-out is offered alongside the exit; it reads as
+// a toggle, so the same menu is also the way back.
 export function Header({ email, muted, onSignOut, onSetMuted, activeViolations }: {
   email: string; muted: boolean; onSignOut: () => void; onSetMuted: (muted: boolean) => void;
   activeViolations: string[];
@@ -38,7 +40,6 @@ export function Header({ email, muted, onSignOut, onSetMuted, activeViolations }
       <header>
         <h1>{APP_TITLE}</h1>
         <span className="account" ref={account}>
-          {email}
           <span className="account-actions">
             {activeViolations.length > 0 && (
               <button type="button" className="alarm" aria-label="חריגות פעילות"
@@ -53,11 +54,14 @@ export function Header({ email, muted, onSignOut, onSetMuted, activeViolations }
             </button>
           </span>
           {menuOpen && (
-            <span className="account-menu" role="menu">
-              <button type="button" role="menuitem" onClick={choose(onSignOut)}>התנתקות</button>
-              <button type="button" role="menuitem" onClick={choose(() => onSetMuted(!muted))}>
-                {muted ? "חידוש התראות" : "ביטול התראות"}
-              </button>
+            <span className="account-menu">
+              <span className="account-email">{email}</span>
+              <span role="menu">
+                <button type="button" role="menuitem" onClick={choose(onSignOut)}>התנתקות</button>
+                <button type="button" role="menuitem" onClick={choose(() => onSetMuted(!muted))}>
+                  {muted ? "חידוש התראות" : "ביטול התראות"}
+                </button>
+              </span>
             </span>
           )}
         </span>

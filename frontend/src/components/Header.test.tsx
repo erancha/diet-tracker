@@ -17,6 +17,15 @@ describe("Header", () => {
     expect(screen.getByRole("heading", { name: "מעקב תזונה" })).toBeInTheDocument();
   });
 
+  it("names the signed-in address in the menu rather than on the page behind it", async () => {
+    render(<Header {...props} />);
+
+    expect(screen.queryByText("a@b.com")).toBeNull();
+
+    await openMenu();
+    expect(screen.getByText("a@b.com")).toBeInTheDocument();
+  });
+
   it("keeps the plain sign-out as the account menu's first item", async () => {
     const onSignOut = vi.fn();
     render(<Header {...props} onSignOut={onSignOut} />);
