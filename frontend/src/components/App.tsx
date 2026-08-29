@@ -22,7 +22,7 @@ import { Welcome } from "./Welcome";
 // Top-level screen: owns the server data (app config, day history, today's and yesterday's meal
 // payloads, on-demand past-day payloads, the weight log) and every mutation — meal recording and
 // deletion, day submission with tracked floors, day deletion, weight recording, retargeting and
-// deletion — plus the submit → alerts flow,
+// deletion, and the account's reminder opt-out — plus the submit → alerts flow,
 // the day-end section's fold it closes, and the guard that keeps that fold and the day picker from
 // throwing away answers the day-end form has not submitted; the components below it hold no server
 // state of their own.
@@ -143,6 +143,17 @@ export function App({ email, api, reminderHour, firstMealHour, mealGapHours, onS
     onError: errorAlert("מחיקת השקילה נכשלה"),
   });
 
+  const setMutedMutation = useMutation({
+    mutationFn: api.setMuted,
+    onSuccess: ({ muted }) => {
+      setAlerts([{ kind: "ok", message: muted
+        ? "ביטלת את ההתראות — לא יישלחו אליך עוד תזכורות במייל או בטלגרם"
+        : "ההתראות חזרו לפעול" }]);
+      queryClient.invalidateQueries({ queryKey: ["days"] });
+    },
+    onError: errorAlert("עדכון ההתראות נכשל"),
+  });
+
   if (configQuery.isPending || historyQuery.isPending || weightQuery.isPending) {
     return <main>טוען…</main>;
   }
@@ -200,7 +211,8 @@ export function App({ email, api, reminderHour, firstMealHour, mealGapHours, onS
 
   return (
     <>
-      <Header email={email} onSignOut={onSignOut}
+      <Header email={email} onSignOut={onSignOut} muted={data.muted}
+              onSetMuted={(muted) => setMutedMutation.mutate(muted)}
               activeViolations={activeViolations(questionnaire, data.days, todayStr, yesterdayStr)} />
       <main>
         <Alerts items={alerts} onDismiss={dismissAlerts} />

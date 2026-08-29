@@ -20,6 +20,15 @@ class Derived:
     eating_window: float
 
 
+def _source_weight(choice, small_portion_flag, weights, small_portion) -> float:
+    """What one carb source on a plate weighs: its grade, at the reduced helping where the
+    quantity rule offers one. A meal's main grade and its second source price identically."""
+    weight = weights[choice]
+    if small_portion_flag and small_portion.offered_for(weight):
+        weight = small_portion.weigh(weight)
+    return weight
+
+
 def derive(meals: list, weights: dict, addition_values: dict, small_portion) -> Derived:
     if not meals:
         return Derived(carbs=0, meals=0, vegetables=0, eating_window=0)
@@ -27,17 +36,23 @@ def derive(meals: list, weights: dict, addition_values: dict, small_portion) -> 
     carbs = 0
     fruits = 0
     for meal in ordered:
-        weight = weights[meal["carbs_choice"]]
-        # Quantity applies to the meal's own grade, before the fruit escalation floors it: the
-        # escalation prices a second fruit, not the helping of whatever else was on the plate, so
-        # a small portion must not discount it.
-        if meal["small_portion"] and small_portion.offered_for(weight):
-            weight = small_portion.weigh(weight)
+        # Quantity applies to each source's own grade, before the fruit escalation floors their
+        # sum: the escalation prices a second fruit, not the helping of whatever else was on the
+        # plate, so a small portion must not discount it.
+        weight = _source_weight(meal["carbs_choice"], meal["small_portion"], weights,
+                                small_portion)
+        # A plate drawing on two carb sources — a grade 2 bowl beside a slice of white bread —
+        # has no single grade that tells the truth, so the second source carries its own and the
+        # two are summed.
+        second = meal["second_source"]
+        if second is not None:
+            weight += _source_weight(second["carbs_choice"], second["small_portion"], weights,
+                                     small_portion)
         if meal["fruit"]:
             fruits += 1
             if fruits > 1:
                 weight = max(weight, weights[FRUIT_ESCALATION_CHOICE])
-        # Additions (a sweet, alcohol, too many nuts) cost on top of the meal's grade (escalated
+        # Additions (a sweet, alcohol, too many nuts) cost on top of the meal's sources (escalated
         # or not), so an excellent meal with a cookie stays cheaper than a heavy meal with one.
         for addition in meal["additions"]:
             weight += addition_values[addition]

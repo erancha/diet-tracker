@@ -29,7 +29,8 @@ closed from the tracker, and the week's trend over recorded history.
   untracked once its meals are logged, a weekly weigh-in reminder that skips anyone who already
   weighed in on the day itself, an alert when a principle or the carb score stays past its limit
   several days running, and a weekly summary of averages. The one reminder that shows up inside
-  the app is the 7-day trend chart after each submit.
+  the app is the 7-day trend chart after each submit. The account menu turns all of them off and
+  back on, so leaving the app does not mean going on being reminded by it.
 
 ## Tech stack
 

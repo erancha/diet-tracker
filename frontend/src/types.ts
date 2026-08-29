@@ -80,6 +80,14 @@ export interface AppConfigFile {
 // A single question's stored answer — always a number (points, counts, hours, liters).
 export type AnswerValue = number;
 
+/** One carb source on a plate: the grade it drew on, and whether it was eaten as a small
+ * portion. A meal's main source is spelled flat across carbs_choice and small_portion; a second
+ * one is carried as this pair. */
+export interface CarbSource {
+  carbs_choice: string;
+  small_portion: boolean;
+}
+
 export interface Meal {
   id: string;
   at: string;
@@ -92,6 +100,10 @@ export interface Meal {
   // Whether the meal was a small portion of its grade — the quantity the grade itself no longer
   // carries.
   small_portion: boolean;
+  // A second carb source on the same plate — a slice of white bread beside a grade 2 bowl — with
+  // its own grade and helping, because no single grade prices such a plate honestly. Null on a
+  // plate that drew on one source.
+  second_source: CarbSource | null;
 }
 
 export interface Derived {
@@ -117,6 +129,13 @@ export interface HistoryResponse {
   days: Day[];
   today: DayPayload;
   yesterday: DayPayload;
+  // Whether the account has opted out of the reminders, alerts and digests it would otherwise be
+  // sent. The app itself is unaffected — a muted account still sees its own violations here.
+  muted: boolean;
+}
+
+export interface NotificationSettings {
+  muted: boolean;
 }
 
 export interface NewMeal {
@@ -126,6 +145,7 @@ export interface NewMeal {
   fruit: boolean;
   additions: string[];
   small_portion: boolean;
+  second_source: CarbSource | null;
 }
 
 export interface Violation {

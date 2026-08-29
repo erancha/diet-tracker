@@ -2,17 +2,37 @@
 
 ## Meal log and scoring
 
-Each meal is recorded as it happens with a timestamp, a carb grade, whether it included
-vegetables or fruit, and its additions (see below). Every carb grade carries a point weight defined in
-`config/app.json`; the day's carb score is the sum of its meals' weights. Scoring is
-golf-style: lower is better.
+Each meal is recorded as it happens with a timestamp, the carb source or sources it drew on,
+whether it included vegetables or fruit, and its additions (see below). Every carb grade carries a
+point weight defined in `config/app.json`; the day's carb score is the sum of its meals' weights.
+Scoring is golf-style: lower is better.
 
 The day's four tracked values all derive from the meal log:
 
-- **Carb score** — sum of the meals' carb-grade weights, with the fruit escalation below.
+- **Carb score** — sum of the meals' carb-source weights, with the fruit escalation below.
 - **Meal count** — number of recorded meals.
 - **Vegetable meals** — number of meals that included vegetables.
 - **Eating window** — hours between the first and last meal, rounded to the nearest half hour.
+
+## Carb sources on a plate
+
+The grade ladder ranks a meal by the carb source it drew on, so two things the ladder does not
+carry are recorded beside it.
+
+**Helping.** A grade is a source, not a quantity, so a meal may be marked a small portion and
+counts its grade at the configured percentage. The option is offered only from the configured
+grade up, where a lighter helping is a distinction worth drawing and the reduced weight still
+lands above zero; a meal switched down to a lighter grade loses the mark with it.
+
+**A second source.** A plate can draw on two sources at once — a grade 2 quinoa bowl beside a
+slice of white bread — and no single grade prices such a plate honestly. A meal may therefore
+record a second carb source: a grade of its own, carrying its own helping. Both sources are
+weighed by the same rule and summed, and it is that sum the fruit escalation floors and the
+additions are charged on top of. The grades table stays the one price list for a carb source, so
+a second source is priced exactly as it would be were it the whole meal.
+
+The plain no-carb grade is never a second source — a plate drawing on no carb source says so by
+carrying none at all — and a meal recorded before the field existed reads as drawing on one.
 
 ## Fruit escalation
 
@@ -24,7 +44,7 @@ least that grade's weight, and never lowered when the meal's own grade is alread
 
 A meal may carry additions — accompaniments that are not a grade of their own: a sweet, non-dry
 alcohol, too many nuts, or a heavy load of fat. Each addition pays its configured surcharge (the
-carbs question's `additions` in the config) on top of the meal's grade, after any fruit
+carbs question's `additions` in the config) on top of the meal's carb sources, after any fruit
 escalation. The surcharge keeps the base grade meaningful: an excellent meal with a cookie stays
 cheaper than a heavy meal with one, while an addition on every meal still compounds into a poor
 day score.
@@ -36,8 +56,9 @@ plate of rice and avocado unscored.
 
 Meals stored under a shape the config has since moved past are read as their current equivalent:
 the legacy sweet flag maps to a single sweet addition, and the retired heavy no-carb grade maps
-to the plain no-carb grade carrying the fat addition. Each mapping preserves the meal's combined
-weight, so retiring a grade never restates a day's recorded score.
+to the plain no-carb grade carrying the fat addition. The mapping reaches either of a meal's carb
+sources. Each mapping preserves the meal's combined weight, so retiring a grade never restates a
+day's recorded score.
 
 ## Day lifecycle
 
@@ -130,3 +151,11 @@ Scheduled jobs (EventBridge Scheduler, Asia/Jerusalem) run alongside the tracker
 - **Weigh-in reminder** — a weekly prompt to step on the scale, skipped for anyone who already
   recorded a weight on the weigh-in day itself, on the same channels as the alerts above.
 - **Trend chart** — a 7-day trend chart after each submit.
+
+Every job above reads its audience from the pool minus the accounts that have opted out, so one
+switch silences all of them — the unconditional weekly digest included. The switch is the account
+menu's second item, beside the sign-out it sits with because leaving is when a user decides they
+are done being reminded; it toggles, so the same item subscribes again. Opting out changes nothing
+inside the app: a muted account still sees its own violations on submit and in the header alarm,
+and its day is left unrecorded as alerted, so a streak still live when notifications resume raises
+one then.

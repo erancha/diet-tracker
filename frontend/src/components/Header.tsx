@@ -1,19 +1,43 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { APP_TITLE } from "../appTitle";
 import { Icon } from "./Icon";
 
-// App chrome: the title, the account box, and — while rule violations are still active — an
+// App chrome: the title, the account menu, and — while rule violations are still active — an
 // alarm that survives reloads, unlike the transient post-submit banner. The alarm starts closed
 // so the warning presence is visible without leading every visit with the full messages.
-export function Header({ email, onSignOut, activeViolations }: {
-  email: string; onSignOut: () => void; activeViolations: string[];
+//
+// The account menu holds the two account-level actions: signing out, and the reminder
+// subscription. Leaving is when a user decides they are done being reminded, so the opt-out is
+// offered alongside the exit; it reads as a toggle, so the same menu is also the way back.
+export function Header({ email, muted, onSignOut, onSetMuted, activeViolations }: {
+  email: string; muted: boolean; onSignOut: () => void; onSetMuted: (muted: boolean) => void;
+  activeViolations: string[];
 }) {
   const [alarmOpen, setAlarmOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  // The menu floats over the page, so the two gestures that dismiss a floating layer have to be
+  // heard on the document rather than on the menu itself: a press anywhere outside it, and Escape.
+  const account = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    if (!menuOpen) return;
+    const dismiss = (event: MouseEvent) => {
+      if (!account.current?.contains(event.target as Node)) setMenuOpen(false);
+    };
+    const onEscape = (event: KeyboardEvent) => { if (event.key === "Escape") setMenuOpen(false); };
+    document.addEventListener("mousedown", dismiss);
+    document.addEventListener("keydown", onEscape);
+    return () => {
+      document.removeEventListener("mousedown", dismiss);
+      document.removeEventListener("keydown", onEscape);
+    };
+  }, [menuOpen]);
+
+  const choose = (action: () => void) => () => { setMenuOpen(false); action(); };
   return (
     <>
       <header>
         <h1>{APP_TITLE}</h1>
-        <span>
+        <span className="account" ref={account}>
           {email}
           <span className="account-actions">
             {activeViolations.length > 0 && (
@@ -22,8 +46,20 @@ export function Header({ email, onSignOut, activeViolations }: {
                 <Icon name="alarm" /> {activeViolations.length}
               </button>
             )}
-            <button type="button" className="quiet" onClick={onSignOut}>התנתקות</button>
+            <button type="button" className="icon-only account-trigger" aria-haspopup="menu"
+                    aria-expanded={menuOpen} aria-label="תפריט חשבון"
+                    onClick={() => setMenuOpen((open) => !open)}>
+              <Icon name="menu" />
+            </button>
           </span>
+          {menuOpen && (
+            <span className="account-menu" role="menu">
+              <button type="button" role="menuitem" onClick={choose(onSignOut)}>התנתקות</button>
+              <button type="button" role="menuitem" onClick={choose(() => onSetMuted(!muted))}>
+                {muted ? "חידוש התראות" : "ביטול התראות"}
+              </button>
+            </span>
+          )}
         </span>
       </header>
       {alarmOpen && activeViolations.map((message) => (

@@ -3,7 +3,8 @@
 
 import { isUnexpired, redirectToLogin, type Tokens } from "./auth";
 import type { AppConfig } from "./config";
-import type { AnswerValue, DayPayload, HistoryResponse, NewMeal, SubmitResult, WeightPayload } from "./types";
+import type { AnswerValue, DayPayload, HistoryResponse, NewMeal, NotificationSettings, SubmitResult,
+  WeightPayload } from "./types";
 
 /** Backend request rejected; the message keeps the method, path, status, and body for diagnosis. */
 export class ApiError extends Error {
@@ -41,6 +42,7 @@ export interface Api {
   recordWeight(kg: number): Promise<WeightPayload>;
   setWeightTarget(kg: number): Promise<WeightPayload>;
   deleteWeight(date: string): Promise<WeightPayload>;
+  setMuted(muted: boolean): Promise<NotificationSettings>;
 }
 
 export function createApi(
@@ -88,5 +90,6 @@ export function createApi(
     recordWeight: (kg) => request("PUT", "/weight", { kg }),
     setWeightTarget: (kg) => request("PUT", "/weight/target", { kg }),
     deleteWeight: (date) => request("DELETE", `/weight/${date}`),
+    setMuted: (muted) => request("PUT", "/notifications", { muted }),
   };
 }

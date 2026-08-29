@@ -22,7 +22,7 @@ def minimal(**overrides):
 
 def test_repo_config_loads_with_numeric_choices_and_threshold_rules():
     q = appconfig.load(APP_CONFIG).questionnaire
-    assert q.version == 11
+    assert q.version == 12
     carbs = q.question("carbs")
     assert carbs.type == "points" and carbs.max == 35
     assert carbs.day_title == f"{carbs.text} ({carbs.day_qualifier})"

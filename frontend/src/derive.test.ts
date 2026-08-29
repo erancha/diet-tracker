@@ -26,16 +26,16 @@ describe("mealWeights", () => {
 
   it("aligns results with the input order, not chronological order", () => {
     const meals = [
-      { at: "2026-08-20T20:00:00+03:00", carbs_choice: "carb_grade_6", vegetables: false, fruit: false, additions: [], small_portion: false },
-      { at: "2026-08-20T08:00:00+03:00", carbs_choice: "no_carbs", vegetables: false, fruit: false, additions: [], small_portion: false },
+      { at: "2026-08-20T20:00:00+03:00", carbs_choice: "carb_grade_6", vegetables: false, fruit: false, additions: [], small_portion: false, second_source: null },
+      { at: "2026-08-20T08:00:00+03:00", carbs_choice: "no_carbs", vegetables: false, fruit: false, additions: [], small_portion: false, second_source: null },
     ];
     expect(mealWeights(meals, fixture.weights, fixture.addition_values, fixture.small_portion)).toEqual([6, 0]);
   });
 
   it("escalates the chronologically later fruit meal even when listed first", () => {
     const meals = [
-      { at: "2026-08-20T13:00:00+03:00", carbs_choice: "carb_grade_1", vegetables: false, fruit: true, additions: [], small_portion: false },
-      { at: "2026-08-20T09:00:00+03:00", carbs_choice: "carb_grade_1", vegetables: false, fruit: true, additions: [], small_portion: false },
+      { at: "2026-08-20T13:00:00+03:00", carbs_choice: "carb_grade_1", vegetables: false, fruit: true, additions: [], small_portion: false, second_source: null },
+      { at: "2026-08-20T09:00:00+03:00", carbs_choice: "carb_grade_1", vegetables: false, fruit: true, additions: [], small_portion: false, second_source: null },
     ];
     expect(mealWeights(meals, fixture.weights, fixture.addition_values, fixture.small_portion)).toEqual([5, 1]);
   });

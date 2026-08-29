@@ -222,6 +222,12 @@ Resources:
             ApiId: !Ref Api
             Method: DELETE
             Path: /weight/{date}
+        SetNotifications:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref Api
+            Method: PUT
+            Path: /notifications
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref DaysTable

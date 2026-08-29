@@ -28,6 +28,32 @@ header span button { font-size: inherit; padding: 0.3rem 0.9rem; }
 /* Sign-out and the alarm share one row so the alarm reads as part of the account box rather than
    as a stray control below it. */
 header .account-actions { display: flex; align-items: center; gap: 0.4rem; }
+/* The account box anchors the menu that drops out of it, so the menu can leave the flow rather
+   than push the page down for as long as it is open. */
+header .account { position: relative; }
+/* While its menu is open the trigger holds a pressed state, in the accent the app acts in and on
+   a firmer wash than hover paints, so the control reads as the held-open source of the card
+   hanging off it rather than as one the pointer happens to be over. Outscoring the hover rule is
+   what keeps it from lightening back to the hover grey under the pointer that opened it. */
+header button.account-trigger[aria-expanded="true"]:not(:disabled) {
+  --btn-bg: #dfe4e6; --btn-fg: var(--accent);
+}
+/* A floating card rather than a stack of buttons: the menu carries the surface — border, radius,
+   shadow — so its items need none of their own, and it hangs from the box's own edge, which is
+   where the control that opened it sits. */
+header .account-menu {
+  position: absolute; top: 100%; inset-inline-end: 0; z-index: 10; margin-top: 0.3rem;
+  display: flex; flex-direction: column; min-width: max-content;
+  background: #fff; border: 1px solid #e0e0da; border-radius: 8px; padding: 0.25rem;
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.13);
+}
+/* Items read as a list: no box of their own until a pointer reaches one, and text on the reading
+   edge rather than centred the way a standalone button is. */
+header .account-menu button {
+  --btn-bg: transparent; --btn-fg: inherit; --btn-border: transparent;
+  text-align: start; padding: 0.45rem 0.8rem; border-radius: 6px; white-space: nowrap;
+}
+header .account-menu button:hover:not(:disabled) { --btn-bg: #eceff1; filter: none; }
 /* The alarm is a warning indicator, not an action, so it wears the alert palette instead of the
    accent button green. */
 header .alarm { --btn-bg: #ffebee; --btn-fg: var(--danger); --btn-border: #f3c9cc;
@@ -260,7 +286,13 @@ td.view-day { cursor: pointer; }
 /* A fresh day renders the actions row and meal list with nothing in them; hiding them keeps
    their margins from deepening the card's bottom gap past its top padding. */
 .form-actions:empty, .meal-list:empty { display: none; }
-/* Five config-driven checkboxes must wrap on narrow phones instead of spilling off-screen. */
+/* A carb source is its grade group plus the helping that qualifies it, so the two travel as one
+   block: the fieldset gives up its own bottom margin and the block carries the gap instead,
+   leaving the helping box tucked under the grade it belongs to. */
+.carb-source { margin-bottom: 1rem; }
+.carb-source > fieldset { margin-bottom: 0; }
+.carb-source .meal-flags { margin-top: 0.5rem; }
+/* Config-driven checkboxes must wrap on narrow phones instead of spilling off-screen. */
 .meal-flags { display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; }
 .meal-flags label { display: inline-flex; align-items: center; gap: 0.3rem; }
 /* The meal-time picker takes its own line so the checkbox row above keeps its wrap layout. */

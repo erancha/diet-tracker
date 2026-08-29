@@ -1,6 +1,6 @@
 import { clockTimeOf } from "../dates";
 import { carbsScales, mealWeights } from "../derive";
-import type { Meal, Questionnaire } from "../types";
+import type { Choice, Meal, Questionnaire } from "../types";
 import { HIGH_GRADE_THRESHOLD } from "../violations";
 import { Icon } from "./Icon";
 
@@ -26,6 +26,7 @@ export function MealList({ questionnaire, meals, onEdit, onDelete }: {
   // still resolves.
   const { weights, additionValues, smallPortion } = carbsScales(carbsQuestion);
   const points = meals.every((m) => weights[m.carbs_choice] !== undefined
+      && (m.second_source === null || weights[m.second_source.carbs_choice] !== undefined)
       && m.additions.every((a) => additionValues[a] !== undefined))
     ? mealWeights(newestFirst, weights, additionValues, smallPortion)
     : undefined;
@@ -33,18 +34,24 @@ export function MealList({ questionnaire, meals, onEdit, onDelete }: {
   return (
     <ul className="meal-list">
       {newestFirst.map((meal, index) => {
-        // Retired choice ids fall back to the raw id and are never grade-highlighted.
         const choice = carbsQuestion.choices.find((c) => c.id === meal.carbs_choice);
+        const second = meal.second_source === null ? undefined
+          : carbsQuestion.choices.find((c) => c.id === meal.second_source!.carbs_choice);
         return (
           <li key={meal.id}>
             {/* Outside the text cell, so the row lays time and description out as two columns and
                 a description too long for one line wraps against its own edge, not the time's. */}
             <strong className="meal-at">{clockTimeOf(meal.at)}</strong>
             <span className="meal-text">
-              <span className={choice !== undefined && choice.value > HIGH_GRADE_THRESHOLD
-                ? "high-grade" : undefined}>
-                {choice?.label ?? meal.carbs_choice}
-              </span>
+              <Grade choice={choice} choiceId={meal.carbs_choice} />
+              {/* A plate that drew on two carb sources names both, each highlighted on its own
+                  grade; the row's points are their sum. */}
+              {meal.second_source !== null && (
+                <>
+                  {" + "}
+                  <Grade choice={second} choiceId={meal.second_source.carbs_choice} />
+                </>
+              )}
               {meal.vegetables && " · 🥗"}
               {meal.fruit && " · 🍎"}
               {meal.additions.map((id) => ` · ${ADDITION_MARKERS[id] ?? id}`).join("")}
@@ -77,5 +84,16 @@ export function MealList({ questionnaire, meals, onEdit, onDelete }: {
         );
       })}
     </ul>
+  );
+}
+
+// One carb source's grade as the row names it. A choice id the current questionnaire has retired
+// carries no weight here, so it falls back to the raw id and is never grade-highlighted.
+function Grade({ choice, choiceId }: { choice: Choice | undefined; choiceId: string }) {
+  return (
+    <span className={choice !== undefined && choice.value > HIGH_GRADE_THRESHOLD
+      ? "high-grade" : undefined}>
+      {choice?.label ?? choiceId}
+    </span>
   );
 }

@@ -10,13 +10,14 @@ const emptyDay = (date: string): DayPayload => ({
 
 const meal: Meal = {
   id: "m1", at: "2026-08-28T09:00:00", carbs_choice: "c", vegetables: true, fruit: false,
-  additions: [], small_portion: false,
+  additions: [], small_portion: false, second_source: null,
 };
 
 const EMPTY_HISTORY: HistoryResponse = {
   days: [],
   today: emptyDay("2026-08-28"),
   yesterday: emptyDay("2026-08-27"),
+  muted: false,
 };
 const EMPTY_WEIGHT: WeightPayload = { target: null, entries: [] };
 

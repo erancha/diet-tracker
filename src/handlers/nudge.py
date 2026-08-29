@@ -2,7 +2,8 @@
 evaluation, weekly digest, weekly weigh-in.
 
 EventBridge Scheduler invokes this handler with {"job": ...}; each job iterates every user in
-the pool. NudgeEnv gathers all AWS-derived inputs once so job logic stays pure and testable."""
+the pool who has not opted out of notifications. NudgeEnv gathers all AWS-derived inputs once so
+job logic stays pure and testable."""
 
 import os
 from dataclasses import dataclass
@@ -30,7 +31,7 @@ OPEN_DAY_TEXT = "רשמת היום ארוחות ולא מילאת את השאל�
 class NudgeEnv:
     store: object
     questionnaire: object
-    users: list
+    users: list  # already narrowed to the pool members who accept notifications
     telegram: tuple | None  # (bot_token, chat_map) when the Telegram channel is active, else None
     ses: object
     sender: str
@@ -45,13 +46,23 @@ def handler(event, context):
     logger.info("job=%s completed", event["job"])
 
 
+def _notifiable(store, pool) -> list:
+    """The pool members a job may message: everyone who has not opted out.
+
+    The opt-out is account-wide, so narrowing the audience once here is what silences every job
+    for a muted user — including the weekly digest, which is otherwise unconditional."""
+    return [user for user in pool if not store.get_nudge_state(user.sub)["muted"]]
+
+
 def _build_env() -> NudgeEnv:
     ssm = boto3.client("ssm")
+    store = Store(os.environ["DAYS_TABLE"], os.environ["MEALS_TABLE"], os.environ["STATE_TABLE"],
+                  os.environ["WEIGHTS_TABLE"])
     return NudgeEnv(
-        store=Store(os.environ["DAYS_TABLE"], os.environ["MEALS_TABLE"], os.environ["STATE_TABLE"],
-                    os.environ["WEIGHTS_TABLE"]),
+        store=store,
         questionnaire=appconfig.load(os.environ["APP_CONFIG_PATH"]).questionnaire,
-        users=users.list_users(boto3.client("cognito-idp"), os.environ["USER_POOL_ID"]),
+        users=_notifiable(store, users.list_users(boto3.client("cognito-idp"),
+                                                  os.environ["USER_POOL_ID"])),
         telegram=notify.telegram_config(ssm, os.environ["BOT_TOKEN_PARAM"], os.environ["CHAT_MAP_PARAM"]),
         ses=boto3.client("ses"),
         sender=os.environ["SES_SENDER"],

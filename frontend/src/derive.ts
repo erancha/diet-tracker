@@ -30,6 +30,17 @@ export function smallPortionOffered(portion: SmallPortion, weight: number): bool
   return weight >= portion.from_value;
 }
 
+// What one carb source on a plate weighs: its grade, at the reduced helping where the quantity
+// rule offers one. A meal's main grade and its second source price identically.
+function sourceWeight(choice: string, smallPortionFlag: boolean, weights: Record<string, number>, portion: SmallPortion): number {
+  const weight = weights[choice];
+  if (weight === undefined) throw new Error(`unknown carbs choice ${choice}`);
+  if (smallPortionFlag && smallPortionOffered(portion, weight)) {
+    return (weight * portion.percent) / 100;
+  }
+  return weight;
+}
+
 // Every carbs grade includes one fruit; only the day's first fruit rides free. Each fruit meal
 // after it counts as the fruit grade, so its weight is raised to at least that choice's weight —
 // never lowered when the meal's own grade is already heavier.
@@ -50,19 +61,22 @@ function roundToHalfHour(hours: number): number {
 // Each meal's effective carb contribution — its grade weight after fruit escalation, plus its
 // additions' surcharges — aligned with the input order so callers can label the meals they
 // passed in. The returned weights sum to the day's carb score.
-export function mealWeights(meals: Pick<Meal, "at" | "carbs_choice" | "fruit" | "additions" | "small_portion">[], weights: Record<string, number>, additionValues: Record<string, number>, smallPortion: SmallPortion): number[] {
+export function mealWeights(meals: Pick<Meal, "at" | "carbs_choice" | "fruit" | "additions" | "small_portion" | "second_source">[], weights: Record<string, number>, additionValues: Record<string, number>, smallPortion: SmallPortion): number[] {
   const chronological = meals.map((meal, index) => ({ meal, index }))
     .sort((a, b) => new Date(a.meal.at).getTime() - new Date(b.meal.at).getTime());
   const result = new Array<number>(meals.length);
   let fruits = 0;
   for (const { meal, index } of chronological) {
-    let weight = weights[meal.carbs_choice];
-    if (weight === undefined) throw new Error(`unknown carbs choice ${meal.carbs_choice}`);
-    // Quantity applies to the meal's own grade, before the fruit escalation floors it: the
-    // escalation prices a second fruit, not the helping of whatever else was on the plate, so a
-    // small portion must not discount it.
-    if (meal.small_portion && smallPortionOffered(smallPortion, weight)) {
-      weight = (weight * smallPortion.percent) / 100;
+    // Quantity applies to each source's own grade, before the fruit escalation floors their sum:
+    // the escalation prices a second fruit, not the helping of whatever else was on the plate, so
+    // a small portion must not discount it.
+    let weight = sourceWeight(meal.carbs_choice, meal.small_portion, weights, smallPortion);
+    // A plate drawing on two carb sources — a grade 2 bowl beside a slice of white bread — has no
+    // single grade that tells the truth, so the second source carries its own and the two are
+    // summed.
+    if (meal.second_source !== null) {
+      weight += sourceWeight(meal.second_source.carbs_choice, meal.second_source.small_portion,
+                             weights, smallPortion);
     }
     if (meal.fruit) {
       fruits += 1;
@@ -72,7 +86,7 @@ export function mealWeights(meals: Pick<Meal, "at" | "carbs_choice" | "fruit" | 
         weight = Math.max(weight, escalation);
       }
     }
-    // Additions (a sweet, alcohol, too many nuts) cost on top of the meal's grade (escalated
+    // Additions (a sweet, alcohol, too many nuts) cost on top of the meal's sources (escalated
     // or not), so an excellent meal with a cookie stays cheaper than a heavy meal with one.
     for (const addition of meal.additions) {
       const value = additionValues[addition];
@@ -84,7 +98,7 @@ export function mealWeights(meals: Pick<Meal, "at" | "carbs_choice" | "fruit" | 
   return result;
 }
 
-export function deriveDay(meals: Pick<Meal, "at" | "carbs_choice" | "vegetables" | "fruit" | "additions" | "small_portion">[], weights: Record<string, number>, additionValues: Record<string, number>, smallPortion: SmallPortion): Derived {
+export function deriveDay(meals: Pick<Meal, "at" | "carbs_choice" | "vegetables" | "fruit" | "additions" | "small_portion" | "second_source">[], weights: Record<string, number>, additionValues: Record<string, number>, smallPortion: SmallPortion): Derived {
   if (meals.length === 0) return { carbs: 0, meals: 0, vegetables: 0, eating_window: 0 };
   const ordered = [...meals].sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime());
   const window = new Date(ordered[ordered.length - 1].at).getTime() - new Date(ordered[0].at).getTime();

@@ -61,21 +61,24 @@ def body_of(response):
     return json.loads(response["body"])
 
 
+def meal_body(carbs_choice, vegetables, fruit, additions, at_time, small_portion, second_source):
+    """The body both recording and correcting a meal take, so the two helpers cannot drift."""
+    return {"at": f"{today()}T{at_time}+03:00", "carbs_choice": carbs_choice,
+            "vegetables": vegetables, "fruit": fruit, "additions": list(additions),
+            "small_portion": small_portion, "second_source": second_source}
+
+
 def add_meal(carbs_choice="carb_grade_3", vegetables=True, fruit=False, additions=(),
-             at_time="09:10:00", small_portion=False):
-    return api.handler(request("POST /meals", {
-        "at": f"{today()}T{at_time}+03:00", "carbs_choice": carbs_choice,
-        "vegetables": vegetables, "fruit": fruit, "additions": list(additions),
-        "small_portion": small_portion}), None)
+             at_time="09:10:00", small_portion=False, second_source=None):
+    return api.handler(request("POST /meals", meal_body(
+        carbs_choice, vegetables, fruit, additions, at_time, small_portion, second_source)), None)
 
 
 def update_meal(meal_id, carbs_choice="carb_grade_3", vegetables=True, fruit=False, additions=(),
                 small_portion=False,
-                at_time="09:10:00", date=None):
-    return api.handler(request("PUT /meals/{date}/{id}", {
-        "at": f"{today()}T{at_time}+03:00", "carbs_choice": carbs_choice,
-        "vegetables": vegetables, "fruit": fruit, "additions": list(additions),
-        "small_portion": small_portion},
+                at_time="09:10:00", date=None, second_source=None):
+    return api.handler(request("PUT /meals/{date}/{id}", meal_body(
+        carbs_choice, vegetables, fruit, additions, at_time, small_portion, second_source),
         path_params={"date": date or today(), "id": meal_id}), None)
 
 
@@ -141,7 +144,8 @@ def test_get_days_keeps_yesterday_floors_once_submitted(env):
     from common.store import Store
     store = Store("days", "meals", "state", "weights")
     yesterday = days_before(today(), 1)
-    store.add_meal("u1", yesterday, f"{yesterday}T09:10:00+03:00", "carb_grade_3", True, False, [], False)
+    store.add_meal("u1", yesterday, meal_body("carb_grade_3", True, False, [], "09:10:00", False,
+                                              None) | {"at": f"{yesterday}T09:10:00+03:00"})
     store.put_day("u1", yesterday, ANSWERS, 3, "t")
     payload = body_of(api.handler(request("GET /days"), None))
     assert payload["yesterday"]["date"] == yesterday
@@ -170,6 +174,53 @@ def test_add_meal_records_and_returns_recomputed_day(env):
 def test_meal_additions_add_their_costs_on_top_of_its_grade(env):
     payload = body_of(add_meal("carb_grade_2", additions=["sweet", "alcohol"]))
     assert payload["derived"]["carbs"] == 10
+
+
+def test_a_second_carb_source_is_priced_beside_the_meals_own_grade(env):
+    # A grade 2 plate carrying a slice of white bread: the plate keeps its grade, and the bread
+    # costs half of grade 7 as the helping it was.
+    payload = body_of(add_meal("carb_grade_2", second_source={
+        "carbs_choice": "carb_grade_7", "small_portion": True}))
+    assert payload["derived"]["carbs"] == 5.5
+    assert payload["meals"][0]["second_source"] == {"carbs_choice": "carb_grade_7",
+                                                    "small_portion": True}
+
+
+def test_correcting_a_meal_can_drop_its_second_carb_source(env):
+    meal_id = body_of(add_meal("carb_grade_2", second_source={
+        "carbs_choice": "carb_grade_7", "small_portion": False}))["meals"][0]["id"]
+    payload = body_of(update_meal(meal_id, "carb_grade_2"))
+    assert payload["meals"][0]["second_source"] is None
+    assert payload["derived"]["carbs"] == 2
+
+
+def test_add_meal_rejects_an_unknown_second_carb_source(env):
+    response = add_meal("carb_grade_2", second_source={"carbs_choice": "nope",
+                                                       "small_portion": False})
+    assert response["statusCode"] == 400
+    assert "nope" in body_of(response)["error"]
+
+
+def test_add_meal_rejects_the_no_carb_grade_as_a_second_source(env):
+    # Drawing on no carb source is what carrying no second source says, so the grade that names it
+    # would be a second way of saying the same thing.
+    response = add_meal("carb_grade_2", second_source={"carbs_choice": "no_carbs",
+                                                       "small_portion": False})
+    assert response["statusCode"] == 400
+    assert "no_carbs" in body_of(response)["error"]
+
+
+def test_add_meal_rejects_a_second_source_that_is_not_a_grade_and_a_helping(env):
+    missing = add_meal("carb_grade_2", second_source={"carbs_choice": "carb_grade_7"})
+    assert missing["statusCode"] == 400
+    stray = add_meal("carb_grade_2", second_source={"carbs_choice": "carb_grade_7",
+                                                    "small_portion": False, "fruit": True})
+    assert stray["statusCode"] == 400
+    unstructured = add_meal("carb_grade_2", second_source="carb_grade_7")
+    assert unstructured["statusCode"] == 400
+    flag = add_meal("carb_grade_2", second_source={"carbs_choice": "carb_grade_7",
+                                                   "small_portion": "yes"})
+    assert flag["statusCode"] == 400
 
 
 def test_add_meal_rejects_an_unknown_addition(env):
@@ -249,7 +300,8 @@ def test_update_meal_guards_missing_meals_other_dates_and_submitted_days(env):
 def test_get_day_returns_any_past_days_meals_and_derived(env):
     from common.store import Store
     old = days_before(today(), 30)
-    Store("days", "meals", "state", "weights").add_meal("u1", old, f"{old}T09:10:00+03:00", "carb_grade_3", True, False, [], False)
+    Store("days", "meals", "state", "weights").add_meal("u1", old, meal_body(
+        "carb_grade_3", True, False, [], "09:10:00", False, None) | {"at": f"{old}T09:10:00+03:00"})
     payload = body_of(api.handler(request("GET /days/{date}", path_params={"date": old}), None))
     assert payload["date"] == old
     assert [m["carbs_choice"] for m in payload["meals"]] == ["carb_grade_3"]
@@ -365,3 +417,31 @@ def test_weights_are_scoped_to_the_authenticated_user(env):
     other = {**request("GET /weight"), "requestContext":
              {"authorizer": {"jwt": {"claims": {"sub": "u2", "email": "b@gmail.com"}}}}}
     assert body_of(api.handler(other, None)) == {"target": None, "entries": []}
+
+
+def test_notifications_route_mutes_and_unmutes_the_account(env):
+    assert body_of(api.handler(request("PUT /notifications", {"muted": True}), None)) == {"muted": True}
+    assert body_of(api.handler(request("GET /days"), None))["muted"] is True
+    assert body_of(api.handler(request("PUT /notifications", {"muted": False}), None)) == {"muted": False}
+    assert body_of(api.handler(request("GET /days"), None))["muted"] is False
+
+
+def test_notifications_route_rejects_a_non_boolean(env):
+    response = api.handler(request("PUT /notifications", {"muted": "yes"}), None)
+    assert response["statusCode"] == 400
+
+
+def test_submit_raises_no_alert_while_the_account_is_muted(env):
+    from common.store import Store
+    store = Store("days", "meals", "state", "weights")
+    store.set_muted("u1", True)
+    for offset in (2, 1):
+        store.put_day("u1", days_before(today(), offset), ANSWERS, 3, "t")
+
+    payload = body_of(api.handler(request("POST /days", {"answers": ANSWERS}), None))
+
+    # The app still shows the day's violations; muting silences the outbound alert alone, and
+    # leaves the day unrecorded as alerted so unmuting can still raise a live streak.
+    assert [v["rule_id"] for v in payload["violations"]] == ["long_eating_window"]
+    assert env == []
+    assert store.get_nudge_state("u1")["rules"] == {}

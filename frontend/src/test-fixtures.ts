@@ -75,8 +75,8 @@ export const trackerQuestionnaire: Questionnaire = {
 export const trackedDay: DayPayload = {
   date: "2026-08-20",
   meals: [
-    { id: "a", at: "2026-08-20T09:10:00+03:00", carbs_choice: "no_carbs", vegetables: true, fruit: false, additions: [], small_portion: false },
-    { id: "b", at: "2026-08-20T13:30:00+03:00", carbs_choice: "carb_grade_4", vegetables: false, fruit: true, additions: [], small_portion: false },
+    { id: "a", at: "2026-08-20T09:10:00+03:00", carbs_choice: "no_carbs", vegetables: true, fruit: false, additions: [], small_portion: false, second_source: null },
+    { id: "b", at: "2026-08-20T13:30:00+03:00", carbs_choice: "carb_grade_4", vegetables: false, fruit: true, additions: [], small_portion: false, second_source: null },
   ],
   derived: { carbs: 4, meals: 2, vegetables: 1, eating_window: 4.5 },
 };

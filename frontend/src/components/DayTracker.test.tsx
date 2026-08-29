@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DayTracker } from "./DayTracker";
 import type { DayPayload } from "../types";
@@ -13,7 +13,7 @@ const emptyDay: DayPayload = {
 const dayWithMealHoursAgo = (hours: number): DayPayload => ({
   date: "2026-08-20",
   meals: [{ id: "m", at: new Date(Date.now() - hours * 3_600_000).toISOString(),
-            carbs_choice: "no_carbs", vegetables: false, fruit: false, additions: [], small_portion: false }],
+            carbs_choice: "no_carbs", vegetables: false, fruit: false, additions: [], small_portion: false, second_source: null }],
   derived: { carbs: 0, meals: 1, vegetables: 0, eating_window: 0 },
 });
 
@@ -49,6 +49,11 @@ const NO_AUTO_OPEN_GAP_HOURS = Infinity;
 // The meal inputs start folded, so a test that reaches them opens the section first.
 const openMealForm = () =>
   fireEvent.click(screen.getByRole("button", { name: "הוספת ארוחה" }));
+
+// Both grade groups offer the same choices, so a query has to say which plate source it means.
+const secondSourceGroup = () => within(screen.getByRole("group", { name: "מקור פחמימה נוסף" }));
+const revealSecondSource = () =>
+  fireEvent.click(screen.getByRole("button", { name: "הוספת מקור פחמימה נוסף" }));
 
 describe("DayTracker", () => {
   // Cases here spy on window.confirm; without a restore the spy and its call log outlive the case
@@ -139,7 +144,7 @@ describe("DayTracker", () => {
     fireEvent.click(screen.getByLabelText("כולל אלכוהול לא יבש"));
     fireEvent.click(screen.getByRole("button", { name: "שמירת ארוחה" }));
     expect(onAddMeal).toHaveBeenCalledWith(expect.objectContaining({
-      carbs_choice: "carb_grade_4", vegetables: true, fruit: true, additions: ["sweet", "alcohol"], small_portion: false }));
+      carbs_choice: "carb_grade_4", vegetables: true, fruit: true, additions: ["sweet", "alcohol"], small_portion: false, second_source: null }));
     // Carries a UTC offset — the test runs on an arbitrary real date, with the clock unpinned.
     expect(onAddMeal.mock.calls[0][0].at).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$/);
   });
@@ -170,7 +175,7 @@ describe("DayTracker", () => {
     fireEvent.click(screen.getByLabelText("כמות קטנה"));
     fireEvent.click(screen.getByRole("button", { name: "שמירת ארוחה" }));
     expect(onAddMeal).toHaveBeenCalledWith(expect.objectContaining({
-      carbs_choice: "carb_grade_7", small_portion: true }));
+      carbs_choice: "carb_grade_7", small_portion: true, second_source: null }));
 
     // Recording folds the inputs away, so the second half opens them again.
     openMealForm();
@@ -181,7 +186,93 @@ describe("DayTracker", () => {
     fireEvent.click(screen.getByLabelText("דרגה 4"));
     fireEvent.click(screen.getByRole("button", { name: "שמירת ארוחה" }));
     expect(onAddMeal).toHaveBeenLastCalledWith(expect.objectContaining({
-      carbs_choice: "carb_grade_4", small_portion: false }));
+      carbs_choice: "carb_grade_4", small_portion: false, second_source: null }));
+  });
+
+  it("offers every grade but the plain no-carb one as a second carb source", () => {
+    render(<DayTracker questionnaire={questionnaire} today={emptyDay}
+                       firstMealHour={NO_AUTO_OPEN_HOUR}
+                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    openMealForm();
+    expect(screen.queryByRole("group", { name: "מקור פחמימה נוסף" })).toBeNull();
+    revealSecondSource();
+    // Drawing on no carb source is what carrying no second source says.
+    expect(secondSourceGroup().queryByLabelText("ללא פחמימות")).toBeNull();
+    expect(secondSourceGroup().getByLabelText("דרגה 7")).toBeInTheDocument();
+  });
+
+  it("records a second carb source under its own grade and helping", () => {
+    const onAddMeal = vi.fn();
+    render(<DayTracker questionnaire={questionnaire} today={emptyDay}
+                       firstMealHour={NO_AUTO_OPEN_HOUR}
+                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       onAddMeal={onAddMeal} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    openMealForm();
+    fireEvent.click(screen.getByLabelText("דרגה 4"));
+    revealSecondSource();
+    fireEvent.click(secondSourceGroup().getByLabelText("דרגה 7"));
+    fireEvent.click(screen.getByLabelText("כמות קטנה"));
+    fireEvent.click(screen.getByRole("button", { name: "שמירת ארוחה" }));
+    // The groups answer independently: a grade picked as the second source must not unseat the
+    // meal's own, which sharing one radio name would do.
+    expect(onAddMeal).toHaveBeenCalledWith(expect.objectContaining({
+      carbs_choice: "carb_grade_4", small_portion: false,
+      second_source: { carbs_choice: "carb_grade_7", small_portion: true } }));
+  });
+
+  it("records no second source once the group is removed", () => {
+    const onAddMeal = vi.fn();
+    render(<DayTracker questionnaire={questionnaire} today={emptyDay}
+                       firstMealHour={NO_AUTO_OPEN_HOUR}
+                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       onAddMeal={onAddMeal} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    openMealForm();
+    fireEvent.click(screen.getByLabelText("דרגה 4"));
+    revealSecondSource();
+    fireEvent.click(secondSourceGroup().getByLabelText("דרגה 7"));
+    fireEvent.click(screen.getByRole("button", { name: "הסרת מקור פחמימה נוסף" }));
+    fireEvent.click(screen.getByRole("button", { name: "שמירת ארוחה" }));
+    expect(onAddMeal).toHaveBeenCalledWith(expect.objectContaining({
+      carbs_choice: "carb_grade_4", second_source: null }));
+  });
+
+  it("records no second source from a group left open and unanswered", () => {
+    const onAddMeal = vi.fn();
+    render(<DayTracker questionnaire={questionnaire} today={emptyDay}
+                       firstMealHour={NO_AUTO_OPEN_HOUR}
+                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       onAddMeal={onAddMeal} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    openMealForm();
+    fireEvent.click(screen.getByLabelText("דרגה 4"));
+    revealSecondSource();
+    fireEvent.click(screen.getByRole("button", { name: "שמירת ארוחה" }));
+    expect(onAddMeal).toHaveBeenCalledWith(expect.objectContaining({ second_source: null }));
+  });
+
+  it("opens a recorded second carb source into its own group for correction", () => {
+    atLocalTime(19, 5);
+    const twoSourceDay: DayPayload = {
+      ...trackedDay,
+      meals: [{ ...trackedDay.meals[1],
+                second_source: { carbs_choice: "carb_grade_7", small_portion: true } }],
+    };
+    const onUpdateMeal = vi.fn();
+    render(<DayTracker questionnaire={questionnaire} today={twoSourceDay}
+                       firstMealHour={NO_AUTO_OPEN_HOUR}
+                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       onAddMeal={vi.fn()} onUpdateMeal={onUpdateMeal}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "עריכת ארוחה 13:30" }));
+    expect(secondSourceGroup().getByLabelText("דרגה 7")).toBeChecked();
+    expect(screen.getByLabelText("כמות קטנה")).toBeChecked();
+    fireEvent.click(screen.getByRole("button", { name: "שמירת ארוחה" }));
+    expect(onUpdateMeal).toHaveBeenCalledWith("b", expect.objectContaining({
+      second_source: { carbs_choice: "carb_grade_7", small_portion: true } }));
   });
 
   it("records the picked choice id even when another choice shares its numeric value", () => {
@@ -294,7 +385,7 @@ describe("DayTracker", () => {
     fireEvent.click(screen.getByLabelText("כולל מתוק"));
     fireEvent.click(screen.getByRole("button", { name: "שמירת ארוחה" }));
     expect(onUpdateMeal).toHaveBeenCalledWith("b", expect.objectContaining({
-      carbs_choice: "carb_grade_4", vegetables: true, fruit: true, additions: ["sweet"], small_portion: false }));
+      carbs_choice: "carb_grade_4", vegetables: true, fruit: true, additions: ["sweet"], small_portion: false, second_source: null }));
     expect(onUpdateMeal.mock.calls[0][1].at).toMatch(/T12:00:00[+-]\d{2}:\d{2}$/);
     expect(screen.queryByRole("button", { name: "עדכון ארוחה" })).toBeNull();
   });
@@ -816,7 +907,7 @@ describe("DayTracker", () => {
     const additionsDay: DayPayload = {
       date: "2026-08-20",
       meals: [{ id: "a", at: "2026-08-20T09:10:00+03:00", carbs_choice: "carb_grade_4",
-                vegetables: false, fruit: false, additions: ["sweet", "alcohol", "nuts", "fat"], small_portion: false }],
+                vegetables: false, fruit: false, additions: ["sweet", "alcohol", "nuts", "fat"], small_portion: false, second_source: null }],
       derived: { carbs: 17, meals: 1, vegetables: 0, eating_window: 0 },
     };
     render(<DayTracker questionnaire={questionnaire} today={additionsDay}

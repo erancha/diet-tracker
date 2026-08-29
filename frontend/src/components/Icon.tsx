@@ -17,6 +17,7 @@ const GLYPHS = {
            <path d="M13.73 21a2 2 0 0 1-3.46 0" /></>,
   openDay: <><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
              <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" /></>,
+  menu: <><path d="M3 6h18" /><path d="M3 12h18" /><path d="M3 18h18" /></>,
 } satisfies Record<string, ReactElement>;
 
 export type IconName = keyof typeof GLYPHS;

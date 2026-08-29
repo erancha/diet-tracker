@@ -130,7 +130,9 @@ def test_the_weigh_in_job_is_dispatchable_by_name(env, monkeypatch):
 
 
 def record_meal(store, sub, day, at_time="09:10:00"):
-    store.add_meal(sub, day, f"{day}T{at_time}+03:00", "carb_grade_3", True, False, [], False)
+    store.add_meal(sub, day, {"at": f"{day}T{at_time}+03:00", "carbs_choice": "carb_grade_3",
+                             "vegetables": True, "fruit": False, "additions": [],
+                             "small_portion": False, "second_source": None})
 
 
 def test_the_evening_reminder_does_not_yet_call_the_day_open(env):
@@ -174,3 +176,9 @@ def test_the_last_call_job_is_dispatchable_by_name(env, monkeypatch):
     e.store.put_day("u2", today(), CLEAN, 1, "t")
     nudge.handler({"job": "last_call"}, None)
     assert [target for _, target, _ in sent] == ["111", "a@gmail.com"]
+
+
+def test_muted_users_are_dropped_from_every_jobs_audience(env):
+    e, _ = env
+    e.store.set_muted("u1", True)
+    assert nudge._notifiable(e.store, e.users) == [User("u2", "b@gmail.com")]

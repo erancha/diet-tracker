@@ -27,28 +27,44 @@ def _from_dynamo(value):
 # here on has a home again without one.
 _RETIRED_GRADES: dict[str, tuple[str, str | None]] = {}
 
+# The attributes one stored meal carries beside its keys. Named once so the record written and the
+# API body it is projected from cannot drift apart.
+MEAL_ATTRIBUTES = ("at", "carbs_choice", "vegetables", "fruit", "additions", "small_portion",
+                   "second_source")
+
 # Sort key of the weights table's target item. It sorts past every ISO date, keeping the single
 # target and the dated measurements in one key space without a date range ever returning it.
 TARGET_KEY = "target"
 
 
+def _current_grade(choice, additions) -> tuple:
+    """One recorded grade as the current questionnaire expresses it, with the addition making up
+    the difference — where the retirement declares one — folded into the meal's additions."""
+    if choice not in _RETIRED_GRADES:
+        return choice, additions
+    choice, addition = _RETIRED_GRADES[choice]
+    return choice, additions if addition is None else [*additions, addition]
+
+
 def _meal_from_item(item) -> dict:
     """One stored meal in the shape the app reads it.
 
-    Meals recorded before an attribute existed legally lack it: meals predate the fruit flag, and
-    predate the small-portion flag in turn, while additions supersede the boolean sweet flag, so a
-    legacy sweet meal reads as a single sweet addition. A meal recorded under a grade the
-    questionnaire has since retired reads as its current equivalent, so nothing downstream is
-    handed an id the config no longer knows."""
-    carbs_choice = item["carbs_choice"]
+    Meals recorded before an attribute existed legally lack it: meals predate the fruit flag,
+    predate the small-portion flag in turn, and predate the second carb source after that, while
+    additions supersede the boolean sweet flag, so a legacy sweet meal reads as a single sweet
+    addition. A meal recorded under a grade the questionnaire has since retired reads as its
+    current equivalent — either of its sources — so nothing downstream is handed an id the config
+    no longer knows."""
     additions = item.get("additions", ["sweet"] if item.get("sweet", False) else [])
-    if carbs_choice in _RETIRED_GRADES:
-        carbs_choice, addition = _RETIRED_GRADES[carbs_choice]
-        if addition is not None:
-            additions = [*additions, addition]
+    carbs_choice, additions = _current_grade(item["carbs_choice"], additions)
+    second = item.get("second_source")
+    if second is not None:
+        second_choice, additions = _current_grade(second["carbs_choice"], additions)
+        second = {"carbs_choice": second_choice, "small_portion": second["small_portion"]}
     return {"id": item["sk"].split("#", 1)[1], "at": item["at"], "carbs_choice": carbs_choice,
             "vegetables": item["vegetables"], "fruit": item.get("fruit", False),
-            "additions": additions, "small_portion": item.get("small_portion", False)}
+            "additions": additions, "small_portion": item.get("small_portion", False),
+            "second_source": second}
 
 
 def _weights_by_day(items) -> dict:
@@ -92,15 +108,16 @@ class Store:
         return {item["sk"]: {k: _from_dynamo(v) for k, v in item["answers"].items()}
                 for item in response["Items"]}
 
-    def add_meal(self, user_sub, day, at, carbs_choice, vegetables, fruit, additions,
-                 small_portion) -> str:
+    def add_meal(self, user_sub, day, meal) -> str:
+        """Stores one meal, returning its id. The meal is a mapping over MEAL_ATTRIBUTES, which is
+        also the shape the API validates a request body into: projecting through that tuple keeps
+        anything else a caller happens to carry out of the record."""
         # Time-of-day prefix keeps sort-key order chronological; the random suffix separates
         # same-second reports.
-        meal_id = f"{at[11:19]}-{secrets.token_hex(3)}"
+        meal_id = f"{meal['at'][11:19]}-{secrets.token_hex(3)}"
         self._meals.put_item(Item={
             "pk": user_sub, "sk": f"{day}#{meal_id}",
-            "at": at, "carbs_choice": carbs_choice, "vegetables": vegetables, "fruit": fruit,
-            "additions": additions, "small_portion": small_portion,
+            **{name: meal[name] for name in MEAL_ATTRIBUTES},
         })
         return meal_id
 
@@ -109,8 +126,7 @@ class Store:
             KeyConditionExpression=Key("pk").eq(user_sub) & Key("sk").begins_with(f"{day}#"))
         return [_meal_from_item(item) for item in response["Items"]]
 
-    def replace_meal(self, user_sub, day, meal_id, at, carbs_choice, vegetables, fruit,
-                     additions, small_portion) -> str:
+    def replace_meal(self, user_sub, day, meal_id, meal) -> str:
         """Rewrites one meal wholesale, returning its new id; raises KeyError when no such meal
         exists. The id carries the meal's time to keep the sort key chronological, so a corrected
         time necessarily moves the meal to a new id. The replacement is written before the
@@ -118,8 +134,7 @@ class Store:
         never a meal that silently disappeared."""
         if "Item" not in self._meals.get_item(Key={"pk": user_sub, "sk": f"{day}#{meal_id}"}):
             raise KeyError(meal_id)
-        new_id = self.add_meal(user_sub, day, at, carbs_choice, vegetables, fruit, additions,
-                               small_portion)
+        new_id = self.add_meal(user_sub, day, meal)
         self.delete_meal(user_sub, day, meal_id)
         return new_id
 
@@ -132,14 +147,25 @@ class Store:
             raise KeyError(meal_id)
 
     def get_nudge_state(self, user_sub) -> dict:
+        """The user's notification state: which rules have already been alerted for, and whether
+        the account has opted out of being notified at all.
+
+        State written before the opt-out existed legally carries no flag and reads as subscribed,
+        the same allowance the meal and weight attributes above are read under. Defaulting it here
+        rather than at each call site is what lets every reader index the key directly."""
         response = self._state.get_item(Key={"pk": user_sub})
         if "Item" not in response:
             # A user who has never been alerted is a legal initial state.
-            return {"rules": {}}
-        return response["Item"]["state"]
+            return {"rules": {}, "muted": False}
+        return {"muted": False, **response["Item"]["state"]}
 
     def put_nudge_state(self, user_sub, state) -> None:
         self._state.put_item(Item={"pk": user_sub, "state": state})
+
+    def set_muted(self, user_sub, muted) -> None:
+        """Sets the account's notification opt-out, keeping the alert record beside it so muting
+        and unmuting never rewrite which days were already alerted for."""
+        self.put_nudge_state(user_sub, {**self.get_nudge_state(user_sub), "muted": muted})
 
     def put_weight(self, user_sub, day, kg, at) -> None:
         """Records the day's weight and the wall-clock "HH:MM" it was taken at, replacing whatever

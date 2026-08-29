@@ -1,6 +1,6 @@
 {
   "questionnaire": {
-    "version": 11,
+    "version": 12,
     "questions": [
       {
         "id": "drinking",
@@ -204,7 +204,7 @@
         ],
         "small_portion": {
           "label": "כמות קטנה",
-          "from_value": 5,
+          "from_value": 4,
           "percent": 50
         }
       }
