@@ -267,8 +267,12 @@ Resources:
         Version: '2012-10-17'
         Statement:
           - Effect: Allow
+            # While the account sits in the SES sandbox every send is authorized against the
+            # recipient's identity as well as the sender's, so a grant naming only SesSender denies
+            # every message to anyone but the sender. The grant spans the account's own verified
+            # identities, which is exactly the audience the sandbox permits as recipients.
             Action: ses:SendEmail
-            Resource: !Sub 'arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/${SesSender}'
+            Resource: !Sub 'arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/*'
           - Effect: Allow
             Action: ssm:GetParameter
             Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/diet-tracker/*'
