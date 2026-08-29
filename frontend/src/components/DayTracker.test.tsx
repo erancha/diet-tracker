@@ -56,6 +56,10 @@ const revealSecondSource = () =>
   fireEvent.click(screen.getByRole("button", { name: "הוספת מקור פחמימה נוסף" }));
 
 describe("DayTracker", () => {
+  // The label density is remembered per browser, so a case that changes it would set the density
+  // every later case opens on.
+  afterEach(() => window.localStorage.clear());
+
   // Cases here spy on window.confirm; without a restore the spy and its call log outlive the case
   // that installed it, and a later one reads another case's dialog answer as its own.
   afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); });
@@ -187,6 +191,28 @@ describe("DayTracker", () => {
     fireEvent.click(screen.getByRole("button", { name: "שמירת ארוחה" }));
     expect(onAddMeal).toHaveBeenLastCalledWith(expect.objectContaining({
       carbs_choice: "carb_grade_4", small_portion: false, second_source: null }));
+  });
+
+  it("opens on grade names alone and spells them out on demand, in the picker and the rows", () => {
+    atLocalTime(19, 5);
+    render(<DayTracker questionnaire={questionnaire} today={trackedDay}
+                       firstMealHour={NO_AUTO_OPEN_HOUR}
+                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    openMealForm();
+    expect(screen.getByLabelText("דרגה 4")).toBeInTheDocument();
+    expect(screen.getAllByText("דרגה 4")).not.toHaveLength(0);
+
+    fireEvent.click(screen.getByRole("button", { name: "הרחבת שמות" }));
+    // One switch reaches the grade group and the recorded meal row alike.
+    expect(screen.getByLabelText("דרגה 4 (אורז לבן)")).toBeInTheDocument();
+    expect(screen.getAllByText("דרגה 4 (אורז לבן)")).not.toHaveLength(0);
+    // A grade that lists nothing reads the same at either density.
+    expect(screen.getByLabelText("דרגה 4!")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "צמצום שמות" }));
+    expect(screen.getByLabelText("דרגה 4")).toBeInTheDocument();
   });
 
   it("offers every grade but the plain no-carb one as a second carb source", () => {

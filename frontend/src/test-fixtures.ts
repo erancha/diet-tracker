@@ -60,10 +60,12 @@ export const trackerQuestionnaire: Questionnaire = {
                   { id: "fat", label: "כולל הרבה שומן", value: 2 }],
       tooltip: "המטרה היא ציון נמוך", day_qualifier: "סיכום ציון", meal_qualifier: "דרגת הארוחה",
       small_portion: { label: "כמות קטנה", from_value: 5, percent: 50 },
+      // Two grades list what they cover and two do not, so the label-density switch is exercised
+      // over both kinds at once.
       choices: [{ id: "no_carbs", label: "ללא פחמימות", value: 0 },
-                { id: "carb_grade_4", label: "דרגה 4", value: 4 },
+                { id: "carb_grade_4", label: "דרגה 4", examples: "אורז לבן", value: 4 },
                 { id: "grade4b", label: "דרגה 4!", value: 4 },
-                { id: "carb_grade_7", label: "דרגה 7", value: 7 }] },
+                { id: "carb_grade_7", label: "דרגה 7", examples: "קמח לבן", value: 7 }] },
   ],
   rules: [
     { id: "heavy_carbs", question_id: "carbs", at_least: 8, consecutive_days: 2, message: "m" },

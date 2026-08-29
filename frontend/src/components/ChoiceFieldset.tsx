@@ -1,3 +1,4 @@
+import { choiceLabel } from "../gradeLabels";
 import type { Choice, Question } from "../types";
 import { questionTitle, valueLabel } from "../violations";
 
@@ -39,10 +40,14 @@ export function fieldsetChoices(question: Question, floor?: number, stored?: num
 // The required marking states the obligation to assistive tech; the browser's own enforcement is
 // never invoked, since its message speaks the browser's UI language rather than the app's Hebrew.
 // Enclosing forms check their own answers before submitting.
-export function ChoiceFieldset({ question, selectedId, floor, stored, scope = "day", onPick }: {
+export function ChoiceFieldset({ question, selectedId, floor, stored, scope = "day",
+                                expandLabels = true, onPick }: {
   question: Question;
   selectedId: string | undefined;
   floor?: number;
+  // Whether a choice listing what it covers spells that list out. Only the carbs grades carry one,
+  // so every other question reads the same either way and the default leaves them alone.
+  expandLabels?: boolean;
   // The day's saved answer when a recorded day is open for editing, so an off-scale figure still
   // has an option to check.
   stored?: number;
@@ -63,7 +68,7 @@ export function ChoiceFieldset({ question, selectedId, floor, stored, scope = "d
             checked={selectedId === choice.id}
             onChange={() => onPick(choice)}
           />
-          {" "}{choice.label}
+          {" "}{choiceLabel(choice, expandLabels)}
         </label>
       ))}
     </fieldset>

@@ -286,6 +286,10 @@ td.view-day { cursor: pointer; }
 /* A fresh day renders the actions row and meal list with nothing in them; hiding them keeps
    their margins from deepening the card's bottom gap past its top padding. */
 .form-actions:empty, .meal-list:empty { display: none; }
+/* Leads the tracker's contents on a line of its own, pushed to the row's far end so it reads as a
+   setting over what follows rather than as the first of the meal form's controls. */
+.label-density { display: flex; justify-content: flex-end; margin-bottom: -0.5rem; }
+.label-density button { padding: 0.15rem 0.6rem; font-size: 0.8rem; white-space: nowrap; }
 /* A carb source is its grade group plus the helping that qualifies it, so the two travel as one
    block: the fieldset gives up its own bottom margin and the block carries the gap instead,
    leaving the helping box tucked under the grade it belongs to. */

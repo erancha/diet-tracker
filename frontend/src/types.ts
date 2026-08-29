@@ -3,7 +3,12 @@
 
 export interface Choice {
   id: string;
+  // What the choice is called, on its own. The carbs grades read as a name and a list of what the
+  // grade covers, and the two are held apart so a label can be shown at either density.
   label: string;
+  // What the grade covers, listed. Present only on the carbs choices; every other question's
+  // choices name themselves completely.
+  examples?: string;
   value: number;
   // A choice phrased as an open-ended bound ("מעל 12 שעות", "פחות מ-2.5 ליטר") answers for
   // everything past the ladder's last measured step, so its value is a sentinel one step beyond

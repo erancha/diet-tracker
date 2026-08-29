@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import { clockTimeOf, expandMealForm } from "../dates";
 import { carbsScales, deriveDay, smallPortionOffered } from "../derive";
 import { mayDiscardEdits } from "../edits";
+import { useExpandedGradeLabels } from "../gradeLabels";
 import type { CarbSource, DayPayload, Meal, NewMeal, Question, Questionnaire } from "../types";
 import { ChoiceFieldset } from "./ChoiceFieldset";
 import { CollapsibleSection } from "./CollapsibleSection";
@@ -23,6 +24,11 @@ const NO_CARBS_CHOICE = "no_carbs";
 const SECOND_SOURCE_TITLE = "מקור פחמימה נוסף";
 const SECOND_SOURCE_ADD = "הוספת מקור פחמימה נוסף";
 const SECOND_SOURCE_REMOVE = "הסרת מקור פחמימה נוסף";
+
+// The one control over how much of a grade's name the app spells out, reading as the state it
+// moves to rather than the state it is in.
+const EXPAND_LABELS = "הרחבת שמות";
+const COLLAPSE_LABELS = "צמצום שמות";
 
 // Closing the day from here is offered only once the recorded meals span this much of the day;
 // anything narrower is a day still being eaten, whose figures would be closed too early. A day
@@ -69,6 +75,7 @@ export function DayTracker({ questionnaire, today, firstMealHour, mealGapHours, 
   // clock, and a freshly derived one would read ten minutes on as a time the user had picked.
   const [pristineTime, setPristineTime] = useState(mealTime);
   const [editingId, setEditingId] = useState<string | undefined>(undefined);
+  const [expandLabels, setExpandLabels] = useExpandedGradeLabels();
 
   // Today's meals always resolve against the current questionnaire, so deriveDay's throw on an
   // unknown id is a real config/data fault, not a legal state — let the error boundary show it.
@@ -208,17 +215,26 @@ export function DayTracker({ questionnaire, today, firstMealHour, mealGapHours, 
                         summary={
       <DayDashboard questionnaire={questionnaire} derived={derived} />
     }>
+      {/* Governs every grade name below it — the pickers' and the meal rows' alike — so it leads
+          the tracker's contents rather than sitting inside either one. */}
+      <div className="label-density">
+        <button type="button" className="quiet" onClick={() => setExpandLabels(!expandLabels)}>
+          {expandLabels ? COLLAPSE_LABELS : EXPAND_LABELS}
+        </button>
+      </div>
       <CollapsibleSection className="meal-form" headingLevel={3}
                           title={editing !== undefined ? "עדכון ארוחה" : "הוספת ארוחה"}
                           collapsed={formCollapsed}
                           onToggle={toggleForm}>
         <CarbSourceFields question={carbsQuestion} selectedId={carbsChoiceId}
+                          expandLabels={expandLabels}
                           portionLabel={carbsQuestion.small_portion!.label}
                           portionOffered={offersSmallPortion} smallPortion={smallPortion}
                           onPick={(id) => setCarbsChoiceId(id)}
                           onSmallPortion={setSmallPortion} />
         {secondSourceOpen && (
           <CarbSourceFields question={secondSourceQuestion} selectedId={secondChoiceId}
+                            expandLabels={expandLabels}
                             portionLabel={carbsQuestion.small_portion!.label}
                             portionOffered={offersSecondSmallPortion}
                             smallPortion={secondSmallPortion}
@@ -284,8 +300,8 @@ export function DayTracker({ questionnaire, today, firstMealHour, mealGapHours, 
           </button>
         )}
       </div>
-      <MealList questionnaire={questionnaire} meals={today.meals} onEdit={startEdit}
-                onDelete={onDeleteMeal} />
+      <MealList questionnaire={questionnaire} meals={today.meals} expandLabels={expandLabels}
+                onEdit={startEdit} onDelete={onDeleteMeal} />
       {/* Deleting or correcting a meal mid-close can narrow the day back under the window that
           offered closing, and the panel folds away with the button that opened it. */}
       {closing && closable && (
@@ -306,10 +322,11 @@ export function DayTracker({ questionnaire, today, firstMealHour, mealGapHours, 
 // One carb source's inputs: its grade group, and under it the reduced-helping box the portion
 // rule offers from its threshold up. The box belongs to the grade above it — a plate may carry two
 // sources, and only this pairing says which grade a helping halves.
-function CarbSourceFields({ question, selectedId, portionLabel, portionOffered, smallPortion,
-                            onPick, onSmallPortion }: {
+function CarbSourceFields({ question, selectedId, expandLabels, portionLabel, portionOffered,
+                            smallPortion, onPick, onSmallPortion }: {
   question: Question;
   selectedId: string | undefined;
+  expandLabels: boolean;
   portionLabel: string;
   portionOffered: boolean;
   smallPortion: boolean;
@@ -319,7 +336,7 @@ function CarbSourceFields({ question, selectedId, portionLabel, portionOffered, 
   return (
     <div className="carb-source">
       <ChoiceFieldset question={question} selectedId={selectedId} scope="meal"
-                      onPick={(choice) => onPick(choice.id)} />
+                      expandLabels={expandLabels} onPick={(choice) => onPick(choice.id)} />
       {portionOffered && (
         <div className="meal-flags">
           <label>

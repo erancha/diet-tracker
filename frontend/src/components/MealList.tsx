@@ -1,5 +1,6 @@
 import { clockTimeOf } from "../dates";
 import { carbsScales, mealWeights } from "../derive";
+import { choiceLabel } from "../gradeLabels";
 import type { Choice, Meal, Questionnaire } from "../types";
 import { HIGH_GRADE_THRESHOLD } from "../violations";
 import { Icon } from "./Icon";
@@ -11,8 +12,11 @@ const ADDITION_MARKERS: Record<string, string> = { sweet: "🍪", alcohol: "🍷
 // user checks, corrects or deletes — each row ending with the meal's effective points so the rows
 // visibly sum to the day's carb score. Per-meal editing and deletion render only when their
 // handlers are supplied (the live tracker); the read-only history view passes none.
-export function MealList({ questionnaire, meals, onEdit, onDelete }: {
+export function MealList({ questionnaire, meals, expandLabels, onEdit, onDelete }: {
   questionnaire: Questionnaire;
+  // Every grade a row names carries a list of what it covers, so the density is the caller's to
+  // set rather than this component's to assume.
+  expandLabels: boolean;
   // Chronological, as the server stores them; rendering reverses to newest first.
   meals: Meal[];
   onEdit?: (meal: Meal) => void;
@@ -43,13 +47,14 @@ export function MealList({ questionnaire, meals, onEdit, onDelete }: {
                 a description too long for one line wraps against its own edge, not the time's. */}
             <strong className="meal-at">{clockTimeOf(meal.at)}</strong>
             <span className="meal-text">
-              <Grade choice={choice} choiceId={meal.carbs_choice} />
+              <Grade choice={choice} choiceId={meal.carbs_choice} expanded={expandLabels} />
               {/* A plate that drew on two carb sources names both, each highlighted on its own
                   grade; the row's points are their sum. */}
               {meal.second_source !== null && (
                 <>
                   {" + "}
-                  <Grade choice={second} choiceId={meal.second_source.carbs_choice} />
+                  <Grade choice={second} choiceId={meal.second_source.carbs_choice}
+                         expanded={expandLabels} />
                 </>
               )}
               {meal.vegetables && " · 🥗"}
@@ -89,11 +94,13 @@ export function MealList({ questionnaire, meals, onEdit, onDelete }: {
 
 // One carb source's grade as the row names it. A choice id the current questionnaire has retired
 // carries no weight here, so it falls back to the raw id and is never grade-highlighted.
-function Grade({ choice, choiceId }: { choice: Choice | undefined; choiceId: string }) {
+function Grade({ choice, choiceId, expanded }: {
+  choice: Choice | undefined; choiceId: string; expanded: boolean;
+}) {
   return (
     <span className={choice !== undefined && choice.value > HIGH_GRADE_THRESHOLD
       ? "high-grade" : undefined}>
-      {choice?.label ?? choiceId}
+      {choice === undefined ? choiceId : choiceLabel(choice, expanded)}
     </span>
   );
 }

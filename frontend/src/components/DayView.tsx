@@ -1,5 +1,6 @@
 import type { DayPayload, Questionnaire } from "../types";
 import { weekdayDdmmLabel } from "../dates";
+import { useExpandedGradeLabels } from "../gradeLabels";
 import { DayDashboard } from "./DayDashboard";
 import { Icon } from "./Icon";
 import { MealList } from "./MealList";
@@ -11,6 +12,9 @@ export function DayView({ questionnaire, day, onClose }: {
   day: DayPayload;
   onClose: () => void;
 }) {
+  // A history day's rows read at the density the tracker was left at; the switch that sets it
+  // lives there, so this view follows rather than offering a second one.
+  const [expandLabels] = useExpandedGradeLabels();
   return (
     <section className="day-view">
       <header>
@@ -24,7 +28,7 @@ export function DayView({ questionnaire, day, onClose }: {
       ) : (
         <>
           <DayDashboard questionnaire={questionnaire} derived={day.derived} />
-          <MealList questionnaire={questionnaire} meals={day.meals} />
+          <MealList questionnaire={questionnaire} meals={day.meals} expandLabels={expandLabels} />
         </>
       )}
     </section>
