@@ -249,7 +249,7 @@
       {
         "id": "heavy_carbs",
         "question_id": "carbs",
-        "at_least": 11,
+        "at_least": 12,
         "consecutive_days": 2,
         "message": "ציון פחמימות {value} ומעלה {days} ימים ברצוף"
       }
