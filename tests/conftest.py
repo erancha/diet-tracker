@@ -42,7 +42,7 @@ def numeric_questionnaire():
         "version": 1,
         "questions": [
             {
-                "id": "carbs", "type": "points", "text": "carbs", "max": 30,
+                "id": "carbs", "type": "points", "text": "carbs", "max": 30, "heavy_meal": 4,
                 "choices": [
                     {"id": "no_carbs", "label": "no carbs", "value": 0},
                     {"id": "grade3", "label": "grade3", "value": 3},
@@ -58,7 +58,7 @@ def numeric_questionnaire():
             },
         ],
         "rules": [
-            {"id": "heavy_carbs", "question_id": "carbs", "at_least": 8,
+            {"id": "heavy_day", "question_id": "carbs", "at_least": 8,
              "consecutive_days": 2, "message": "carbs {value} and up {days} days in a row"},
             {"id": "low_drinking", "question_id": "drinking", "below": 2.5,
              "consecutive_days": 2, "message": "low drinking {days} days in a row"},

@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { activeViolations, isViolating, panelTitle, questionTitle, trendPanels, valueLabel, violates } from "./violations";
+import { activeViolations, isHeavyMeal, isViolating, panelTitle, questionTitle, trendPanels, valueLabel, violates } from "./violations";
 import type { Day, Question, Questionnaire, Rule } from "./types";
 
 const carbs: Question = {
-  id: "carbs", type: "points", text: "פחמימות", max: 30, panel_title: "ציון פחמימות",
+  id: "carbs", type: "points", text: "פחמימות", max: 30, heavy_meal: 4, panel_title: "ציון פחמימות",
   day_qualifier: "סיכום ציון", meal_qualifier: "דרגת הארוחה",
   choices: [
     { id: "no_carbs", label: "ללא פחמימות", value: 0 },
@@ -32,6 +32,17 @@ describe("isViolating", () => {
     expect(isViolating(questionnaire, "carbs", 9)).toBe(true);
     expect(isViolating(questionnaire, "carbs", 2)).toBe(false);
     expect(isViolating(questionnaire, "meals", 2)).toBe(true);
+  });
+});
+
+describe("isHeavyMeal", () => {
+  it("judges the plate's whole cost against the configured bound", () => {
+    expect(isHeavyMeal(carbs, 4)).toBe(true);
+    expect(isHeavyMeal(carbs, 3.9)).toBe(false);
+    // The cost a caller passes already carries the additions and the halved small portion, so a
+    // light grade beside a drink is heavy while a small helping of a steep grade is not.
+    expect(isHeavyMeal(carbs, 2 + 4)).toBe(true);
+    expect(isHeavyMeal(carbs, 7 / 2)).toBe(false);
   });
 });
 

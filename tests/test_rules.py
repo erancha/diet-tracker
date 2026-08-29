@@ -41,7 +41,7 @@ def test_due_alerts_fires_at_threshold_once_per_day(numeric_questionnaire):
     history = days(9, 9)
     state = {"rules": {}}
     violations = rules.due_alerts(numeric_questionnaire, history, "2026-08-19", state)
-    assert [v.rule_id for v in violations] == ["heavy_carbs"]
+    assert [v.rule_id for v in violations] == ["heavy_day"]
     assert "2" in violations[0].message
     state = rules.mark_alerted(state, violations, "2026-08-19")
     assert rules.due_alerts(numeric_questionnaire, history, "2026-08-19", state) == []

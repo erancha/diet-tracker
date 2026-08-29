@@ -46,14 +46,15 @@ export const fixtureQuestionnaire: Questionnaire = {
 // Questionnaire as the tracker components consume it: a per-meal carbs points question (two
 // choices sharing a numeric value, to catch id/value mix-ups; one grade either side of the
 // small-portion threshold) with surcharge additions and the portion rule, plus a drinking
-// question for day close. The at_least carbs rule keeps the violation/high-score
-// styling interplay under test in the history table.
+// question for day close. The at_least carbs rule keeps the violation/heavy-day styling
+// interplay under test in the history table, and heavy_meal is the per-meal bound: grade 4
+// reaches it on its own, and a lighter grade reaches it once additions are priced in.
 export const trackerQuestionnaire: Questionnaire = {
   version: 3,
   questions: [
     { id: "drinking", type: "single", text: "שתיה",
       choices: [{ id: "l3", label: "3 ליטר", value: 3 }] },
-    { id: "carbs", type: "points", text: "פחמימות", max: 30,
+    { id: "carbs", type: "points", text: "פחמימות", max: 30, heavy_meal: 4,
       additions: [{ id: "sweet", label: "כולל מתוק", value: 4 },
                   { id: "alcohol", label: "כולל אלכוהול לא יבש", value: 4 },
                   { id: "nuts", label: "כולל הרבה אגוזים או שקדים", value: 3 },
@@ -68,7 +69,7 @@ export const trackerQuestionnaire: Questionnaire = {
                 { id: "carb_grade_7", label: "דרגה 7", examples: "קמח לבן", value: 7 }] },
   ],
   rules: [
-    { id: "heavy_carbs", question_id: "carbs", at_least: 8, consecutive_days: 2, message: "m" },
+    { id: "heavy_day", question_id: "carbs", at_least: 8, consecutive_days: 2, message: "m" },
   ],
 };
 

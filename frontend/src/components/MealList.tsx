@@ -2,7 +2,7 @@ import { clockTimeOf } from "../dates";
 import { carbsScales, mealWeights } from "../derive";
 import { choiceLabel } from "../gradeLabels";
 import type { Choice, Meal, Questionnaire } from "../types";
-import { HIGH_GRADE_THRESHOLD } from "../violations";
+import { isHeavyMeal } from "../violations";
 import { Icon } from "./Icon";
 
 // Row marker per addition id; a retired id falls back to its raw id, like retired grade choices.
@@ -62,9 +62,15 @@ export function MealList({ questionnaire, meals, expandLabels, onEdit, onDelete 
               {meal.additions.map((id) => ` · ${ADDITION_MARKERS[id] ?? id}`).join("")}
             </span>
             {/* A bare number reads as nothing in particular; the carbs tooltip is what says it is
-                this meal's contribution to the day's score. */}
+                this meal's contribution to the day's score. The heavy mark rides this figure and
+                not the grade name because it is the plate's cost that is being judged: the grade
+                is one term of a price that also carries the second source, the escalated fruit
+                and the additions, so a light grade with a drink and fat outprices a steep grade
+                eaten small. */}
             {points !== undefined && (
-              <span className="meal-points" title={carbsQuestion.tooltip}>
+              <span className={isHeavyMeal(carbsQuestion, points[index])
+                      ? "meal-points heavy-meal" : "meal-points"}
+                    title={carbsQuestion.tooltip}>
                 {" · "}{points[index]}
               </span>
             )}
@@ -93,14 +99,9 @@ export function MealList({ questionnaire, meals, expandLabels, onEdit, onDelete 
 }
 
 // One carb source's grade as the row names it. A choice id the current questionnaire has retired
-// carries no weight here, so it falls back to the raw id and is never grade-highlighted.
+// carries no weight, so it falls back to the raw id.
 function Grade({ choice, choiceId, expanded }: {
   choice: Choice | undefined; choiceId: string; expanded: boolean;
 }) {
-  return (
-    <span className={choice !== undefined && choice.value > HIGH_GRADE_THRESHOLD
-      ? "high-grade" : undefined}>
-      {choice === undefined ? choiceId : choiceLabel(choice, expanded)}
-    </span>
-  );
+  return <span>{choice === undefined ? choiceId : choiceLabel(choice, expanded)}</span>;
 }

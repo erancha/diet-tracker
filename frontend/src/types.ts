@@ -29,6 +29,10 @@ export interface Question {
   panel_title?: string;
   panel_qualifier?: string;
   max?: number;
+  // Present only on points questions: what one meal must cost — its grade, second source,
+  // escalated fruit and additions together — to count as heavy. The day-scope counterpart is this
+  // question's rule threshold, so each scope states its bound once, priced the same way.
+  heavy_meal?: number;
   // Present only on the carbs question: the accompaniments a meal may carry (a sweet, alcohol,
   // too many nuts), each with the point cost it adds on top of the meal's grade. Not choices,
   // so they never appear in the grade picker.

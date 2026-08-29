@@ -60,6 +60,23 @@ to the plain no-carb grade carrying the fat addition. The mapping reaches either
 sources. Each mapping preserves the meal's combined weight, so retiring a grade never restates a
 day's recorded score.
 
+## Heavy meals and heavy days
+
+A meal and a day are heavy on what they cost, never on the carb grade alone: a grade 2 bowl beside
+a drink and a spoon of tahini outprices a plain grade 4, and a rule reading the grade would call
+the cheaper plate the worse one. Each scope declares its bound once in `config/app.json` —
+`heavy_meal` on the carbs question for a single plate, weighed after the fruit escalation, the
+additions and the quantity rule; the `heavy_day` rule's `at_least` for the day's summed score.
+Neither bound derives from the other, and neither derives from `max`, which caps the day-end
+slider and bounds a submitted answer rather than judging one.
+
+The two are set so that a day of heavy meals is a heavy day: three meals at the meal bound reach
+the day bound exactly, matching the three meals the `meals` question treats as the day's norm.
+
+The day bound carries two readings of one statement. The tracker and the history table redden a
+day the moment it reaches the bound, and the `heavy_day` rule nudges once the day repeats for its
+`consecutive_days` — so the red predicts the nudge instead of competing with it.
+
 ## Day lifecycle
 
 - **Questionnaire flooring** — recorded meals floor the end-of-day questionnaire: a day can admit

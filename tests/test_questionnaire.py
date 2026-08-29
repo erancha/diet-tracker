@@ -9,7 +9,7 @@ def minimal(**overrides):
     raw = {
         "version": 1,
         "questions": [{
-            "id": "carbs", "type": "points", "text": "carbs", "max": 30,
+            "id": "carbs", "type": "points", "text": "carbs", "max": 30, "heavy_meal": 4,
             "choices": [{"id": "no_carbs", "label": "none", "value": 0},
                         {"id": "grade3", "label": "g3", "value": 3}],
         }],
@@ -25,6 +25,8 @@ def test_repo_config_loads_with_numeric_choices_and_threshold_rules():
     assert q.version == 12
     carbs = q.question("carbs")
     assert carbs.type == "points" and carbs.max == 35
+    # One bound defines a heavy meal, another a heavy day; the day bound lives on its rule.
+    assert carbs.heavy_meal == 4
     assert carbs.day_title == f"{carbs.text} ({carbs.day_qualifier})"
     # A question with no day qualifier names the unit it measures in instead, which is what lets
     # the values under that heading read as bare quantities.
@@ -44,7 +46,7 @@ def test_repo_config_loads_with_numeric_choices_and_threshold_rules():
     # Additions are accompaniments, never grades — they must not leak into the grade picker.
     assert not set(q.addition_values()) & set(q.carb_weights())
     assert {r.id for r in q.rules} == {
-        "low_drinking", "no_vegetables", "long_eating_window", "too_many_meals", "heavy_carbs"}
+        "low_drinking", "no_vegetables", "long_eating_window", "too_many_meals", "heavy_day"}
 
 
 def test_repo_config_orders_questions_like_the_day_dashboard_with_carbs_last():
@@ -65,6 +67,20 @@ def test_addition_without_numeric_value_is_rejected():
     raw = minimal()
     raw["questions"][0]["additions"] = [{"id": "sweet", "label": "sweet", "value": "4"}]
     with pytest.raises(ValueError, match="sweet"):
+        parse(raw)
+
+
+def test_points_question_without_heavy_meal_is_rejected():
+    raw = minimal()
+    del raw["questions"][0]["heavy_meal"]
+    with pytest.raises(ValueError, match="heavy_meal"):
+        parse(raw)
+
+
+def test_non_numeric_heavy_meal_is_rejected():
+    raw = minimal()
+    raw["questions"][0]["heavy_meal"] = "4"
+    with pytest.raises(ValueError, match="heavy_meal"):
         parse(raw)
 
 

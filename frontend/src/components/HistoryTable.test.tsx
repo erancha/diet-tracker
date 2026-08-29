@@ -191,15 +191,16 @@ describe("HistoryTable", () => {
     expect(rowDates()).toEqual([]);
   });
 
-  it("reddens a score above 30% of the max; the violation background never reaches the score column", () => {
+  it("reddens a score reaching the day rule; the violation background never reaches the score column", () => {
     render(<HistoryTable questionnaire={trackerQuestionnaire}
-      days={[{ date: "2026-08-16", answers: { carbs: 10, drinking: 3 } },
-             { date: "2026-08-15", answers: { carbs: 9, drinking: 3 } }]} {...defaults} />);
+      days={[{ date: "2026-08-16", answers: { carbs: 8, drinking: 3 } },
+             { date: "2026-08-15", answers: { carbs: 7, drinking: 3 } }]} {...defaults} />);
+    // Exactly the rule's bound: the score the nudge would count, so the day it lands is red.
     const high = screen.getByRole("button", { name: "הצגת היומן של 2026-08-16" });
-    expect(high).toHaveClass("high-score");
+    expect(high).toHaveClass("heavy-day");
     expect(high).not.toHaveClass("violation");
     const low = screen.getByRole("button", { name: "הצגת היומן של 2026-08-15" });
-    expect(low).not.toHaveClass("high-score");
+    expect(low).not.toHaveClass("heavy-day");
     expect(low).not.toHaveClass("violation");
   });
 });

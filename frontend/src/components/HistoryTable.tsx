@@ -1,7 +1,7 @@
 import { useState, type KeyboardEvent } from "react";
 import type { Day, Questionnaire } from "../types";
 import { daysBefore, weekdayDdmmLabel } from "../dates";
-import { headedValue, isHighScore, isViolating, questionTitle } from "../violations";
+import { headedValue, isViolating, questionTitle } from "../violations";
 import { Icon } from "./Icon";
 
 // Window lengths the reader can choose between, shortest first. The longest is bounded by the
@@ -114,12 +114,13 @@ export function HistoryTable({ questionnaire, days, today, deletableDates, viewe
                   if (!(q.id in day.answers)) return <td key={q.id} className={deleteClass}>—{deletion}</td>;
                   const value = day.answers[q.id];
                   const viewable = q.type === "points";
-                  // The score column signals a high total with red text alone; the violation
+                  const violating = isViolating(questionnaire, q.id, value);
+                  // The score column signals a heavy day with red text alone; the violation
                   // background stays on the answer columns.
                   const classes = [
                     ...(q.type === "points"
-                      ? [isHighScore(q, value) && "high-score", viewable && "view-day"]
-                      : [isViolating(questionnaire, q.id, value) && "violation"]),
+                      ? [violating && "heavy-day", viewable && "view-day"]
+                      : [violating && "violation"]),
                     deleteClass,
                   ].filter(Boolean).join(" ");
                   return (

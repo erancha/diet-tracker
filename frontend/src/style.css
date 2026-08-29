@@ -203,11 +203,11 @@ th { vertical-align: top; font-size: calc(var(--cell-font-size) - 1pt); }
    opens the page and needs no such separation. */
 .history h2 { margin-top: calc(0.83em + 1rem); }
 td.violation { background: #ffebee; color: var(--danger); }
-/* Above-threshold carb scores read as red text pinned to the score itself: the history score
-   cell, the dashboard total, and a meal's grade text. In the dashboard it reaches the figure
-   rather than the whole item, so the alarm sits on the number its label merely names, and its
+/* A heavy day or meal reads as red text pinned to the price that earned it: the history score
+   cell, the dashboard total, and a meal's points. In the dashboard it reaches the figure rather
+   than the whole item, so the alarm sits on the number its label merely names, and its
    specificity outranks the green that figure otherwise carries. */
-td.high-score, .tracker-dashboard .high-score .value, .meal-list .high-grade { color: var(--danger); }
+td.heavy-day, .tracker-dashboard .heavy-day .value, .meal-list .heavy-meal { color: var(--danger); }
 /* The bin is lifted out of the cell's line and pinned to the cell's far edge, so it holds one
    position down the column rather than trailing whatever the row's score happens to measure.
    Out of flow it contributes no width, so the cell reserves its footprint as padding instead: the
@@ -312,7 +312,7 @@ td.view-day { cursor: pointer; }
 .form-actions button { padding-inline: 1rem; white-space: nowrap; }
 .tracker-dashboard { display: flex; gap: 1.2rem; flex-wrap: wrap; font-weight: 600; margin-bottom: 0.5rem; }
 /* Color falls on the figures alone, their labels staying body-colored chrome. The accent green
-   reads as a measurement rather than a verdict, leaving red to mean only the high-score alarm —
+   reads as a measurement rather than a verdict, leaving red to mean only a heavy day —
    so an all-green line means the day is on track. */
 .tracker-dashboard .value { color: var(--accent); }
 /* The dashboard is already semibold, so the score needs extra weight to stand out. */

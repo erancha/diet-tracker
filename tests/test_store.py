@@ -170,8 +170,8 @@ def test_replace_meal_leaves_no_trace_of_an_unknown_meal(store):
 
 def test_nudge_state_roundtrip_with_legal_empty_default(store):
     assert store.get_nudge_state("u1") == {"rules": {}, "muted": False}
-    store.put_nudge_state("u1", {"rules": {"heavy_carbs": {"last_alert_for": "2026-08-19"}}})
-    assert store.get_nudge_state("u1")["rules"]["heavy_carbs"]["last_alert_for"] == "2026-08-19"
+    store.put_nudge_state("u1", {"rules": {"heavy_day": {"last_alert_for": "2026-08-19"}}})
+    assert store.get_nudge_state("u1")["rules"]["heavy_day"]["last_alert_for"] == "2026-08-19"
 
 
 def test_state_written_before_the_opt_out_existed_reads_as_unmuted(store):
@@ -180,11 +180,11 @@ def test_state_written_before_the_opt_out_existed_reads_as_unmuted(store):
 
 
 def test_muting_is_reversible_and_keeps_the_alert_record(store):
-    store.put_nudge_state("u1", {"rules": {"heavy_carbs": {"last_alert_for": "2026-08-19"}}})
+    store.put_nudge_state("u1", {"rules": {"heavy_day": {"last_alert_for": "2026-08-19"}}})
     store.set_muted("u1", True)
     state = store.get_nudge_state("u1")
     assert state["muted"] is True
-    assert state["rules"]["heavy_carbs"]["last_alert_for"] == "2026-08-19"
+    assert state["rules"]["heavy_day"]["last_alert_for"] == "2026-08-19"
     store.set_muted("u1", False)
     assert store.get_nudge_state("u1")["muted"] is False
 

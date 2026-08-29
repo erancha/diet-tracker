@@ -57,6 +57,11 @@ class Question:
     # Present only on points questions: the day-end slider's top of scale. Meal sums may
     # legally exceed it; it caps the slider, not the stored value.
     max: float | None
+    # Present only on points questions: what one meal must cost — its grade, second source,
+    # escalated fruit and additions together — to count as heavy. The day-scope counterpart is
+    # this question's rule threshold, so each scope states its bound once and neither is derived
+    # from the other. Mirrors heavy_meal in frontend/src/types.ts.
+    heavy_meal: float | None
     # Present only on the carbs question: the accompaniments a meal may carry (a sweet, alcohol,
     # too many nuts), each with the point cost it adds on top of the meal's grade. Not choices,
     # so they never appear in the grade picker or carb_weights().
@@ -183,6 +188,9 @@ def parse(raw: dict) -> Questionnaire:
     for q in raw["questions"]:
         if q.get("type") not in QUESTION_TYPES:
             raise ValueError(f"question {q['id']!r} has missing or unknown type {q.get('type')!r}")
+        if q["type"] == "points" and (isinstance(q.get("heavy_meal"), bool)
+                                      or not isinstance(q.get("heavy_meal"), Number)):
+            raise ValueError(f"points question {q['id']!r} needs a numeric heavy_meal bound")
         for c in q["choices"]:
             if isinstance(c.get("value"), bool) or not isinstance(c.get("value"), Number):
                 raise ValueError(f"choice {c['id']!r} of question {q['id']!r} needs a numeric value")
@@ -195,6 +203,7 @@ def parse(raw: dict) -> Questionnaire:
                                  bound=c.get("bound", False)) for c in q["choices"]),
             day_qualifier=q.get("day_qualifier"), unit=q.get("unit"),
             panel_title=q.get("panel_title"), max=q.get("max"),
+            heavy_meal=q.get("heavy_meal"),
             additions=tuple(Choice(id=a["id"], label=a["label"], value=a["value"])
                             for a in q["additions"]) if "additions" in q else None,
             small_portion=SmallPortion(label=q["small_portion"]["label"],

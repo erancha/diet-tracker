@@ -32,22 +32,34 @@ describe("DayView", () => {
     expect(screen.queryByText(/ארוחות:/)).toBeNull();
   });
 
-  it("reddens only the grade text of meals graded above 3, and a total score above 30% of the max", () => {
+  it("marks the points of a meal reaching the meal bound, and a score reaching the day rule", () => {
     const highDay = { ...trackedDay, derived: { ...trackedDay.derived, carbs: 10 } };
     render(<DayView questionnaire={trackerQuestionnaire} day={highDay} onClose={vi.fn()} />);
-    const grade = screen.getByText(/דרגה 4/);
-    expect(grade.tagName).toBe("SPAN");
-    expect(grade).toHaveClass("high-grade");
-    expect(screen.getByText("13:30").closest("li")).not.toHaveClass("high-grade");
-    expect(screen.getByText(/ללא פחמימות/)).not.toHaveClass("high-grade");
+    // Newest first: the grade 4 plate costs 4 and reaches the bound; the no-carb meal costs 0.
+    const [heavy, light] = Array.from(document.querySelectorAll(".meal-points"));
+    expect(heavy).toHaveTextContent("4");
+    expect(heavy).toHaveClass("heavy-meal");
+    expect(light).not.toHaveClass("heavy-meal");
+    // The judgement is the plate's price, so the grade name itself carries no verdict.
+    expect(screen.getByText(/דרגה 4/)).not.toHaveClass("heavy-meal");
     const score = dashboardFigure("ציון");
     expect(score).toHaveTextContent("ציון: 10");
-    expect(score).toHaveClass("high-score");
+    expect(score).toHaveClass("heavy-day");
   });
 
-  it("leaves scores at or below the thresholds unhighlighted", () => {
+  it("prices a light grade beside its additions, not the grade alone", () => {
+    // Grade 0 with a sweet and a fat costs 6 — dearer than the grade 4 plate that reads heavier.
+    const day = { ...trackedDay, meals: [
+      { ...trackedDay.meals[0], additions: ["sweet", "fat"] }, trackedDay.meals[1]] };
+    render(<DayView questionnaire={trackerQuestionnaire} day={day} onClose={vi.fn()} />);
+    const points = Array.from(document.querySelectorAll(".meal-points"));
+    const laden = points.find((el) => el.textContent?.includes("6"))!;
+    expect(laden).toHaveClass("heavy-meal");
+  });
+
+  it("leaves a meal under the bound and a score under the day rule unmarked", () => {
     render(<DayView questionnaire={trackerQuestionnaire} day={trackedDay} onClose={vi.fn()} />);
-    expect(dashboardFigure("ציון")).not.toHaveClass("high-score");
+    expect(dashboardFigure("ציון")).not.toHaveClass("heavy-day");
   });
 
   it("reports close when its close button is clicked", () => {

@@ -39,13 +39,13 @@ export function isViolating(questionnaire: Questionnaire, questionId: string, va
   return questionnaire.rules.some((rule) => rule.question_id === questionId && violates(rule, value));
 }
 
-// Carb-score emphasis thresholds: a day total above this fraction of the points question's max,
-// or a single meal grade above this value, renders emphasized in red.
-export const HIGH_SCORE_FRACTION = 0.3;
-export const HIGH_GRADE_THRESHOLD = 3;
-
-export function isHighScore(question: Question, value: number): boolean {
-  return question.max !== undefined && value > question.max * HIGH_SCORE_FRACTION;
+// What one plate must cost to count as heavy, judged on the meal's whole price — its grade,
+// second source, escalated fruit and additions — since a light grade beside a drink outprices a
+// steep grade eaten small. The day-scope counterpart is the question's rule, read through
+// isViolating. A points question always declares the bound: parse() in
+// src/common/questionnaire.py rejects a config where one does not.
+export function isHeavyMeal(question: Question, points: number): boolean {
+  return points >= question.heavy_meal!;
 }
 
 // The choice label for an exactly-matching value, for the places that show a value on its own —

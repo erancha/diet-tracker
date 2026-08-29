@@ -10,7 +10,7 @@ def write(tmp_path, weight):
     raw = {
         "questionnaire": {
             "version": 1,
-            "questions": [{"id": "carbs", "type": "points", "text": "carbs", "max": 30,
+            "questions": [{"id": "carbs", "type": "points", "text": "carbs", "max": 30, "heavy_meal": 4,
                            "choices": [{"id": "no_carbs", "label": "none", "value": 0}]}],
             "rules": [],
         },
