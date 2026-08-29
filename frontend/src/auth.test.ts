@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AuthError, ensureSignedIn, logoutUrl, redirectToLogin, signOut } from "./auth";
 import type { AppConfig } from "./config";
 
@@ -103,5 +103,53 @@ describe("signOut", () => {
 
     expect(sessionStorage.getItem("tokens")).toBeNull();
     expect(navigate).toHaveBeenCalledWith(logoutUrl(cfg));
+  });
+});
+
+describe("watchSession", () => {
+  const expired = { id_token: "t", expires_at: Date.now() - 1_000 };
+  const live = { id_token: "t", expires_at: Date.now() + 3_600_000 };
+
+  // redirectToLogin commits to a single navigation per page load, so a case that expects one needs
+  // its own module instance rather than the memo an earlier case left behind.
+  let auth: typeof import("./auth");
+  beforeEach(async () => {
+    vi.resetModules();
+    auth = await import("./auth");
+    sessionStorage.setItem("tokens", JSON.stringify(live));
+  });
+  afterEach(() => { delete (document as { visibilityState?: unknown }).visibilityState; });
+
+  const hide = () =>
+    Object.defineProperty(document, "visibilityState", { value: "hidden", configurable: true });
+
+  it("re-authenticates when a tab returns to the foreground holding an expired token", async () => {
+    const navigate = vi.fn();
+    auth.watchSession(cfg, expired, navigate);
+
+    document.dispatchEvent(new Event("visibilitychange"));
+
+    await vi.waitFor(() => expect(navigate).toHaveBeenCalledOnce());
+    expect(navigate.mock.calls[0][0]).toMatch(/^https:\/\/auth\.example\.com\/oauth2\/authorize\?/);
+    expect(sessionStorage.getItem("tokens")).toBeNull();
+  });
+
+  it("leaves a token still within its lifetime alone", () => {
+    const navigate = vi.fn();
+    auth.watchSession(cfg, live, navigate);
+
+    document.dispatchEvent(new Event("visibilitychange"));
+
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it("ignores the transition that hides the tab", () => {
+    const navigate = vi.fn();
+    auth.watchSession(cfg, expired, navigate);
+    hide();
+
+    document.dispatchEvent(new Event("visibilitychange"));
+
+    expect(navigate).not.toHaveBeenCalled();
   });
 });

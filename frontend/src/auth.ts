@@ -77,14 +77,33 @@ function userFacingMessage(description: string, rootEmail: string): string {
     : description;
 }
 
-// The sign-in redirect this page load has already started, if any. Every request bouncing off an
-// expired token asks to re-authenticate, and minting a verifier per caller would leave the last one
-// stored while the committed navigation carries an earlier caller's challenge — a PKCE mismatch
-// that fails the exchange. One redirect per page load keeps the pair consistent.
+// The sign-in redirect this page load has already started, if any. Every caller that finds the
+// session gone asks to re-authenticate — a request bouncing off a 401, a tab returning to the
+// foreground — and minting a verifier per caller would leave the last one stored while the
+// committed navigation carries an earlier caller's challenge, a PKCE mismatch that fails the
+// exchange. One redirect per page load keeps the pair consistent.
 let redirect: Promise<void> | null = null;
 
 export function redirectToLogin(cfg: AppConfig, navigate: (url: string) => void = navigateTo): Promise<void> {
   return (redirect ??= startLogin(cfg, navigate));
+}
+
+export function reauthenticate(cfg: AppConfig, navigate: (url: string) => void = navigateTo): void {
+  sessionStorage.removeItem("tokens");
+  void redirectToLogin(cfg, navigate);
+}
+
+/**
+ * Re-authenticates a tab that returns to the foreground holding a token which expired while it was
+ * away. Requests already carry their own 401 recovery; this closes the window before one is made,
+ * so a user coming back to the app is not looking at a page whose every action is about to bounce.
+ */
+export function watchSession(
+  cfg: AppConfig, tokens: Tokens, navigate: (url: string) => void = navigateTo,
+): void {
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && !isUnexpired(tokens)) reauthenticate(cfg, navigate);
+  });
 }
 
 async function startLogin(cfg: AppConfig, navigate: (url: string) => void): Promise<void> {

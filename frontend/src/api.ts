@@ -1,7 +1,7 @@
 // Typed client for the authenticated backend API, bound to the signed-in user's tokens, plus the
 // Hebrew alert text the UI shows when a request fails.
 
-import { isUnexpired, redirectToLogin, type Tokens } from "./auth";
+import { isUnexpired, reauthenticate, type Tokens } from "./auth";
 import type { AppConfig } from "./config";
 import type { AnswerValue, DayPayload, HistoryResponse, NewMeal, NotificationSettings, SubmitResult,
   WeightPayload } from "./types";
@@ -48,7 +48,7 @@ export interface Api {
 export function createApi(
   cfg: AppConfig,
   tokens: Tokens,
-  reauthenticate: () => void = () => void redirectToLogin(cfg),
+  onExpired: () => void = () => reauthenticate(cfg),
 ): Api {
   async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
     const response = await fetch(cfg.apiUrl + path, {
@@ -69,8 +69,7 @@ export function createApi(
     // config.js is still cached. Signing in again would only produce another rejected token, so
     // that case falls through to the error below instead of cycling through the Hosted UI forever.
     if (response.status === 401 && !isUnexpired(tokens)) {
-      sessionStorage.removeItem("tokens");
-      reauthenticate();
+      onExpired();
       return new Promise<T>(() => {});
     }
     if (!response.ok) {

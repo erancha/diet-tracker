@@ -1,13 +1,14 @@
 // Entry point: resolves the session before mounting — a signed-in user gets the questionnaire app
 // wired to the query client and the token-bound API client, a signed-out visitor gets the landing
 // page whose sign-in button starts the Hosted UI flow, and a sign-in rejected by the Hosted UI
-// renders as an alert banner.
+// renders as an alert banner. A signed-in session that expires while the tab sits in the background
+// is renewed when the tab comes back to the foreground.
 
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createApi } from "./api";
-import { AuthError, claims, ensureSignedIn, redirectToLogin, signOut } from "./auth";
+import { AuthError, claims, ensureSignedIn, redirectToLogin, signOut, watchSession } from "./auth";
 import { getConfig } from "./config";
 import { App } from "./components/App";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -30,6 +31,7 @@ try {
     );
   } else {
     const api = createApi(cfg, tokens);
+    watchSession(cfg, tokens);
     const { email } = claims(tokens.id_token);
 
     root.render(

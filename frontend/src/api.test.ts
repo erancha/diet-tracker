@@ -19,36 +19,32 @@ const tokens: Tokens = { id_token: "token", expires_at: 0 };
 describe("createApi", () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it("clears the stored tokens, triggers re-authentication, and never settles on a 401", async () => {
-    sessionStorage.setItem("tokens", JSON.stringify(tokens));
+  it("triggers re-authentication and never settles on a 401 under an expired token", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("Unauthorized", { status: 401 })));
-    const reauthenticate = vi.fn();
+    const onExpired = vi.fn();
 
     const outcome = await Promise.race([
-      createApi(cfg, tokens, reauthenticate).getDays().then(() => "settled", () => "settled"),
+      createApi(cfg, tokens, onExpired).getDays().then(() => "settled", () => "settled"),
       new Promise((resolve) => setTimeout(() => resolve("pending"), 10)),
     ]);
 
     expect(outcome).toBe("pending");
-    expect(sessionStorage.getItem("tokens")).toBeNull();
-    expect(reauthenticate).toHaveBeenCalledOnce();
+    expect(onExpired).toHaveBeenCalledOnce();
   });
 
   it("surfaces a 401 under a token still within its lifetime instead of re-authenticating", async () => {
     const live: Tokens = { id_token: "token", expires_at: Date.now() + 3_600_000 };
-    sessionStorage.setItem("tokens", JSON.stringify(live));
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("Unauthorized", { status: 401 })));
-    const reauthenticate = vi.fn();
+    const onExpired = vi.fn();
 
     const outcome = await Promise.race([
-      createApi(cfg, live, reauthenticate).getDays().then(() => "resolved", (e: unknown) => e),
+      createApi(cfg, live, onExpired).getDays().then(() => "resolved", (e: unknown) => e),
       new Promise((resolve) => setTimeout(() => resolve("pending"), 10)),
     ]);
 
     expect(outcome).toBeInstanceOf(ApiError);
     expect((outcome as ApiError).status).toBe(401);
-    expect(reauthenticate).not.toHaveBeenCalled();
-    expect(sessionStorage.getItem("tokens")).not.toBeNull();
+    expect(onExpired).not.toHaveBeenCalled();
   });
 
   it("sends an edited meal as a whole-meal PUT under the meal's own path", async () => {
