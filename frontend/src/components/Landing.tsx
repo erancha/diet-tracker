@@ -1,10 +1,11 @@
 /**
  * Signed-out screen: a Hebrew, functionality-only summary of the app and a Google sign-in button.
  * The summary bullets mirror the root README's overview and must stay aligned with it, and they
- * name the שכפ"צ principle each tracked value serves. A closing table spells the acronym out —
- * the one place in the app that does, the questionnaire and history headers carrying it as a bare
- * prefix — and sits past the sign-in button so the summary above stays about what the app does,
- * with the acronym's first mention linking down to it.
+ * name the שכפ"צ principle each tracked value serves — the carb score, which serves none, kept in
+ * a bullet of its own so the acronym's count reads straight. A closing table spells the acronym
+ * out — the one place in the app that does, the questionnaire and history headers carrying it as
+ * a bare prefix — and sits past the sign-in button so the summary above stays about what the app
+ * does, with the acronym's first mention linking down to it.
  * Rendered instead of the questionnaire until sign-in completes.
  */
 import { APP_TITLE } from "../appTitle";
@@ -12,7 +13,7 @@ import { APP_TITLE } from "../appTitle";
 // Ties the intro's link to the table it jumps to, so neither can drift from the other.
 const PRINCIPLES_ID = "landing-principles";
 // The carb-grade ladder, published beside the app from frontend/public. The summary already names
-// the score, so the grades hang off that name rather than costing the page a bullet of its own.
+// the score, so the grades hang off that name rather than a link line of their own.
 const CARB_GRADES_PATH = "carb-grades.html";
 export function Landing({ onSignIn }: { onSignIn: () => void }) {
   return (
@@ -26,13 +27,16 @@ export function Landing({ onSignIn }: { onSignIn: () => void }) {
       <ul className="landing-summary">
         <li>
           כל ארוחה נרשמת כשהיא נאכלת, ואפשר להשלים את יום אתמול גם אחרי חצות. מהרישום נגזרים
-          שלושה מעקרונות השכפ"צ — כמות הירקות, חלון האכילה ומספר הארוחות — וציון{" "}
-          <a href={CARB_GRADES_PATH} target="_blank" rel="noreferrer">פחמימות / קמחים / סוכרים</a>
-          {" "}(נמוך = טוב)
+          שלושה מארבעת עקרונות השכפ"צ: כמות הירקות, חלון האכילה ומספר הארוחות
         </li>
         <li>
-          שתיית המים היא העיקרון היחיד שאינו נגזר מהיומן, ולכן יום שתועד במלואו נסגר בשאלון סיכום
-          היום עם מילוי כמות המים בלבד
+          שתיית המים היא העיקרון הרביעי, היחיד שאינו נגזר מהיומן, ולכן יום שתועד במלואו נסגר
+          בשאלון סיכום היום עם מילוי כמות המים בלבד
+        </li>
+        <li>
+          מעבר לשכפ"צ, הרישום מניב ציון יומי של{" "}
+          <a href={CARB_GRADES_PATH} target="_blank" rel="noreferrer">פחמימות / קמחים / סוכרים</a>
+          {" "}(נמוך = טוב)
         </li>
         <li>
           גרף משקל שבועי: שקילה מול משקל יעד

@@ -14,11 +14,13 @@ closed from the tracker, and the week's trend over recorded history.
   eating window, and few meals a day. Their Hebrew initials spell שכפ"צ, the prefix every question
   in the app carries, and a table at the foot of the signed-out page lists them with their targets.
 - You log each meal as you eat it, and can still fill in yesterday after midnight. Those entries
-  answer three of the four principles by themselves — vegetables, eating window and meal count —
-  and add a carb score for flours and sugars, where lower is better.
-- Water is the one principle meals cannot answer, so a short end-of-day questionnaire asks for it.
-  What was already recorded sets the floor there: a day can admit more than was logged, never less,
-  and a fully logged day closes straight from the tracker once the water is filled in.
+  answer three of the four principles by themselves — vegetables, eating window and meal count.
+- Water is the fourth principle, the one meals cannot answer, so a short end-of-day questionnaire
+  asks for it. What was already recorded sets the floor there: a day can admit more than was
+  logged, never less, and a fully logged day closes straight from the tracker once the water is
+  filled in.
+- Beyond the four principles, the same entries yield a daily carb score for flours and sugars,
+  where lower is better.
 - Weight is tracked on its own weekly rhythm, beside the daily log: each weigh-in is charted
   against a target you set, and carries the hour it was taken at, because a weekly weighing only
   compares with itself when it is taken at about the same time of day. The section reads back
