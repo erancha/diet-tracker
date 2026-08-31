@@ -2,7 +2,7 @@
 // questionnaire config. All functions take the questionnaire explicitly so they stay pure and
 // independently testable.
 
-import type { Day, Question, Questionnaire, Rule } from "./types";
+import type { AnswerValue, Day, Question, Questionnaire, Rule } from "./types";
 import { isoDate, parseIsoDate, yesterdayOf } from "./dates";
 
 export function violates(rule: Rule, value: number): boolean {
@@ -37,6 +37,16 @@ export function activeViolations(questionnaire: Questionnaire, days: Day[],
 
 export function isViolating(questionnaire: Questionnaire, questionId: string, value: number): boolean {
   return questionnaire.rules.some((rule) => rule.question_id === questionId && violates(rule, value));
+}
+
+// Whether any answer of one submitted day crosses its rule's bound on its own — the same per-day
+// signal the history table paints red. The submit banner reads it so a saved day is declared
+// clean only when nothing crossed a bound; a crossing short of its consecutive-days run is named
+// as such instead of masquerading as a clean day.
+export function crossesThreshold(questionnaire: Questionnaire,
+                                 answers: Record<string, AnswerValue>): boolean {
+  return Object.entries(answers).some(([questionId, value]) =>
+    isViolating(questionnaire, questionId, value));
 }
 
 // What one plate must cost to count as heavy, judged on the meal's whole price — its grade,

@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { alertMessage, type Api } from "../api";
-import { activeViolations } from "../violations";
+import { activeViolations, crossesThreshold } from "../violations";
 import type { AnswerValue, AppConfigFile, NewMeal, WeightPayload } from "../types";
 import { dayEnded, defaultDay, expandQuestionnaire, expandWeightSection, isoDate, yesterdayOf } from "../dates";
 import { mayDiscardEdits } from "../edits";
@@ -78,14 +78,20 @@ export function App({ email, api, reminderHour, firstMealHour, mealGapHours, onS
 
   const submitMutation = useMutation({
     mutationFn: api.submitDay,
-    onSuccess: (result) => {
+    onSuccess: (result, { answers }) => {
       // A violated day is still a saved day, so the confirmation leads either way — the folded
       // form would otherwise be the only sign the answers went through.
       const saved = `נשמר לתאריך ${result.date}!`;
-      setAlerts(result.violations.length === 0
-        ? [{ kind: "ok", message: `${saved} אין חריגות היום ✔` }]
-        : [{ kind: "ok", message: saved },
-           ...result.violations.map((v) => ({ kind: "alert" as const, message: v.message }))]);
+      // A bound crossed today is painted red in the table beside the banner, so a clean-day claim
+      // there reads as a contradiction; the banner names the crossing instead, as a notice — a
+      // crossing is not yet the consecutive-days violation the alert rules watch for.
+      setAlerts(result.violations.length > 0
+        ? [{ kind: "ok", message: saved },
+           ...result.violations.map((v) => ({ kind: "alert" as const, message: v.message }))]
+        : crossesThreshold(configQuery.data!.questionnaire, answers)
+          ? [{ kind: "ok", message: saved },
+             { kind: "notice", message: "היום חצה סף (מסומן באדום בטבלה) — עדיין אין חריגה של ימים רצופים" }]
+          : [{ kind: "ok", message: `${saved} אין חריגות היום ✔` }]);
       setQuestionnaireCollapsed(true);
       queryClient.invalidateQueries({ queryKey: ["days"] });
     },

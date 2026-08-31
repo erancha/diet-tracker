@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { activeViolations, isHeavyMeal, isViolating, panelTitle, questionTitle, trendPanels, valueLabel, violates } from "./violations";
+import { activeViolations, crossesThreshold, isHeavyMeal, isViolating, panelTitle, questionTitle, trendPanels, valueLabel, violates } from "./violations";
 import type { Day, Question, Questionnaire, Rule } from "./types";
 
 const carbs: Question = {
@@ -43,6 +43,17 @@ describe("isHeavyMeal", () => {
     // light grade beside a drink is heavy while a small helping of a steep grade is not.
     expect(isHeavyMeal(carbs, 2 + 4)).toBe(true);
     expect(isHeavyMeal(carbs, 7 / 2)).toBe(false);
+  });
+});
+
+describe("crossesThreshold", () => {
+  it("is true when any submitted value crosses its rule's bound", () => {
+    expect(crossesThreshold(questionnaire, { carbs: 9, meals: 3 })).toBe(true);
+    expect(crossesThreshold(questionnaire, { carbs: 2, meals: 2 })).toBe(true);
+  });
+
+  it("is false when every submitted value respects every bound", () => {
+    expect(crossesThreshold(questionnaire, { carbs: 2, meals: 3 })).toBe(false);
   });
 });
 
