@@ -48,6 +48,21 @@ Parameters:
   ChatMapParam:
     Type: String
     Default: /diet-tracker/telegram/chat-map
+  RagApiUrl:
+    Type: String
+    Default: ''
+    Description: Base URL of the external Summaries.AI REST API answering corpus questions
+      (its POST /rag/query route); passed by scripts/deploy.sh from params.sh. Chat questions
+      fail until it is configured
+  RagApiKeyParam:
+    Type: String
+    Default: /diet-tracker/rag/api-key
+    Description: SSM parameter holding the Summaries.AI API key the chat proxy sends
+  ChatDailyLimit:
+    Type: Number
+    Default: 20
+    Description: Questions each user may ask per day — chat is the only feature that spends
+      money per use, so this is the per-user cost ceiling
 
 Globals:
   Function:
@@ -71,6 +86,10 @@ Globals:
         CHAT_MAP_PARAM: !Ref ChatMapParam
         SES_SENDER: !Ref SesSender
         USER_POOL_ID: !Ref UserPoolId
+        CHAT_QUOTA_TABLE: !Ref ChatQuotaTable
+        CHAT_DAILY_LIMIT: !Ref ChatDailyLimit
+        RAG_API_URL: !Ref RagApiUrl
+        RAG_API_KEY_PARAM: !Ref RagApiKeyParam
 
 Resources:
   DaysTable:
@@ -113,6 +132,22 @@ Resources:
       AttributeDefinitions:
         - AttributeName: pk
           AttributeType: S
+
+  # One item per user per day ('{sub}#{day}') counting chat questions; the TTL attribute lets
+  # DynamoDB delete yesterday's rows on its own, so there is no reset logic and no cleanup job.
+  ChatQuotaTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: pk
+          KeyType: HASH
+      AttributeDefinitions:
+        - AttributeName: pk
+          AttributeType: S
+      TimeToLiveSpecification:
+        AttributeName: expires_at
+        Enabled: true
 
   # Holds both item kinds of the weight log: one measurement per calendar day under its ISO date,
   # and the user's single target under the sort key "target", which sorts past every date.
@@ -239,6 +274,23 @@ Resources:
             TableName: !Ref WeightsTable
         - !Ref NotifyPolicy
 
+  ChatFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../build/lambda
+      Handler: handlers/chat.handler
+      Events:
+        Chat:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref Api
+            Method: POST
+            Path: /chat
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ChatQuotaTable
+        - !Ref NotifyPolicy
+
   NudgeFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -259,7 +311,8 @@ Resources:
               Action: cognito-idp:ListUsers
               Resource: !Sub 'arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${UserPoolId}'
 
-  # Both functions alert users, so the SES/SSM grants live in one shared managed policy.
+  # The SES/SSM grants shared by every function that alerts users or reads a secret from the
+  # /diet-tracker/* SSM namespace (the chat proxy's RAG API key lives there too).
   NotifyPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:

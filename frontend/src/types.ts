@@ -180,3 +180,15 @@ export interface WeightPayload {
   // Oldest first, the order the chart plots them in.
   entries: WeightEntry[];
 }
+
+export interface ChatSource {
+  fileName: string;
+  // Best similarity score among the document's retrieved chunks, 0–1.
+  score: number;
+}
+
+export interface ChatAnswer {
+  answer: string;
+  // Empty when no document matched the question.
+  sources: ChatSource[];
+}

@@ -70,7 +70,8 @@ deploy_main() {
       UserPoolClientId="$user_pool_client_id" \
       ReminderHours="20" \
       WeighInWeekday="$(app_config "['weight']['weigh_in']['weekday']")" \
-      WeighInHour="$(app_config "['weight']['weigh_in']['hour']")"
+      WeighInHour="$(app_config "['weight']['weigh_in']['hour']")" \
+      RagApiUrl="${RAG_API_URL:-}"
 }
 
 FRONTEND_URL=$(stack_output "$APP" FrontendUrl)

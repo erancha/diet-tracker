@@ -8,6 +8,7 @@ import { mayDiscardEdits } from "../edits";
 import { TARGET_UNSET_NOTICE } from "../weight";
 import { isFirstVisit } from "../firstVisit";
 import { Alerts, type AlertItem } from "./Alerts";
+import { Chat } from "./Chat";
 import { CollapsibleSection } from "./CollapsibleSection";
 import { DayPicker, type DayChoice } from "./DayPicker";
 import { DayTracker } from "./DayTracker";
@@ -259,6 +260,9 @@ export function App({ email, api, reminderHour, firstMealHour, mealGapHours, onS
             onDelete={(date) => deleteMutation.mutate(date)}
             onView={setViewedDate}
           />
+        </CollapsibleSection>
+        <CollapsibleSection className="chat-section" title="שאלות על אבא חטוב">
+          <Chat api={api} />
         </CollapsibleSection>
       </main>
     </>

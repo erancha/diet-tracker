@@ -19,6 +19,7 @@ from common.derive import derive
 from common.log import get_logger
 from common.rules import LOOKBACK_DAYS
 from common.store import Store
+from common.webapi import response as _response
 
 logger = get_logger(__name__)
 
@@ -352,11 +353,3 @@ def _alert(email, violations):
         token, chat_map = telegram
         notify.send_telegram(token, users.chat_id_for(chat_map, email), text)
     notify.send_email(boto3.client("ses"), os.environ["SES_SENDER"], email, notify.ALERT_SUBJECT, text)
-
-
-def _response(status, body):
-    return {
-        "statusCode": status,
-        "headers": {"Content-Type": "application/json"},
-        "body": json.dumps(body, ensure_ascii=False),
-    }

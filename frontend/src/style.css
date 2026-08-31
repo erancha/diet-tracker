@@ -415,3 +415,18 @@ td.view-day { cursor: pointer; }
 .weight-entries .weight-entry-at { min-width: 5ch; opacity: 0.7; font-variant-numeric: tabular-nums; }
 .weight-entries .weight-entry-kg { flex: 1; font-weight: 600; }
 .weight-entries button { padding: 0.35rem; margin-block: -0.35rem; }
+
+/* The knowledge-base chat: user and assistant turns as bubbles, each answer's source documents
+   in one muted line beneath it, and the composer pinned as the section's last row. The section
+   follows the history table; as with .history h2, the heading's own margin is what shows
+   through, so the extra rem of separation rides on the restated browser default. */
+.chat-section h2 { margin-top: calc(0.83em + 1rem); }
+.chat-messages { list-style: none; padding: 0; margin: 0 0 0.75rem; display: flex; flex-direction: column; gap: 0.5rem; }
+.chat-messages li { border-radius: 8px; padding: 0.5rem 0.8rem; max-width: 85%; }
+.chat-messages li p { margin: 0; white-space: pre-wrap; }
+.chat-user { align-self: flex-start; background: #e8f0e9; }
+.chat-assistant { align-self: flex-end; background: #fff; border: 1px solid #e0e0da; }
+.chat-sources { margin-top: 0.35rem !important; font-size: 0.8rem; opacity: 0.7; }
+.chat-pending { opacity: 0.7; }
+.chat form { display: flex; gap: 0.5rem; }
+.chat form input { flex: 1; }
