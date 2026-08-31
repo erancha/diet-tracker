@@ -1,7 +1,11 @@
-"""HTTP API handler: day submission with meal-derived floors and synchronous rule alerts,
-history with per-day read-only lookups, day deletion, intraday meal reporting with whole-meal
-corrections, the weight log — measurements and the target the chart reads them against — and the
-account's own opt-out from being notified at all.
+"""HTTP API handler: day submission with meal-derived floors, history with per-day read-only
+lookups, day deletion, intraday meal reporting with whole-meal corrections, the weight log —
+measurements and the target the chart reads them against — and the account's own opt-out from
+being notified at all.
+
+Submission reports the day's tripped rules in the reply for the UI alone; outbound alerting
+belongs exclusively to the nightly rules job, so a violating day raises at most one message,
+at the job's scheduled hour.
 
 The caller's identity comes exclusively from the JWT claims the API Gateway authorizer
 verified — the request body never names a user."""
@@ -11,9 +15,7 @@ import os
 from dataclasses import asdict
 from datetime import date, datetime
 
-import boto3
-
-from common import appconfig, notify, rules, users, weight
+from common import appconfig, rules, weight
 from common.dates import clock_time, days_before, now_iso, today
 from common.derive import derive
 from common.log import get_logger
@@ -28,10 +30,9 @@ def handler(event, context):
     claims = event["requestContext"]["authorizer"]["jwt"]["claims"]
     route = event["routeKey"]
     sub = claims["sub"]
-    email = claims["email"].lower()
     logger.info("request route=%s sub=%s", route, sub)
     if route == "POST /days":
-        return _submit(sub, email, json.loads(event["body"]))
+        return _submit(sub, json.loads(event["body"]))
     if route == "GET /days":
         return _history(sub)
     if route == "GET /days/{date}":
@@ -104,7 +105,7 @@ def _day_payload(store, questionnaire, sub, day) -> dict:
                                      questionnaire.small_portion()))}
 
 
-def _submit(sub, email, body):
+def _submit(sub, body):
     questionnaire = _questionnaire()
     answers = body["answers"]
     day, allowed = _backfill_window()
@@ -126,14 +127,9 @@ def _submit(sub, email, body):
                 "error": f"{field} ({answers[field]}) is below the tracked floor ({floor})"})
     store.put_day(sub, chosen, answers, questionnaire.version, now_iso())
     history = store.get_days_range(sub, days_before(chosen, LOOKBACK_DAYS), chosen)
-    state = store.get_nudge_state(sub)
-    violations = rules.due_alerts(questionnaire, history, chosen, state)
-    # A muted account still sees its violations in the reply; the opt-out silences the outbound
-    # alert alone, and leaves the day unrecorded as alerted so a still-live streak can raise one
-    # once notifications resume.
-    if violations and not state["muted"]:
-        _alert(email, violations)
-        store.put_nudge_state(sub, rules.mark_alerted(state, violations, chosen))
+    # The alerted-state stays untouched here: the nightly rules job owns both the outbound
+    # message and the mark_alerted write, so submitting never suppresses the day's one alert.
+    violations = rules.due_alerts(questionnaire, history, chosen, store.get_nudge_state(sub))
     return _response(200, {
         "date": chosen,
         "violations": [{"rule_id": v.rule_id, "message": v.message} for v in violations],
@@ -343,13 +339,3 @@ def _set_muted(sub, body):
         return _response(400, {"error": f"muted must be a boolean, got {muted!r}"})
     _store().set_muted(sub, muted)
     return _response(200, {"muted": muted})
-
-
-def _alert(email, violations):
-    text = notify.violation_text(violations)
-    ssm = boto3.client("ssm")
-    telegram = notify.telegram_config(ssm, os.environ["BOT_TOKEN_PARAM"], os.environ["CHAT_MAP_PARAM"])
-    if telegram is not None:
-        token, chat_map = telegram
-        notify.send_telegram(token, users.chat_id_for(chat_map, email), text)
-    notify.send_email(boto3.client("ses"), os.environ["SES_SENDER"], email, notify.ALERT_SUBJECT, text)

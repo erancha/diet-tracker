@@ -2,8 +2,8 @@
 
 A rule fires when its question's value violated its threshold for at least `consecutive_days`
 days ending at the evaluation date. Alerts repeat daily while the streak holds, but at most once
-per (rule, date) — `mark_alerted` records the date so the submit path and the nightly job never
-double-alert the same day.
+per (rule, date) — `mark_alerted` records the date so a re-run of the nightly job (the only
+alerter) never double-alerts the same day.
 """
 
 from dataclasses import dataclass

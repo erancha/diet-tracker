@@ -6,7 +6,6 @@ import boto3
 import pytest
 from conftest import APP_CONFIG
 
-from common import rules
 from common.dates import days_before, today
 from handlers import api
 
@@ -25,27 +24,7 @@ def env(monkeypatch, ddb):
     monkeypatch.setenv("STATE_TABLE", "state")
     monkeypatch.setenv("WEIGHTS_TABLE", "weights")
     monkeypatch.setenv("APP_CONFIG_PATH", str(APP_CONFIG))
-    alerts = []
-    monkeypatch.setattr(api, "_alert", lambda email, violations: alerts.append((email, violations)))
     monkeypatch.setattr(api, "clock_time", lambda: WEIGH_IN_AT)
-    return alerts
-
-
-def test_alert_sends_the_shared_subject_and_body(monkeypatch):
-    monkeypatch.setenv("BOT_TOKEN_PARAM", "/token")
-    monkeypatch.setenv("CHAT_MAP_PARAM", "/chat-map")
-    monkeypatch.setenv("SES_SENDER", "me@x.com")
-    monkeypatch.setattr(api.boto3, "client", lambda service: None)
-    monkeypatch.setattr(api.notify, "telegram_config", lambda ssm, token, chat_map: None)
-    sent = {}
-    monkeypatch.setattr(api.notify, "send_email",
-                        lambda ses, sender, to, subject, body: sent.update(subject=subject, body=body))
-
-    violations = [rules.Violation("drinking", 2, "פחות מ-2.5 ליטר שתיה 2 ימים ברצוף")]
-    api._alert("a@gmail.com", violations)
-
-    assert sent["subject"] == api.notify.ALERT_SUBJECT
-    assert sent["body"] == api.notify.violation_text(violations)
 
 
 def request(route, body=None, path_params=None):
@@ -98,14 +77,16 @@ def test_submit_stores_numeric_answers_and_reports_no_violations(env):
     assert history["days"][0] == {"date": today(), "answers": ANSWERS}
 
 
-def test_submit_alerts_when_numeric_streak_reaches_threshold(env):
+def test_submit_reports_violations_but_leaves_alerting_to_the_nightly_job(env):
     from common.store import Store
     store = Store("days", "meals", "state", "weights")
     for offset in (2, 1):
         store.put_day("u1", days_before(today(), offset), ANSWERS, 3, "t")
     payload = body_of(api.handler(request("POST /days", {"answers": ANSWERS}), None))
+    # The reply shows the violations for the UI; the day stays unmarked as alerted, so the
+    # nightly rules job raises the single daily outbound alert.
     assert [v["rule_id"] for v in payload["violations"]] == ["long_eating_window"]
-    assert env[0][0] == "a@gmail.com"
+    assert store.get_nudge_state("u1")["rules"] == {}
 
 
 def test_submit_rejects_non_numeric_answers(env):
@@ -431,17 +412,3 @@ def test_notifications_route_rejects_a_non_boolean(env):
     assert response["statusCode"] == 400
 
 
-def test_submit_raises_no_alert_while_the_account_is_muted(env):
-    from common.store import Store
-    store = Store("days", "meals", "state", "weights")
-    store.set_muted("u1", True)
-    for offset in (2, 1):
-        store.put_day("u1", days_before(today(), offset), ANSWERS, 3, "t")
-
-    payload = body_of(api.handler(request("POST /days", {"answers": ANSWERS}), None))
-
-    # The app still shows the day's violations; muting silences the outbound alert alone, and
-    # leaves the day unrecorded as alerted so unmuting can still raise a live streak.
-    assert [v["rule_id"] for v in payload["violations"]] == ["long_eating_window"]
-    assert env == []
-    assert store.get_nudge_state("u1")["rules"] == {}
