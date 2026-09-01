@@ -2,14 +2,22 @@ import json
 import urllib.error
 
 import pytest
+from conftest import APP_CONFIG
 
 from common import chat as chat_client
+from common.dates import today
+from common.store import Store
 from handlers import chat as chat_handler
 
 
 @pytest.fixture
 def env(monkeypatch, ddb):
     monkeypatch.setenv("AWS_DEFAULT_REGION", "eu-central-1")
+    monkeypatch.setenv("DAYS_TABLE", "days")
+    monkeypatch.setenv("MEALS_TABLE", "meals")
+    monkeypatch.setenv("STATE_TABLE", "state")
+    monkeypatch.setenv("WEIGHTS_TABLE", "weights")
+    monkeypatch.setenv("APP_CONFIG_PATH", str(APP_CONFIG))
     ddb.create_table(TableName="chat_quota",
                      KeySchema=[{"AttributeName": "pk", "KeyType": "HASH"}],
                      AttributeDefinitions=[{"AttributeName": "pk", "AttributeType": "S"}],
@@ -55,8 +63,33 @@ def test_returns_the_upstream_answer_and_sources(env, monkeypatch):
     assert "T" in body.pop("at")
     assert body == {"answer": "תשובה מהמסמכים",
                     "sources": [{"fileName": "מדריך.pdf", "score": 0.83}]}
-    assert asked == {"api_url": "https://rag.example/prod", "key": "the-key",
-                     "question": "כמה פחמימות מותר ביום?"}
+    assert asked["api_url"] == "https://rag.example/prod"
+    assert asked["key"] == "the-key"
+    assert asked["question"].startswith("כמה פחמימות מותר ביום?")
+
+
+def test_the_upstream_question_carries_the_askers_tracked_data(env, ddb, monkeypatch):
+    Store("days", "meals", "state", "weights", dynamodb=ddb).add_meal("u1", today(), {
+        "at": f"{today()}T12:30:00+03:00", "carbs_choice": "carb_grade_2", "vegetables": True,
+        "fruit": False, "additions": [], "small_portion": False, "second_source": None})
+    asked = {}
+    monkeypatch.setattr(chat_handler.chat, "ask", lambda api_url, key, question:
+                        asked.update(question=question) or {"answer": "ת", "sources": []})
+
+    chat_handler.handler(request({"question": "מה אכלתי היום?"}), None)
+
+    assert asked["question"].startswith("מה אכלתי היום?")
+    assert "נתוני המעקב של השואל" in asked["question"]
+    assert "דרגה 2" in asked["question"]
+
+
+def test_the_stored_turn_keeps_the_original_question_without_the_data_block(env, monkeypatch):
+    monkeypatch.setattr(chat_handler.chat, "ask",
+                        lambda api_url, key, question: {"answer": "ת", "sources": []})
+    chat_handler.handler(request({"question": "מה אכלתי היום?"}), None)
+
+    (turn,) = transcript()
+    assert turn["question"] == "מה אכלתי היום?"
 
 
 def test_rejects_a_missing_or_blank_question(env):
@@ -150,8 +183,9 @@ def test_failed_requests_persist_no_turn(env, monkeypatch):
 
 
 def test_a_follow_up_overwrites_the_replied_to_turn_in_place(env, monkeypatch):
+    answers = iter(["תשובה ראשונה", "תשובת ההמשך"])
     monkeypatch.setattr(chat_handler.chat, "ask",
-                        lambda api_url, key, question: {"answer": f"ת:{question}", "sources": []})
+                        lambda api_url, key, question: {"answer": next(answers), "sources": []})
     at = body_of(chat_handler.handler(request({"question": "שאלה מקורית"}), None))["at"]
 
     followed = chat_handler.handler(request({"question": "שרשור עם שאלת המשך", "at": at}), None)
@@ -160,7 +194,7 @@ def test_a_follow_up_overwrites_the_replied_to_turn_in_place(env, monkeypatch):
     assert body_of(followed)["at"] == at
     (turn,) = transcript()
     assert turn["question"] == "שרשור עם שאלת המשך"
-    assert turn["answer"] == "ת:שרשור עם שאלת המשך"
+    assert turn["answer"] == "תשובת ההמשך"
     assert turn["at"] == at
 
 

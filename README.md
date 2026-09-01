@@ -36,9 +36,11 @@ closed from the tracker, and the week's trend over recorded history.
 - Questions about the diet's principles are answered inside the app: a chat section sends each
   question to the knowledge base of the diet's source documents, hosted on
   [Summaries.AI](https://github.com/erancha/Summaries.AI-public), and shows the answer with the
-  documents it drew on. Questions are capped per user per day, because each one spends money
-  upstream. Every answered turn is stored per user, so the conversation survives reloads and
-  follows its user across devices.
+  documents it drew on. Each question also carries the asker's own recent tracked data — the
+  last week's day summaries and the meals of today and yesterday — so answers can cite it; this
+  means that data leaves the app for the external answering service and the LLM behind it. Questions are capped
+  per user per day, because each one spends money upstream. Every answered turn is stored per
+  user, so the conversation survives reloads and follows its user across devices.
 
 ## Tech stack
 

@@ -4,7 +4,9 @@ money per use, so the quota is consumed before the upstream call and the request
 the limit is refused without spending anything.
 
 The caller's identity comes exclusively from the JWT claims the API Gateway authorizer
-verified — the request body never names a user.
+verified — the request body never names a user. That verified identity is also what selects
+the asker's own tracked data, which rides with the question upstream (common.chat_context) so
+answers can ground in it.
 
 Each answered turn is stored per user (common.chat_history) and served back by GET /chat, so
 the conversation survives reloads and follows the user across devices. A POST naming an
@@ -19,9 +21,10 @@ import urllib.error
 
 import boto3
 
-from common import chat, chat_history, quota
+from common import appconfig, chat, chat_context, chat_history, quota
 from common.dates import today
 from common.log import get_logger
+from common.store import Store
 from common.webapi import response
 
 logger = get_logger(__name__)
@@ -68,9 +71,17 @@ def _ask(sub, email, body):
     if count > _daily_limit(email):
         return response(429, {"error": "מכסת השאלות היומית נוצלה — אפשר לשאול שוב מחר"})
 
+    # Only the upstream question carries the asker's tracked data; the stored turn keeps the
+    # bare question, so the transcript stays readable and a follow-up re-attaches fresh data
+    # instead of accumulating stale copies in the chain.
+    store = Store(os.environ["DAYS_TABLE"], os.environ["MEALS_TABLE"], os.environ["STATE_TABLE"],
+                  os.environ["WEIGHTS_TABLE"])
+    questionnaire = appconfig.load(os.environ["APP_CONFIG_PATH"]).questionnaire
+    upstream_question = chat_context.with_user_context(question.strip(), store, questionnaire,
+                                                       sub, today())
     key = chat.api_key(boto3.client("ssm"), os.environ["RAG_API_KEY_PARAM"])
     try:
-        answer = chat.ask(os.environ["RAG_API_URL"], key, question.strip())
+        answer = chat.ask(os.environ["RAG_API_URL"], key, upstream_question)
     except (urllib.error.URLError, TimeoutError) as error:
         logger.error("rag service call failed: %s", error)
         return response(502, {"error": "שירות המענה אינו זמין כרגע — נסו שוב מאוחר יותר"})

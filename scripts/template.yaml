@@ -326,6 +326,11 @@ Resources:
             TableName: !Ref ChatQuotaTable
         - DynamoDBCrudPolicy:
             TableName: !Ref ChatHistoryTable
+        # Read-only: the chat only attaches the asker's tracked data to the upstream question.
+        - DynamoDBReadPolicy:
+            TableName: !Ref DaysTable
+        - DynamoDBReadPolicy:
+            TableName: !Ref MealsTable
         - !Ref NotifyPolicy
 
   NudgeFunction:
