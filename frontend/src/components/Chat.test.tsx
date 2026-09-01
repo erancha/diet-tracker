@@ -37,7 +37,7 @@ describe("Chat", () => {
       answer: "מותר עד 4 נקודות פחמימה",
       sources: [{ fileName: "מדריך-פחמימות.pdf", score: 0.83 }],
     }) });
-    render(<Chat api={chatApi} />);
+    render(<Chat api={chatApi} sampleQuestions={[]} />);
 
     await ask("כמה פחמימות מותר ביום?");
 
@@ -48,7 +48,8 @@ describe("Chat", () => {
   });
 
   it("opens on the stored transcript, newest first", async () => {
-    render(<Chat api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(2) }) })} />);
+    render(<Chat api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(2) }) })}
+                 sampleQuestions={[]} />);
 
     expect(await screen.findByText("שאלה 2")).toBeInTheDocument();
     const texts = screen.getAllByText(/^שאלה \d+$/).map((el) => el.textContent);
@@ -60,7 +61,7 @@ describe("Chat", () => {
       getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(1) }),
       ask: vi.fn().mockResolvedValue({ answer: "תשובה חדשה", sources: [] }),
     });
-    render(<Chat api={chatApi} />);
+    render(<Chat api={chatApi} sampleQuestions={[]} />);
     await screen.findByText("שאלה 1");
 
     await ask("שאלה חדשה");
@@ -71,7 +72,8 @@ describe("Chat", () => {
   });
 
   it("opens with every stored answer collapsed behind its question", async () => {
-    render(<Chat api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(2) }) })} />);
+    render(<Chat api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(2) }) })}
+                 sampleQuestions={[]} />);
     await screen.findByText("שאלה 2");
 
     expect(screen.queryByText("תשובה 2")).not.toBeInTheDocument();
@@ -79,7 +81,8 @@ describe("Chat", () => {
   });
 
   it("renders the whole transcript with no turn-count picker", async () => {
-    render(<Chat api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(25) }) })} />);
+    render(<Chat api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(25) }) })}
+                 sampleQuestions={[]} />);
     await screen.findByText("שאלה 25");
 
     expect(screen.getAllByText(/^שאלה \d+$/)).toHaveLength(25);
@@ -90,7 +93,7 @@ describe("Chat", () => {
     const stored = { question: "שאלה", answer: "תשובה", at: "2026-09-01T10:00:00",
                      sources: [{ fileName: "מדריך.pdf", score: 0.83 }] };
     const chatApi = api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: [stored] }) });
-    render(<Chat api={chatApi} />);
+    render(<Chat api={chatApi} sampleQuestions={[]} />);
     const question = await screen.findByRole("button", { name: "שאלה", expanded: false });
 
     await userEvent.click(question);
@@ -110,7 +113,7 @@ describe("Chat", () => {
       getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(1) }),
       ask: vi.fn().mockResolvedValue({ answer: "תשובה טרייה", sources: [], at: "2026-09-01T11:00:00" }),
     });
-    render(<Chat api={chatApi} />);
+    render(<Chat api={chatApi} sampleQuestions={[]} />);
     await screen.findByText("שאלה 1");
 
     await ask("שאלה טרייה");
@@ -121,14 +124,14 @@ describe("Chat", () => {
 
   it("shows what failed when the transcript cannot be loaded", async () => {
     const chatApi = api({ getChatTranscript: vi.fn().mockRejectedValue(new ApiError(502, "GET /chat → 502")) });
-    render(<Chat api={chatApi} />);
+    render(<Chat api={chatApi} sampleQuestions={[]} />);
 
     expect(await screen.findByText(/טעינת השיחה נכשלה/)).toBeInTheDocument();
   });
 
   it("shows the daily-quota refusal for a 429", async () => {
     const chatApi = api({ ask: vi.fn().mockRejectedValue(new ApiError(429, "POST /chat → 429")) });
-    render(<Chat api={chatApi} />);
+    render(<Chat api={chatApi} sampleQuestions={[]} />);
 
     await ask("שאלה");
 
@@ -137,7 +140,7 @@ describe("Chat", () => {
 
   it("shows what failed for any other error", async () => {
     const chatApi = api({ ask: vi.fn().mockRejectedValue(new ApiError(502, "POST /chat → 502")) });
-    render(<Chat api={chatApi} />);
+    render(<Chat api={chatApi} sampleQuestions={[]} />);
 
     await ask("שאלה");
 
@@ -150,7 +153,7 @@ describe("Chat", () => {
       getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(2) }),
       deleteChatTurn: vi.fn().mockResolvedValue({ at: turn(2).at }),
     });
-    render(<Chat api={chatApi} />);
+    render(<Chat api={chatApi} sampleQuestions={[]} />);
     await screen.findByText("שאלה 2");
 
     await userEvent.click(screen.getByRole("button", { name: "מחיקת השאלה שאלה 2" }));
@@ -163,7 +166,7 @@ describe("Chat", () => {
   it("keeps the turn when deletion is not confirmed", async () => {
     vi.spyOn(window, "confirm").mockReturnValue(false);
     const chatApi = api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(1) }) });
-    render(<Chat api={chatApi} />);
+    render(<Chat api={chatApi} sampleQuestions={[]} />);
     await screen.findByText("שאלה 1");
 
     await userEvent.click(screen.getByRole("button", { name: "מחיקת השאלה שאלה 1" }));
@@ -178,7 +181,7 @@ describe("Chat", () => {
       getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(1) }),
       deleteChatTurn: vi.fn().mockRejectedValue(new ApiError(502, "DELETE /chat → 502")),
     });
-    render(<Chat api={chatApi} />);
+    render(<Chat api={chatApi} sampleQuestions={[]} />);
     await screen.findByText("שאלה 1");
 
     await userEvent.click(screen.getByRole("button", { name: "מחיקת השאלה שאלה 1" }));
@@ -193,7 +196,7 @@ describe("Chat", () => {
       ask: vi.fn().mockResolvedValue({ answer: "תשובה", sources: [], at: "2026-09-01T11:00:00+00:00" }),
       deleteChatTurn: vi.fn().mockResolvedValue({ at: "2026-09-01T11:00:00+00:00" }),
     });
-    render(<Chat api={chatApi} />);
+    render(<Chat api={chatApi} sampleQuestions={[]} />);
     await ask("שאלה חדשה");
     await screen.findByText("תשובה");
 
@@ -202,9 +205,67 @@ describe("Chat", () => {
     expect(chatApi.deleteChatTurn).toHaveBeenCalledWith("2026-09-01T11:00:00+00:00");
   });
 
+  it("offers each configured sample question as a link labeled by its short form", async () => {
+    render(<Chat api={api()} sampleQuestions={[
+      { label: "עקרונות", question: "מהם עקרונות התוכנית?" },
+      { label: "חלבון", question: "כמה חלבון מומלץ לצרוך ביום?" },
+    ]} />);
+
+    expect(screen.getByRole("button", { name: "עקרונות" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "חלבון" })).toBeInTheDocument();
+  });
+
+  it("pastes a sample's full question into the composer without sending it", async () => {
+    const chatApi = api();
+    render(<Chat api={chatApi} sampleQuestions={[
+      { label: "חלבון", question: "כמה חלבון מומלץ לצרוך ביום?" },
+    ]} />);
+
+    await userEvent.click(screen.getByRole("button", { name: "חלבון" }));
+
+    expect(screen.getByRole("textbox")).toHaveValue("כמה חלבון מומלץ לצרוך ביום?");
+    expect(screen.getByRole("button", { name: "שליחה" })).toBeEnabled();
+    expect(chatApi.ask).not.toHaveBeenCalled();
+  });
+
+  it("disables sending until the composer holds a question", async () => {
+    render(<Chat api={api()} sampleQuestions={[]} />);
+
+    expect(screen.getByRole("button", { name: "שליחה" })).toBeDisabled();
+
+    await userEvent.type(screen.getByRole("textbox"), "שאלה");
+    expect(screen.getByRole("button", { name: "שליחה" })).toBeEnabled();
+  });
+
+  it("clears the composer from its inline clear control", async () => {
+    render(<Chat api={api()} sampleQuestions={[]} />);
+    await userEvent.type(screen.getByRole("textbox"), "שאלה שהתחרטתי עליה");
+
+    await userEvent.click(screen.getByRole("button", { name: "ניקוי השאלה" }));
+
+    expect(screen.getByRole("textbox")).toHaveValue("");
+    expect(screen.getByRole("button", { name: "שליחה" })).toBeDisabled();
+  });
+
+  it("hides the clear control while the composer is empty", async () => {
+    render(<Chat api={api()} sampleQuestions={[]} />);
+
+    expect(screen.queryByRole("button", { name: "ניקוי השאלה" })).not.toBeInTheDocument();
+  });
+
+  it("lets a question span multiple lines without submitting on Enter", async () => {
+    const chatApi = api();
+    render(<Chat api={chatApi} sampleQuestions={[]} />);
+
+    await userEvent.type(screen.getByRole("textbox"), "שורה ראשונה{enter}שורה שנייה");
+
+    expect(screen.getByRole("textbox")).toHaveValue("שורה ראשונה\nשורה שנייה");
+    expect(chatApi.ask).not.toHaveBeenCalled();
+  });
+
   it("ignores a blank question", async () => {
     const chatApi = api();
-    render(<Chat api={chatApi} />);
+    render(<Chat api={chatApi} sampleQuestions={[]} />);
 
     await userEvent.type(screen.getByRole("textbox"), "   ");
     await userEvent.click(screen.getByRole("button", { name: "שליחה" }));

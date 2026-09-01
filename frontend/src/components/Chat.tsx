@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useState } from "react";
 import { ApiError, type Api } from "../api";
-import type { ChatTurn } from "../types";
+import type { ChatSampleQuestion, ChatTurn } from "../types";
 import { Icon } from "./Icon";
 
 // The server states the same refusal in handlers/chat.py; mirrored here because ApiError does
@@ -14,7 +14,12 @@ const QUOTA_MESSAGE = "מכסת השאלות היומית נוצלה — אפש�
 // opens expanded — the user just asked and is waiting for it — while loaded turns start
 // collapsed, which is what lets the full history render without a turn-count picker. Each turn
 // offers permanent deletion behind a confirm, keyed by the timestamp the server stored it under.
-export function Chat({ api }: { api: Pick<Api, "ask" | "getChatTranscript" | "deleteChatTurn"> }) {
+// Configured sample questions render as one-tap links above the composer; a tap only fills the
+// input — nothing is sent, so no quota is spent before the user chooses to submit.
+export function Chat({ api, sampleQuestions }: {
+  api: Pick<Api, "ask" | "getChatTranscript" | "deleteChatTurn">;
+  sampleQuestions: ChatSampleQuestion[];
+}) {
   const [turns, setTurns] = useState<ChatTurn[]>([]);
   // Timestamps of the turns whose answers are open.
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -79,15 +84,29 @@ export function Chat({ api }: { api: Pick<Api, "ask" | "getChatTranscript" | "de
 
   return (
     <div className="chat">
+      {sampleQuestions.length > 0 && (
+        <div className="chat-samples">
+          {sampleQuestions.map((sample) => (
+            <button key={sample.label} type="button" className="quiet"
+              onClick={() => setDraft(sample.question)}>{sample.label}</button>
+          ))}
+        </div>
+      )}
       <form onSubmit={(event) => { event.preventDefault(); void send(); }}>
-        <input
-          type="text"
-          value={draft}
-          onChange={(event) => setDraft(event.target.value)}
-          placeholder="שאלה על אבא חטוב…"
-          aria-label="שאלה"
-        />
-        <button type="submit" disabled={pendingQuestion !== null}>שליחה</button>
+        <div className="composer">
+          <textarea
+            rows={2}
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            placeholder="שאלה על אבא חטוב…"
+            aria-label="שאלה"
+          />
+          {draft !== "" && (
+            <button type="button" className="icon-only clear-draft" aria-label="ניקוי השאלה"
+              onClick={() => setDraft("")}><Icon name="close" /></button>
+          )}
+        </div>
+        <button type="submit" disabled={pendingQuestion !== null || draft.trim() === ""}>שליחה</button>
       </form>
       {error && <div className="alert">{error}</div>}
       {(pendingQuestion !== null || turns.length > 0) && (

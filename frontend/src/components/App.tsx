@@ -268,7 +268,7 @@ export function App({ email, api, reminderHour, firstMealHour, mealGapHours, onS
           />
         </CollapsibleSection>
         <CollapsibleSection className="chat-section" title="שאלות על אבא חטוב">
-          <Chat api={api} />
+          <Chat api={api} sampleQuestions={configQuery.data.chat.sample_questions} />
         </CollapsibleSection>
       </main>
     </>

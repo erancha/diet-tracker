@@ -80,10 +80,24 @@ export interface WeightSettings {
   limits: { min_kg: number; max_kg: number };
 }
 
+// One sample-question link above the chat composer: the short link text, and the full question
+// it pastes into the input.
+export interface ChatSampleQuestion {
+  label: string;
+  question: string;
+}
+
+// Frontend-only section of config/app.json — load() in src/common/appconfig.py picks out only
+// the keys it names, so this rides along without touching the Lambdas.
+export interface ChatSettings {
+  sample_questions: ChatSampleQuestion[];
+}
+
 // config/app.json as the frontend fetches it from its own origin.
 export interface AppConfigFile {
   questionnaire: Questionnaire;
   weight: WeightSettings;
+  chat: ChatSettings;
 }
 
 // A single question's stored answer — always a number (points, counts, hours, liters).

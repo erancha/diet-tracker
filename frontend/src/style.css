@@ -438,5 +438,14 @@ td.view-day { cursor: pointer; }
 .chat-assistant { align-self: flex-end; background: #fff; border: 1px solid #e0e0da; }
 .chat-sources { margin-top: 0.35rem !important; font-size: 0.8rem; opacity: 0.7; }
 .chat-pending { opacity: 0.7; }
+.chat-samples { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.5rem; }
+.chat-samples button { font-size: 0.85rem; padding: 0.25rem 0.6rem; }
 .chat form { display: flex; gap: 0.5rem; margin-bottom: 0.75rem; }
-.chat form input { flex: 1; }
+.chat .composer { flex: 1; position: relative; display: flex; }
+/* End padding reserves the strip the clear icon overlays, so long questions slide under it
+   instead of colliding with it. Content-sized so a pasted sample question shows in full with no
+   inner scrollbar; browsers without field-sizing keep the minimum box and scroll past it. */
+.chat .composer textarea { flex: 1; padding: 0.3rem 0.4rem; padding-inline-end: 2.2rem;
+                           font: inherit; resize: none; field-sizing: content;
+                           min-height: 2lh; max-height: 6lh; }
+.chat .clear-draft { position: absolute; inset-inline-end: 0.2rem; top: 50%; transform: translateY(-50%); }
