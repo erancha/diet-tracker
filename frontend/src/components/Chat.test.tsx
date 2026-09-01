@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { ApiError, type Api } from "../api";
@@ -44,6 +44,7 @@ describe("Chat", () => {
     expect(chatApi.ask).toHaveBeenCalledWith("כמה פחמימות מותר ביום?");
     expect(screen.getByText("כמה פחמימות מותר ביום?")).toBeInTheDocument();
     expect(await screen.findByText("מותר עד 4 נקודות פחמימה")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "יותר" }));
     expect(screen.getByText(/מדריך-פחמימות\.pdf/)).toBeInTheDocument();
   });
 
@@ -89,7 +90,7 @@ describe("Chat", () => {
     expect(screen.queryByRole("radio")).not.toBeInTheDocument();
   });
 
-  it("toggles an answer and its sources open and closed by its question, without the backend", async () => {
+  it("toggles an answer open and closed by its question, without the backend", async () => {
     const stored = { question: "שאלה", answer: "תשובה", at: "2026-09-01T10:00:00",
                      sources: [{ fileName: "מדריך.pdf", score: 0.83 }] };
     const chatApi = api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: [stored] }) });
@@ -98,7 +99,6 @@ describe("Chat", () => {
 
     await userEvent.click(question);
     expect(screen.getByText("תשובה")).toBeInTheDocument();
-    expect(screen.getByText(/מדריך\.pdf/)).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "שאלה", expanded: true }));
     expect(screen.queryByText("תשובה")).not.toBeInTheDocument();
@@ -106,6 +106,52 @@ describe("Chat", () => {
     // Toggling reveals data the transcript load already holds — no request per click.
     expect(chatApi.getChatTranscript).toHaveBeenCalledTimes(1);
     expect(chatApi.ask).not.toHaveBeenCalled();
+  });
+
+  it("keeps the sources behind a more/less toggle inside the open answer", async () => {
+    const stored = { question: "שאלה", answer: "תשובה", at: "2026-09-01T10:00:00",
+                     sources: [{ fileName: "מדריך.pdf", score: 0.83 }] };
+    const chatApi = api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: [stored] }) });
+    render(<Chat api={chatApi} sampleQuestions={[]} />);
+    await userEvent.click(await screen.findByRole("button", { name: "שאלה" }));
+
+    expect(screen.queryByText(/מדריך\.pdf/)).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "יותר", expanded: false }));
+    expect(screen.getByText(/מדריך\.pdf/)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "פחות", expanded: true }));
+    expect(screen.queryByText(/מדריך\.pdf/)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "יותר" })).toBeInTheDocument();
+  });
+
+  it("lists the sources as a table of file and match-percent rows", async () => {
+    const stored = { question: "שאלה", answer: "תשובה", at: "2026-09-01T10:00:00",
+                     sources: [{ fileName: "מדריך.pdf", score: 0.83 },
+                               { fileName: "תפריט.pdf", score: 0.705 }] };
+    const chatApi = api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: [stored] }) });
+    render(<Chat api={chatApi} sampleQuestions={[]} />);
+    await userEvent.click(await screen.findByRole("button", { name: "שאלה" }));
+    await userEvent.click(screen.getByRole("button", { name: "יותר" }));
+
+    const table = screen.getByRole("table");
+    expect(within(table).getByRole("columnheader", { name: "מקור" })).toBeInTheDocument();
+    expect(within(table).getByRole("columnheader", { name: "התאמה" })).toBeInTheDocument();
+    const rows = within(table).getAllByRole("row");
+    expect(rows).toHaveLength(3);
+    expect(within(rows[1]).getAllByRole("cell").map((cell) => cell.textContent))
+      .toEqual(["מדריך.pdf", "83%"]);
+    expect(within(rows[2]).getAllByRole("cell").map((cell) => cell.textContent))
+      .toEqual(["תפריט.pdf", "71%"]);
+  });
+
+  it("omits the sources toggle when the answer cites nothing", async () => {
+    render(<Chat api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(1) }) })}
+                 sampleQuestions={[]} />);
+    await userEvent.click(await screen.findByRole("button", { name: "שאלה 1" }));
+
+    expect(screen.getByText("תשובה 1")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "יותר" })).not.toBeInTheDocument();
   });
 
   it("shows a fresh answer expanded while stored turns stay collapsed", async () => {

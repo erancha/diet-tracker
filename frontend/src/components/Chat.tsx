@@ -12,6 +12,19 @@ const ANSWER_LABEL = "התשובה:";
 const FOLLOW_UP_LABEL = "שאלת המשך:";
 const CHAIN_LABELS = [ORIGINAL_LABEL, ANSWER_LABEL, FOLLOW_UP_LABEL];
 
+// A copy of the set with the timestamp added if absent, removed if present.
+function flipped(current: Set<string>, at: string): Set<string> {
+  const next = new Set(current);
+  if (!next.delete(at)) next.add(at);
+  return next;
+}
+
+function dropped(current: Set<string>, at: string): Set<string> {
+  const next = new Set(current);
+  next.delete(at);
+  return next;
+}
+
 // A follow-up rides the same single-question API as a fresh question: the prior conversation is
 // folded into the question text itself, labeled so the original question, each answer, and the
 // new follow-up read apart. A follow-up turn's stored question already is such a chain, so
@@ -42,8 +55,9 @@ function renderQuestion(text: string): ReactNode {
 }
 
 // Q&A over the diet knowledge base: the composer on top, then the user's whole stored
-// transcript newest first as one question per row, each answer and its source chips folded
-// behind its question. GET /chat delivers every turn in full up front, so toggling a question
+// transcript newest first as one question per row, each answer folded behind its question and
+// the answer's source citations folded once more behind a more/less toggle inside the open
+// answer. GET /chat delivers every turn in full up front, so toggling a question or its sources
 // only reveals data already in memory — no request leaves the page per click. A fresh answer
 // opens expanded — the user just asked and is waiting for it — while loaded turns start
 // collapsed, which is what lets the full history render without a turn-count picker. Each turn
@@ -63,6 +77,8 @@ export function Chat({ api, sampleQuestions }: {
   const [turns, setTurns] = useState<ChatTurn[]>([]);
   // Timestamps of the turns whose answers are open.
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  // Timestamps of the turns whose source citations are shown.
+  const [sourcesShown, setSourcesShown] = useState<Set<string>>(new Set());
   const [draft, setDraft] = useState("");
   // The question awaiting its answer, or null. Doubles as the pending flag: the composer is
   // held while it is set, so at most one question is in flight.
@@ -110,24 +126,16 @@ export function Chat({ api, sampleQuestions }: {
     try {
       await api.deleteChatTurn(turn.at);
       setTurns((current) => current.filter((kept) => kept.at !== turn.at));
-      setExpanded((current) => {
-        const kept = new Set(current);
-        kept.delete(turn.at);
-        return kept;
-      });
+      setExpanded((current) => dropped(current, turn.at));
+      setSourcesShown((current) => dropped(current, turn.at));
       setReplyTo((current) => (current?.at === turn.at ? null : current));
     } catch (thrown) {
       setError(`מחיקת השאלה נכשלה (${(thrown as Error).message})`);
     }
   };
 
-  const toggle = (at: string) => {
-    setExpanded((current) => {
-      const next = new Set(current);
-      if (!next.delete(at)) next.add(at);
-      return next;
-    });
-  };
+  const toggle = (at: string) => setExpanded((current) => flipped(current, at));
+  const toggleSources = (at: string) => setSourcesShown((current) => flipped(current, at));
 
   // The question awaiting its answer, rendered as a normal exchange with the thinking indicator.
   // It follows the composer wherever that sits, so a pending follow-up reads in place under the
@@ -196,9 +204,28 @@ export function Chat({ api, sampleQuestions }: {
                 <li className="chat-assistant">
                   <p>{turn.answer}</p>
                   {turn.sources.length > 0 && (
-                    <p className="chat-sources">
-                      {turn.sources.map((source) => `${source.fileName} (${source.score.toFixed(2)})`).join(" · ")}
-                    </p>
+                    <>
+                      <button type="button" className="chat-sources-toggle"
+                        aria-expanded={sourcesShown.has(turn.at)}
+                        onClick={() => toggleSources(turn.at)}>
+                        {sourcesShown.has(turn.at) ? "פחות" : "יותר"}
+                      </button>
+                      {sourcesShown.has(turn.at) && (
+                        <table className="chat-sources">
+                          <thead>
+                            <tr><th>מקור</th><th>התאמה</th></tr>
+                          </thead>
+                          <tbody>
+                            {turn.sources.map((source, index) => (
+                              <tr key={index}>
+                                <td>{source.fileName}</td>
+                                <td>{Math.round(source.score * 100)}%</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      )}
+                    </>
                   )}
                   <button type="button" className="icon-only reply-turn"
                     aria-label={`שאלת המשך על ${turn.question}`}
