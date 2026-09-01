@@ -33,7 +33,7 @@ def handler(event, context):
     sub = claims["sub"]
     logger.info("request route=%s sub=%s", route, sub)
     if route == "POST /chat":
-        return _ask(sub, json.loads(event["body"]))
+        return _ask(sub, claims["email"], json.loads(event["body"]))
     if route == "GET /chat":
         return response(200, {"turns": chat_history.turns(_history_table(), sub)})
     if route == "DELETE /chat/{at}":
@@ -45,7 +45,17 @@ def _history_table():
     return boto3.resource("dynamodb").Table(os.environ["CHAT_HISTORY_TABLE"])
 
 
-def _ask(sub, body):
+def _daily_limit(email):
+    """Questions this user may ask today: an entry in the overrides map (email → limit, keyed
+    lowercase like the sign-up allowlist) replaces the shared default for that user."""
+    overrides = json.loads(os.environ["CHAT_DAILY_LIMIT_OVERRIDES"])
+    email = email.lower()
+    if email in overrides:
+        return int(overrides[email])
+    return int(os.environ["CHAT_DAILY_LIMIT"])
+
+
+def _ask(sub, email, body):
     question = body.get("question")
     if not isinstance(question, str) or not question.strip():
         return response(400, {"error": "question is required"})
@@ -55,7 +65,7 @@ def _ask(sub, body):
 
     table = boto3.resource("dynamodb").Table(os.environ["CHAT_QUOTA_TABLE"])
     count = quota.consume(table, sub, today())
-    if count > int(os.environ["CHAT_DAILY_LIMIT"]):
+    if count > _daily_limit(email):
         return response(429, {"error": "מכסת השאלות היומית נוצלה — אפשר לשאול שוב מחר"})
 
     key = chat.api_key(boto3.client("ssm"), os.environ["RAG_API_KEY_PARAM"])

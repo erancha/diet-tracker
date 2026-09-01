@@ -23,16 +23,17 @@ def env(monkeypatch, ddb):
     monkeypatch.setenv("CHAT_QUOTA_TABLE", "chat_quota")
     monkeypatch.setenv("CHAT_HISTORY_TABLE", "chat_history")
     monkeypatch.setenv("CHAT_DAILY_LIMIT", "2")
+    monkeypatch.setenv("CHAT_DAILY_LIMIT_OVERRIDES", "{}")
     monkeypatch.setenv("RAG_API_URL", "https://rag.example/prod")
     monkeypatch.setenv("RAG_API_KEY_PARAM", "/diet-tracker/rag/api-key")
     monkeypatch.setattr(chat_handler.chat, "api_key", lambda ssm, param: "the-key")
 
 
-def request(body):
+def request(body, sub="u1", email="a@gmail.com"):
     return {
         "routeKey": "POST /chat",
         "body": json.dumps(body, ensure_ascii=False),
-        "requestContext": {"authorizer": {"jwt": {"claims": {"sub": "u1", "email": "a@gmail.com"}}}},
+        "requestContext": {"authorizer": {"jwt": {"claims": {"sub": sub, "email": email}}}},
     }
 
 
@@ -72,6 +73,23 @@ def test_refuses_beyond_the_daily_limit_without_asking_upstream(env, monkeypatch
     refused = chat_handler.handler(request({"question": "3"}), None)
     assert refused["statusCode"] == 429
     assert len(calls) == 2
+
+
+def test_an_override_raises_one_users_limit_and_leaves_the_rest_on_the_default(env, monkeypatch):
+    monkeypatch.setenv("CHAT_DAILY_LIMIT_OVERRIDES", '{"vip@gmail.com": 4}')
+    monkeypatch.setattr(chat_handler.chat, "ask",
+                        lambda api_url, key, question: {"answer": "ת", "sources": []})
+
+    def vip(question):
+        return chat_handler.handler(request({"question": question}, sub="v1", email="VIP@gmail.com"), None)
+
+    for question in ("1", "2", "3", "4"):
+        assert vip(question)["statusCode"] == 200
+    assert vip("5")["statusCode"] == 429
+
+    assert chat_handler.handler(request({"question": "1"}), None)["statusCode"] == 200
+    assert chat_handler.handler(request({"question": "2"}), None)["statusCode"] == 200
+    assert chat_handler.handler(request({"question": "3"}), None)["statusCode"] == 429
 
 
 def test_a_blank_question_does_not_spend_quota(env, monkeypatch):

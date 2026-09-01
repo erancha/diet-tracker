@@ -60,9 +60,13 @@ Parameters:
     Description: SSM parameter holding the Summaries.AI API key the chat proxy sends
   ChatDailyLimit:
     Type: Number
-    Default: 20
-    Description: Questions each user may ask per day — chat is the only feature that spends
-      money per use, so this is the per-user cost ceiling
+    Description: Questions a user may ask per day unless ChatDailyLimitOverrides names them —
+      chat is the only feature that spends money per use, so this is the per-user cost ceiling;
+      passed by scripts/deploy.sh from params.sh
+  ChatDailyLimitOverrides:
+    Type: String
+    Description: JSON object mapping a user's email (lowercase) to a daily limit that replaces
+      ChatDailyLimit for that user; passed by scripts/deploy.sh from params.sh
 
 Globals:
   Function:
@@ -89,6 +93,7 @@ Globals:
         CHAT_QUOTA_TABLE: !Ref ChatQuotaTable
         CHAT_HISTORY_TABLE: !Ref ChatHistoryTable
         CHAT_DAILY_LIMIT: !Ref ChatDailyLimit
+        CHAT_DAILY_LIMIT_OVERRIDES: !Ref ChatDailyLimitOverrides
         RAG_API_URL: !Ref RagApiUrl
         RAG_API_KEY_PARAM: !Ref RagApiKeyParam
 

@@ -8,3 +8,7 @@ export SES_SENDER="erancha@gmail.com"
 # The API key itself is not a deploy parameter — store it in SSM: aws ssm put-parameter \
 #   --name /diet-tracker/rag/api-key --type SecureString --value <key>
 export RAG_API_URL=""
+# Chat questions each user may ask per day, and a JSON map of lowercase email -> limit for
+# users whose allowance differs from the default.
+export CHAT_DAILY_LIMIT="10"
+export CHAT_DAILY_LIMIT_OVERRIDES="{}"

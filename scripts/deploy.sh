@@ -71,7 +71,9 @@ deploy_main() {
       ReminderHours="20" \
       WeighInWeekday="$(app_config "['weight']['weigh_in']['weekday']")" \
       WeighInHour="$(app_config "['weight']['weigh_in']['hour']")" \
-      RagApiUrl="${RAG_API_URL:-}"
+      RagApiUrl="${RAG_API_URL:-}" \
+      ChatDailyLimit="$CHAT_DAILY_LIMIT" \
+      ChatDailyLimitOverrides="$CHAT_DAILY_LIMIT_OVERRIDES"
 }
 
 FRONTEND_URL=$(stack_output "$APP" FrontendUrl)
