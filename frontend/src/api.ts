@@ -43,7 +43,7 @@ export interface Api {
   setWeightTarget(kg: number): Promise<WeightPayload>;
   deleteWeight(date: string): Promise<WeightPayload>;
   setMuted(muted: boolean): Promise<NotificationSettings>;
-  ask(question: string): Promise<ChatAnswer>;
+  ask(question: string, at?: string): Promise<ChatAnswer>;
   getChatTranscript(): Promise<ChatTranscript>;
   deleteChatTurn(at: string): Promise<{ at: string }>;
 }
@@ -93,7 +93,9 @@ export function createApi(
     setWeightTarget: (kg) => request("PUT", "/weight/target", { kg }),
     deleteWeight: (date) => request("DELETE", `/weight/${date}`),
     setMuted: (muted) => request("PUT", "/notifications", { muted }),
-    ask: (question) => request("POST", "/chat", { question }),
+    // `at` marks the question as a follow-up: the server writes the answered question over the
+    // turn stored under that timestamp, keeping the conversation as that one turn.
+    ask: (question, at) => request("POST", "/chat", { question, ...(at !== undefined && { at }) }),
     getChatTranscript: () => request("GET", "/chat"),
     // The timestamp's '+' and ':' must reach the route as the literal characters the turn is
     // stored under, so it travels percent-encoded.

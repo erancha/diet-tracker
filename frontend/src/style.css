@@ -435,6 +435,12 @@ td.view-day { cursor: pointer; }
   --btn-bg: transparent; --btn-fg: inherit; --btn-border: transparent;
   flex: 1; padding: 0; border-radius: 0; font-size: inherit; text-align: start; white-space: pre-wrap;
 }
+/* A follow-up turn's question carries its whole chain, so a closed row clamps to a scannable
+   height; opening the answer reveals the question in full. */
+.chat-question[aria-expanded="false"] {
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3;
+  line-clamp: 3; overflow: hidden;
+}
 .chat-assistant { align-self: flex-end; background: #fff; border: 1px solid #e0e0da; }
 .chat-sources { margin-top: 0.35rem !important; font-size: 0.8rem; opacity: 0.7; }
 .chat-pending { opacity: 0.7; }
@@ -449,3 +455,15 @@ td.view-day { cursor: pointer; }
                            font: inherit; resize: none; field-sizing: content;
                            min-height: 2lh; max-height: 6lh; }
 .chat .clear-draft { position: absolute; inset-inline-end: 0.2rem; top: 50%; transform: translateY(-50%); }
+/* Heads the relocated composer while a reply is in progress, carrying its cancel control. */
+.chat .reply-chip { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.35rem;
+                    font-size: 0.85rem; opacity: 0.85; }
+.chat .reply-chip span { flex: 1; }
+.chat .reply-turn { margin-top: 0.35rem; padding: 0.25rem; }
+/* The pressed reply control keeps the question bubble's tint, tying the relocated composer below
+   back to the control that summoned it. */
+.chat .reply-turn[aria-pressed="true"] { --btn-bg: #e8f0e9; --btn-border: currentColor; }
+/* The in-progress composer rides inside the transcript, under the answer it extends; a full-width
+   row, shedding the message-bubble styling its list neighbors carry. */
+.chat-messages .chat-composer { max-width: 100%; align-self: stretch; background: none; padding: 0; }
+.chat .chat-composer form { margin-bottom: 0.25rem; }

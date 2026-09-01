@@ -80,6 +80,20 @@ describe("createApi", () => {
     expect(JSON.parse(String(fetchMock.mock.calls[1][1].body))).toEqual({ kg: 72 });
   });
 
+  it("posts a follow-up with the timestamp of the turn it extends, and none for a fresh question", async () => {
+    const fetchMock = vi.fn().mockImplementation(async () =>
+      new Response('{"answer": "ת", "sources": [], "at": "2026-09-01T10:00:00+00:00"}'));
+    vi.stubGlobal("fetch", fetchMock);
+    const api = createApi(cfg, tokens);
+
+    await api.ask("שאלה");
+    await api.ask("שרשור", "2026-09-01T10:00:00+00:00");
+
+    expect(JSON.parse(String(fetchMock.mock.calls[0][1].body))).toEqual({ question: "שאלה" });
+    expect(JSON.parse(String(fetchMock.mock.calls[1][1].body))).toEqual(
+      { question: "שרשור", at: "2026-09-01T10:00:00+00:00" });
+  });
+
   it("percent-encodes the turn timestamp in the chat delete path", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response('{"at": "2026-09-01T10:00:00+00:00"}'));
     vi.stubGlobal("fetch", fetchMock);

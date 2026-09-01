@@ -205,6 +205,133 @@ describe("Chat", () => {
     expect(chatApi.deleteChatTurn).toHaveBeenCalledWith("2026-09-01T11:00:00+00:00");
   });
 
+  it("moves the composer under the answer being replied to and marks the reply in progress", async () => {
+    render(<Chat api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(1) }) })}
+                 sampleQuestions={[]} />);
+    await userEvent.click(await screen.findByRole("button", { name: "שאלה 1" }));
+
+    await userEvent.click(screen.getByRole("button", { name: "שאלת המשך על שאלה 1" }));
+
+    const composerRow = screen.getByRole("textbox").closest("li");
+    expect(composerRow).toHaveClass("chat-composer");
+    expect(screen.getByText("תשובה 1").closest("li")!.nextElementSibling).toBe(composerRow);
+    expect(screen.getByRole("button", { name: "שאלת המשך על שאלה 1" }))
+      .toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByText("שאלת המשך")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "ביטול שאלת ההמשך" })).toBeInTheDocument();
+  });
+
+  it("shows the thinking bubble under the conversation a follow-up extends", async () => {
+    const chatApi = api({
+      getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(1) }),
+      ask: vi.fn().mockReturnValue(new Promise(() => {})),
+    });
+    render(<Chat api={chatApi} sampleQuestions={[]} />);
+    await userEvent.click(await screen.findByRole("button", { name: "שאלה 1" }));
+    await userEvent.click(screen.getByRole("button", { name: "שאלת המשך על שאלה 1" }));
+
+    await ask("ומה עוד?");
+
+    const question = screen.getByText("ומה עוד?").closest("li")!;
+    expect(question).toHaveClass("chat-user");
+    expect(question.previousElementSibling).toBe(screen.getByRole("textbox").closest("li"));
+    expect(screen.getByText("חושב…").closest("li")).toHaveClass("chat-assistant");
+  });
+
+  it("sends a follow-up as the labeled chain and replaces the turn in place", async () => {
+    const chatApi = api({
+      getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(2) }),
+      ask: vi.fn().mockResolvedValue({ answer: "תשובת המשך", sources: [], at: turn(1).at }),
+    });
+    render(<Chat api={chatApi} sampleQuestions={[]} />);
+    await userEvent.click(await screen.findByRole("button", { name: "שאלה 1" }));
+    await userEvent.click(screen.getByRole("button", { name: "שאלת המשך על שאלה 1" }));
+
+    await ask("ומה עוד?");
+
+    expect(chatApi.ask).toHaveBeenCalledWith(
+      "השאלה המקורית: שאלה 1\nהתשובה: תשובה 1\nשאלת המשך: ומה עוד?", turn(1).at);
+    expect(await screen.findByText("תשובת המשך")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "שאלה 1" })).not.toBeInTheDocument();
+    const questions = [...document.querySelectorAll(".chat-question")].map((el) => el.textContent);
+    expect(questions).toEqual(
+      ["שאלה 2", "השאלה המקורית: שאלה 1\nהתשובה: תשובה 1\nשאלת המשך: ומה עוד?"]);
+  });
+
+  it("extends an already-composed chain without re-wrapping it", async () => {
+    const chain = "השאלה המקורית: א\nהתשובה: ב\nשאלת המשך: ג";
+    const stored = { question: chain, answer: "ד", sources: [], at: "2026-09-01T10:00:00" };
+    const chatApi = api({
+      getChatTranscript: vi.fn().mockResolvedValue({ turns: [stored] }),
+      ask: vi.fn().mockResolvedValue({ answer: "ו", sources: [], at: stored.at }),
+    });
+    render(<Chat api={chatApi} sampleQuestions={[]} />);
+    await userEvent.click(await screen.findByRole("button", { name: /^השאלה המקורית/ }));
+    await userEvent.click(screen.getByRole("button", { name: /^שאלת המשך על/ }));
+
+    await ask("ה");
+
+    expect(chatApi.ask).toHaveBeenCalledWith(`${chain}\nהתשובה: ד\nשאלת המשך: ה`, stored.at);
+  });
+
+  it("swaps the composer placeholder to follow-up wording while a reply is in progress", async () => {
+    render(<Chat api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(1) }) })}
+                 sampleQuestions={[]} />);
+    await userEvent.click(await screen.findByRole("button", { name: "שאלה 1" }));
+    await userEvent.click(screen.getByRole("button", { name: "שאלת המשך על שאלה 1" }));
+
+    expect(screen.getByPlaceholderText("שאלת המשך…")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "ביטול שאלת ההמשך" }));
+    expect(screen.getByPlaceholderText("שאלה על אבא חטוב…")).toBeInTheDocument();
+  });
+
+  it("cancels a follow-up from its header, sending the next question as standalone", async () => {
+    const chatApi = api({
+      getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(1) }),
+      ask: vi.fn().mockResolvedValue({ answer: "תשובה עצמאית", sources: [], at: "2026-09-01T11:00:00" }),
+    });
+    render(<Chat api={chatApi} sampleQuestions={[]} />);
+    await userEvent.click(await screen.findByRole("button", { name: "שאלה 1" }));
+    await userEvent.click(screen.getByRole("button", { name: "שאלת המשך על שאלה 1" }));
+
+    await userEvent.click(screen.getByRole("button", { name: "ביטול שאלת ההמשך" }));
+    await ask("שאלה עצמאית");
+
+    expect(screen.getByRole("textbox").closest("li")).toBeNull();
+    expect(chatApi.ask).toHaveBeenCalledWith("שאלה עצמאית");
+  });
+
+  it("returns the composer to the top once the follow-up is answered", async () => {
+    const chatApi = api({
+      getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(1) }),
+      ask: vi.fn().mockResolvedValue({ answer: "תשובת המשך", sources: [], at: turn(1).at }),
+    });
+    render(<Chat api={chatApi} sampleQuestions={[]} />);
+    await userEvent.click(await screen.findByRole("button", { name: "שאלה 1" }));
+    await userEvent.click(screen.getByRole("button", { name: "שאלת המשך על שאלה 1" }));
+
+    await ask("ומה עוד?");
+
+    expect(await screen.findByText("תשובת המשך")).toBeInTheDocument();
+    expect(screen.getByRole("textbox").closest("li")).toBeNull();
+  });
+
+  it("returns the composer to the top when the replied-to turn is deleted", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    const chatApi = api({
+      getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(1) }),
+      deleteChatTurn: vi.fn().mockResolvedValue({ at: turn(1).at }),
+    });
+    render(<Chat api={chatApi} sampleQuestions={[]} />);
+    await userEvent.click(await screen.findByRole("button", { name: "שאלה 1" }));
+    await userEvent.click(screen.getByRole("button", { name: "שאלת המשך על שאלה 1" }));
+
+    await userEvent.click(screen.getByRole("button", { name: "מחיקת השאלה שאלה 1" }));
+
+    expect(screen.getByRole("textbox").closest("li")).toBeNull();
+  });
+
   it("offers each configured sample question as a link labeled by its short form", async () => {
     render(<Chat api={api()} sampleQuestions={[
       { label: "עקרונות", question: "מהם עקרונות התוכנית?" },

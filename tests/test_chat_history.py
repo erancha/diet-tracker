@@ -41,6 +41,35 @@ def test_append_returns_the_stored_sort_key(table):
     assert turn["at"] == at
 
 
+def test_append_with_an_explicit_at_overwrites_that_turn_in_place(table):
+    at = chat_history.append(table, "u1", "שאלה מקורית", "תשובה ראשונה", [])
+
+    returned = chat_history.append(table, "u1", "שרשור מלא", "תשובה חדשה",
+                                   [{"fileName": "מדריך.pdf", "score": 0.9}], at=at)
+
+    assert returned == at
+    (turn,) = chat_history.turns(table, "u1")
+    assert turn == {"question": "שרשור מלא", "answer": "תשובה חדשה",
+                    "sources": [{"fileName": "מדריך.pdf", "score": 0.9}], "at": at}
+
+
+def test_append_with_an_at_that_holds_no_turn_raises(table):
+    with pytest.raises(KeyError):
+        chat_history.append(table, "u1", "שאלת המשך", "תשובה", [], at="2026-09-01T10:00:00+00:00")
+
+    assert chat_history.turns(table, "u1") == []
+
+
+def test_append_with_an_at_cannot_touch_another_users_turn(table):
+    at = chat_history.append(table, "u1", "שאלה", "תשובה", [])
+
+    with pytest.raises(KeyError):
+        chat_history.append(table, "u2", "שרשור", "ת", [], at=at)
+
+    assert [turn["question"] for turn in chat_history.turns(table, "u1")] == ["שאלה"]
+    assert chat_history.turns(table, "u2") == []
+
+
 def test_delete_removes_only_the_named_turn(table):
     kept = chat_history.append(table, "u1", "נשארת", "ת", [])
     removed = chat_history.append(table, "u1", "נמחקת", "ת", [])

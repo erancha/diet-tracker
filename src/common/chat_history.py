@@ -1,5 +1,7 @@
-"""Per-user chat transcript: one DynamoDB item per Q&A turn, keyed by the user's sub with the
-UTC ISO timestamp as the sort key, so a plain key-ordered query reads a user's conversation.
+"""Per-user chat transcript: one DynamoDB item per stored turn, keyed by the user's sub with a
+UTC ISO timestamp as the sort key, so a plain key-ordered query reads a user's transcript. A
+follow-up overwrites its target turn under the same key, so a multi-turn conversation stays a
+single item holding the latest answer and the whole chain in its question text.
 
 Source scores are floats, which the DynamoDB document layer refuses, so the sources list rides
 as a JSON string attribute and is parsed back on read."""
@@ -10,19 +12,28 @@ from datetime import datetime, timezone
 from boto3.dynamodb.conditions import Key
 
 
-def append(table, sub, question, answer, sources):
-    """Stores one answered turn under the user, stamped with the current UTC time as its sort
-    key, and returns that stamp — the turn's identity for a later delete. The caller supplies
-    the content, not the position."""
-    at = datetime.now(timezone.utc).isoformat()
-    table.put_item(Item={
+def append(table, sub, question, answer, sources, at=None):
+    """Stores one answered turn under the user and returns its sort key — the turn's identity
+    for a later delete or follow-up. Without `at` the turn is stamped with the current UTC time,
+    a fresh append. With `at` the write replaces the user's existing turn at that stamp whole —
+    a follow-up folds its conversation into one item — and raises KeyError when no such turn
+    exists, so a turn deleted elsewhere is not resurrected at a client-chosen key."""
+    sk = datetime.now(timezone.utc).isoformat() if at is None else at
+    item = {
         "pk": sub,
-        "sk": at,
+        "sk": sk,
         "question": question,
         "answer": answer,
         "sources": json.dumps(sources, ensure_ascii=False),
-    })
-    return at
+    }
+    if at is None:
+        table.put_item(Item=item)
+    else:
+        try:
+            table.put_item(Item=item, ConditionExpression="attribute_exists(pk)")
+        except table.meta.client.exceptions.ConditionalCheckFailedException:
+            raise KeyError(at)
+    return sk
 
 
 def delete(table, sub, at):

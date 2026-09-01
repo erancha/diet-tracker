@@ -131,6 +131,42 @@ def test_failed_requests_persist_no_turn(env, monkeypatch):
     assert transcript() == []
 
 
+def test_a_follow_up_overwrites_the_replied_to_turn_in_place(env, monkeypatch):
+    monkeypatch.setattr(chat_handler.chat, "ask",
+                        lambda api_url, key, question: {"answer": f"ת:{question}", "sources": []})
+    at = body_of(chat_handler.handler(request({"question": "שאלה מקורית"}), None))["at"]
+
+    followed = chat_handler.handler(request({"question": "שרשור עם שאלת המשך", "at": at}), None)
+
+    assert followed["statusCode"] == 200
+    assert body_of(followed)["at"] == at
+    (turn,) = transcript()
+    assert turn["question"] == "שרשור עם שאלת המשך"
+    assert turn["answer"] == "ת:שרשור עם שאלת המשך"
+    assert turn["at"] == at
+
+
+def test_a_follow_up_to_a_missing_turn_is_404_and_persists_nothing(env, monkeypatch):
+    monkeypatch.setattr(chat_handler.chat, "ask",
+                        lambda api_url, key, question: {"answer": "ת", "sources": []})
+
+    response = chat_handler.handler(
+        request({"question": "שאלת המשך", "at": "2026-09-01T10:00:00+00:00"}), None)
+
+    assert response["statusCode"] == 404
+    assert transcript() == []
+
+
+def test_a_follow_up_with_a_malformed_at_is_400_and_spends_no_quota(env, monkeypatch):
+    monkeypatch.setattr(chat_handler.chat, "ask",
+                        lambda api_url, key, question: {"answer": "ת", "sources": []})
+    assert chat_handler.handler(request({"question": "שאלה", "at": "  "}), None)["statusCode"] == 400
+    assert chat_handler.handler(request({"question": "שאלה", "at": 5}), None)["statusCode"] == 400
+
+    assert chat_handler.handler(request({"question": "1"}), None)["statusCode"] == 200
+    assert chat_handler.handler(request({"question": "2"}), None)["statusCode"] == 200
+
+
 def delete_request(at, sub="u1"):
     return {
         "routeKey": "DELETE /chat/{at}",

@@ -7,9 +7,11 @@ The caller's identity comes exclusively from the JWT claims the API Gateway auth
 verified — the request body never names a user.
 
 Each answered turn is stored per user (common.chat_history) and served back by GET /chat, so
-the conversation survives reloads and follows the user across devices. DELETE /chat/{at}
-permanently removes one of the caller's own turns by its timestamp; the quota already spent on
-the deleted question is unaffected."""
+the conversation survives reloads and follows the user across devices. A POST naming an
+existing turn's timestamp (`at`) is a follow-up: the answered turn replaces that turn in
+place, keeping a whole conversation as one stored turn whose question text carries the chain.
+DELETE /chat/{at} permanently removes one of the caller's own turns by its timestamp; the
+quota already spent on the deleted question is unaffected."""
 
 import json
 import os
@@ -47,6 +49,9 @@ def _ask(sub, body):
     question = body.get("question")
     if not isinstance(question, str) or not question.strip():
         return response(400, {"error": "question is required"})
+    at = body.get("at")
+    if at is not None and (not isinstance(at, str) or not at.strip()):
+        return response(400, {"error": "at must be the timestamp of a stored turn"})
 
     table = boto3.resource("dynamodb").Table(os.environ["CHAT_QUOTA_TABLE"])
     count = quota.consume(table, sub, today())
@@ -59,7 +64,11 @@ def _ask(sub, body):
     except (urllib.error.URLError, TimeoutError) as error:
         logger.error("rag service call failed: %s", error)
         return response(502, {"error": "שירות המענה אינו זמין כרגע — נסו שוב מאוחר יותר"})
-    at = chat_history.append(_history_table(), sub, question.strip(), answer["answer"], answer["sources"])
+    try:
+        at = chat_history.append(_history_table(), sub, question.strip(), answer["answer"],
+                                 answer["sources"], at=at)
+    except KeyError:
+        return response(404, {"error": f"no turn stored at {at}"})
     return response(200, {"answer": answer["answer"], "sources": answer["sources"], "at": at})
 
 
