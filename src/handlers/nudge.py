@@ -1,5 +1,5 @@
-"""Scheduled nudge jobs: the evening fill reminder, the night's last call, nightly rule
-evaluation, weekly digest, weekly weigh-in.
+"""Scheduled nudge jobs: the night's last call, nightly rule evaluation, weekly digest,
+weekly weigh-in.
 
 EventBridge Scheduler invokes this handler with {"job": ...}; each job iterates every user in
 the pool who has not opted out of notifications. NudgeEnv gathers all AWS-derived inputs once so
@@ -19,7 +19,7 @@ from common.store import Store
 logger = get_logger(__name__)
 
 REMINDER_SUBJECT = "תזכורת — שאלון תזונה"
-REMINDER_TEXT = "עדיין לא מילאת את שאלון התזונה של היום 🕗"
+REMINDER_TEXT = "עדיין לא מילאת את שאלון התזונה של היום 🌙"
 
 # What the last call says to a day whose meals are logged: the questionnaire is all that is left,
 # so the nudge names that rather than repeating the reminder above.
@@ -38,7 +38,7 @@ class NudgeEnv:
 
 
 def handler(event, context):
-    jobs = {"reminder": _reminder, "last_call": _last_call, "rules": _rules_job,
+    jobs = {"last_call": _last_call, "rules": _rules_job,
             "weekly": _weekly, "weigh_in": _weigh_in}
     env = _build_env()
     logger.info("job=%s starting users=%d", event["job"], len(env.users))
@@ -77,23 +77,18 @@ def _send(env, user, subject, text):
 
 
 def _unsubmitted(env, day) -> list:
-    """The users whose day holds no submitted questionnaire — the ones both day reminders address."""
+    """The users whose day holds no submitted questionnaire — the ones the last call addresses."""
     return [user for user in env.users if not env.store.has_day(user.sub, day)]
 
 
-def _reminder(env):
-    for user in _unsubmitted(env, today()):
-        _send(env, user, REMINDER_SUBJECT, REMINDER_TEXT)
-
-
 def _last_call(env):
-    """The night's final reminder, sent late enough that the day it asks about is over in
+    """The day's one fill reminder, sent late enough that the day it asks about is over in
     practice — and still inside it, so the answer is about the day the user is living.
 
-    It nudges the same unsubmitted users the evening reminder does, and tells a user whose meals
-    are already logged that the day is open rather than untracked: everything but the water is
-    recorded, and the questionnaire is what closes it. A day carrying no meals gets the plain
-    reminder, because nothing about it has been tracked yet."""
+    It nudges every user whose day remains unsubmitted, and tells one whose meals are already
+    logged that the day is open rather than untracked: everything but the water is recorded, and
+    the questionnaire is what closes it. A day carrying no meals gets the plain reminder, because
+    nothing about it has been tracked yet."""
     day = today()
     for user in _unsubmitted(env, day):
         if env.store.get_meals(user.sub, day):

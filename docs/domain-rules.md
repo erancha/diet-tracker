@@ -84,9 +84,9 @@ day the moment it reaches the bound, and the `heavy_day` rule nudges once the da
   submit validation.
 - **Water-close** — a fully tracked day closes directly from the tracker with only water entered.
 - **Answerable day** — the day-end questionnaire answers a day that has ended, so it opens on the
-  last one that did: today from the first evening reminder hour (the stack's `ReminderHours`)
-  onward, yesterday for the whole stretch before it, including the small hours after midnight.
-  Today stays disabled in the day picker until that hour.
+  last one that did: today from the day-end hour (the stack's `DayEndHour`) onward, yesterday for
+  the whole stretch before it, including the small hours after midnight. Today stays disabled in
+  the day picker until that hour.
 - **Overdue meal** — the tracker's meal inputs sit folded behind the day's figures and its meal
   list, and open expanded when a meal is overdue. A day is overdue in two ways: it passes its
   first-meal hour (the stack's `FirstMealHour`) with nothing recorded, or its most recent meal
@@ -155,12 +155,11 @@ at deploy time, because an EventBridge cron expression is fixed when the stack d
 
 Scheduled jobs (EventBridge Scheduler, Asia/Jerusalem) run alongside the tracker:
 
-- **Fill reminders** — sent on the stack's `ReminderHours` while a day remains unsubmitted.
-- **Last call** — the night's final reminder, late enough that the day is over in practice and
-  still inside it, so what it asks about is the day the user is living. It reaches the same
-  unsubmitted users the fill reminders do, and tells a user whose meals are already logged that
-  the day is open rather than untracked: everything but the water is recorded, and the
-  questionnaire is what closes it. A day carrying no meals gets the plain reminder.
+- **Last call** — the day's one fill reminder, late enough that the day is over in practice and
+  still inside it, so what it asks about is the day the user is living. It reaches every user
+  whose day remains unsubmitted, and tells one whose meals are already logged that the day is
+  open rather than untracked: everything but the water is recorded, and the questionnaire is what
+  closes it. A day carrying no meals gets the plain reminder.
 - **Threshold alerts** — fire over consecutive days violating the configured thresholds, by email
   plus Telegram when a bot token is configured (see
   [Development & deployment](development.md#telegram-optional)).

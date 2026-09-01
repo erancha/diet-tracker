@@ -6,7 +6,7 @@ window.CONFIG = {
   apiUrl: "https://<api-id>.execute-api.eu-central-1.amazonaws.com",
   redirectUri: window.location.origin + "/",
   rootEmail: "<app-owner-email>",
-  firstReminderHour: 20,
+  dayEndHour: 20,
   firstMealHour: 11,
   mealGapHours: 4,
 };

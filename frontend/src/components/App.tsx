@@ -30,8 +30,8 @@ import { Welcome } from "./Welcome";
 //
 // It also reads whether the account has recorded anything yet, because both the greeting and the
 // weight section's opening fold answer to that one reading and must not disagree about it.
-export function App({ email, api, reminderHour, firstMealHour, mealGapHours, onSignOut }: {
-  email: string; api: Api; reminderHour: number; firstMealHour: number; mealGapHours: number;
+export function App({ email, api, dayEndHour, firstMealHour, mealGapHours, onSignOut }: {
+  email: string; api: Api; dayEndHour: number; firstMealHour: number; mealGapHours: number;
   onSignOut: () => void;
 }) {
   const queryClient = useQueryClient();
@@ -50,8 +50,8 @@ export function App({ email, api, reminderHour, firstMealHour, mealGapHours, onS
   // fold and reseeded by the day switch, both owned here, so its edits survive neither — this is
   // what lets the two ask before spending them.
   const [pendingAnswers, setPendingAnswers] = useState(false);
-  const todaySelectable = dayEnded(now, reminderHour);
-  const [day, setDay] = useState<DayChoice>(() => defaultDay(now, reminderHour));
+  const todaySelectable = dayEnded(now, dayEndHour);
+  const [day, setDay] = useState<DayChoice>(() => defaultDay(now, dayEndHour));
 
   const configQuery = useQuery({
     queryKey: ["app-config"],
@@ -182,7 +182,7 @@ export function App({ email, api, reminderHour, firstMealHour, mealGapHours, onS
 
   const floors = day === "yesterday" ? data.yesterday.derived : data.today.derived;
   const questionnaireOpen = questionnaireCollapsed === null
-    ? expandQuestionnaire(now, reminderHour, data.today.meals.length, todaySubmitted)
+    ? expandQuestionnaire(now, dayEndHour, data.today.meals.length, todaySubmitted)
     : !questionnaireCollapsed;
 
   const submit = (answers: Record<string, AnswerValue>) =>
@@ -200,7 +200,7 @@ export function App({ email, api, reminderHour, firstMealHour, mealGapHours, onS
                         headingLevel={daySummaryFoldedIntoTracker ? 3 : 2}
                         onToggle={toggleDaySummary}>
       <DayPicker todayStr={todayStr} yesterdayStr={yesterdayStr} value={day}
-                 todaySelectable={todaySelectable} reminderHour={reminderHour}
+                 todaySelectable={todaySelectable} dayEndHour={dayEndHour}
                  onChange={(next) => { if (mayDiscardEdits(pendingAnswers)) setDay(next); }} />
       {/* Re-keyed per day so switching between today and yesterday reseeds the form from the
           newly selected day's saved answers. */}

@@ -38,23 +38,23 @@ def test_handler_logs_job_start_and_completion(env, monkeypatch, caplog):
     e, sent = env
     monkeypatch.setattr(nudge, "_build_env", lambda: e)
     with caplog.at_level(logging.INFO):
-        nudge.handler({"job": "reminder"}, None)
-    assert "job=reminder" in caplog.text
+        nudge.handler({"job": "last_call"}, None)
+    assert "job=last_call" in caplog.text
     assert "users=2" in caplog.text
     assert "completed" in caplog.text
 
 
-def test_reminder_targets_only_users_missing_today(env):
+def test_last_call_targets_only_users_missing_today(env):
     e, sent = env
     e.store.put_day("u1", today(), CLEAN, 1, "t")
-    nudge._reminder(e)
+    nudge._last_call(e)
     assert [(kind, target) for kind, target, _ in sent] == [("tg", "222"), ("mail", "b@gmail.com")]
 
 
-def test_reminder_sends_only_email_when_telegram_disabled(env):
+def test_last_call_sends_only_email_when_telegram_disabled(env):
     e, sent = env
     e = dataclasses.replace(e, telegram=None)
-    nudge._reminder(e)
+    nudge._last_call(e)
     assert [kind for kind, _, _ in sent] == ["mail", "mail"]
 
 
@@ -133,16 +133,6 @@ def record_meal(store, sub, day, at_time="09:10:00"):
     store.add_meal(sub, day, {"at": f"{day}T{at_time}+03:00", "carbs_choice": "carb_grade_3",
                              "vegetables": True, "fruit": False, "additions": [],
                              "small_portion": False, "second_source": None})
-
-
-def test_the_evening_reminder_does_not_yet_call_the_day_open(env):
-    """The day is still being eaten at the first reminder hour, so only the last call names a
-    tracked day open."""
-    e, sent = env
-    record_meal(e.store, "u1", today())
-    e.store.put_day("u2", today(), CLEAN, 1, "t")
-    nudge._reminder(e)
-    assert [text for _, _, text in sent] == [nudge.REMINDER_TEXT, nudge.REMINDER_TEXT]
 
 
 def test_last_call_tells_a_user_who_recorded_meals_that_the_day_is_still_open(env):

@@ -26,13 +26,13 @@ closed from the tracker, and the week's trend over recorded history.
   compares with itself when it is taken at about the same time of day. The section reads back
   where you stand in that rhythm and opens itself on the weigh-in morning. Weight is measured
   rather than scored, so it changes no day's score and raises no alert.
-- Reminders go out by email, and by Telegram where a bot token is configured: a nudge while a day
-  is still unsubmitted, a last call at the end of it that says the day is open rather than
-  untracked once its meals are logged, a weekly weigh-in reminder that skips anyone who already
-  weighed in on the day itself, an alert when a principle or the carb score stays past its limit
-  several days running, and a weekly summary of averages. The one reminder that shows up inside
-  the app is the 7-day trend chart after each submit. The account menu turns all of them off and
-  back on, so leaving the app does not mean going on being reminded by it.
+- Reminders go out by email, and by Telegram where a bot token is configured: a last call at the
+  end of a day still unsubmitted, saying the day is open rather than untracked once its meals are
+  logged, a weekly weigh-in reminder that skips anyone who already weighed in on the day itself,
+  an alert when a principle or the carb score stays past its limit several days running, and a
+  weekly summary of averages. The one reminder that shows up inside the app is the 7-day trend
+  chart after each submit. The account menu turns all of them off and back on, so leaving the app
+  does not mean going on being reminded by it.
 - Questions about the diet's principles are answered inside the app: a chat section sends each
   question to the knowledge base of the diet's source documents, hosted on
   [Summaries.AI](https://github.com/erancha/Summaries.AI-public), and shows the answer with the

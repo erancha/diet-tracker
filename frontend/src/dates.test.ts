@@ -73,11 +73,11 @@ describe("last7Days", () => {
 });
 
 describe("dayEnded", () => {
-  it("counts the day as ended from the reminder hour onward", () => {
+  it("counts the day as ended from the day-end hour onward", () => {
     expect(dayEnded(new Date(2026, 7, 18, 20, 0), 20)).toBe(true);
   });
 
-  it("counts the day as still running before the reminder hour", () => {
+  it("counts the day as still running before the day-end hour", () => {
     expect(dayEnded(new Date(2026, 7, 18, 19, 59), 20)).toBe(false);
   });
 
@@ -99,7 +99,7 @@ describe("defaultDay", () => {
     expect(defaultDay(new Date(2026, 7, 18, 21, 0), 20)).toBe("today");
   });
 
-  it("follows a different configured reminder hour", () => {
+  it("follows a different configured day-end hour", () => {
     expect(defaultDay(new Date(2026, 7, 18, 19, 0), 19)).toBe("today");
   });
 });
@@ -150,26 +150,26 @@ describe("expandMealForm", () => {
 describe("expandQuestionnaire", () => {
   const eightPm = new Date(2026, 7, 18, 20, 0);
   const beforeEight = new Date(2026, 7, 18, 19, 59);
-  const reminderHour = 20;
+  const dayEndHour = 20;
 
-  it("expands from the reminder hour on an untracked, unsubmitted day", () => {
-    expect(expandQuestionnaire(eightPm, reminderHour, 0, false)).toBe(true);
+  it("expands from the day-end hour on an untracked, unsubmitted day", () => {
+    expect(expandQuestionnaire(eightPm, dayEndHour, 0, false)).toBe(true);
   });
 
-  it("stays collapsed before the reminder hour", () => {
-    expect(expandQuestionnaire(beforeEight, reminderHour, 0, false)).toBe(false);
+  it("stays collapsed before the day-end hour", () => {
+    expect(expandQuestionnaire(beforeEight, dayEndHour, 0, false)).toBe(false);
   });
 
-  it("respects a different configured reminder hour", () => {
+  it("respects a different configured day-end hour", () => {
     expect(expandQuestionnaire(beforeEight, 19, 0, false)).toBe(true);
   });
 
   it("stays collapsed when meals were recorded", () => {
-    expect(expandQuestionnaire(eightPm, reminderHour, 2, false)).toBe(false);
+    expect(expandQuestionnaire(eightPm, dayEndHour, 2, false)).toBe(false);
   });
 
   it("stays collapsed once today is submitted", () => {
-    expect(expandQuestionnaire(eightPm, reminderHour, 0, true)).toBe(false);
+    expect(expandQuestionnaire(eightPm, dayEndHour, 0, true)).toBe(false);
   });
 });
 

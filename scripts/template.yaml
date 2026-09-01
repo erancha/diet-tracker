@@ -13,12 +13,13 @@ Parameters:
   AllowedOrigins:
     Type: CommaDelimitedList
     Default: 'http://localhost:8000'
-  ReminderHours:
-    Type: String
-    Description: Asia/Jerusalem hours of the daily fill reminders, whole hours only, passed by
-      scripts/deploy.sh; the first also drives the frontend's auto-expanded evening questionnaire
-      via the FirstReminderHour output. The night's last call runs on its own half-hour schedule
-      past these
+  DayEndHour:
+    Type: Number
+    Default: 20
+    Description: Asia/Jerusalem hour from which the day counts as over for the day-end
+      questionnaire; the frontend enables today in the day picker and auto-expands an untracked
+      day's questionnaire from this hour on. The night's last-call nudge fires later, on its own
+      half-hour schedule
   FirstMealHour:
     Type: Number
     Default: 11
@@ -391,23 +392,11 @@ Resources:
                 Action: lambda:InvokeFunction
                 Resource: !GetAtt NudgeFunction.Arn
 
-  ReminderSchedule:
-    Type: AWS::Scheduler::Schedule
-    Properties:
-      ScheduleExpression: !Sub 'cron(0 ${ReminderHours} * * ? *)'
-      ScheduleExpressionTimezone: Asia/Jerusalem
-      FlexibleTimeWindow:
-        Mode: 'OFF'
-      Target:
-        Arn: !GetAtt NudgeFunction.Arn
-        RoleArn: !GetAtt SchedulerRole.Arn
-        Input: '{"job": "reminder"}'
-
   LastCallSchedule:
     Type: AWS::Scheduler::Schedule
     Properties:
       # Half past eleven is the last slot at which the day being asked about is still the running
-      # one, so it carries its own minute rather than joining the whole-hour ReminderHours.
+      # one — late enough to be the day's single fill nudge, and still inside the day it asks about.
       ScheduleExpression: 'cron(30 23 * * ? *)'
       ScheduleExpressionTimezone: Asia/Jerusalem
       FlexibleTimeWindow:
@@ -511,8 +500,8 @@ Outputs:
     Value: !Sub 'https://${Api}.execute-api.${AWS::Region}.amazonaws.com'
   FirstMealHour:
     Value: !Ref FirstMealHour
-  FirstReminderHour:
-    Value: !Select [0, !Split [',', !Ref ReminderHours]]
+  DayEndHour:
+    Value: !Ref DayEndHour
   FrontendBucket:
     Value: !Ref FrontendBucket
   FrontendUrl:

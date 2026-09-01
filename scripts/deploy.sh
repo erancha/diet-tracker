@@ -48,8 +48,8 @@ deploy_cognito() {
 
 # Every hour a schedule's cron is built from is passed on each deploy: CloudFormation keeps the
 # previous value of any parameter a deploy leaves out, so a template default is inert once the
-# stack exists. The reminder hours live here as the one declaration; the weigh-in slot is declared
-# in config/app.json and lifted out because an EventBridge cron is fixed when the stack deploys.
+# stack exists. The weigh-in slot is declared in config/app.json and lifted out here because an
+# EventBridge cron is fixed when the stack deploys.
 app_config() {
   python3 -c "import json; print(json.load(open('config/app.json'))$1)"
 }
@@ -68,7 +68,6 @@ deploy_main() {
     --parameter-overrides SesSender="$SES_SENDER" AllowedOrigins="$origins" \
       UserPoolId="$user_pool_id" \
       UserPoolClientId="$user_pool_client_id" \
-      ReminderHours="20" \
       WeighInWeekday="$(app_config "['weight']['weigh_in']['weekday']")" \
       WeighInHour="$(app_config "['weight']['weigh_in']['hour']")" \
       RagApiUrl="${RAG_API_URL:-}" \
@@ -89,7 +88,7 @@ fi
 HOSTED_UI_DOMAIN=$(stack_output "${APP}-cognito" HostedUiDomain)
 CLIENT_ID=$(stack_output "${APP}-cognito" UserPoolClientId)
 API_URL=$(stack_output "$APP" ApiUrl)
-FIRST_REMINDER_HOUR=$(stack_output "$APP" FirstReminderHour)
+DAY_END_HOUR=$(stack_output "$APP" DayEndHour)
 FIRST_MEAL_HOUR=$(stack_output "$APP" FirstMealHour)
 MEAL_GAP_HOURS=$(stack_output "$APP" MealGapHours)
 # public/ may be absent on a fresh clone — its only content is this gitignored file.
@@ -103,7 +102,7 @@ window.CONFIG = {
   apiUrl: "$API_URL",
   redirectUri: window.location.origin + "/",
   rootEmail: "${ALLOWED_EMAILS%%,*}",
-  firstReminderHour: ${FIRST_REMINDER_HOUR},
+  dayEndHour: ${DAY_END_HOUR},
   firstMealHour: ${FIRST_MEAL_HOUR},
   mealGapHours: ${MEAL_GAP_HOURS},
 };

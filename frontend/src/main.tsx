@@ -38,7 +38,7 @@ try {
       <StrictMode>
         <ErrorBoundary>
           <QueryClientProvider client={new QueryClient()}>
-            <App email={email} api={api} reminderHour={cfg.firstReminderHour}
+            <App email={email} api={api} dayEndHour={cfg.dayEndHour}
                  firstMealHour={cfg.firstMealHour} mealGapHours={cfg.mealGapHours}
                  onSignOut={() => signOut(cfg)} />
           </QueryClientProvider>

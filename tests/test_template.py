@@ -61,7 +61,7 @@ def test_every_scheduled_job_name_is_one_the_nudge_handler_dispatches():
     scheduled = {json.loads(resource["Properties"]["Target"]["Input"])["job"]
                  for resource in template["Resources"].values()
                  if resource["Type"] == "AWS::Scheduler::Schedule"}
-    assert scheduled == {"reminder", "last_call", "rules", "weekly", "weigh_in"}
+    assert scheduled == {"last_call", "rules", "weekly", "weigh_in"}
 
 
 def test_every_parameter_a_schedule_reads_is_passed_on_deploy():

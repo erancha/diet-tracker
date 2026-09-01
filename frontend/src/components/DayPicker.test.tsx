@@ -7,7 +7,7 @@ describe("DayPicker", () => {
     todayStr: "2026-08-18",
     yesterdayStr: "2026-08-17",
     value: "yesterday" as const,
-    reminderHour: 20,
+    dayEndHour: 20,
     onChange: () => {},
   };
 
