@@ -416,11 +416,11 @@ td.view-day { cursor: pointer; }
 .weight-entries .weight-entry-kg { flex: 1; font-weight: 600; }
 .weight-entries button { padding: 0.35rem; margin-block: -0.35rem; }
 
-/* The knowledge-base chat: the composer as the section's first row, then the transcript newest
-   first — user and assistant turns as bubbles, each answer's source documents in one muted line
-   beneath it. The section follows the history table; as with .history h2, the heading's own
-   margin is what shows through, so the extra rem of separation rides on the restated browser
-   default. */
+/* The knowledge-base chat: the composer as the section's first row, then the whole transcript
+   newest first as one question bubble per turn, the answer bubble with its muted source line
+   unfolding beneath the question that is clicked open. The section follows the history table; as
+   with .history h2, the heading's own margin is what shows through, so the extra rem of
+   separation rides on the restated browser default. */
 .chat-section h2 { margin-top: calc(0.83em + 1rem); }
 .chat-messages { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.5rem; }
 .chat-messages li { border-radius: 8px; padding: 0.5rem 0.8rem; max-width: 85%; }
@@ -429,6 +429,12 @@ td.view-day { cursor: pointer; }
    keeps the leading edge. */
 .chat-user { align-self: flex-start; background: #e8f0e9; display: flex; align-items: center; gap: 0.4rem; }
 .chat-user p { flex: 1; }
+/* The question doubles as its answer's toggle: a text-styled button, so the bubble keeps reading
+   as conversation while the whole row stays keyboard-reachable. */
+.chat-question {
+  --btn-bg: transparent; --btn-fg: inherit; --btn-border: transparent;
+  flex: 1; padding: 0; border-radius: 0; font-size: inherit; text-align: start; white-space: pre-wrap;
+}
 .chat-assistant { align-self: flex-end; background: #fff; border: 1px solid #e0e0da; }
 .chat-sources { margin-top: 0.35rem !important; font-size: 0.8rem; opacity: 0.7; }
 .chat-pending { opacity: 0.7; }

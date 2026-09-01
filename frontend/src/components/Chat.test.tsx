@@ -70,32 +70,53 @@ describe("Chat", () => {
     expect(texts).toEqual(["שאלה חדשה", "שאלה 1"]);
   });
 
-  it("shows 10 turns by default and widens to 20 or all on request", async () => {
+  it("opens with every stored answer collapsed behind its question", async () => {
+    render(<Chat api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(2) }) })} />);
+    await screen.findByText("שאלה 2");
+
+    expect(screen.queryByText("תשובה 2")).not.toBeInTheDocument();
+    expect(screen.queryByText("תשובה 1")).not.toBeInTheDocument();
+  });
+
+  it("renders the whole transcript with no turn-count picker", async () => {
     render(<Chat api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(25) }) })} />);
     await screen.findByText("שאלה 25");
 
-    expect(screen.getAllByText(/^שאלה \d+$/)).toHaveLength(10);
-
-    await userEvent.click(screen.getByRole("radio", { name: "20" }));
-    expect(screen.getAllByText(/^שאלה \d+$/)).toHaveLength(20);
-
-    await userEvent.click(screen.getByRole("radio", { name: "הכל" }));
     expect(screen.getAllByText(/^שאלה \d+$/)).toHaveLength(25);
-  });
-
-  it("offers no limit choice while the transcript fits the default", async () => {
-    render(<Chat api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(10) }) })} />);
-    await screen.findByText("שאלה 10");
-
     expect(screen.queryByRole("radio")).not.toBeInTheDocument();
   });
 
-  it("offers all only when the transcript outgrows 20", async () => {
-    render(<Chat api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(15) }) })} />);
-    await screen.findByText("שאלה 15");
+  it("toggles an answer and its sources open and closed by its question, without the backend", async () => {
+    const stored = { question: "שאלה", answer: "תשובה", at: "2026-09-01T10:00:00",
+                     sources: [{ fileName: "מדריך.pdf", score: 0.83 }] };
+    const chatApi = api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: [stored] }) });
+    render(<Chat api={chatApi} />);
+    const question = await screen.findByRole("button", { name: "שאלה", expanded: false });
 
-    expect(screen.getByRole("radio", { name: "20" })).toBeInTheDocument();
-    expect(screen.queryByRole("radio", { name: "הכל" })).not.toBeInTheDocument();
+    await userEvent.click(question);
+    expect(screen.getByText("תשובה")).toBeInTheDocument();
+    expect(screen.getByText(/מדריך\.pdf/)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "שאלה", expanded: true }));
+    expect(screen.queryByText("תשובה")).not.toBeInTheDocument();
+
+    // Toggling reveals data the transcript load already holds — no request per click.
+    expect(chatApi.getChatTranscript).toHaveBeenCalledTimes(1);
+    expect(chatApi.ask).not.toHaveBeenCalled();
+  });
+
+  it("shows a fresh answer expanded while stored turns stay collapsed", async () => {
+    const chatApi = api({
+      getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(1) }),
+      ask: vi.fn().mockResolvedValue({ answer: "תשובה טרייה", sources: [], at: "2026-09-01T11:00:00" }),
+    });
+    render(<Chat api={chatApi} />);
+    await screen.findByText("שאלה 1");
+
+    await ask("שאלה טרייה");
+
+    expect(await screen.findByText("תשובה טרייה")).toBeInTheDocument();
+    expect(screen.queryByText("תשובה 1")).not.toBeInTheDocument();
   });
 
   it("shows what failed when the transcript cannot be loaded", async () => {
