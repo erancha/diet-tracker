@@ -87,6 +87,7 @@ Globals:
         SES_SENDER: !Ref SesSender
         USER_POOL_ID: !Ref UserPoolId
         CHAT_QUOTA_TABLE: !Ref ChatQuotaTable
+        CHAT_HISTORY_TABLE: !Ref ChatHistoryTable
         CHAT_DAILY_LIMIT: !Ref ChatDailyLimit
         RAG_API_URL: !Ref RagApiUrl
         RAG_API_KEY_PARAM: !Ref RagApiKeyParam
@@ -148,6 +149,23 @@ Resources:
       TimeToLiveSpecification:
         AttributeName: expires_at
         Enabled: true
+
+  # One item per answered chat turn, keyed by user sub with the answer's UTC timestamp as the
+  # sort key. No TTL: the transcript is deliberately kept indefinitely.
+  ChatHistoryTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: pk
+          KeyType: HASH
+        - AttributeName: sk
+          KeyType: RANGE
+      AttributeDefinitions:
+        - AttributeName: pk
+          AttributeType: S
+        - AttributeName: sk
+          AttributeType: S
 
   # Holds both item kinds of the weight log: one measurement per calendar day under its ISO date,
   # and the user's single target under the sort key "target", which sorts past every date.
@@ -285,9 +303,23 @@ Resources:
             ApiId: !Ref Api
             Method: POST
             Path: /chat
+        ChatTranscript:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref Api
+            Method: GET
+            Path: /chat
+        ChatDelete:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref Api
+            Method: DELETE
+            Path: /chat/{at}
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref ChatQuotaTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ChatHistoryTable
         - !Ref NotifyPolicy
 
   NudgeFunction:

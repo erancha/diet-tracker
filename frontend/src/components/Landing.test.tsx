@@ -44,6 +44,16 @@ describe("Landing", () => {
     }
   });
 
+  it("mentions the chat answering questions from the diet's source documents", () => {
+    const { container } = render(<Landing onSignIn={() => {}} />);
+
+    const summaryText = [...container.querySelectorAll(".landing-summary li")]
+      .map((item) => item.textContent)
+      .join(" ");
+    expect(summaryText).toContain("צ'אט");
+    expect(summaryText).toContain("מסמכי המקור");
+  });
+
   it("links to the source repository", () => {
     render(<Landing onSignIn={() => {}} />);
 

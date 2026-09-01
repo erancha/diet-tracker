@@ -3,8 +3,8 @@
 
 import { isUnexpired, reauthenticate, type Tokens } from "./auth";
 import type { AppConfig } from "./config";
-import type { AnswerValue, ChatAnswer, DayPayload, HistoryResponse, NewMeal, NotificationSettings,
-  SubmitResult, WeightPayload } from "./types";
+import type { AnswerValue, ChatAnswer, ChatTranscript, DayPayload, HistoryResponse, NewMeal,
+  NotificationSettings, SubmitResult, WeightPayload } from "./types";
 
 /** Backend request rejected; the message keeps the method, path, status, and body for diagnosis. */
 export class ApiError extends Error {
@@ -44,6 +44,8 @@ export interface Api {
   deleteWeight(date: string): Promise<WeightPayload>;
   setMuted(muted: boolean): Promise<NotificationSettings>;
   ask(question: string): Promise<ChatAnswer>;
+  getChatTranscript(): Promise<ChatTranscript>;
+  deleteChatTurn(at: string): Promise<{ at: string }>;
 }
 
 export function createApi(
@@ -92,5 +94,9 @@ export function createApi(
     deleteWeight: (date) => request("DELETE", `/weight/${date}`),
     setMuted: (muted) => request("PUT", "/notifications", { muted }),
     ask: (question) => request("POST", "/chat", { question }),
+    getChatTranscript: () => request("GET", "/chat"),
+    // The timestamp's '+' and ':' must reach the route as the literal characters the turn is
+    // stored under, so it travels percent-encoded.
+    deleteChatTurn: (at) => request("DELETE", `/chat/${encodeURIComponent(at)}`),
   };
 }

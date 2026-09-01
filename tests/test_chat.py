@@ -14,7 +14,14 @@ def env(monkeypatch, ddb):
                      KeySchema=[{"AttributeName": "pk", "KeyType": "HASH"}],
                      AttributeDefinitions=[{"AttributeName": "pk", "AttributeType": "S"}],
                      BillingMode="PAY_PER_REQUEST")
+    ddb.create_table(TableName="chat_history",
+                     KeySchema=[{"AttributeName": "pk", "KeyType": "HASH"},
+                                {"AttributeName": "sk", "KeyType": "RANGE"}],
+                     AttributeDefinitions=[{"AttributeName": "pk", "AttributeType": "S"},
+                                           {"AttributeName": "sk", "AttributeType": "S"}],
+                     BillingMode="PAY_PER_REQUEST")
     monkeypatch.setenv("CHAT_QUOTA_TABLE", "chat_quota")
+    monkeypatch.setenv("CHAT_HISTORY_TABLE", "chat_history")
     monkeypatch.setenv("CHAT_DAILY_LIMIT", "2")
     monkeypatch.setenv("RAG_API_URL", "https://rag.example/prod")
     monkeypatch.setenv("RAG_API_KEY_PARAM", "/diet-tracker/rag/api-key")
@@ -43,8 +50,10 @@ def test_returns_the_upstream_answer_and_sources(env, monkeypatch):
     monkeypatch.setattr(chat_handler.chat, "ask", fake_ask)
     response = chat_handler.handler(request({"question": "כמה פחמימות מותר ביום?"}), None)
     assert response["statusCode"] == 200
-    assert body_of(response) == {"answer": "תשובה מהמסמכים",
-                                 "sources": [{"fileName": "מדריך.pdf", "score": 0.83}]}
+    body = body_of(response)
+    assert "T" in body.pop("at")
+    assert body == {"answer": "תשובה מהמסמכים",
+                    "sources": [{"fileName": "מדריך.pdf", "score": 0.83}]}
     assert asked == {"api_url": "https://rag.example/prod", "key": "the-key",
                      "question": "כמה פחמימות מותר ביום?"}
 
@@ -79,6 +88,78 @@ def test_upstream_failure_maps_to_502(env, monkeypatch):
 
     monkeypatch.setattr(chat_handler.chat, "ask", failing_ask)
     assert chat_handler.handler(request({"question": "שאלה"}), None)["statusCode"] == 502
+
+
+def transcript(sub="u1"):
+    return body_of(chat_handler.handler({
+        "routeKey": "GET /chat",
+        "requestContext": {"authorizer": {"jwt": {"claims": {"sub": sub, "email": "a@gmail.com"}}}},
+    }, None))["turns"]
+
+
+def test_a_successful_answer_is_persisted_for_its_user(env, monkeypatch):
+    sources = [{"fileName": "מדריך.pdf", "score": 0.83}]
+    monkeypatch.setattr(chat_handler.chat, "ask",
+                        lambda api_url, key, question: {"answer": "תשובה", "sources": sources})
+    chat_handler.handler(request({"question": "שאלה?"}), None)
+
+    (turn,) = transcript()
+    assert turn["question"] == "שאלה?"
+    assert turn["answer"] == "תשובה"
+    assert turn["sources"] == sources
+    assert "T" in turn["at"]
+    assert transcript(sub="other") == []
+
+
+def test_transcript_is_returned_newest_first(env, monkeypatch):
+    monkeypatch.setattr(chat_handler.chat, "ask",
+                        lambda api_url, key, question: {"answer": f"ת:{question}", "sources": []})
+    chat_handler.handler(request({"question": "ראשונה"}), None)
+    chat_handler.handler(request({"question": "שנייה"}), None)
+
+    assert [turn["question"] for turn in transcript()] == ["שנייה", "ראשונה"]
+
+
+def test_failed_requests_persist_no_turn(env, monkeypatch):
+    def failing_ask(api_url, key, question):
+        raise urllib.error.URLError("connection refused")
+
+    monkeypatch.setattr(chat_handler.chat, "ask", failing_ask)
+    chat_handler.handler(request({}), None)                     # 400
+    chat_handler.handler(request({"question": "שאלה"}), None)   # 502
+
+    assert transcript() == []
+
+
+def delete_request(at, sub="u1"):
+    return {
+        "routeKey": "DELETE /chat/{at}",
+        "pathParameters": {"at": at},
+        "requestContext": {"authorizer": {"jwt": {"claims": {"sub": sub, "email": "a@gmail.com"}}}},
+    }
+
+
+def test_a_turn_can_be_deleted_by_its_timestamp(env, monkeypatch):
+    monkeypatch.setattr(chat_handler.chat, "ask",
+                        lambda api_url, key, question: {"answer": "ת", "sources": []})
+    at = body_of(chat_handler.handler(request({"question": "שאלה?"}), None))["at"]
+
+    response = chat_handler.handler(delete_request(at), None)
+    assert response["statusCode"] == 200
+    assert transcript() == []
+
+
+def test_deleting_a_missing_turn_is_404(env):
+    assert chat_handler.handler(delete_request("2026-09-01T10:00:00+00:00"), None)["statusCode"] == 404
+
+
+def test_a_user_cannot_delete_another_users_turn(env, monkeypatch):
+    monkeypatch.setattr(chat_handler.chat, "ask",
+                        lambda api_url, key, question: {"answer": "ת", "sources": []})
+    at = body_of(chat_handler.handler(request({"question": "שאלה?"}), None))["at"]
+
+    assert chat_handler.handler(delete_request(at, sub="other"), None)["statusCode"] == 404
+    assert len(transcript()) == 1
 
 
 def test_ask_posts_the_question_with_the_api_key(monkeypatch):

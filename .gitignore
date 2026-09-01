@@ -12,9 +12,8 @@ build/
 docs/superpowers/*
 .superpowers/
 
-# AI-tooling working files stay local, consistent with the sibling portfolio repos
+# AI-session working files stay local; CLAUDE.md is tracked as contributor documentation
 .claude/
-CLAUDE.md
 
 # Session AWS credentials — tracked only as aws-config.example.sh
 /scripts/aws-config.sh

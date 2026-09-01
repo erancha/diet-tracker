@@ -4,7 +4,12 @@ money per use, so the quota is consumed before the upstream call and the request
 the limit is refused without spending anything.
 
 The caller's identity comes exclusively from the JWT claims the API Gateway authorizer
-verified — the request body never names a user."""
+verified — the request body never names a user.
+
+Each answered turn is stored per user (common.chat_history) and served back by GET /chat, so
+the conversation survives reloads and follows the user across devices. DELETE /chat/{at}
+permanently removes one of the caller's own turns by its timestamp; the quota already spent on
+the deleted question is unaffected."""
 
 import json
 import os
@@ -12,7 +17,7 @@ import urllib.error
 
 import boto3
 
-from common import chat, quota
+from common import chat, chat_history, quota
 from common.dates import today
 from common.log import get_logger
 from common.webapi import response
@@ -27,7 +32,15 @@ def handler(event, context):
     logger.info("request route=%s sub=%s", route, sub)
     if route == "POST /chat":
         return _ask(sub, json.loads(event["body"]))
+    if route == "GET /chat":
+        return response(200, {"turns": chat_history.turns(_history_table(), sub)})
+    if route == "DELETE /chat/{at}":
+        return _delete_turn(sub, event["pathParameters"]["at"])
     raise ValueError(f"unhandled route {route!r}")
+
+
+def _history_table():
+    return boto3.resource("dynamodb").Table(os.environ["CHAT_HISTORY_TABLE"])
 
 
 def _ask(sub, body):
@@ -46,4 +59,15 @@ def _ask(sub, body):
     except (urllib.error.URLError, TimeoutError) as error:
         logger.error("rag service call failed: %s", error)
         return response(502, {"error": "שירות המענה אינו זמין כרגע — נסו שוב מאוחר יותר"})
-    return response(200, {"answer": answer["answer"], "sources": answer["sources"]})
+    at = chat_history.append(_history_table(), sub, question.strip(), answer["answer"], answer["sources"])
+    return response(200, {"answer": answer["answer"], "sources": answer["sources"], "at": at})
+
+
+def _delete_turn(sub, at):
+    """Removes one of the caller's turns by its timestamp. The conditional delete is scoped to
+    the caller's key, so someone else's timestamp reads as a turn that does not exist."""
+    try:
+        chat_history.delete(_history_table(), sub, at)
+    except KeyError:
+        return response(404, {"error": f"no turn stored at {at}"})
+    return response(200, {"at": at})

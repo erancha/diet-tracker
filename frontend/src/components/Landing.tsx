@@ -45,6 +45,9 @@ export function Landing({ onSignIn }: { onSignIn: () => void }) {
           תזכורות והתראות נשלחות במייל: תזכורת כשדיווח של יום חסר, תזכורת שקילה שבועית, התראה
           כשציון הפחמימות חורג כמה ימים ברצף וסיכום שבועי
         </li>
+        <li>
+          שאלות על עקרונות התוכנית נענות בצ'אט בתוך האפליקציה, מתוך מסמכי המקור של הדיאטה
+        </li>
       </ul>
       <button type="button" onClick={onSignIn}>התחברות עם Google</button>
       {/* Each principle's bold initial opens its row, so the acronym reads down the first column. */}

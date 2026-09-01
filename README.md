@@ -33,14 +33,22 @@ closed from the tracker, and the week's trend over recorded history.
   several days running, and a weekly summary of averages. The one reminder that shows up inside
   the app is the 7-day trend chart after each submit. The account menu turns all of them off and
   back on, so leaving the app does not mean going on being reminded by it.
+- Questions about the diet's principles are answered inside the app: a chat section sends each
+  question to the knowledge base of the diet's source documents, hosted on
+  [Summaries.AI](https://github.com/erancha/Summaries.AI-public), and shows the answer with the
+  documents it drew on. Questions are capped per user per day, because each one spends money
+  upstream. Every answered turn is stored per user, so the conversation survives reloads and
+  follows its user across devices.
 
 ## Tech stack
 
-- **Backend** — Python 3.13 Lambdas behind an HTTP API, four DynamoDB tables, EventBridge
+- **Backend** — Python 3.13 Lambdas behind an HTTP API, six DynamoDB tables, EventBridge
   Scheduler (Asia/Jerusalem)
 - **Frontend** — React (TypeScript + Vite) RTL app on S3 + CloudFront, Recharts, TanStack Query
 - **Auth** — Cognito Google sign-in gated by a small allowlist
 - **Notifications** — SES email, optional Telegram bot
+- **Knowledge-base chat** — Summaries.AI RAG API over the diet documents; its API key lives in
+  SSM Parameter Store and is read per request, so rotating it needs no redeploy
 
 ## Architecture
 
@@ -55,9 +63,12 @@ graph LR
     U((User)) --> FE[React RTL frontend<br/>S3 + CloudFront]
     FE -->|Google sign-in| COG[Cognito]
     COG -->|allowlist| PRE[presignup Lambda]
-    FE -->|JWT| API[HTTP API<br/>/days · /meals · /weight]
+    FE -->|JWT| API[HTTP API<br/>/days · /meals · /weight · /chat]
     API --> APIL[api Lambda]
+    API --> CHATL[chat Lambda]
     APIL --> DB[(DynamoDB<br/>days · meals · nudge state · weights)]
+    CHATL --> CDB[(DynamoDB<br/>chat quota · chat history)]
+    CHATL --> RAG[Summaries.AI<br/>RAG API]
     SCH[EventBridge Scheduler<br/>Asia/Jerusalem] --> NUDGE[nudge Lambda]
     NUDGE --> DB
     NUDGE --> SES[SES email]

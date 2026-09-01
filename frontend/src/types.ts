@@ -191,4 +191,20 @@ export interface ChatAnswer {
   answer: string;
   // Empty when no document matched the question.
   sources: ChatSource[];
+  // UTC ISO timestamp the server stored the turn under — its identity for a later delete.
+  at: string;
+}
+
+// One stored Q&A exchange from the user's chat history.
+export interface ChatTurn {
+  question: string;
+  answer: string;
+  sources: ChatSource[];
+  // UTC ISO timestamp the answer arrived at — the transcript's sort key.
+  at: string;
+}
+
+export interface ChatTranscript {
+  // Newest first, the order the chat renders them in.
+  turns: ChatTurn[];
 }
