@@ -255,7 +255,9 @@ describe("Chat", () => {
     expect(screen.queryByRole("button", { name: "שאלה 1" })).not.toBeInTheDocument();
     const questions = [...document.querySelectorAll(".chat-question")].map((el) => el.textContent);
     expect(questions).toEqual(
-      ["שאלה 2", "השאלה המקורית: שאלה 1\nהתשובה: תשובה 1\nשאלת המשך: ומה עוד?"]);
+      ["שאלה 2", "השאלה המקורית: שאלה 1\n\nהתשובה: תשובה 1\n\nשאלת המשך: ומה עוד?"]);
+    const labels = [...document.querySelectorAll(".chat-question strong")].map((el) => el.textContent);
+    expect(labels).toEqual(["השאלה המקורית:", "התשובה:", "שאלת המשך:"]);
   });
 
   it("extends an already-composed chain without re-wrapping it", async () => {

@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useState, type ReactNode } from "react";
 import { ApiError, type Api } from "../api";
 import type { ChatSampleQuestion, ChatTurn } from "../types";
 import { Icon } from "./Icon";
@@ -8,6 +8,9 @@ import { Icon } from "./Icon";
 const QUOTA_MESSAGE = "מכסת השאלות היומית נוצלה — אפשר לשאול שוב מחר";
 
 const ORIGINAL_LABEL = "השאלה המקורית:";
+const ANSWER_LABEL = "התשובה:";
+const FOLLOW_UP_LABEL = "שאלת המשך:";
+const CHAIN_LABELS = [ORIGINAL_LABEL, ANSWER_LABEL, FOLLOW_UP_LABEL];
 
 // A follow-up rides the same single-question API as a fresh question: the prior conversation is
 // folded into the question text itself, labeled so the original question, each answer, and the
@@ -17,7 +20,25 @@ function composeFollowUp(target: ChatTurn, question: string): string {
   const chain = target.question.startsWith(ORIGINAL_LABEL)
     ? target.question
     : `${ORIGINAL_LABEL} ${target.question}`;
-  return `${chain}\nהתשובה: ${target.answer}\nשאלת המשך: ${question}`;
+  return `${chain}\n${ANSWER_LABEL} ${target.answer}\n${FOLLOW_UP_LABEL} ${question}`;
+}
+
+// A chained question stays one plain string in storage; only its display dresses it up — each
+// chain label bold and preceded by a blank line, relying on the question button's pre-wrap.
+// Answers folded into the chain may span lines themselves, so only lines opening with a label
+// are treated as section starts.
+function renderQuestion(text: string): ReactNode {
+  if (!text.startsWith(ORIGINAL_LABEL)) return text;
+  return text.split("\n").map((line, index) => {
+    const label = CHAIN_LABELS.find((candidate) => line.startsWith(candidate));
+    return (
+      <Fragment key={index}>
+        {index > 0 && (label ? "\n\n" : "\n")}
+        {label ? <strong>{label}</strong> : null}
+        {label ? line.slice(label.length) : line}
+      </Fragment>
+    );
+  });
 }
 
 // Q&A over the diet knowledge base: the composer on top, then the user's whole stored
@@ -166,7 +187,7 @@ export function Chat({ api, sampleQuestions }: {
               <li className="chat-user">
                 <button type="button" className="chat-question"
                   aria-expanded={expanded.has(turn.at)}
-                  onClick={() => toggle(turn.at)}>{turn.question}</button>
+                  onClick={() => toggle(turn.at)}>{renderQuestion(turn.question)}</button>
                 <button type="button" className="icon-only delete-turn"
                   aria-label={`מחיקת השאלה ${turn.question}`}
                   onClick={() => void remove(turn)}><Icon name="remove" /></button>
