@@ -227,10 +227,10 @@ export function Chat({ api, sampleQuestions }: {
                       )}
                     </>
                   )}
-                  <button type="button" className="icon-only reply-turn"
+                  <button type="button" className="reply-turn"
                     aria-label={`שאלת המשך על ${turn.question}`}
                     aria-pressed={replyTo?.at === turn.at}
-                    onClick={() => setReplyTo(turn)}><Icon name="reply" /></button>
+                    onClick={() => setReplyTo(turn)}>המשך</button>
                 </li>
               )}
               {replyTo?.at === turn.at && (

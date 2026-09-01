@@ -447,11 +447,13 @@ td.view-day { cursor: pointer; }
   line-clamp: 3; overflow: hidden;
 }
 .chat-assistant { align-self: flex-end; background: #fff; border: 1px solid #e0e0da; }
-/* The citations' more/less toggle: link-styled text at the source line's size, so it reads as
-   part of the answer bubble's muted footer rather than as a full control. */
+/* The citations' more/less toggle: underlined link text at the source line's size, so it stays
+   part of the answer bubble's muted footer rather than a full control. The underline carries the
+   clickability — accent green alone also colors non-interactive text like headings and values. */
 .chat-sources-toggle {
   --btn-bg: transparent; --btn-fg: var(--accent); --btn-border: transparent;
   display: block; padding: 0; margin-top: 0.35rem; border-radius: 0; font-size: 0.8rem;
+  text-decoration: underline;
 }
 /* The citations table sizes to its two short columns: the global table min-width serves the wide
    history grid and would stretch this past its answer bubble, so it is dropped here. */
@@ -473,7 +475,13 @@ td.view-day { cursor: pointer; }
 .chat .reply-chip { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.35rem;
                     font-size: 0.85rem; opacity: 0.85; }
 .chat .reply-chip span { flex: 1; }
-.chat .reply-turn { margin-top: 0.35rem; padding: 0.25rem; }
+/* Worded rather than glyph-based: a reply arrow reads as escaping the window, not as continuing
+   the exchange, so the control names the action. Outlined like the quiet variant to read as an
+   optional next step, not the bubble's primary content. */
+.chat .reply-turn {
+  --btn-bg: transparent; --btn-fg: var(--accent); --btn-border: #b6d0b8;
+  display: block; margin-top: 0.5rem; padding: 0.25rem 0.8rem; font-size: 0.85rem;
+}
 /* The pressed reply control keeps the question bubble's tint, tying the relocated composer below
    back to the control that summoned it. */
 .chat .reply-turn[aria-pressed="true"] { --btn-bg: #e8f0e9; --btn-border: currentColor; }
