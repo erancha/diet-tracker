@@ -18,6 +18,9 @@ export const fixtureQuestionnaire: Questionnaire = {
       type: "single",
       text: "שתיה",
       unit: "ליטר",
+      // Above the rule's bound, so the middle choice exercises the warn-floor styling alone
+      // while the bottom one still carries the full violation.
+      warn_below: 4,
       panel_title: "שתיה (ליטרים)",
       choices: [
         { id: "low", label: "פחות מ-2.5 ליטר !!", value: 2, bound: true },

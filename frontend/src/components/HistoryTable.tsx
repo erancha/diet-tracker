@@ -116,11 +116,13 @@ export function HistoryTable({ questionnaire, days, today, deletableDates, viewe
                   const viewable = q.type === "points";
                   const violating = isViolating(questionnaire, q.id, value);
                   // The score column signals a heavy day with red text alone; the violation
-                  // background stays on the answer columns.
+                  // background stays on the answer columns, where a value under its question's
+                  // warn floor reddens without it.
                   const classes = [
                     ...(q.type === "points"
                       ? [violating && "heavy-day", viewable && "view-day"]
-                      : [violating && "violation"]),
+                      : [violating && "violation",
+                         q.warn_below !== undefined && value < q.warn_below && "shortfall"]),
                     deleteClass,
                   ].filter(Boolean).join(" ");
                   return (

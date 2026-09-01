@@ -219,6 +219,9 @@ th { vertical-align: top; font-size: calc(var(--cell-font-size) - 1pt); }
    opens the page and needs no such separation. */
 .history h2 { margin-top: calc(0.83em + 1rem); }
 td.violation { background: #ffebee; color: var(--danger); }
+/* An answer under its question's warn floor: red text alone, a day-by-day nudge milder than the
+   background a rule crossing earns. */
+td.shortfall { color: var(--danger); }
 /* A heavy day or meal reads as red text pinned to the price that earned it: the history score
    cell, the dashboard total, and a meal's points. In the dashboard it reaches the figure rather
    than the whole item, so the alarm sits on the number its label merely names, and its

@@ -42,6 +42,9 @@ export interface Question {
   // up — where a lighter helping is a distinction worth drawing and the reduced weight still
   // lands above zero.
   small_portion?: { label: string; from_value: number; percent: number };
+  // Display floor: history answers below it redden on their own, day by day — unlike a rule's
+  // bound, which alarms only after its consecutive-days streak.
+  warn_below?: number;
   // What the question measures. Named once in the day-scope heading, so the values under it are
   // free to read as bare numbers instead of repeating it per row.
   unit?: string;

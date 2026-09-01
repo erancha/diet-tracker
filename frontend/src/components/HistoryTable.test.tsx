@@ -191,6 +191,16 @@ describe("HistoryTable", () => {
     expect(rowDates()).toEqual([]);
   });
 
+  it("reddens an answer short of its question's warn floor, without the violation background", () => {
+    render(<HistoryTable questionnaire={fixtureQuestionnaire}
+      days={[{ date: "2026-08-17", answers: { drinking: 3 } },
+             { date: "2026-08-16", answers: { drinking: 4 } }]} {...defaults} />);
+    const short = screen.getByText("3");
+    expect(short).toHaveClass("shortfall");
+    expect(short).not.toHaveClass("violation");
+    expect(screen.getByText("4")).not.toHaveClass("shortfall");
+  });
+
   it("reddens a score reaching the day rule; the violation background never reaches the score column", () => {
     render(<HistoryTable questionnaire={trackerQuestionnaire}
       days={[{ date: "2026-08-16", answers: { carbs: 8, drinking: 3 } },
