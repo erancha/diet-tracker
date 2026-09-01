@@ -66,6 +66,17 @@ describe("Header", () => {
     expect(screen.queryByRole("menuitem")).toBeNull();
   });
 
+  it("swaps the trigger glyph from the menu bars to a close mark while the menu is open", async () => {
+    render(<Header {...props} />);
+
+    const trigger = screen.getByRole("button", { name: "תפריט חשבון" });
+    expect(trigger.querySelector("path")).toHaveAttribute("d", "M3 6h18");
+
+    await openMenu();
+
+    expect(trigger.querySelector("path")).toHaveAttribute("d", "M18 6 6 18");
+  });
+
   it("marks the trigger expanded while its menu is open, which is what the open state paints from",
      async () => {
     render(<Header {...props} />);

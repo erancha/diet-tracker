@@ -50,7 +50,7 @@ export function Header({ email, muted, onSignOut, onSetMuted, activeViolations }
             <button type="button" className="icon-only account-trigger" aria-haspopup="menu"
                     aria-expanded={menuOpen} aria-label="תפריט חשבון"
                     onClick={() => setMenuOpen((open) => !open)}>
-              <Icon name="menu" />
+              <Icon name={menuOpen ? "close" : "menu"} />
             </button>
           </span>
           {menuOpen && (

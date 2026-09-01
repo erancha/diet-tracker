@@ -31,6 +31,11 @@ header .account-actions { display: flex; align-items: center; gap: 0.4rem; }
 /* The account box anchors the menu that drops out of it, so the menu can leave the flow rather
    than push the page down for as long as it is open. */
 header .account { position: relative; }
+/* The trigger is chrome reached by thumb, not a compact row control, so unlike its icon-only
+   siblings it holds the 44px minimum touch target: a 22px glyph plus enough padding, both in
+   absolute units so the account box's reduced font size cannot shrink them. */
+header button.account-trigger { padding: 0.7rem; }
+header .account-trigger .icon { width: 1.375rem; height: 1.375rem; }
 /* While its menu is open the trigger holds a pressed state, in the accent the app acts in and on
    a firmer wash than hover paints, so the control reads as the held-open source of the card
    hanging off it rather than as one the pointer happens to be over. Outscoring the hover rule is
