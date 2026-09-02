@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { alertMessage, type Api } from "../api";
 import { activeViolations, crossesThreshold } from "../violations";
@@ -20,13 +20,22 @@ import { TrendChart } from "./TrendChart";
 import { WeightSection } from "./WeightSection";
 import { Welcome } from "./Welcome";
 
+// How long an empty history panel stands open before folding away on its own. The style sheet's
+// wind-down dim is timed to end exactly here, so the dim and the fold read as one gesture.
+const EMPTY_HISTORY_FOLD_MS = 10_000;
+
+// How long the closing sweep runs — the duration of the style sheet's history-fold animation.
+// The collapsed state lands only once the sweep has finished, because collapsing unmounts the
+// content the animation needs on screen.
+const HISTORY_FOLD_SWEEP_MS = 800;
+
 // Top-level screen: owns the server data (app config, day history, today's and yesterday's meal
 // payloads, on-demand past-day payloads, the weight log) and every mutation — meal recording and
 // deletion, day submission with tracked floors, day deletion, weight recording, retargeting and
 // deletion, and the account's reminder opt-out — plus the submit → alerts flow,
-// the day-end section's fold it closes, and the guard that keeps that fold and the day picker from
-// throwing away answers the day-end form has not submitted; the components below it hold no server
-// state of their own.
+// the day-end section's fold it closes, the empty history panel's timed wind-down fold, and the
+// guard that keeps the day-end fold and the day picker from throwing away answers the day-end
+// form has not submitted; the components below it hold no server state of their own.
 //
 // It also reads whether the account has recorded anything yet, because both the greeting and the
 // weight section's opening fold answer to that one reading and must not disagree about it.
@@ -64,6 +73,33 @@ export function App({ email, api, dayEndHour, firstMealHour, mealGapHours, onSig
   });
   const historyQuery = useQuery({ queryKey: ["days"], queryFn: api.getDays });
   const weightQuery = useQuery({ queryKey: ["weight"], queryFn: api.getWeight });
+
+  // The history section's fold. On an account with nothing recorded the panel is empty axes, so
+  // after a short look it folds away to its title line — dimming through the last seconds and
+  // sweeping closed rather than vanishing, so the fold reads as deliberate. A manual toggle takes
+  // over from the automatic fold for the rest of the visit; the first recorded day or meal
+  // disarms it instead.
+  const emptyHistory = historyQuery.data !== undefined
+    && historyQuery.data.days.length === 0 && historyQuery.data.today.meals.length === 0;
+  const [historyCollapsed, setHistoryCollapsed] = useState(false);
+  const [historyFolding, setHistoryFolding] = useState(false);
+  const [historyToggled, setHistoryToggled] = useState(false);
+  const toggleHistory = () => {
+    setHistoryToggled(true);
+    setHistoryFolding(false);
+    setHistoryCollapsed((c) => !c);
+  };
+  useEffect(() => {
+    if (!emptyHistory || historyToggled || historyCollapsed) return;
+    const fold = setTimeout(() => setHistoryFolding(true), EMPTY_HISTORY_FOLD_MS);
+    const folded = setTimeout(() => { setHistoryFolding(false); setHistoryCollapsed(true); },
+                              EMPTY_HISTORY_FOLD_MS + HISTORY_FOLD_SWEEP_MS);
+    return () => { clearTimeout(fold); clearTimeout(folded); };
+  }, [emptyHistory, historyToggled, historyCollapsed]);
+  // The wind-down dim rides on the section for the whole armed stretch — its animation carries
+  // its own delay — and leaves with the armed state, so the folded title line stands at full
+  // strength.
+  const historyWaning = emptyHistory && !historyToggled && !historyCollapsed;
 
   // The history row whose read-only day view is open, or null when none is.
   const [viewedDate, setViewedDate] = useState<string | null>(null);
@@ -250,7 +286,10 @@ export function App({ email, api, dayEndHour, firstMealHour, mealGapHours, onSig
           />
         )}
         {!daySummaryFoldedIntoTracker && daySummarySection}
-        <CollapsibleSection title="היסטוריה" className="history">
+        <CollapsibleSection title="היסטוריה" collapsed={historyCollapsed} onToggle={toggleHistory}
+                            className={historyWaning ? "history history-waning" : "history"}>
+          <div className={historyFolding ? "history-body history-folding" : "history-body"}>
+          <div>
           <TrendChart questionnaire={questionnaire} days={data.days} today={data.today}
                       endDate={data.days.length > 0 ? data.days[0].date : data.today.date} />
           {viewedDate !== null && (
@@ -268,6 +307,8 @@ export function App({ email, api, dayEndHour, firstMealHour, mealGapHours, onSig
             onDelete={(date) => deleteMutation.mutate(date)}
             onView={setViewedDate}
           />
+          </div>
+          </div>
         </CollapsibleSection>
         <CollapsibleSection className="chat-section" title="שאלות על אבא חטוב">
           <Chat api={api} sampleQuestions={configQuery.data.chat.sample_questions} />
