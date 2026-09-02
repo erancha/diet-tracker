@@ -47,7 +47,8 @@ closed from the tracker, and the week's trend over recorded history.
 - **Backend** — Python 3.13 Lambdas behind an HTTP API, six DynamoDB tables, EventBridge
   Scheduler (Asia/Jerusalem)
 - **Frontend** — React (TypeScript + Vite) RTL app on S3 + CloudFront, Recharts, TanStack Query
-- **Auth** — Cognito Google sign-in gated by a small allowlist
+- **Auth** — Cognito Google sign-in gated by an allowlist regex (".*" opens sign-up to
+  everyone); the admin is emailed about each new user
 - **Notifications** — SES email, optional Telegram bot
 - **Knowledge-base chat** — Summaries.AI RAG API over the diet documents; its API key lives in
   SSM Parameter Store and is read per request, so rotating it needs no redeploy

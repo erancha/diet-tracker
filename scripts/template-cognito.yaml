@@ -1,6 +1,7 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: Cognito user pool with Google sign-in, gated by a pre-signup allowlist.
+Description: Cognito user pool with Google sign-in, gated by a pre-signup allowlist regex,
+  with the admin emailed about each new user.
 
 Parameters:
   GoogleClientId:
@@ -10,7 +11,14 @@ Parameters:
     NoEcho: true
   AllowedEmails:
     Type: String
-    Description: Comma-separated Google account emails permitted to sign up
+    Description: Regex a Google account's email must fullmatch to sign up; alternation lists
+      several addresses and ".*" opens sign-up to everyone
+  AdminEmail:
+    Type: String
+    Description: Address notified about each new user who signs up
+  SesSender:
+    Type: String
+    Description: Verified SES identity the new-user notice is sent from
   CallbackUrls:
     Type: CommaDelimitedList
     Default: 'http://localhost:8000/'
@@ -30,6 +38,18 @@ Resources:
       Environment:
         Variables:
           ALLOWED_EMAILS: !Ref AllowedEmails
+          ADMIN_EMAIL: !Ref AdminEmail
+          SES_SENDER: !Ref SesSender
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              # While the account sits in the SES sandbox every send is authorized against the
+              # recipient's identity as well as the sender's, so a grant naming only SesSender
+              # denies every message to anyone but the sender. The grant spans the account's own
+              # verified identities, which is exactly the audience the sandbox permits.
+              Action: ses:SendEmail
+              Resource: !Sub 'arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/*'
 
   UserPool:
     Type: AWS::Cognito::UserPool
