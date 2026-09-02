@@ -195,8 +195,11 @@ export function App({ email, api, dayEndHour, firstMealHour, mealGapHours, onSig
   const toggleDaySummary = () => {
     if (mayDiscardEdits(pendingAnswers)) setQuestionnaireCollapsed(questionnaireOpen);
   };
+  // Before the day-end hour the section answers for yesterday alone, so its heading waits in grey
+  // until the day it is named for can be answered.
   const daySummarySection = (
     <CollapsibleSection title="שאלון סיכום היום" collapsed={!questionnaireOpen}
+                        className={todaySelectable ? undefined : "day-not-ended"}
                         headingLevel={daySummaryFoldedIntoTracker ? 3 : 2}
                         onToggle={toggleDaySummary}>
       <DayPicker todayStr={todayStr} yesterdayStr={yesterdayStr} value={day}

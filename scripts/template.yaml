@@ -17,9 +17,8 @@ Parameters:
     Type: Number
     Default: 20
     Description: Asia/Jerusalem hour from which the day counts as over for the day-end
-      questionnaire; the frontend enables today in the day picker and auto-expands an untracked
-      day's questionnaire from this hour on. The night's last-call nudge fires later, on its own
-      half-hour schedule
+      questionnaire; read by the frontend through its generated config. The night's last-call
+      nudge fires later, on its own half-hour schedule
   FirstMealHour:
     Type: Number
     Default: 11

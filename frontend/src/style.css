@@ -308,6 +308,9 @@ td.view-day { cursor: pointer; }
 @media (prefers-reduced-motion: reduce) {
   .meal-form .section-toggle { animation: none; }
 }
+/* The day-summary heading before the day-end hour: de-emphasised, not disabled — it keeps its
+   click, and hover still answers in the accent. */
+.day-not-ended .section-toggle { --btn-fg: #8a8a84; }
 /* Kept near body size against the tracker's larger heading, so the fold reads as a row inside
    the panel rather than as a section of its own; its top margin joins the dashboard's bottom
    margin for a 1.5rem gap above. */
