@@ -90,6 +90,7 @@ Globals:
         BOT_TOKEN_PARAM: !Ref BotTokenParam
         CHAT_MAP_PARAM: !Ref ChatMapParam
         SES_SENDER: !Ref SesSender
+        APP_URL: !Sub 'https://${Distribution.DomainName}'
         USER_POOL_ID: !Ref UserPoolId
         CHAT_QUOTA_TABLE: !Ref ChatQuotaTable
         CHAT_HISTORY_TABLE: !Ref ChatHistoryTable

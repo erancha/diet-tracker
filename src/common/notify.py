@@ -19,19 +19,24 @@ APP_NAME = "מעקב תזונה"
 
 ALERT_SUBJECT = f"התראת תזונה — {APP_NAME}"
 
+# Names the same account-menu action the frontend renders in Header.tsx.
+MUTE_FOOTNOTE = 'להפסקת ההתראות: בתפריט החשבון באפליקציה בחרו "ביטול התראות"'
+
 
 def violation_text(violations) -> str:
     """Render tripped rules as the message body."""
     return "התראות תזונה:\n" + "\n".join(f"• {v.message}" for v in violations)
 
 
-def send_email(ses_client, sender, recipient, subject, body) -> None:
+def send_email(ses_client, sender, recipient, subject, body, app_url) -> None:
+    """Sends one email, closing it with the mute footnote and the app's address — appending
+    here rather than at call sites is what guarantees every email carries its own way out."""
     ses_client.send_email(
         Source=sender,
         Destination={"ToAddresses": [recipient]},
         Message={
             "Subject": {"Data": subject, "Charset": "UTF-8"},
-            "Body": {"Text": {"Data": body, "Charset": "UTF-8"}},
+            "Body": {"Text": {"Data": f"{body}\n\n{MUTE_FOOTNOTE}\n{app_url}", "Charset": "UTF-8"}},
         },
     )
     logger.info("email sent to=%s subject=%s", recipient, subject)

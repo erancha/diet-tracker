@@ -38,6 +38,7 @@ class NudgeEnv:
     telegram: tuple | None  # (bot_token, chat_map) when the Telegram channel is active, else None
     ses: object
     sender: str
+    app_url: str  # the deployed frontend, cited in every email's mute footnote
     rag_url: str
     rag_key: str
 
@@ -71,6 +72,7 @@ def _build_env() -> NudgeEnv:
         telegram=notify.telegram_config(ssm, os.environ["BOT_TOKEN_PARAM"], os.environ["CHAT_MAP_PARAM"]),
         ses=boto3.client("ses"),
         sender=os.environ["SES_SENDER"],
+        app_url=os.environ["APP_URL"],
         rag_url=os.environ["RAG_API_URL"],
         rag_key=chat.api_key(ssm, os.environ["RAG_API_KEY_PARAM"]),
     )
@@ -80,7 +82,7 @@ def _send(env, user, subject, text):
     if env.telegram is not None:
         bot_token, chat_map = env.telegram
         notify.send_telegram(bot_token, users.chat_id_for(chat_map, user.email), text)
-    notify.send_email(env.ses, env.sender, user.email, subject, text)
+    notify.send_email(env.ses, env.sender, user.email, subject, text, env.app_url)
 
 
 def _unsubmitted(env, day) -> list:

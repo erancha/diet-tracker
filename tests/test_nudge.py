@@ -20,7 +20,8 @@ CLEAN = {"drinking": 3, "vegetables": 2, "eating_window": 10, "meals": 3, "carbs
 def env(monkeypatch, ddb):
     sent = []
     monkeypatch.setattr(nudge.notify, "send_telegram", lambda token, chat, text: sent.append(("tg", chat, text)))
-    monkeypatch.setattr(nudge.notify, "send_email", lambda ses, sender, to, subject, body: sent.append(("mail", to, body)))
+    monkeypatch.setattr(nudge.notify, "send_email",
+                        lambda ses, sender, to, subject, body, app_url: sent.append(("mail", to, body)))
     monkeypatch.setattr(nudge.chat, "ask", lambda url, key, question: {"answer": "תובנה"})
     monkeypatch.setenv("AWS_DEFAULT_REGION", "eu-central-1")
     monkeypatch.setenv("DAYS_TABLE", "days")
@@ -32,7 +33,7 @@ def env(monkeypatch, ddb):
         questionnaire=appconfig.load(APP_CONFIG).questionnaire,
         users=[User("u1", "a@gmail.com"), User("u2", "b@gmail.com")],
         telegram=("TOKEN", {"a@gmail.com": "111", "b@gmail.com": "222"}),
-        ses=None, sender="me@x.com",
+        ses=None, sender="me@x.com", app_url="https://app.example",
         rag_url="https://rag.example", rag_key="K",
     )
     return e, sent
@@ -77,7 +78,7 @@ def test_rules_job_sends_the_shared_alert_subject_and_body(env, monkeypatch):
     e, _ = env
     mails = []
     monkeypatch.setattr(nudge.notify, "send_email",
-                        lambda ses, sender, to, subject, body: mails.append((subject, body)))
+                        lambda ses, sender, to, subject, body, app_url: mails.append((subject, body)))
     for offset in (2, 1, 0):
         e.store.put_day("u1", days_before(today(), offset), VIOLATING, 1, "t")
 

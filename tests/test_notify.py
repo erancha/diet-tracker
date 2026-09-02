@@ -24,8 +24,24 @@ def test_send_email_via_ses():
     with mock_aws():
         ses = boto3.client("ses", region_name="eu-central-1")
         ses.verify_email_identity(EmailAddress="me@example.com")
-        notify.send_email(ses, "me@example.com", "me@example.com", "נושא", "גוף ההודעה")
+        notify.send_email(ses, "me@example.com", "me@example.com", "נושא", "גוף ההודעה",
+                          "https://dxyz.cloudfront.net")
         assert ses.get_send_quota()["SentLast24Hours"] == 1
+
+
+def test_send_email_closes_with_mute_footnote_and_app_link():
+    captured = {}
+
+    class FakeSes:
+        def send_email(self, **kwargs):
+            captured.update(kwargs)
+
+    notify.send_email(FakeSes(), "me@x.com", "you@x.com", "נושא", "גוף ההודעה",
+                      "https://dxyz.cloudfront.net")
+    body = captured["Message"]["Body"]["Text"]["Data"]
+    assert body.startswith("גוף ההודעה\n\n")
+    assert "ביטול התראות" in body
+    assert body.endswith("https://dxyz.cloudfront.net")
 
 
 def test_send_telegram_posts_message(monkeypatch):
@@ -52,7 +68,8 @@ def test_send_email_logs_delivery_receipt(caplog):
         ses = boto3.client("ses", region_name="eu-central-1")
         ses.verify_email_identity(EmailAddress="me@example.com")
         with caplog.at_level(logging.INFO):
-            notify.send_email(ses, "me@example.com", "you@example.com", "נושא", "גוף")
+            notify.send_email(ses, "me@example.com", "you@example.com", "נושא", "גוף",
+                              "https://dxyz.cloudfront.net")
     assert "email sent" in caplog.text
     assert "you@example.com" in caplog.text
 
