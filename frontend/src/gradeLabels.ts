@@ -1,15 +1,16 @@
 // How much of a carb grade's name the app shows, and the browser-remembered choice of it.
 //
-// A carbs choice names itself and then lists what it covers, and the config holds the two apart.
-// A picker showing eight of them in full — twice over, once the second carb source group is open —
-// does not fit a phone, so the two halves compose only when the reading is expanded.
+// A carbs choice names itself and then lists what it covers, and the config holds the two apart;
+// the halves compose only at the expanded density. Eight composed labels — twice over, once the
+// second carb source group is open — are a lot for a phone, so the trimmed names-alone reading
+// stands one press away for a reader who already knows the grades.
 
 import { useCallback, useState } from "react";
 import type { Choice } from "./types";
 
-// The tracker opens on names alone; the examples are a first-time reading rather than a daily one,
-// and the choice, once made, is the browser's to remember.
-const STORAGE_KEY = "diet-tracker.expanded-grade-labels";
+// The tracker opens with the examples spelled out; the choice, once trimmed or restored, is the
+// browser's to remember. Exported for tests that pin the density a case opens on.
+export const STORAGE_KEY = "diet-tracker.expanded-grade-labels";
 
 /** One choice as it reads at the requested density. Choices carrying no examples — every question
  * outside the carbs grades — read the same either way. */
@@ -22,9 +23,9 @@ export function choiceLabel(choice: Choice, expanded: boolean): string {
 // state the app is served into rather than a fault: the density then lives for the session alone.
 function storedPreference(): boolean {
   try {
-    return window.localStorage.getItem(STORAGE_KEY) === "true";
+    return window.localStorage.getItem(STORAGE_KEY) !== "false";
   } catch {
-    return false;
+    return true;
   }
 }
 

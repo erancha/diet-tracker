@@ -1,7 +1,8 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DayTracker } from "./DayTracker";
 import type { DayPayload } from "../types";
+import { STORAGE_KEY as GRADE_LABELS_KEY } from "../gradeLabels";
 import { dashboardFigure, trackedDay, trackerQuestionnaire as questionnaire } from "../test-fixtures";
 
 const emptyDay: DayPayload = {
@@ -67,6 +68,11 @@ describe("DayTracker", () => {
   // Cases here spy on window.confirm; without a restore the spy and its call log outlive the case
   // that installed it, and a later one reads another case's dialog answer as its own.
   afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); });
+
+  // Grade labels open spelled out by default, while the cases here read grades by their short
+  // names; pinning the trimmed density keeps those readings stable, and the default itself is
+  // asserted by the case that clears this pin.
+  beforeEach(() => window.localStorage.setItem(GRADE_LABELS_KEY, "false"));
 
   it("starts expanded on an empty day whatever the hour", () => {
     atLocalTime(9);
@@ -197,7 +203,20 @@ describe("DayTracker", () => {
       carbs_choice: "carb_grade_4", small_portion: false, second_source: null }));
   });
 
-  it("opens on grade names alone and spells them out on demand, in the picker and the rows", () => {
+  it("opens spelled out by default, before any density has been chosen", () => {
+    window.localStorage.removeItem(GRADE_LABELS_KEY);
+    atLocalTime(19, 5);
+    render(<DayTracker questionnaire={questionnaire} today={trackedDay}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    openMealForm();
+    expect(screen.getByRole("button", { name: "צמצום שמות" })).toBeInTheDocument();
+    expect(screen.getByLabelText("דרגה 4 (אורז לבן)")).toBeInTheDocument();
+  });
+
+  it("switches the grade reading on demand, in the picker and the rows alike", () => {
     atLocalTime(19, 5);
     render(<DayTracker questionnaire={questionnaire} today={trackedDay}
                        firstMealHour={NO_NUDGE_HOUR}

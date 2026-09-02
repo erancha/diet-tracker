@@ -18,15 +18,15 @@ describe("choiceLabel", () => {
 describe("useExpandedGradeLabels", () => {
   afterEach(() => window.localStorage.clear());
 
-  it("opens on names alone and remembers the reading that was chosen", async () => {
+  it("opens spelled out and remembers the reading that was chosen", async () => {
     const { renderHook, act } = await import("@testing-library/react");
     const first = renderHook(() => useExpandedGradeLabels());
-    expect(first.result.current[0]).toBe(false);
-    act(() => first.result.current[1](true));
     expect(first.result.current[0]).toBe(true);
+    act(() => first.result.current[1](false));
+    expect(first.result.current[0]).toBe(false);
 
     // A fresh mount stands for the next visit: the density outlives the one that set it.
     const next = renderHook(() => useExpandedGradeLabels());
-    expect(next.result.current[0]).toBe(true);
+    expect(next.result.current[0]).toBe(false);
   });
 });
