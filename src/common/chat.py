@@ -8,6 +8,10 @@ an unreachable or erroring service is the caller's contract state to handle."""
 import json
 import urllib.request
 
+# The upstream /rag/query contract caps its question field at this many characters
+# (Summaries.AI ragQueryContract.ts MAX_QUESTION_CHARS); every composed question must stay within.
+MAX_QUESTION_CHARS = 4000
+
 # Below the Lambda's 30s timeout, so a hung service surfaces as an error the caller can map to
 # a clean 502 — URLError while connecting, TimeoutError once reading — instead of the Lambda
 # dying mid-request.

@@ -6,11 +6,12 @@ the pool who has not opted out of notifications. NudgeEnv gathers all AWS-derive
 job logic stays pure and testable."""
 
 import os
+import urllib.error
 from dataclasses import dataclass
 
 import boto3
 
-from common import appconfig, digest, notify, rules, users, weight
+from common import appconfig, chat, digest, notify, rules, users, weight
 from common.dates import days_before, today
 from common.log import get_logger
 from common.rules import LOOKBACK_DAYS
@@ -26,6 +27,8 @@ REMINDER_TEXT = "עדיין לא מילאת את שאלון התזונה של ה
 OPEN_DAY_SUBJECT = "תזכורת — היום עדיין פתוח"
 OPEN_DAY_TEXT = "רשמת היום ארוחות ולא מילאת את השאלון 🌙 אפשר להשלים אותו עכשיו"
 
+SUMMARY_HEADING = "תובנות והמלצות לשבוע הבא:"
+
 
 @dataclass(frozen=True)
 class NudgeEnv:
@@ -35,6 +38,8 @@ class NudgeEnv:
     telegram: tuple | None  # (bot_token, chat_map) when the Telegram channel is active, else None
     ses: object
     sender: str
+    rag_url: str
+    rag_key: str
 
 
 def handler(event, context):
@@ -66,6 +71,8 @@ def _build_env() -> NudgeEnv:
         telegram=notify.telegram_config(ssm, os.environ["BOT_TOKEN_PARAM"], os.environ["CHAT_MAP_PARAM"]),
         ses=boto3.client("ses"),
         sender=os.environ["SES_SENDER"],
+        rag_url=os.environ["RAG_API_URL"],
+        rag_key=chat.api_key(ssm, os.environ["RAG_API_KEY_PARAM"]),
     )
 
 
@@ -117,8 +124,25 @@ def _weekly(env):
     day = today()
     for user in env.users:
         history = env.store.get_days_range(user.sub, days_before(day, 6), day)
-        _send(env, user, f"סיכום שבועי — {notify.APP_NAME}",
-              digest.weekly_text(env.questionnaire, history))
+        _send(env, user, f"סיכום שבועי — {notify.APP_NAME}", _weekly_body(env, history))
+
+
+def _weekly_body(env, history) -> str:
+    """The numeric digest, followed for a submitted week by an LLM-written recap and tips.
+
+    The recap paragraph is an optional garnish: when the RAG service is unreachable or slow the
+    plain digest still goes out, because losing the whole weekly send over it would be worse.
+    An empty week has nothing to recap, so the service is not asked."""
+    text = digest.weekly_text(env.questionnaire, history)
+    if not history:
+        return text
+    try:
+        answer = chat.ask(env.rag_url, env.rag_key,
+                          digest.weekly_summary_question(env.questionnaire, history))["answer"]
+    except (urllib.error.URLError, TimeoutError):
+        logger.warning("weekly summary generation failed; sending the plain digest", exc_info=True)
+        return text
+    return f"{text}\n\n{SUMMARY_HEADING}\n{answer}"
 
 
 def _weigh_in(env):

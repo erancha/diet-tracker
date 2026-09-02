@@ -338,6 +338,9 @@ Resources:
     Properties:
       CodeUri: ../build/lambda
       Handler: handlers/nudge.handler
+      # The weekly job asks the RAG service for a per-user recap, and each call may run up to the
+      # client's 25s ceiling — the global 30s budget cannot cover a loop over the user pool.
+      Timeout: 300
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref DaysTable

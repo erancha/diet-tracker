@@ -9,12 +9,10 @@ the match."""
 
 import json
 
+from common.chat import MAX_QUESTION_CHARS
 from common.dates import days_before
 from common.derive import derive
-
-# The upstream /rag/query contract caps its question field at this many characters
-# (Summaries.AI ragQueryContract.ts MAX_QUESTION_CHARS); the composed question must stay within.
-MAX_QUESTION_CHARS = 4000
+from common.digest import labeled_history
 
 SUMMARY_DAYS = 7
 
@@ -57,12 +55,9 @@ def _bounded(data, budget) -> str | None:
 
 
 def _summaries(store, questionnaire, sub, day) -> dict:
-    """The user's submitted answers over the summary window, keyed by date with each value
-    under its question's Hebrew day-scope heading."""
-    days = store.get_days_range(sub, days_before(day, SUMMARY_DAYS - 1), day)
-    return {date: {questionnaire.question(question_id).day_title: value
-                   for question_id, value in answers.items()}
-            for date, answers in days.items()}
+    """The user's submitted answers over the summary window, in the shared Hebrew-labeled shape."""
+    return labeled_history(
+        questionnaire, store.get_days_range(sub, days_before(day, SUMMARY_DAYS - 1), day))
 
 
 def _day_detail(store, questionnaire, sub, day) -> dict:

@@ -1,5 +1,7 @@
 import dataclasses
 import logging
+import urllib.error
+
 import pytest
 
 from conftest import APP_CONFIG
@@ -19,6 +21,7 @@ def env(monkeypatch, ddb):
     sent = []
     monkeypatch.setattr(nudge.notify, "send_telegram", lambda token, chat, text: sent.append(("tg", chat, text)))
     monkeypatch.setattr(nudge.notify, "send_email", lambda ses, sender, to, subject, body: sent.append(("mail", to, body)))
+    monkeypatch.setattr(nudge.chat, "ask", lambda url, key, question: {"answer": "תובנה"})
     monkeypatch.setenv("AWS_DEFAULT_REGION", "eu-central-1")
     monkeypatch.setenv("DAYS_TABLE", "days")
     monkeypatch.setenv("MEALS_TABLE", "meals")
@@ -30,6 +33,7 @@ def env(monkeypatch, ddb):
         users=[User("u1", "a@gmail.com"), User("u2", "b@gmail.com")],
         telegram=("TOKEN", {"a@gmail.com": "111", "b@gmail.com": "222"}),
         ses=None, sender="me@x.com",
+        rag_url="https://rag.example", rag_key="K",
     )
     return e, sent
 
@@ -102,6 +106,46 @@ def test_weekly_sends_digest_to_every_user(env):
     assert any("סיכום שבועי" in text for _, _, text in sent)
     assert any("ממוצע" in text for _, _, text in sent)
     assert any("לא מולאו שאלונים השבוע" in text for _, _, text in sent)
+
+
+def test_weekly_appends_the_llm_summary_after_the_numeric_digest(env, monkeypatch):
+    e, sent = env
+    asked = []
+
+    def fake_ask(url, key, question):
+        asked.append((url, key, question))
+        return {"answer": "היה שבוע מאוזן"}
+
+    monkeypatch.setattr(nudge.chat, "ask", fake_ask)
+    e.store.put_day("u1", today(), CLEAN, 1, "t")
+    nudge._weekly(e)
+    expected_question = nudge.digest.weekly_summary_question(e.questionnaire, {today(): CLEAN})
+    assert asked == [("https://rag.example", "K", expected_question)]
+    body = next(text for _, target, text in sent if target == "a@gmail.com")
+    assert body.index("ממוצע") < body.index("היה שבוע מאוזן")
+
+
+def test_weekly_skips_the_llm_for_an_empty_week(env, monkeypatch):
+    e, sent = env
+    monkeypatch.setattr(nudge.chat, "ask",
+                        lambda url, key, question: pytest.fail("asked the LLM with no data"))
+    nudge._weekly(e)
+    assert all("לא מולאו שאלונים השבוע" in text for _, _, text in sent)
+
+
+def test_weekly_falls_back_to_the_plain_digest_when_the_llm_call_fails(env, monkeypatch, caplog):
+    e, sent = env
+
+    def failing_ask(url, key, question):
+        raise urllib.error.URLError("service down")
+
+    monkeypatch.setattr(nudge.chat, "ask", failing_ask)
+    e.store.put_day("u1", today(), CLEAN, 1, "t")
+    with caplog.at_level(logging.WARNING):
+        nudge._weekly(e)
+    body = next(text for _, target, text in sent if target == "a@gmail.com")
+    assert "ממוצע" in body
+    assert "weekly summary" in caplog.text
 
 
 def test_weigh_in_targets_only_users_who_have_not_weighed_on_the_day(env):

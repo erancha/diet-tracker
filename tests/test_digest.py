@@ -1,4 +1,5 @@
-from common.digest import weekly_text
+from common.chat import MAX_QUESTION_CHARS
+from common.digest import weekly_summary_question, weekly_text
 
 
 def test_empty_history_message(numeric_questionnaire):
@@ -25,3 +26,29 @@ def test_days_predating_a_question_are_skipped_in_its_average(numeric_questionna
     }
     text = weekly_text(numeric_questionnaire, history)
     assert "carbs: ממוצע 4" in text
+
+
+def test_averages_round_to_one_decimal_digit(numeric_questionnaire):
+    history = {
+        "2026-08-19": {"carbs": 7},
+        "2026-08-20": {"carbs": 2},
+        "2026-08-21": {"carbs": 2},
+    }
+    assert "carbs: ממוצע 3.7" in weekly_text(numeric_questionnaire, history)
+
+
+def test_summary_question_asks_for_recap_and_tips_over_labeled_data(numeric_questionnaire):
+    history = {"2026-08-19": {"carbs": 7, "drinking": 3}}
+    question = weekly_summary_question(numeric_questionnaire, history)
+    assert "המלצות" in question
+    assert '"2026-08-19"' in question
+    assert '"carbs": 7' in question
+
+
+def test_summary_question_sheds_oldest_days_to_fit_the_upstream_cap(numeric_questionnaire):
+    history = {f"2026-{month:02d}-{day:02d}": {"carbs": 7, "drinking": 3}
+               for month in range(1, 13) for day in range(1, 29)}
+    question = weekly_summary_question(numeric_questionnaire, history)
+    assert len(question) <= MAX_QUESTION_CHARS
+    assert "2026-12-28" in question
+    assert "2026-01-01" not in question
