@@ -196,7 +196,7 @@ export function App({ email, api, dayEndHour, firstMealHour, mealGapHours, onSig
     if (mayDiscardEdits(pendingAnswers)) setQuestionnaireCollapsed(questionnaireOpen);
   };
   const daySummarySection = (
-    <CollapsibleSection title="שאלון סיכום יום" collapsed={!questionnaireOpen}
+    <CollapsibleSection title="שאלון סיכום היום" collapsed={!questionnaireOpen}
                         headingLevel={daySummaryFoldedIntoTracker ? 3 : 2}
                         onToggle={toggleDaySummary}>
       <DayPicker todayStr={todayStr} yesterdayStr={yesterdayStr} value={day}
