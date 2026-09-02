@@ -408,20 +408,23 @@ td.view-day { cursor: pointer; }
 /* Above the target, the weight and the distance to it are the miss, so both take the danger
    colour — the figures alone, leaving the unit beside the heading and the phrasing around the
    distance as chrome, the way figures read against their wording everywhere else. The target
-   keeps the accent: it is the goal being missed, not the figure missing it.
+   keeps the accent: it is the goal being missed, not the figure missing it. The measurements in
+   the list below the chart read the same way, each against its own standing at the time.
 
    The distance carries the accent class too, so this has to outrank the rule above on its own
    count rather than on standing after it. */
 .weight-over-target .weight-latest,
-.weight-over-target .weight-summary .weight-gap { color: var(--danger); }
+.weight-over-target .weight-summary .weight-gap,
+.weight-entries .over-target { color: var(--danger); }
 /* The measurements behind the chart. Each row puts the date, the weight and the delete control in
    fixed cells so the column holds down the list however the values vary. */
 .weight-rhythm { margin: 0 0 0.5rem; opacity: 0.8; }
 .weight-entries { list-style: none; padding: 0; margin: 0.5rem 0 0; }
-.weight-entries li { display: flex; align-items: center; gap: 0.75rem; padding: 0.125rem 0; }
-.weight-entries .weight-entry-date { min-width: 6ch; }
+.weight-entries li { display: flex; align-items: center; gap: 1rem; padding: 0.125rem 0; }
+.weight-entries .weight-entry-date { min-width: 6ch; font-weight: 600; }
 .weight-entries .weight-entry-at { min-width: 5ch; opacity: 0.7; font-variant-numeric: tabular-nums; }
 .weight-entries .weight-entry-kg { flex: 1; font-weight: 600; }
+.weight-entries .far-over { font-weight: 800; }
 .weight-entries button { padding: 0.35rem; margin-block: -0.35rem; }
 
 /* The knowledge-base chat: the composer as the section's first row, then the whole transcript

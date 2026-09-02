@@ -150,7 +150,7 @@ export function WeightSection({ weight, settings, now, defaultExpanded,
         <WeightChart entries={plotted} target={weight.target} span={active} spans={spans}
                      onSpanChange={setSpan} />
       )}
-      <WeightEntries entries={plotted} onDelete={onDelete} />
+      <WeightEntries entries={plotted} target={weight.target} onDelete={onDelete} />
     </CollapsibleSection>
   );
 }

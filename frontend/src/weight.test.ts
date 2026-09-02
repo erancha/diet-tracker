@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { activeSpan, chartDomain, entriesWithin, kgLabel, offeredSpans, rhythmReading,
-         summarize, targetChangePrompt, usualHour } from "./weight";
+         overTargetSeverity, summarize, targetChangePrompt, usualHour } from "./weight";
 import type { WeightEntry } from "./types";
 
 const TODAY = new Date(2026, 7, 27); // 2026-08-27
@@ -102,6 +102,24 @@ describe("summarize", () => {
   it("still reads before the first weighing, so the target is reachable from the start", () => {
     expect(summarize([], 72)).toEqual({ latest: null, target: 72, gapKg: null, prefix: "ה", overTarget: false });
     expect(summarize([], null)).toEqual({ latest: null, target: null, gapKg: null, prefix: "ה", overTarget: false });
+  });
+});
+
+describe("overTargetSeverity", () => {
+  it("grades a measurement by how far it sits above the target", () => {
+    expect(overTargetSeverity(105.4, 95)).toBe("far");
+    expect(overTargetSeverity(104.9, 95)).toBe("over");
+    expect(overTargetSeverity(105, 95)).toBe("over");
+  });
+
+  it("reads nothing at or below the target, or where the gap is too small to show", () => {
+    expect(overTargetSeverity(94, 95)).toBeNull();
+    expect(overTargetSeverity(95, 95)).toBeNull();
+    expect(overTargetSeverity(95.04, 95)).toBeNull();
+  });
+
+  it("reads nothing before a target has been set", () => {
+    expect(overTargetSeverity(105.4, null)).toBeNull();
   });
 });
 

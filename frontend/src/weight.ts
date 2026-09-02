@@ -80,6 +80,20 @@ export function kgLabel(kg: number): string {
 // number, so the line reads as arrival rather than as a distance it cannot show.
 const AT_TARGET_KG = 0.05;
 
+// Kilograms above the target past which a measurement stops reading as merely over and starts
+// reading as far over.
+const FAR_OVER_KG = 10;
+
+/**
+ * How one measurement reads against the target: "far" when it exceeds the target by more than
+ * FAR_OVER_KG, "over" when it exceeds it by enough to render as a distance at all, and null at or
+ * below the target — or before a target has been set, when there is nothing to read against.
+ */
+export function overTargetSeverity(kg: number, target: number | null): "over" | "far" | null {
+  if (target === null || kg - target < AT_TARGET_KG) return null;
+  return kg - target > FAR_OVER_KG ? "far" : "over";
+}
+
 /**
  * The section's one-line reading, which is also where the target is set. It comes apart rather
  * than arriving pre-rendered because the line has to paint its figures, leave the units as
