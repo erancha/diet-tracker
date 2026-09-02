@@ -34,7 +34,7 @@ export function Landing({ onSignIn }: { onSignIn: () => void }) {
           בשאלון סיכום היום עם מילוי כמות המים בלבד
         </li>
         <li>
-          מעבר לשכפ"צ, הרישום מניב ציון יומי של{" "}
+          מעבר לשכפ"צ, מהרישום מחושב גם ציון יומי של{" "}
           <a href={CARB_GRADES_PATH} target="_blank" rel="noreferrer">פחמימות / קמחים / סוכרים</a>
           {" "}(נמוך = טוב)
         </li>
