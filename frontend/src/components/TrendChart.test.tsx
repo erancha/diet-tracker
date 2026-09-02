@@ -47,6 +47,11 @@ describe("TrendChart", () => {
     expect(legend.compareDocumentPosition(firstPanel) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
+  it("renders the panels before any day has been submitted", () => {
+    const { container } = render(<TrendChart questionnaire={fixtureQuestionnaire} days={[]} today={emptyToday} endDate="2026-08-19" />);
+    expect(container.querySelectorAll(".trend-panel")).toHaveLength(2);
+  });
+
   it("charts the carb-score panel first even when it is configured last", () => {
     const { container } = render(<TrendChart questionnaire={withCarbsPanel} days={days} today={emptyToday} endDate="2026-08-18" />);
     const titles = [...container.querySelectorAll(".trend-panel-title")].map((el) => el.textContent);

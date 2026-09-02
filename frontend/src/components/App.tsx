@@ -248,9 +248,8 @@ export function App({ email, api, dayEndHour, firstMealHour, mealGapHours, onSig
         )}
         {!daySummaryFoldedIntoTracker && daySummarySection}
         <CollapsibleSection title="היסטוריה" className="history">
-          {data.days.length > 0 && (
-            <TrendChart questionnaire={questionnaire} days={data.days} today={data.today} endDate={data.days[0].date} />
-          )}
+          <TrendChart questionnaire={questionnaire} days={data.days} today={data.today}
+                      endDate={data.days.length > 0 ? data.days[0].date : data.today.date} />
           {viewedDate !== null && (
             viewedDayQuery.isPending ? <p>טוען…</p>
             : viewedDayQuery.isError ? <div className="alert">{alertMessage("טעינת היום נכשלה", viewedDayQuery.error)}</div>
