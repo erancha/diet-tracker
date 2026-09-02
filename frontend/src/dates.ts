@@ -65,8 +65,7 @@ export function daysSince(date: string, now: Date): number {
 }
 
 // The weigh-in day opens the weight section expanded while the day still holds no weighing — the
-// one morning a week the section is what the user came to the page for. The same treatment
-// expandMealForm gives an overdue meal.
+// one morning a week the section is what the user came to the page for.
 export function expandWeightSection(now: Date, weekday: string,
                                     entries: readonly { date: string }[]): boolean {
   return isWeighInDay(now, weekday) && !entries.some((entry) => entry.date === isoDate(now));
@@ -100,14 +99,14 @@ export function expandQuestionnaire(now: Date, dayEndHour: number, mealsRecorded
 
 const MS_PER_HOUR = 3_600_000;
 
-// A meal is overdue in two ways, and either one opens the tracker's meal inputs expanded instead of
-// leaving them behind their fold: a day still carrying nothing by firstMealHour, and a day whose
+// A meal is overdue in two ways: a day still carrying nothing by firstMealHour, and a day whose
 // most recent meal is mealGapHours or more behind the clock. The gap is measured from when the meal
-// was eaten, and stands on its own — a stale meal opens the inputs however early in the day it is.
+// was eaten, and stands on its own — a stale meal is overdue however early in the day it is. The
+// tracker answers an overdue meal by blinking its add-meal toggle rather than opening the inputs.
 //
 // Meals are dated, not ordered, so the latest one is found by time rather than by position.
-export function expandMealForm(now: Date, firstMealHour: number, mealGapHours: number,
-                               meals: readonly { at: string }[]): boolean {
+export function mealOverdue(now: Date, firstMealHour: number, mealGapHours: number,
+                            meals: readonly { at: string }[]): boolean {
   if (meals.length === 0) return now.getHours() >= firstMealHour;
   const lastMeal = Math.max(...meals.map((m) => Date.parse(m.at)));
   return now.getTime() - lastMeal >= mealGapHours * MS_PER_HOUR;

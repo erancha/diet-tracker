@@ -296,6 +296,18 @@ td.view-day { cursor: pointer; }
 .section-toggle::before { content: "▾ "; font-size: 0.9em; }
 .section-toggle[aria-expanded="false"]::before { content: "◂ "; }
 .section-toggle:hover:not(:disabled) { --btn-fg: var(--accent); filter: none; }
+/* An overdue meal blinks the folded add-meal toggle instead of opening the inputs uninvited:
+   once a second at first, pressing to twice a second when ten seconds go unanswered, then
+   settling into a slow standing reminder. The tracker's nudge phase picks the beat. */
+.meal-form.nudge-0 .section-toggle { animation: nudge-blink 1s ease-in-out infinite; }
+.meal-form.nudge-1 .section-toggle { animation: nudge-blink 0.5s ease-in-out infinite; }
+.meal-form.nudge-2 .section-toggle { animation: nudge-blink 2s ease-in-out infinite; }
+/* A dip-and-return pulse rather than an on/off square wave: the label stays legible at the
+   bottom of the dip, and never sits dimmed waiting for the next cycle. */
+@keyframes nudge-blink { 50% { opacity: 0.45; } }
+@media (prefers-reduced-motion: reduce) {
+  .meal-form .section-toggle { animation: none; }
+}
 /* Kept near body size against the tracker's larger heading, so the fold reads as a row inside
    the panel rather than as a section of its own; its top margin joins the dashboard's bottom
    margin for a 1.5rem gap above. */

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DayTracker } from "./DayTracker";
 import type { DayPayload } from "../types";
@@ -32,19 +32,23 @@ const wideWindowDay: DayPayload = {
 };
 
 // Pins the clock: the meal form's default time is derived from it, as are the future-time guard
-// on the submit button and the hour that opens the meal inputs on an unrecorded day.
+// on the submit button and the hour that starts the add-meal nudge on an unrecorded day.
 const atLocalTime = (hour: number, minute = 0) => {
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date(2026, 7, 20, hour, minute));
 };
 
-// Past every hour a clock can report, so cases not about the auto-open rule always arrive with
-// the meal inputs folded, whatever hour they pin — or leave unpinned.
-const NO_AUTO_OPEN_HOUR = 24;
+// Past every hour a clock can report, so cases not about the first-meal nudge always arrive
+// with a quiet toggle, whatever hour they pin — or leave unpinned.
+const NO_NUDGE_HOUR = 24;
 
-// Longer than any gap a clock can open, so cases not about the stale-meal rule always arrive with
-// the meal inputs folded, however old the day fixture's meals are.
-const NO_AUTO_OPEN_GAP_HOURS = Infinity;
+// Longer than any gap a clock can open, so cases not about the stale-meal nudge always arrive
+// with a quiet toggle, however old the day fixture's meals are.
+const NO_NUDGE_GAP_HOURS = Infinity;
+
+// The meal-form section, read off its toggle: where the nudge classes land.
+const mealFormSection = () =>
+  screen.getByRole("button", { name: "הוספת ארוחה" }).closest("section")!;
 
 // The meal inputs start folded, so a test that reaches them opens the section first.
 const openMealForm = () =>
@@ -67,8 +71,8 @@ describe("DayTracker", () => {
   it("starts expanded on an empty day whatever the hour", () => {
     atLocalTime(9);
     render(<DayTracker questionnaire={questionnaire} today={emptyDay}
-                       firstMealHour={NO_AUTO_OPEN_HOUR}
-                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     expect(screen.getByRole("button", { name: "יומן היום" }))
@@ -77,8 +81,8 @@ describe("DayTracker", () => {
 
   it("starts expanded however recently the last meal was recorded", () => {
     render(<DayTracker questionnaire={questionnaire} today={dayWithMealHoursAgo(1)}
-                       firstMealHour={NO_AUTO_OPEN_HOUR}
-                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     expect(screen.getByRole("button", { name: "יומן היום" }))
@@ -87,8 +91,8 @@ describe("DayTracker", () => {
 
   it("derives the dashboard from the recorded meals, not the payload's derived copy", () => {
     render(<DayTracker questionnaire={questionnaire} today={staleDerivedDay}
-                       firstMealHour={NO_AUTO_OPEN_HOUR}
-                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     expect(dashboardFigure("ציון")).toHaveTextContent("ציון: 4");
@@ -100,8 +104,8 @@ describe("DayTracker", () => {
   it("close-day submits values derived from the recorded meals", () => {
     const onCloseDay = vi.fn();
     render(<DayTracker questionnaire={questionnaire} today={wideWindowDay}
-                       firstMealHour={NO_AUTO_OPEN_HOUR}
-                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={onCloseDay} />);
     fireEvent.click(screen.getByRole("button", { name: "סגירת יום" }));
@@ -113,8 +117,8 @@ describe("DayTracker", () => {
 
   it("renders each meal's time in bold", () => {
     render(<DayTracker questionnaire={questionnaire} today={trackedDay}
-                       firstMealHour={NO_AUTO_OPEN_HOUR}
-                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     const time = screen.getByText("09:10");
@@ -123,8 +127,8 @@ describe("DayTracker", () => {
 
   it("titles the per-meal carbs picker with the meal-level text, not the score summary", () => {
     render(<DayTracker questionnaire={questionnaire} today={emptyDay}
-                       firstMealHour={NO_AUTO_OPEN_HOUR}
-                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     openMealForm();
@@ -135,8 +139,8 @@ describe("DayTracker", () => {
   it("records a meal with the picked grade, vegetables, fruit and additions", () => {
     const onAddMeal = vi.fn();
     render(<DayTracker questionnaire={questionnaire} today={emptyDay}
-                       firstMealHour={NO_AUTO_OPEN_HOUR}
-                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={onAddMeal} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     openMealForm();
@@ -155,8 +159,8 @@ describe("DayTracker", () => {
 
   it("offers the small portion only on grades worth splitting by helping", () => {
     render(<DayTracker questionnaire={questionnaire} today={emptyDay}
-                       firstMealHour={NO_AUTO_OPEN_HOUR}
-                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     openMealForm();
@@ -170,8 +174,8 @@ describe("DayTracker", () => {
   it("records the small portion, and drops it when the grade no longer offers one", () => {
     const onAddMeal = vi.fn();
     render(<DayTracker questionnaire={questionnaire} today={emptyDay}
-                       firstMealHour={NO_AUTO_OPEN_HOUR}
-                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={onAddMeal} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     openMealForm();
@@ -196,8 +200,8 @@ describe("DayTracker", () => {
   it("opens on grade names alone and spells them out on demand, in the picker and the rows", () => {
     atLocalTime(19, 5);
     render(<DayTracker questionnaire={questionnaire} today={trackedDay}
-                       firstMealHour={NO_AUTO_OPEN_HOUR}
-                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     openMealForm();
@@ -217,8 +221,8 @@ describe("DayTracker", () => {
 
   it("offers every grade but the plain no-carb one as a second carb source", () => {
     render(<DayTracker questionnaire={questionnaire} today={emptyDay}
-                       firstMealHour={NO_AUTO_OPEN_HOUR}
-                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     openMealForm();
@@ -232,8 +236,8 @@ describe("DayTracker", () => {
   it("records a second carb source under its own grade and helping", () => {
     const onAddMeal = vi.fn();
     render(<DayTracker questionnaire={questionnaire} today={emptyDay}
-                       firstMealHour={NO_AUTO_OPEN_HOUR}
-                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={onAddMeal} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     openMealForm();
@@ -252,8 +256,8 @@ describe("DayTracker", () => {
   it("records no second source once the group is removed", () => {
     const onAddMeal = vi.fn();
     render(<DayTracker questionnaire={questionnaire} today={emptyDay}
-                       firstMealHour={NO_AUTO_OPEN_HOUR}
-                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={onAddMeal} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     openMealForm();
@@ -269,8 +273,8 @@ describe("DayTracker", () => {
   it("records no second source from a group left open and unanswered", () => {
     const onAddMeal = vi.fn();
     render(<DayTracker questionnaire={questionnaire} today={emptyDay}
-                       firstMealHour={NO_AUTO_OPEN_HOUR}
-                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={onAddMeal} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     openMealForm();
@@ -289,8 +293,8 @@ describe("DayTracker", () => {
     };
     const onUpdateMeal = vi.fn();
     render(<DayTracker questionnaire={questionnaire} today={twoSourceDay}
-                       firstMealHour={NO_AUTO_OPEN_HOUR}
-                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={onUpdateMeal}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     fireEvent.click(screen.getByRole("button", { name: "עריכת ארוחה 13:30" }));
@@ -304,8 +308,8 @@ describe("DayTracker", () => {
   it("records the picked choice id even when another choice shares its numeric value", () => {
     const onAddMeal = vi.fn();
     render(<DayTracker questionnaire={questionnaire} today={emptyDay}
-                       firstMealHour={NO_AUTO_OPEN_HOUR}
-                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={onAddMeal} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     openMealForm();
@@ -317,8 +321,8 @@ describe("DayTracker", () => {
   it("defaults the meal time to twenty minutes before the ten-minute mark just passed", () => {
     atLocalTime(12, 25);
     render(<DayTracker questionnaire={questionnaire} today={emptyDay}
-                       firstMealHour={NO_AUTO_OPEN_HOUR}
-                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     openMealForm();
@@ -328,8 +332,8 @@ describe("DayTracker", () => {
   it("holds the default at midnight during the first twenty minutes of the day", () => {
     atLocalTime(0, 5);
     render(<DayTracker questionnaire={questionnaire} today={emptyDay}
-                       firstMealHour={NO_AUTO_OPEN_HOUR}
-                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     openMealForm();
@@ -340,8 +344,8 @@ describe("DayTracker", () => {
     atLocalTime(16, 5);
     const onAddMeal = vi.fn();
     render(<DayTracker questionnaire={questionnaire} today={emptyDay}
-                       firstMealHour={NO_AUTO_OPEN_HOUR}
-                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={onAddMeal} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     openMealForm();
@@ -354,8 +358,8 @@ describe("DayTracker", () => {
   it("returns the meal time to the default estimate after a meal is recorded", () => {
     atLocalTime(16, 5);
     render(<DayTracker questionnaire={questionnaire} today={emptyDay}
-                       firstMealHour={NO_AUTO_OPEN_HOUR}
-                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     openMealForm();
@@ -371,8 +375,8 @@ describe("DayTracker", () => {
     atLocalTime(13, 0);
     const onAddMeal = vi.fn();
     render(<DayTracker questionnaire={questionnaire} today={emptyDay}
-                       firstMealHour={NO_AUTO_OPEN_HOUR}
-                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={onAddMeal} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     openMealForm();
@@ -384,8 +388,8 @@ describe("DayTracker", () => {
 
   it("loads a recorded meal into the meal form when its edit button is tapped", () => {
     render(<DayTracker questionnaire={questionnaire} today={trackedDay}
-                       firstMealHour={NO_AUTO_OPEN_HOUR}
-                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()} onDeleteMeal={vi.fn()}
                        onCloseDay={vi.fn()} />);
     fireEvent.click(screen.getByRole("button", { name: "עריכת ארוחה 13:30" }));
@@ -401,8 +405,8 @@ describe("DayTracker", () => {
     atLocalTime(19, 5);
     const onUpdateMeal = vi.fn();
     render(<DayTracker questionnaire={questionnaire} today={trackedDay}
-                       firstMealHour={NO_AUTO_OPEN_HOUR}
-                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={onUpdateMeal} onDeleteMeal={vi.fn()}
                        onCloseDay={vi.fn()} />);
     fireEvent.click(screen.getByRole("button", { name: "עריכת ארוחה 13:30" }));
@@ -421,8 +425,8 @@ describe("DayTracker", () => {
     const onUpdateMeal = vi.fn();
     const confirmSpy = vi.spyOn(window, "confirm");
     render(<DayTracker questionnaire={questionnaire} today={trackedDay}
-                       firstMealHour={NO_AUTO_OPEN_HOUR}
-                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={onUpdateMeal} onDeleteMeal={vi.fn()}
                        onCloseDay={vi.fn()} />);
     fireEvent.click(screen.getByRole("button", { name: "עריכת ארוחה 13:30" }));
@@ -439,8 +443,8 @@ describe("DayTracker", () => {
     atLocalTime(19, 5);
     vi.spyOn(window, "confirm").mockReturnValue(false);
     render(<DayTracker questionnaire={questionnaire} today={trackedDay}
-                       firstMealHour={NO_AUTO_OPEN_HOUR}
-                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()} onDeleteMeal={vi.fn()}
                        onCloseDay={vi.fn()} />);
     fireEvent.click(screen.getByRole("button", { name: "עריכת ארוחה 13:30" }));
@@ -456,8 +460,8 @@ describe("DayTracker", () => {
     atLocalTime(19, 5);
     const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
     render(<DayTracker questionnaire={questionnaire} today={trackedDay}
-                       firstMealHour={NO_AUTO_OPEN_HOUR}
-                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()} onDeleteMeal={vi.fn()}
                        onCloseDay={vi.fn()} />);
     fireEvent.click(screen.getByRole("button", { name: "עריכת ארוחה 13:30" }));
@@ -472,8 +476,8 @@ describe("DayTracker", () => {
     atLocalTime(19, 5);
     const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
     render(<DayTracker questionnaire={questionnaire} today={trackedDay}
-                       firstMealHour={NO_AUTO_OPEN_HOUR}
-                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()} onDeleteMeal={vi.fn()}
                        onCloseDay={vi.fn()} />);
     fireEvent.click(screen.getByRole("button", { name: "עריכת ארוחה 13:30" }));
@@ -485,15 +489,15 @@ describe("DayTracker", () => {
   it("falls back to recording when the meal being edited is deleted", () => {
     const { rerender } = render(
       <DayTracker questionnaire={questionnaire} today={trackedDay}
-                  firstMealHour={NO_AUTO_OPEN_HOUR}
-                  mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                  firstMealHour={NO_NUDGE_HOUR}
+                  mealGapHours={NO_NUDGE_GAP_HOURS}
                   onAddMeal={vi.fn()} onUpdateMeal={vi.fn()} onDeleteMeal={vi.fn()}
                   onCloseDay={vi.fn()} />);
     fireEvent.click(screen.getByRole("button", { name: "עריכת ארוחה 13:30" }));
 
     rerender(<DayTracker questionnaire={questionnaire}
-                         firstMealHour={NO_AUTO_OPEN_HOUR}
-                         mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                         firstMealHour={NO_NUDGE_HOUR}
+                         mealGapHours={NO_NUDGE_GAP_HOURS}
                          today={{ ...trackedDay, meals: [trackedDay.meals[0]] }}
                          onAddMeal={vi.fn()} onUpdateMeal={vi.fn()} onDeleteMeal={vi.fn()}
                          onCloseDay={vi.fn()} />);
@@ -504,8 +508,8 @@ describe("DayTracker", () => {
 
   it("collapses to the dashboard alone and expands back on header toggle", () => {
     render(<DayTracker questionnaire={questionnaire} today={wideWindowDay}
-                       firstMealHour={NO_AUTO_OPEN_HOUR}
-                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     const toggle = screen.getByRole("button", { name: "יומן היום" });
@@ -526,8 +530,8 @@ describe("DayTracker", () => {
 
   it("starts with the meal inputs folded behind the actions and the meal list", () => {
     render(<DayTracker questionnaire={questionnaire} today={wideWindowDay}
-                       firstMealHour={NO_AUTO_OPEN_HOUR}
-                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     expect(screen.getByRole("button", { name: "הוספת ארוחה" }))
@@ -539,93 +543,114 @@ describe("DayTracker", () => {
     expect(dashboardFigure("ציון")).toHaveTextContent("ציון: 4");
   });
 
-  it("keeps the meal inputs folded while the last meal is younger than the gap", () => {
+  it("keeps the toggle quiet while the last meal is younger than the gap", () => {
     render(<DayTracker questionnaire={questionnaire}
-                       firstMealHour={NO_AUTO_OPEN_HOUR}
+                       firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={4}
                        today={dayWithMealHoursAgo(3)}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     expect(screen.getByRole("button", { name: "הוספת ארוחה" }))
       .toHaveAttribute("aria-expanded", "false");
+    expect(mealFormSection()).toHaveClass("meal-form", { exact: true });
   });
 
-  it("unfolds the meal inputs once the gap since the last meal has passed", () => {
+  it("keeps the inputs folded but blinks the toggle once the gap since the last meal passed", () => {
     render(<DayTracker questionnaire={questionnaire}
-                       firstMealHour={NO_AUTO_OPEN_HOUR}
+                       firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={4}
                        today={dayWithMealHoursAgo(5)}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
-    expect(screen.getByRole("button", { name: "הוספת ארוחה" }))
-      .toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByLabelText("שעת הארוחה")).toBeInTheDocument();
-  });
-
-  it("folds the meal inputs away again once the overdue meal is recorded", () => {
-    render(<DayTracker questionnaire={questionnaire}
-                       firstMealHour={NO_AUTO_OPEN_HOUR}
-                       mealGapHours={4}
-                       today={dayWithMealHoursAgo(5)}
-                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
-                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
-    fireEvent.click(screen.getByLabelText("דרגה 4"));
-    fireEvent.click(screen.getByRole("button", { name: "שמירת ארוחה" }));
-
     expect(screen.getByRole("button", { name: "הוספת ארוחה" }))
       .toHaveAttribute("aria-expanded", "false");
+    expect(mealFormSection()).toHaveClass("nudge-0");
   });
 
-  it("unfolds the meal inputs from the first-meal hour on a day with nothing recorded", () => {
+  it("stops the nudge once a fresh meal lands in the day's list", () => {
+    const props = { questionnaire, firstMealHour: NO_NUDGE_HOUR, mealGapHours: 4,
+                    onAddMeal: vi.fn(), onUpdateMeal: vi.fn(), onDeleteMeal: vi.fn(),
+                    onCloseDay: vi.fn() };
+    const { rerender } = render(<DayTracker {...props} today={dayWithMealHoursAgo(5)} />);
+    expect(mealFormSection()).toHaveClass("nudge-0");
+
+    rerender(<DayTracker {...props} today={dayWithMealHoursAgo(1)} />);
+
+    expect(mealFormSection()).toHaveClass("meal-form", { exact: true });
+  });
+
+  it("blinks the toggle from the first-meal hour on a day with nothing recorded", () => {
     atLocalTime(11);
     render(<DayTracker questionnaire={questionnaire} today={emptyDay}
                        firstMealHour={11}
-                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     expect(screen.getByRole("button", { name: "הוספת ארוחה" }))
-      .toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByLabelText("שעת הארוחה")).toBeInTheDocument();
+      .toHaveAttribute("aria-expanded", "false");
+    expect(mealFormSection()).toHaveClass("nudge-0");
   });
 
-  it("keeps the meal inputs folded before the first-meal hour", () => {
+  it("keeps the toggle quiet before the first-meal hour", () => {
     atLocalTime(10, 59);
     render(<DayTracker questionnaire={questionnaire} today={emptyDay}
                        firstMealHour={11}
-                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
-    expect(screen.getByRole("button", { name: "הוספת ארוחה" }))
-      .toHaveAttribute("aria-expanded", "false");
+    expect(mealFormSection()).toHaveClass("meal-form", { exact: true });
   });
 
-  it("keeps the meal inputs folded past the hour once the day has a recorded meal", () => {
+  it("keeps the toggle quiet past the hour once the day has a recorded meal", () => {
     atLocalTime(15);
     render(<DayTracker questionnaire={questionnaire} today={trackedDay}
                        firstMealHour={11}
-                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
-    expect(screen.getByRole("button", { name: "הוספת ארוחה" }))
-      .toHaveAttribute("aria-expanded", "false");
+    expect(mealFormSection()).toHaveClass("meal-form", { exact: true });
   });
 
-  it("folds the auto-opened meal inputs away on the header toggle", () => {
+  it("pauses the nudge while the inputs are open and resumes it when they fold again", () => {
     atLocalTime(11);
     render(<DayTracker questionnaire={questionnaire} today={emptyDay}
                        firstMealHour={11}
-                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    openMealForm();
+    expect(mealFormSection()).toHaveClass("meal-form", { exact: true });
+
     fireEvent.click(screen.getByRole("button", { name: "הוספת ארוחה" }));
-    expect(screen.getByRole("button", { name: "הוספת ארוחה" }))
-      .toHaveAttribute("aria-expanded", "false");
+
+    expect(mealFormSection()).toHaveClass("nudge-0");
+  });
+
+  it("escalates the blink after ten seconds and settles into the slow beat after twenty", () => {
+    vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout"] });
+    vi.setSystemTime(new Date(2026, 7, 20, 11, 0));
+    render(<DayTracker questionnaire={questionnaire} today={emptyDay}
+                       firstMealHour={11}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    expect(mealFormSection()).toHaveClass("nudge-0");
+
+    act(() => vi.advanceTimersByTime(10_000));
+    expect(mealFormSection()).toHaveClass("nudge-1");
+
+    act(() => vi.advanceTimersByTime(10_000));
+    expect(mealFormSection()).toHaveClass("nudge-2");
+
+    // The slow beat is the standing state: nothing further is scheduled past it.
+    act(() => vi.advanceTimersByTime(600_000));
+    expect(mealFormSection()).toHaveClass("nudge-2");
   });
 
   it("unfolds the meal inputs when a recorded meal is opened for editing", () => {
     render(<DayTracker questionnaire={questionnaire}
-                       firstMealHour={NO_AUTO_OPEN_HOUR}
-                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
                        today={dayWithMealHoursAgo(1)}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
@@ -641,8 +666,8 @@ describe("DayTracker", () => {
   it("folds the meal inputs away once a meal is recorded", () => {
     atLocalTime(19, 5);
     render(<DayTracker questionnaire={questionnaire} today={emptyDay}
-                       firstMealHour={NO_AUTO_OPEN_HOUR}
-                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     openMealForm();
@@ -657,8 +682,8 @@ describe("DayTracker", () => {
   it("folds the meal inputs away once a correction is sent", () => {
     atLocalTime(19, 5);
     render(<DayTracker questionnaire={questionnaire} today={trackedDay}
-                       firstMealHour={NO_AUTO_OPEN_HOUR}
-                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     fireEvent.click(screen.getByRole("button", { name: "עריכת ארוחה 13:30" }));
@@ -671,8 +696,8 @@ describe("DayTracker", () => {
   it("leaves the meal inputs open when an edit is cancelled", () => {
     atLocalTime(19, 5);
     render(<DayTracker questionnaire={questionnaire} today={trackedDay}
-                       firstMealHour={NO_AUTO_OPEN_HOUR}
-                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     fireEvent.click(screen.getByRole("button", { name: "עריכת ארוחה 13:30" }));
@@ -687,8 +712,8 @@ describe("DayTracker", () => {
     atLocalTime(19, 5);
     const confirmSpy = vi.spyOn(window, "confirm");
     render(<DayTracker questionnaire={questionnaire} today={trackedDay}
-                       firstMealHour={NO_AUTO_OPEN_HOUR}
-                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     fireEvent.click(screen.getByRole("button", { name: "עריכת ארוחה 13:30" }));
@@ -708,9 +733,10 @@ describe("DayTracker", () => {
     const confirmSpy = vi.spyOn(window, "confirm");
     render(<DayTracker questionnaire={questionnaire} today={emptyDay}
                        firstMealHour={11}
-                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    openMealForm();
     fireEvent.click(screen.getByRole("button", { name: "הוספת ארוחה" }));
 
     expect(confirmSpy).not.toHaveBeenCalled();
@@ -722,8 +748,8 @@ describe("DayTracker", () => {
     atLocalTime(19, 5);
     const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
     render(<DayTracker questionnaire={questionnaire} today={emptyDay}
-                       firstMealHour={NO_AUTO_OPEN_HOUR}
-                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     openMealForm();
@@ -740,8 +766,8 @@ describe("DayTracker", () => {
     atLocalTime(19, 5);
     const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
     render(<DayTracker questionnaire={questionnaire} today={emptyDay}
-                       firstMealHour={NO_AUTO_OPEN_HOUR}
-                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     openMealForm();
@@ -763,8 +789,8 @@ describe("DayTracker", () => {
     atLocalTime(19, 5);
     const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
     render(<DayTracker questionnaire={questionnaire} today={emptyDay}
-                       firstMealHour={NO_AUTO_OPEN_HOUR}
-                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     openMealForm();
@@ -779,8 +805,8 @@ describe("DayTracker", () => {
     atLocalTime(19, 5);
     const confirmSpy = vi.spyOn(window, "confirm");
     render(<DayTracker questionnaire={questionnaire} today={emptyDay}
-                       firstMealHour={NO_AUTO_OPEN_HOUR}
-                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     openMealForm();
@@ -798,8 +824,8 @@ describe("DayTracker", () => {
     atLocalTime(19, 5);
     vi.spyOn(window, "confirm").mockReturnValue(false);
     render(<DayTracker questionnaire={questionnaire} today={trackedDay}
-                       firstMealHour={NO_AUTO_OPEN_HOUR}
-                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     fireEvent.click(screen.getByRole("button", { name: "עריכת ארוחה 13:30" }));
@@ -816,8 +842,8 @@ describe("DayTracker", () => {
     atLocalTime(19, 5);
     const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
     render(<DayTracker questionnaire={questionnaire} today={trackedDay}
-                       firstMealHour={NO_AUTO_OPEN_HOUR}
-                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     fireEvent.click(screen.getByRole("button", { name: "עריכת ארוחה 13:30" }));
@@ -833,8 +859,8 @@ describe("DayTracker", () => {
 
   it("renders the score bold and last in the dashboard", () => {
     render(<DayTracker questionnaire={questionnaire} today={trackedDay}
-                       firstMealHour={NO_AUTO_OPEN_HOUR}
-                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     const score = dashboardFigure("ציון");
@@ -844,8 +870,8 @@ describe("DayTracker", () => {
 
   it("exposes the carbs tooltip on the dashboard score", () => {
     render(<DayTracker questionnaire={questionnaire} today={trackedDay}
-                       firstMealHour={NO_AUTO_OPEN_HOUR}
-                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     expect(dashboardFigure("ציון")).toHaveAttribute("title", "המטרה היא ציון נמוך");
@@ -855,8 +881,8 @@ describe("DayTracker", () => {
     const onDeleteMeal = vi.fn();
     vi.spyOn(window, "confirm").mockReturnValue(true);
     render(<DayTracker questionnaire={questionnaire} today={trackedDay}
-                       firstMealHour={NO_AUTO_OPEN_HOUR}
-                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={onDeleteMeal} onCloseDay={vi.fn()} />);
     expect(dashboardFigure("ציון")).toHaveTextContent("ציון: 4");
@@ -873,8 +899,8 @@ describe("DayTracker", () => {
 
   it("lists meals newest first", () => {
     render(<DayTracker questionnaire={questionnaire} today={trackedDay}
-                       firstMealHour={NO_AUTO_OPEN_HOUR}
-                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     const times = screen.getAllByText(/^\d{2}:\d{2}$/).map((el) => el.textContent);
@@ -883,8 +909,8 @@ describe("DayTracker", () => {
 
   it("shows each meal's effective points at the end of its row", () => {
     render(<DayTracker questionnaire={questionnaire} today={trackedDay}
-                       firstMealHour={NO_AUTO_OPEN_HOUR}
-                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     expect(screen.getByText("09:10").closest("li")).toHaveTextContent("ללא פחמימות · 🥗 · 0");
@@ -893,8 +919,8 @@ describe("DayTracker", () => {
 
   it("gives each meal's time its own cell, so a wrapped description never runs under it", () => {
     render(<DayTracker questionnaire={questionnaire} today={trackedDay}
-                       firstMealHour={NO_AUTO_OPEN_HOUR}
-                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     const time = screen.getByText("09:10");
@@ -906,8 +932,8 @@ describe("DayTracker", () => {
 
   it("gives each meal's points their own cell so the scores hold a column", () => {
     render(<DayTracker questionnaire={questionnaire} today={trackedDay}
-                       firstMealHour={NO_AUTO_OPEN_HOUR}
-                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     for (const [time, score] of [["09:10", "0"], ["13:30", "4"]] as const) {
@@ -920,8 +946,8 @@ describe("DayTracker", () => {
 
   it("names the meal's score through the carbs tooltip, so the bare number is explained", () => {
     render(<DayTracker questionnaire={questionnaire} today={trackedDay}
-                       firstMealHour={NO_AUTO_OPEN_HOUR}
-                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     const row = screen.getByText("13:30").closest("li")!;
@@ -937,8 +963,8 @@ describe("DayTracker", () => {
       derived: { carbs: 17, meals: 1, vegetables: 0, eating_window: 0 },
     };
     render(<DayTracker questionnaire={questionnaire} today={additionsDay}
-                       firstMealHour={NO_AUTO_OPEN_HOUR}
-                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     expect(screen.getByText("09:10").closest("li"))
@@ -947,8 +973,8 @@ describe("DayTracker", () => {
 
   it("marks each meal's row controls with the compact icon-only style", () => {
     render(<DayTracker questionnaire={questionnaire} today={trackedDay}
-                       firstMealHour={NO_AUTO_OPEN_HOUR}
-                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     for (const button of screen.getAllByRole("button", { name: /מחיקת ארוחה|עריכת ארוחה/ })) {
@@ -959,8 +985,8 @@ describe("DayTracker", () => {
   it("close-day asks for water and submits derived values plus drinking", () => {
     const onCloseDay = vi.fn();
     render(<DayTracker questionnaire={questionnaire} today={wideWindowDay}
-                       firstMealHour={NO_AUTO_OPEN_HOUR}
-                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={onCloseDay} />);
     fireEvent.click(screen.getByRole("button", { name: "סגירת יום" }));
@@ -973,16 +999,16 @@ describe("DayTracker", () => {
   it("close-day stays hidden until the recorded meals span six hours", () => {
     const { rerender } = render(
       <DayTracker questionnaire={questionnaire} today={trackedDay}
-                  firstMealHour={NO_AUTO_OPEN_HOUR}
-                  mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                  firstMealHour={NO_NUDGE_HOUR}
+                  mealGapHours={NO_NUDGE_GAP_HOURS}
                   onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                   onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     expect(dashboardFigure("חלון")).toHaveTextContent("חלון: 4.5 שעות");
     expect(screen.queryByRole("button", { name: "סגירת יום" })).toBeNull();
 
     rerender(<DayTracker questionnaire={questionnaire} today={wideWindowDay}
-                         firstMealHour={NO_AUTO_OPEN_HOUR}
-                         mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                         firstMealHour={NO_NUDGE_HOUR}
+                         mealGapHours={NO_NUDGE_GAP_HOURS}
                          onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                          onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     expect(dashboardFigure("חלון")).toHaveTextContent("חלון: 6.5 שעות");
@@ -992,16 +1018,16 @@ describe("DayTracker", () => {
   it("folds the close-day panel away when a deletion narrows the window below six hours", () => {
     const { rerender } = render(
       <DayTracker questionnaire={questionnaire} today={wideWindowDay}
-                  firstMealHour={NO_AUTO_OPEN_HOUR}
-                  mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                  firstMealHour={NO_NUDGE_HOUR}
+                  mealGapHours={NO_NUDGE_GAP_HOURS}
                   onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                   onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     fireEvent.click(screen.getByRole("button", { name: "סגירת יום" }));
     expect(screen.getByRole("button", { name: "אישור וסגירה" })).toBeInTheDocument();
 
     rerender(<DayTracker questionnaire={questionnaire} today={trackedDay}
-                         firstMealHour={NO_AUTO_OPEN_HOUR}
-                         mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                         firstMealHour={NO_NUDGE_HOUR}
+                         mealGapHours={NO_NUDGE_GAP_HOURS}
                          onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                          onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     expect(screen.queryByRole("button", { name: "אישור וסגירה" })).toBeNull();
@@ -1015,22 +1041,22 @@ describe("DayTracker", () => {
     };
     const { rerender } = render(
       <DayTracker questionnaire={questionnaire} today={emptyDay}
-                  firstMealHour={NO_AUTO_OPEN_HOUR}
-                  mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                  firstMealHour={NO_NUDGE_HOUR}
+                  mealGapHours={NO_NUDGE_GAP_HOURS}
                   onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                   onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     expect(screen.queryByRole("button", { name: "סגירת יום" })).toBeNull();
 
     rerender(<DayTracker questionnaire={questionnaire} today={singleMealDay}
-                         firstMealHour={NO_AUTO_OPEN_HOUR}
-                         mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                         firstMealHour={NO_NUDGE_HOUR}
+                         mealGapHours={NO_NUDGE_GAP_HOURS}
                          onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                          onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     expect(screen.queryByRole("button", { name: "סגירת יום" })).toBeNull();
 
     rerender(<DayTracker questionnaire={questionnaire} today={wideWindowDay}
-                         firstMealHour={NO_AUTO_OPEN_HOUR}
-                         mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                         firstMealHour={NO_NUDGE_HOUR}
+                         mealGapHours={NO_NUDGE_GAP_HOURS}
                          onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                          onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     expect(screen.getByRole("button", { name: "סגירת יום" })).toBeInTheDocument();
@@ -1038,8 +1064,8 @@ describe("DayTracker", () => {
 
   it("seats a header aside on the tracker's own title row", () => {
     render(<DayTracker questionnaire={questionnaire} today={trackedDay}
-                       firstMealHour={NO_AUTO_OPEN_HOUR}
-                       mealGapHours={NO_AUTO_OPEN_GAP_HOURS}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
                        headerAside={<span>שאלון מקופל</span>}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);

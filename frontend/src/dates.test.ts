@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dayEnded, dayLabel, daysBefore, daysSince, ddmmLabel, defaultDay, expandMealForm, expandQuestionnaire, expandWeightSection, isWeighInDay, isoDate, last7Days, parseIsoDate, weekdayDdmmLabel, weekdayLetter } from "./dates";
+import { dayEnded, dayLabel, daysBefore, daysSince, ddmmLabel, defaultDay, mealOverdue, expandQuestionnaire, expandWeightSection, isWeighInDay, isoDate, last7Days, parseIsoDate, weekdayDdmmLabel, weekdayLetter } from "./dates";
 
 describe("isoDate", () => {
   it("formats a local date as YYYY-MM-DD with zero padding", () => {
@@ -104,7 +104,7 @@ describe("defaultDay", () => {
   });
 });
 
-describe("expandMealForm", () => {
+describe("mealOverdue", () => {
   const eleven = new Date(2026, 7, 18, 11, 0);
   const beforeEleven = new Date(2026, 7, 18, 10, 59);
   const firstMealHour = 11;
@@ -113,37 +113,37 @@ describe("expandMealForm", () => {
   // the same wherever the test runs.
   const mealAt = (hour: number, minute = 0) => ({ at: new Date(2026, 7, 18, hour, minute).toISOString() });
 
-  it("expands from the first-meal hour on a day with nothing recorded", () => {
-    expect(expandMealForm(eleven, firstMealHour, mealGapHours, [])).toBe(true);
+  it("overdue from the first-meal hour on a day with nothing recorded", () => {
+    expect(mealOverdue(eleven, firstMealHour, mealGapHours, [])).toBe(true);
   });
 
-  it("stays collapsed before the first-meal hour", () => {
-    expect(expandMealForm(beforeEleven, firstMealHour, mealGapHours, [])).toBe(false);
+  it("not yet due before the first-meal hour", () => {
+    expect(mealOverdue(beforeEleven, firstMealHour, mealGapHours, [])).toBe(false);
   });
 
   it("respects a different configured first-meal hour", () => {
-    expect(expandMealForm(beforeEleven, 10, mealGapHours, [])).toBe(true);
+    expect(mealOverdue(beforeEleven, 10, mealGapHours, [])).toBe(true);
   });
 
-  it("stays collapsed while the last recorded meal is younger than the gap", () => {
-    expect(expandMealForm(eleven, firstMealHour, mealGapHours, [mealAt(7, 1)])).toBe(false);
+  it("not due while the last recorded meal is younger than the gap", () => {
+    expect(mealOverdue(eleven, firstMealHour, mealGapHours, [mealAt(7, 1)])).toBe(false);
   });
 
-  it("expands once the gap since the last recorded meal is reached", () => {
-    expect(expandMealForm(eleven, firstMealHour, mealGapHours, [mealAt(7)])).toBe(true);
+  it("overdue once the gap since the last recorded meal is reached", () => {
+    expect(mealOverdue(eleven, firstMealHour, mealGapHours, [mealAt(7)])).toBe(true);
   });
 
   it("measures the gap from the latest meal whatever order the meals arrive in", () => {
-    expect(expandMealForm(eleven, firstMealHour, mealGapHours, [mealAt(10), mealAt(6)])).toBe(false);
+    expect(mealOverdue(eleven, firstMealHour, mealGapHours, [mealAt(10), mealAt(6)])).toBe(false);
   });
 
-  it("expands on a stale meal even before the first-meal hour", () => {
-    expect(expandMealForm(beforeEleven, firstMealHour, mealGapHours, [mealAt(6)])).toBe(true);
+  it("overdue on a stale meal even before the first-meal hour", () => {
+    expect(mealOverdue(beforeEleven, firstMealHour, mealGapHours, [mealAt(6)])).toBe(true);
   });
 
   it("respects a different configured gap", () => {
-    expect(expandMealForm(eleven, firstMealHour, 2, [mealAt(8, 30)])).toBe(true);
-    expect(expandMealForm(eleven, firstMealHour, 6, [mealAt(8, 30)])).toBe(false);
+    expect(mealOverdue(eleven, firstMealHour, 2, [mealAt(8, 30)])).toBe(true);
+    expect(mealOverdue(eleven, firstMealHour, 6, [mealAt(8, 30)])).toBe(false);
   });
 });
 

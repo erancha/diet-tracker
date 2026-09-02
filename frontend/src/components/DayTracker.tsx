@@ -1,5 +1,5 @@
-import { useState, type ReactNode } from "react";
-import { clockTimeOf, expandMealForm } from "../dates";
+import { useEffect, useState, type ReactNode } from "react";
+import { clockTimeOf, mealOverdue } from "../dates";
 import { carbsScales, deriveDay, smallPortionOffered } from "../derive";
 import { mayDiscardEdits } from "../edits";
 import { useExpandedGradeLabels } from "../gradeLabels";
@@ -29,6 +29,10 @@ const SECOND_SOURCE_REMOVE = "הסרת מקור פחמימה נוסף";
 // moves to rather than the state it is in.
 const EXPAND_LABELS = "הרחבת שמות";
 const COLLAPSE_LABELS = "צמצום שמות";
+
+// How long each of the nudge's escalating beats runs before the next takes over. The blink rate
+// itself is the style sheet's, keyed by the phase the section's class carries.
+const NUDGE_ESCALATION_MS = 10_000;
 
 // Closing the day from here is offered only once the recorded meals span this much of the day;
 // anything narrower is a day still being eaten, whose figures would be closed too early. A day
@@ -122,12 +126,28 @@ export function DayTracker({ questionnaire, today, firstMealHour, mealGapHours, 
         || secondChoiceId !== undefined || mealTime !== pristineTime);
 
   // The meal inputs are the tallest thing here and are worth reading only when there is a meal to
-  // report, so the tracker opens on the day's figures and its recorded meals with the inputs
-  // folded away behind them — unless a meal is overdue, when reporting one is the likeliest reason
-  // for the visit. This decides only where the section opens: recording a meal or sending a
-  // correction folds the inputs again, and opening a meal for editing unfolds them.
-  const [formCollapsed, setFormCollapsed] =
-    useState(() => !expandMealForm(new Date(), firstMealHour, mealGapHours, today.meals));
+  // report, so the tracker always opens on the day's figures and its recorded meals with the
+  // inputs folded away behind them. Recording a meal or sending a correction folds the inputs
+  // again, and opening a meal for editing unfolds them.
+  const [formCollapsed, setFormCollapsed] = useState(true);
+
+  // An overdue meal is called for from the fold rather than by opening the inputs uninvited: the
+  // add-meal toggle blinks while it stands between the user and reporting the meal. Open inputs
+  // silence the nudge, and so does a fresh meal arriving in the day's list.
+  const nudging = formCollapsed
+    && mealOverdue(new Date(), firstMealHour, mealGapHours, today.meals);
+
+  // Which beat of the blink schedule the nudge is on: 0 opens it, 1 presses harder, 2 settles into
+  // the slow standing reminder. The schedule restarts whenever the nudge returns, so a re-folded
+  // form gets the same escalation a fresh visit does.
+  const [nudgePhase, setNudgePhase] = useState(0);
+  useEffect(() => {
+    if (!nudging) return;
+    setNudgePhase(0);
+    const escalations = [1, 2].map((phase) =>
+      setTimeout(() => setNudgePhase(phase), phase * NUDGE_ESCALATION_MS));
+    return () => escalations.forEach(clearTimeout);
+  }, [nudging]);
 
   // Only reachable through the submit button, which renders only once a grade is picked and is
   // disabled while the picked time is still ahead of the clock.
@@ -222,7 +242,8 @@ export function DayTracker({ questionnaire, today, firstMealHour, mealGapHours, 
           {expandLabels ? COLLAPSE_LABELS : EXPAND_LABELS}
         </button>
       </div>
-      <CollapsibleSection className="meal-form" headingLevel={3}
+      <CollapsibleSection className={nudging ? `meal-form nudge-${nudgePhase}` : "meal-form"}
+                          headingLevel={3}
                           title={editing !== undefined ? "עדכון ארוחה" : "הוספת ארוחה"}
                           collapsed={formCollapsed}
                           onToggle={toggleForm}>

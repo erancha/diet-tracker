@@ -13,10 +13,10 @@ export interface AppConfig {
   // questionnaire, and an untracked, unsubmitted day opens it expanded.
   dayEndHour: number;
   // Local hour by which the day's first meal is expected; from then on a day with nothing recorded
-  // opens the tracker's meal inputs expanded.
+  // blinks the tracker's add-meal toggle.
   firstMealHour: number;
   // Hours a day may go without a meal before the next one counts as overdue; once the most recent
-  // recorded meal is this far behind the clock, the tracker's meal inputs open expanded.
+  // recorded meal is this far behind the clock, the tracker's add-meal toggle blinks.
   mealGapHours: number;
 }
 

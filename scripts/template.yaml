@@ -23,14 +23,15 @@ Parameters:
   FirstMealHour:
     Type: Number
     Default: 11
-    Description: Asia/Jerusalem hour by which the day's first meal is expected; from then on the
-      frontend opens the tracker's meal inputs expanded on a day with nothing recorded
+    Description: Asia/Jerusalem hour by which the day's first meal is expected; a day still
+      holding nothing past it carries an overdue meal. Read by the frontend through its
+      generated config
   MealGapHours:
     Type: Number
     Default: 4
-    Description: Hours a day may go without a meal before the next one counts as overdue; once the
-      most recent recorded meal is this far behind, the frontend opens the tracker's meal inputs
-      expanded
+    Description: Hours a day may go without a meal before the next one counts as overdue,
+      measured from when the most recent meal was eaten. Read by the frontend through its
+      generated config
   WeighInWeekday:
     Type: String
     AllowedValues: [SUN, MON, TUE, WED, THU, FRI, SAT]
