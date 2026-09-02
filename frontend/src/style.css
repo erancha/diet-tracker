@@ -67,6 +67,7 @@ header .account-email {
    edge rather than centred the way a standalone button is. */
 header .account-menu button {
   --btn-bg: transparent; --btn-fg: inherit; --btn-border: transparent;
+  display: flex; align-items: center; gap: 0.5rem;
   text-align: start; padding: 0.45rem var(--menu-text-inset); border-radius: 6px; white-space: nowrap;
 }
 header .account-menu button:hover:not(:disabled) { --btn-bg: #eceff1; filter: none; }

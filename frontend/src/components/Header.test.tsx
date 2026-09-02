@@ -26,15 +26,16 @@ describe("Header", () => {
     expect(screen.getByText("a@b.com")).toBeInTheDocument();
   });
 
-  it("keeps the plain sign-out as the account menu's first item", async () => {
+  it("keeps sign-out as the account menu's last item", async () => {
     const onSignOut = vi.fn();
     render(<Header {...props} onSignOut={onSignOut} />);
 
     await openMenu();
     const items = screen.getAllByRole("menuitem");
-    expect(items[0]).toHaveTextContent("התנתקות");
+    const signOut = items[items.length - 1];
+    expect(signOut).toHaveTextContent("התנתקות");
 
-    await userEvent.click(items[0]);
+    await userEvent.click(signOut);
     expect(onSignOut).toHaveBeenCalledOnce();
   });
 

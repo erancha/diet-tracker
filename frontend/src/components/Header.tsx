@@ -57,9 +57,12 @@ export function Header({ email, muted, onSignOut, onSetMuted, activeViolations }
             <span className="account-menu">
               <span className="account-email">{email}</span>
               <span role="menu">
-                <button type="button" role="menuitem" onClick={choose(onSignOut)}>התנתקות</button>
                 <button type="button" role="menuitem" onClick={choose(() => onSetMuted(!muted))}>
+                  <Icon name={muted ? "alarm" : "alarmOff"} />
                   {muted ? "חידוש התראות" : "ביטול התראות"}
+                </button>
+                <button type="button" role="menuitem" onClick={choose(onSignOut)}>
+                  <Icon name="signOut" />התנתקות
                 </button>
               </span>
             </span>

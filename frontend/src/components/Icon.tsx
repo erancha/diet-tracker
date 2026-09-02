@@ -18,6 +18,11 @@ const GLYPHS = {
   openDay: <><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
              <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" /></>,
   menu: <><path d="M3 6h18" /><path d="M3 12h18" /><path d="M3 18h18" /></>,
+  alarmOff: <><path d="M8.7 3A6 6 0 0 1 18 8a21.3 21.3 0 0 0 .6 5" />
+              <path d="M17 17H3s3-2 3-9a4.67 4.67 0 0 1 .3-1.7" />
+              <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /><path d="m2 2 20 20" /></>,
+  signOut: <><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="m16 17 5-5-5-5" />
+             <path d="M21 12H9" /></>,
 } satisfies Record<string, ReactElement>;
 
 export type IconName = keyof typeof GLYPHS;
