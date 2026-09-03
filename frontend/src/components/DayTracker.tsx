@@ -9,11 +9,9 @@ import { CollapsibleSection } from "./CollapsibleSection";
 import { DayDashboard } from "./DayDashboard";
 import { MealList } from "./MealList";
 
-// The meal time the form opens on is the current clock rounded down to a ten-minute mark and
-// pushed back by a typical report lag: a meal is tapped in a few minutes after it was eaten, and
-// its time is an estimate, not a stopwatch reading.
-const TIME_STEP_MINUTES = 10;
-const REPORT_LAG_MINUTES = 20;
+// The meal time the form opens on is the current clock rounded down to a five-minute mark: a
+// meal's time is an estimate, not a stopwatch reading.
+const TIME_STEP_MINUTES = 5;
 
 // A meal drawing on no carb source says so by carrying none at all, so the plain no-carb grade is
 // never a second one. The id is the config's, shared with the API's own rejection of it.
@@ -403,11 +401,9 @@ function clockTime(minutes: number): string {
     `${String(minutes % 60).padStart(2, "0")}`;
 }
 
-// Never reaches back past midnight: the server accepts today's meals only, and a meal reported
-// in the first minutes of a day was still eaten on that day.
 function defaultMealTime(now: Date): string {
   const minutes = minutesOfDay(now);
-  return clockTime(Math.max(0, minutes - minutes % TIME_STEP_MINUTES - REPORT_LAG_MINUTES));
+  return clockTime(minutes - minutes % TIME_STEP_MINUTES);
 }
 
 // The current date carrying the picked wall-clock time, whole minutes.

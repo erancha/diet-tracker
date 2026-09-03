@@ -341,26 +341,15 @@ describe("DayTracker", () => {
     expect(onAddMeal).toHaveBeenCalledWith(expect.objectContaining({ carbs_choice: "grade4b" }));
   });
 
-  it("defaults the meal time to twenty minutes before the ten-minute mark just passed", () => {
-    atLocalTime(12, 25);
+  it("defaults the meal time to the five-minute boundary just passed", () => {
+    atLocalTime(12, 27);
     render(<DayTracker maxMealsPerDay={NO_CAP_MEALS} questionnaire={questionnaire} today={emptyDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     openMealForm();
-    expect(screen.getByLabelText("שעת הארוחה")).toHaveValue("12:00");
-  });
-
-  it("holds the default at midnight during the first twenty minutes of the day", () => {
-    atLocalTime(0, 5);
-    render(<DayTracker maxMealsPerDay={NO_CAP_MEALS} questionnaire={questionnaire} today={emptyDay}
-                       firstMealHour={NO_NUDGE_HOUR}
-                       mealGapHours={NO_NUDGE_GAP_HOURS}
-                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
-                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
-    openMealForm();
-    expect(screen.getByLabelText("שעת הארוחה")).toHaveValue("00:00");
+    expect(screen.getByLabelText("שעת הארוחה")).toHaveValue("12:25");
   });
 
   it("records a meal at the picked time rather than the submission moment", () => {
@@ -391,7 +380,7 @@ describe("DayTracker", () => {
     fireEvent.click(screen.getByRole("button", { name: "שמירת ארוחה" }));
     // Recording folds the inputs away, so the restored default is read back through the header.
     fireEvent.click(screen.getByRole("button", { name: "הוספת ארוחה" }));
-    expect(screen.getByLabelText("שעת הארוחה")).toHaveValue("15:40");
+    expect(screen.getByLabelText("שעת הארוחה")).toHaveValue("16:05");
   });
 
   it("refuses to record a meal at a time the day has not reached yet", () => {
@@ -457,7 +446,7 @@ describe("DayTracker", () => {
     fireEvent.click(screen.getByRole("button", { name: "יציאה מעריכה" }));
     expect(confirmSpy).not.toHaveBeenCalled();
     expect(onUpdateMeal).not.toHaveBeenCalled();
-    expect(screen.getByLabelText("שעת הארוחה")).toHaveValue("18:40");
+    expect(screen.getByLabelText("שעת הארוחה")).toHaveValue("19:05");
     expect(screen.getByLabelText("דרגה 4")).not.toBeChecked();
     expect(screen.queryByRole("button", { name: "עדכון ארוחה" })).toBeNull();
   });
@@ -492,7 +481,7 @@ describe("DayTracker", () => {
     fireEvent.click(screen.getByRole("button", { name: "ביטול שינויים" }));
     expect(confirmSpy).toHaveBeenCalledOnce();
     expect(screen.queryByRole("button", { name: "עדכון ארוחה" })).toBeNull();
-    expect(screen.getByLabelText("שעת הארוחה")).toHaveValue("18:40");
+    expect(screen.getByLabelText("שעת הארוחה")).toHaveValue("19:05");
   });
 
   it("treats a re-picked addition as a divergence worth confirming", () => {
@@ -747,7 +736,7 @@ describe("DayTracker", () => {
     expect(toggle).toHaveAttribute("aria-expanded", "false");
     // The edit is gone, not merely hidden: the inputs come back on the recording defaults.
     fireEvent.click(toggle);
-    expect(screen.getByLabelText("שעת הארוחה")).toHaveValue("18:40");
+    expect(screen.getByLabelText("שעת הארוחה")).toHaveValue("19:05");
     expect(screen.getByLabelText("דרגה 4")).not.toBeChecked();
   });
 
@@ -805,7 +794,7 @@ describe("DayTracker", () => {
     fireEvent.click(toggle);
     expect(screen.getByLabelText("דרגה 4")).not.toBeChecked();
     expect(screen.getByLabelText("כולל ירקות")).not.toBeChecked();
-    expect(screen.getByLabelText("שעת הארוחה")).toHaveValue("18:40");
+    expect(screen.getByLabelText("שעת הארוחה")).toHaveValue("19:05");
   });
 
   it("asks before folding away a meal time picked off the opening default", () => {
@@ -877,7 +866,7 @@ describe("DayTracker", () => {
     const toggle = screen.getByRole("button", { name: "הוספת ארוחה" });
     expect(toggle).toHaveAttribute("aria-expanded", "false");
     fireEvent.click(toggle);
-    expect(screen.getByLabelText("שעת הארוחה")).toHaveValue("18:40");
+    expect(screen.getByLabelText("שעת הארוחה")).toHaveValue("19:05");
   });
 
   it("renders the score bold and last in the dashboard", () => {
