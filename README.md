@@ -41,6 +41,9 @@ closed from the tracker, and the week's trend over recorded history.
   means that data leaves the app for the external answering service and the LLM behind it. Questions are capped
   per user per day, because each one spends money upstream. Every answered turn is stored per
   user, so the conversation survives reloads and follows its user across devices.
+- The admin account alone gets a user-activity section: every signed-up account with its
+  closed-day and meal counts over the trailing week, most active first. It carries counts and
+  addresses only — no one's recorded content is readable there.
 
 ## Tech stack
 
@@ -66,7 +69,7 @@ graph LR
     U((User)) --> FE[React RTL frontend<br/>S3 + CloudFront]
     FE -->|Google sign-in| COG[Cognito]
     COG -->|allowlist| PRE[presignup Lambda]
-    FE -->|JWT| API[HTTP API<br/>/days · /meals · /weight · /chat]
+    FE -->|JWT| API[HTTP API<br/>/days · /meals · /weight · /chat · /admin]
     API --> APIL[api Lambda]
     API --> CHATL[chat Lambda]
     APIL --> DB[(DynamoDB<br/>days · meals · nudge state · weights)]

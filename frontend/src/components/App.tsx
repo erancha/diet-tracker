@@ -7,6 +7,7 @@ import { dayEnded, defaultDay, expandQuestionnaire, expandWeightSection, isoDate
 import { mayDiscardEdits } from "../edits";
 import { TARGET_UNSET_NOTICE } from "../weight";
 import { isFirstVisit } from "../firstVisit";
+import { AdminSection } from "./AdminSection";
 import { Alerts, type AlertItem } from "./Alerts";
 import { Chat } from "./Chat";
 import { CollapsibleSection } from "./CollapsibleSection";
@@ -27,13 +28,14 @@ import { Welcome } from "./Welcome";
 // deletion, and the account's reminder opt-out — plus the submit → alerts flow,
 // the day-end section's fold it closes, the empty history panel's timed wind-down fold, and the
 // guard that keeps the day-end fold and the day picker from throwing away answers the day-end
-// form has not submitted; the components below it hold no server state of their own.
+// form has not submitted; apart from the chat and admin sections, which own their reads, the
+// components below it hold no server state of their own.
 //
 // It also reads whether the account has recorded anything yet, because both the greeting and the
 // weight section's opening fold answer to that one reading and must not disagree about it.
-export function App({ email, api, dayEndHour, firstMealHour, mealGapHours, onSignOut }: {
+export function App({ email, api, dayEndHour, firstMealHour, mealGapHours, isAdmin, onSignOut }: {
   email: string; api: Api; dayEndHour: number; firstMealHour: number; mealGapHours: number;
-  onSignOut: () => void;
+  isAdmin: boolean; onSignOut: () => void;
 }) {
   const queryClient = useQueryClient();
   const [now] = useState(() => new Date());
@@ -293,6 +295,7 @@ export function App({ email, api, dayEndHour, firstMealHour, mealGapHours, onSig
         <CollapsibleSection className="chat-section" title="שאלות על אבא חטוב">
           <Chat api={api} sampleQuestions={configQuery.data.chat.sample_questions} />
         </CollapsibleSection>
+        {isAdmin && <AdminSection api={api} />}
       </main>
     </>
   );

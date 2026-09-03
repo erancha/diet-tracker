@@ -43,6 +43,10 @@ Parameters:
     Default: 8
     Description: Asia/Jerusalem hour of the weekly weigh-in reminder, from the same config/app.json
       declaration as WeighInWeekday
+  AdminEmail:
+    Type: String
+    Description: Address whose authenticated caller the API recognizes as the admin — the one
+      account allowed the per-user activity listing; passed by scripts/deploy.sh from params.sh
   BotTokenParam:
     Type: String
     Default: /diet-tracker/telegram/bot-token
@@ -215,6 +219,9 @@ Resources:
       # values and would otherwise upload the template's own directory.
       CodeUri: ../build/lambda
       Handler: handlers/api.handler
+      Environment:
+        Variables:
+          ADMIN_EMAIL: !Ref AdminEmail
       Events:
         SubmitDay:
           Type: HttpApi
@@ -288,6 +295,12 @@ Resources:
             ApiId: !Ref Api
             Method: PUT
             Path: /notifications
+        AdminActivity:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref Api
+            Method: GET
+            Path: /admin/activity
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref DaysTable
@@ -297,6 +310,7 @@ Resources:
             TableName: !Ref NudgeStateTable
         - DynamoDBCrudPolicy:
             TableName: !Ref WeightsTable
+        - !Ref ListUsersPolicy
 
   ChatFunction:
     Type: AWS::Serverless::Function
@@ -352,10 +366,19 @@ Resources:
         - DynamoDBCrudPolicy:
             TableName: !Ref WeightsTable
         - !Ref NotifyPolicy
-        - Statement:
-            - Effect: Allow
-              Action: cognito-idp:ListUsers
-              Resource: !Sub 'arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${UserPoolId}'
+        - !Ref ListUsersPolicy
+
+  # The right to enumerate the user pool, shared by the nudge job (its recipients) and the API's
+  # admin activity listing.
+  ListUsersPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action: cognito-idp:ListUsers
+            Resource: !Sub 'arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${UserPoolId}'
 
   # The SES/SSM grants shared by every function that alerts users or reads a secret from the
   # /diet-tracker/* SSM namespace (the chat proxy's RAG API key lives there too).

@@ -3,8 +3,8 @@
 
 import { isUnexpired, reauthenticate, type Tokens } from "./auth";
 import type { AppConfig } from "./config";
-import type { AnswerValue, ChatAnswer, ChatTranscript, DayPayload, HistoryResponse, NewMeal,
-  NotificationSettings, SubmitResult, WeightPayload } from "./types";
+import type { AdminActivity, AnswerValue, ChatAnswer, ChatTranscript, DayPayload, HistoryResponse,
+  NewMeal, NotificationSettings, SubmitResult, WeightPayload } from "./types";
 
 /** Backend request rejected; the message keeps the method, path, status, and body for diagnosis. */
 export class ApiError extends Error {
@@ -43,6 +43,7 @@ export interface Api {
   setWeightTarget(kg: number): Promise<WeightPayload>;
   deleteWeight(date: string): Promise<WeightPayload>;
   setMuted(muted: boolean): Promise<NotificationSettings>;
+  getAdminActivity(): Promise<AdminActivity>;
   ask(question: string, at?: string): Promise<ChatAnswer>;
   getChatTranscript(): Promise<ChatTranscript>;
   deleteChatTurn(at: string): Promise<{ at: string }>;
@@ -93,6 +94,7 @@ export function createApi(
     setWeightTarget: (kg) => request("PUT", "/weight/target", { kg }),
     deleteWeight: (date) => request("DELETE", `/weight/${date}`),
     setMuted: (muted) => request("PUT", "/notifications", { muted }),
+    getAdminActivity: () => request("GET", "/admin/activity"),
     // `at` marks the question as a follow-up: the server writes the answered question over the
     // turn stored under that timestamp, keeping the conversation as that one turn.
     ask: (question, at) => request("POST", "/chat", { question, ...(at !== undefined && { at }) }),

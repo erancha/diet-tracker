@@ -28,12 +28,12 @@ def env(monkeypatch, ddb):
     monkeypatch.setattr(api, "clock_time", lambda: WEIGH_IN_AT)
 
 
-def request(route, body=None, path_params=None):
+def request(route, body=None, path_params=None, email="a@gmail.com"):
     return {
         "routeKey": route,
         "body": json.dumps(body) if body else None,
         "pathParameters": path_params,
-        "requestContext": {"authorizer": {"jwt": {"claims": {"sub": "u1", "email": "a@gmail.com"}}}},
+        "requestContext": {"authorizer": {"jwt": {"claims": {"sub": "u1", "email": email}}}},
     }
 
 
@@ -429,3 +429,49 @@ def test_notifications_route_rejects_a_non_boolean(env):
     assert response["statusCode"] == 400
 
 
+
+
+@pytest.fixture
+def admin_env(env, monkeypatch):
+    """The admin listing's environment on top of env: a mocked user pool the handler may list,
+    and the admin address the caller is recognized by."""
+    cognito = boto3.client("cognito-idp", region_name="eu-central-1")
+    pool_id = cognito.create_user_pool(PoolName="p")["UserPool"]["Id"]
+    monkeypatch.setenv("USER_POOL_ID", pool_id)
+    monkeypatch.setenv("ADMIN_EMAIL", "admin@gmail.com")
+    return cognito, pool_id
+
+
+def signed_up(cognito, pool_id, email):
+    created = cognito.admin_create_user(
+        UserPoolId=pool_id, Username=email,
+        UserAttributes=[{"Name": "email", "Value": email}])
+    return next(a["Value"] for a in created["User"]["Attributes"] if a["Name"] == "sub")
+
+
+def test_admin_activity_refuses_every_other_account(admin_env):
+    response = api.handler(request("GET /admin/activity"), None)
+    assert response["statusCode"] == 403
+
+
+def test_admin_activity_counts_the_trailing_week_most_active_first(admin_env):
+    from common.store import Store
+    cognito, pool_id = admin_env
+    active = signed_up(cognito, pool_id, "active@gmail.com")
+    signed_up(cognito, pool_id, "quiet@gmail.com")
+    signed_up(cognito, pool_id, "admin@gmail.com")
+    store = Store("days", "meals", "state", "weights")
+    store.put_day(active, today(), ANSWERS, 3, "t")
+    store.put_day(active, days_before(today(), 6), ANSWERS, 3, "t")
+    store.put_day(active, days_before(today(), 7), ANSWERS, 3, "t")
+    store.add_meal(active, today(), meal_body("carb_grade_3", True, False, (), "09:10:00",
+                                              False, None))
+    # The admin claim matches case-insensitively, like the sign-up allowlist.
+    response = api.handler(request("GET /admin/activity", email="Admin@Gmail.com"), None)
+    assert response["statusCode"] == 200
+    listed = body_of(response)["users"]
+    assert listed[0] == {"email": "active@gmail.com", "days": 2, "meals": 1}
+    assert {"email": "quiet@gmail.com", "days": 0, "meals": 0} in listed
+    assert {"email": "admin@gmail.com", "days": 0, "meals": 0} in listed
+    # Counts and the address only — an activity overview must never carry recorded content.
+    assert all(set(user) == {"email", "days", "meals"} for user in listed)

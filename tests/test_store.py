@@ -52,6 +52,27 @@ def test_meals_roundtrip_chronological_and_per_day(store):
     assert meals[1]["additions"] == ["sweet"]
 
 
+def test_day_count_spans_the_inclusive_range_per_user(store):
+    store.put_day("u1", "2026-08-13", ANSWERS, 3, "t")
+    store.put_day("u1", "2026-08-14", ANSWERS, 3, "t")
+    store.put_day("u1", "2026-08-20", ANSWERS, 3, "t")
+    store.put_day("u2", "2026-08-15", ANSWERS, 3, "t")
+    assert store.count_days_range("u1", "2026-08-14", "2026-08-20") == 2
+    assert store.count_days_range("u2", "2026-08-14", "2026-08-20") == 1
+    assert store.count_days_range("u3", "2026-08-14", "2026-08-20") == 0
+
+
+def test_meal_count_spans_the_inclusive_range_per_user(store):
+    store.add_meal("u1", "2026-08-13", meal("2026-08-13T09:00:00+03:00", "carb_grade_3"))
+    store.add_meal("u1", "2026-08-14", meal("2026-08-14T09:00:00+03:00", "carb_grade_3"))
+    store.add_meal("u1", "2026-08-20", meal("2026-08-20T09:00:00+03:00", "carb_grade_3"))
+    store.add_meal("u1", "2026-08-20", meal("2026-08-20T13:00:00+03:00", "carb_grade_3"))
+    store.add_meal("u2", "2026-08-20", meal("2026-08-20T09:00:00+03:00", "carb_grade_3"))
+    assert store.count_meals_range("u1", "2026-08-14", "2026-08-20") == 3
+    assert store.count_meals_range("u2", "2026-08-14", "2026-08-20") == 1
+    assert store.count_meals_range("u3", "2026-08-14", "2026-08-20") == 0
+
+
 def test_meal_stored_before_the_fruit_and_addition_flags_reads_them_as_absent(store, ddb):
     ddb.Table("meals").put_item(Item={
         "pk": "u1", "sk": "2026-08-20#09:10:00-abc123",

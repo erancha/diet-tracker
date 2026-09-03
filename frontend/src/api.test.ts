@@ -117,6 +117,19 @@ describe("createApi", () => {
     expect(JSON.parse(init.body)).toEqual({ muted: true });
   });
 
+  it("reads the admin activity listing from its own path", async () => {
+    const listing = { users: [{ email: "a@gmail.com", days: 2, meals: 5 }] };
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify(listing)));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const activity = await createApi(cfg, tokens).getAdminActivity();
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("https://api.example.com/admin/activity");
+    expect(init.method).toBe("GET");
+    expect(activity).toEqual(listing);
+  });
+
   it("rejects with an ApiError carrying the status and the diagnostic detail on a non-ok response", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
       new Response('{"error": "2026-08-22 is already submitted"}', { status: 409 }),

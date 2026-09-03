@@ -108,6 +108,22 @@ class Store:
         return {item["sk"]: {k: _from_dynamo(v) for k, v in item["answers"].items()}
                 for item in response["Items"]}
 
+    def count_days_range(self, user_sub, start_day, end_day) -> int:
+        """Recorded days across the inclusive range, counted inside DynamoDB so record content
+        never leaves the table."""
+        return self._count(self._days, Key("pk").eq(user_sub)
+                           & Key("sk").between(start_day, end_day))
+
+    def count_meals_range(self, user_sub, start_day, end_day) -> int:
+        """Recorded meals across the inclusive day range, counted inside DynamoDB. Meal sort keys
+        are '{day}#{id}', so the upper bound closes past every id of the range's last day."""
+        return self._count(self._meals, Key("pk").eq(user_sub)
+                           & Key("sk").between(f"{start_day}#", f"{end_day}#\xff"))
+
+    @staticmethod
+    def _count(table, key_condition) -> int:
+        return table.query(Select="COUNT", KeyConditionExpression=key_condition)["Count"]
+
     def add_meal(self, user_sub, day, meal) -> str:
         """Stores one meal, returning its id. The meal is a mapping over MEAL_ATTRIBUTES, which is
         also the shape the API validates a request body into: projecting through that tuple keeps

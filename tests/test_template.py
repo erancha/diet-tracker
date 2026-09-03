@@ -37,6 +37,21 @@ def _load_template():
     return yaml.load(TEMPLATE.read_text(), Loader=_CloudFormationLoader)
 
 
+def test_admin_listing_is_routed_gated_and_granted_pool_access():
+    # The admin activity route needs three things wired together: the route itself, the address
+    # the caller is recognized by, and the right to enumerate the pool — a missing one surfaces
+    # only when the admin opens the listing on a deployed stack.
+    template = _load_template()
+    api_function = template["Resources"]["ApiFunction"]["Properties"]
+    routes = {(e["Properties"]["Method"], e["Properties"]["Path"])
+              for e in api_function["Events"].values() if e["Type"] == "HttpApi"}
+    assert ("GET", "/admin/activity") in routes
+    assert api_function["Environment"]["Variables"]["ADMIN_EMAIL"] == "AdminEmail"
+    assert "ListUsersPolicy" in api_function["Policies"]
+    assert "ListUsersPolicy" in template["Resources"]["NudgeFunction"]["Properties"]["Policies"]
+    assert "AdminEmail=" in DEPLOY.read_text()
+
+
 def test_weigh_in_schedule_defaults_agree_with_the_app_config():
     # deploy.sh passes config/app.json's weigh-in slot as parameter overrides, so the template's
     # own defaults never reach a deployed stack. Left to drift they would still mislead anyone

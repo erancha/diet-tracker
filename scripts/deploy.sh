@@ -67,6 +67,7 @@ deploy_main() {
   aws cloudformation deploy --template-file build/template.pkg.yaml \
     --stack-name "$APP" --capabilities CAPABILITY_IAM CAPABILITY_AUTO_EXPAND --no-fail-on-empty-changeset \
     --parameter-overrides SesSender="$SES_SENDER" AllowedOrigins="$origins" \
+      AdminEmail="$ADMIN_EMAIL" \
       UserPoolId="$user_pool_id" \
       UserPoolClientId="$user_pool_client_id" \
       WeighInWeekday="$(app_config "['weight']['weigh_in']['weekday']")" \

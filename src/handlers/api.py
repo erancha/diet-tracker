@@ -1,7 +1,7 @@
 """HTTP API handler: day submission with meal-derived floors, history with per-day read-only
 lookups, day deletion, intraday meal reporting with whole-meal corrections, the weight log —
-measurements and the target the chart reads them against — and the account's own opt-out from
-being notified at all.
+measurements and the target the chart reads them against — the account's own opt-out from
+being notified at all, and the admin's per-user activity overview.
 
 Submission reports the day's tripped rules in the reply for the UI alone; outbound alerting
 belongs exclusively to the nightly rules job, so a violating day raises at most one message,
@@ -15,7 +15,9 @@ import os
 from dataclasses import asdict
 from datetime import date, datetime
 
-from common import appconfig, rules, weight
+import boto3
+
+from common import appconfig, rules, users, weight
 from common.dates import clock_time, days_before, now_iso, today
 from common.derive import derive
 from common.log import get_logger
@@ -56,6 +58,8 @@ def handler(event, context):
         return _delete_weight(sub, event["pathParameters"]["date"])
     if route == "PUT /notifications":
         return _set_muted(sub, json.loads(event["body"]))
+    if route == "GET /admin/activity":
+        return _admin_activity(claims["email"])
     raise ValueError(f"unhandled route {route!r}")
 
 
@@ -331,6 +335,24 @@ def _delete_weight(sub, chosen):
     except KeyError:
         return _response(404, {"error": f"no weight recorded for {chosen}"})
     return _response(200, _weight_payload(store, sub))
+
+
+def _admin_activity(email):
+    """Every user in the pool with their trailing-week day and meal counts, most active first —
+    for the admin account alone. Counts and addresses only, never recorded content: this is an
+    activity overview, not a data export."""
+    if email.lower() != os.environ["ADMIN_EMAIL"].lower():
+        return _response(403, {"error": "admin only"})
+    store = _store()
+    end = today()
+    start = days_before(end, 6)
+    listed = [{"email": user.email,
+               "days": store.count_days_range(user.sub, start, end),
+               "meals": store.count_meals_range(user.sub, start, end)}
+              for user in users.list_users(boto3.client("cognito-idp"),
+                                           os.environ["USER_POOL_ID"])]
+    listed.sort(key=lambda user: user["days"] + user["meals"], reverse=True)
+    return _response(200, {"users": listed})
 
 
 def _set_muted(sub, body):

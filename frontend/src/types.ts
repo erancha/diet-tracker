@@ -171,6 +171,18 @@ export interface NotificationSettings {
   muted: boolean;
 }
 
+// One pool account in the admin's activity overview: trailing-week counts only, no recorded
+// content. The server returns the list most active first.
+export interface AdminActivityUser {
+  email: string;
+  days: number;
+  meals: number;
+}
+
+export interface AdminActivity {
+  users: AdminActivityUser[];
+}
+
 export interface NewMeal {
   at: string;
   carbs_choice: string;

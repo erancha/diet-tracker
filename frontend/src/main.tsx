@@ -40,6 +40,7 @@ try {
           <QueryClientProvider client={new QueryClient()}>
             <App email={email} api={api} dayEndHour={cfg.dayEndHour}
                  firstMealHour={cfg.firstMealHour} mealGapHours={cfg.mealGapHours}
+                 isAdmin={email.toLowerCase() === cfg.rootEmail.toLowerCase()}
                  onSignOut={() => signOut(cfg)} />
           </QueryClientProvider>
         </ErrorBoundary>
