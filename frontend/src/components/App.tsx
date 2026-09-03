@@ -278,6 +278,7 @@ export function App({ email, api, dayEndHour, firstMealHour, mealGapHours, onSig
             today={data.today}
             firstMealHour={firstMealHour}
             mealGapHours={mealGapHours}
+            maxMealsPerDay={configQuery.data.meals.max_per_day}
             onAddMeal={(meal) => mealMutation.mutate(meal)}
             onUpdateMeal={(id, meal) => updateMealMutation.mutate({ id, meal })}
             onDeleteMeal={(id) => deleteMealMutation.mutate(id)}

@@ -6,7 +6,10 @@ from conftest import APP_CONFIG
 from common import appconfig
 
 
-def write(tmp_path, weight):
+LEGAL_MEALS = {"max_per_day": 5}
+
+
+def write(tmp_path, weight, meals=LEGAL_MEALS):
     raw = {
         "questionnaire": {
             "version": 1,
@@ -15,6 +18,7 @@ def write(tmp_path, weight):
             "rules": [],
         },
         "weight": weight,
+        "meals": meals,
     }
     path = tmp_path / "app.json"
     path.write_text(json.dumps(raw), encoding="utf-8")
@@ -25,13 +29,21 @@ LEGAL_WEIGHT = {"weigh_in": {"weekday": "THU", "hour": 8}, "chart_months": 3,
                 "limits": {"min_kg": 20, "max_kg": 400}}
 
 
-def test_repo_config_carries_both_elements():
+def test_repo_config_carries_every_section():
     config = appconfig.load(APP_CONFIG)
     assert config.questionnaire.question("carbs").type == "points"
     assert config.weight.weigh_in.weekday == "THU"
     assert config.weight.weigh_in.hour == 8
     assert config.weight.chart_months == 3
     assert (config.weight.limits.min_kg, config.weight.limits.max_kg) == (20, 400)
+    assert config.meals.max_per_day == 5
+
+
+def test_max_meals_per_day_must_be_a_positive_integer(tmp_path):
+    for cap in (0, -1, 2.5, True, "5"):
+        path = write(tmp_path, LEGAL_WEIGHT, meals={"max_per_day": cap})
+        with pytest.raises(ValueError, match="max_per_day"):
+            appconfig.load(path)
 
 
 def test_weigh_in_weekday_must_be_a_scheduler_token(tmp_path):

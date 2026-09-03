@@ -46,9 +46,18 @@ class WeightConfig:
 
 
 @dataclass(frozen=True)
+class MealsConfig:
+    """Ceiling on the meals one day may hold. Declared in the config so the API's rejection and
+    the frontend's folded-away recording inputs enforce the same count without either restating
+    it."""
+    max_per_day: int
+
+
+@dataclass(frozen=True)
 class AppConfig:
     questionnaire: Questionnaire
     weight: WeightConfig
+    meals: MealsConfig
 
 
 def _parse_weight(raw: dict) -> WeightConfig:
@@ -69,6 +78,14 @@ def _parse_weight(raw: dict) -> WeightConfig:
                         limits=limits)
 
 
+def _parse_meals(raw: dict) -> MealsConfig:
+    cap = raw["max_per_day"]
+    if isinstance(cap, bool) or not isinstance(cap, int) or cap < 1:
+        raise ValueError(f"max_per_day {cap!r} must be a positive integer")
+    return MealsConfig(max_per_day=cap)
+
+
 def load(path) -> AppConfig:
     raw = json.loads(Path(path).read_text(encoding="utf-8"))
-    return AppConfig(questionnaire=parse(raw["questionnaire"]), weight=_parse_weight(raw["weight"]))
+    return AppConfig(questionnaire=parse(raw["questionnaire"]), weight=_parse_weight(raw["weight"]),
+                     meals=_parse_meals(raw["meals"]))

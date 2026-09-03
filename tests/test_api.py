@@ -6,6 +6,7 @@ import boto3
 import pytest
 from conftest import APP_CONFIG
 
+from common import appconfig
 from common.dates import days_before, today
 from handlers import api
 
@@ -150,6 +151,22 @@ def test_add_meal_records_and_returns_recomputed_day(env):
     payload = body_of(add_meal("carb_grade_7", vegetables=False, at_time="13:30:00"))
     assert payload["derived"]["carbs"] == 7
     assert payload["derived"]["eating_window"] == 4.5
+
+
+def test_a_meal_past_the_daily_cap_is_rejected(env):
+    cap = appconfig.load(APP_CONFIG).meals.max_per_day
+    for i in range(cap):
+        assert add_meal(at_time=f"{9 + i:02d}:10:00")["statusCode"] == 200
+    response = add_meal(at_time="20:10:00")
+    assert response["statusCode"] == 409
+    assert str(cap) in body_of(response)["error"]
+
+
+def test_correcting_a_meal_stays_open_at_the_daily_cap(env):
+    cap = appconfig.load(APP_CONFIG).meals.max_per_day
+    for i in range(cap):
+        payload = body_of(add_meal(at_time=f"{9 + i:02d}:10:00"))
+    assert update_meal(payload["meals"][0]["id"], "no_carbs")["statusCode"] == 200
 
 
 def test_meal_additions_add_their_costs_on_top_of_its_grade(env):

@@ -257,6 +257,9 @@
       }
     ]
   },
+  "meals": {
+    "max_per_day": 5
+  },
   "weight": {
     "weigh_in": {
       "weekday": "THU",

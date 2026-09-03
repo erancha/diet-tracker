@@ -232,15 +232,17 @@ def _wrong_correction_day(date, day):
 
 def _add_meal(sub, body):
     day = today()
-    questionnaire = _questionnaire()
-    rejection = _meal_rejection(body, day, questionnaire)
+    config = _config()
+    rejection = _meal_rejection(body, day, config.questionnaire)
     if rejection is not None:
         return rejection
     store = _store()
     if store.has_day(sub, day):
         return _response(409, {"error": f"{day} is already submitted"})
+    if len(store.get_meals(sub, day)) >= config.meals.max_per_day:
+        return _response(409, {"error": f"{day} already holds {config.meals.max_per_day} meals"})
     store.add_meal(sub, day, body)
-    return _response(200, _day_payload(store, questionnaire, sub, day))
+    return _response(200, _day_payload(store, config.questionnaire, sub, day))
 
 
 def _update_meal(sub, date, meal_id, body):

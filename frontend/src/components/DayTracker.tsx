@@ -46,12 +46,14 @@ const CLOSE_DAY_MIN_WINDOW_HOURS = 6;
 // form; the dashboard and close-day values come from the vector-pinned client derivation twin,
 // so they always agree with the meal list rendered beside them — the server re-derives on submit
 // and stays the authority.
-export function DayTracker({ questionnaire, today, firstMealHour, mealGapHours, headerAside,
-                             onAddMeal, onUpdateMeal, onDeleteMeal, onCloseDay }: {
+export function DayTracker({ questionnaire, today, firstMealHour, mealGapHours, maxMealsPerDay,
+                             headerAside, onAddMeal, onUpdateMeal, onDeleteMeal, onCloseDay }: {
   questionnaire: Questionnaire;
   today: DayPayload;
   firstMealHour: number;
   mealGapHours: number;
+  // Meals the day may hold — the same ceiling the API enforces.
+  maxMealsPerDay: number;
   // Shares the tracker's title row, for a neighbouring section folded down to its own title line.
   headerAside?: ReactNode;
   onAddMeal: (meal: NewMeal) => void;
@@ -131,10 +133,16 @@ export function DayTracker({ questionnaire, today, firstMealHour, mealGapHours, 
   // again, and opening a meal for editing unfolds them.
   const [formCollapsed, setFormCollapsed] = useState(true);
 
+  // A day holding its full quota of meals folds the recording inputs away: the section's place is
+  // taken by a completion note, and only correcting a recorded meal still opens the form. Deleting
+  // a meal brings the day back under the quota and the toggle back with it.
+  const atCap = today.meals.length >= maxMealsPerDay;
+
   // An overdue meal is called for from the fold rather than by opening the inputs uninvited: the
   // add-meal toggle blinks while it stands between the user and reporting the meal. Open inputs
-  // silence the nudge, and so does a fresh meal arriving in the day's list.
-  const nudging = formCollapsed
+  // silence the nudge, and so does a fresh meal arriving in the day's list; a day at its cap has
+  // nothing left to call for.
+  const nudging = !atCap && formCollapsed
     && mealOverdue(new Date(), firstMealHour, mealGapHours, today.meals);
 
   // Which beat of the blink schedule the nudge is on: 0 opens it, 1 presses harder, 2 settles into
@@ -242,6 +250,9 @@ export function DayTracker({ questionnaire, today, firstMealHour, mealGapHours, 
           {expandLabels ? COLLAPSE_LABELS : EXPAND_LABELS}
         </button>
       </div>
+      {atCap && formCollapsed ? (
+        <p className="meal-cap-note">{`הושלמו ${maxMealsPerDay} ארוחות היום`}</p>
+      ) : (
       <CollapsibleSection className={nudging ? `meal-form nudge-${nudgePhase}` : "meal-form"}
                           headingLevel={3}
                           title={editing !== undefined ? "עדכון ארוחה" : "הוספת ארוחה"}
@@ -300,6 +311,7 @@ export function DayTracker({ questionnaire, today, firstMealHour, mealGapHours, 
                  onChange={(e) => setMealTime(e.target.value)} />
         </label>
       </CollapsibleSection>
+      )}
       {/* Sits outside the fold that hides the picker: it is the only account of why the submit
           button is disabled, and that button shows either way. */}
       {mealTimeIsFuture && <p className="notice">לא ניתן לרשום ארוחה בשעה עתידית</p>}

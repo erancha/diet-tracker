@@ -96,10 +96,17 @@ export interface ChatSettings {
   sample_questions: ChatSampleQuestion[];
 }
 
+export interface MealsSettings {
+  // Meals a day may hold. The tracker folds recording away at this count, matching the cap the
+  // API enforces.
+  max_per_day: number;
+}
+
 // config/app.json as the frontend fetches it from its own origin.
 export interface AppConfigFile {
   questionnaire: Questionnaire;
   weight: WeightSettings;
+  meals: MealsSettings;
   chat: ChatSettings;
 }
 

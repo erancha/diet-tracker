@@ -328,6 +328,9 @@ td.view-day { cursor: pointer; }
    the panel rather than as a section of its own; its top margin joins the dashboard's bottom
    margin for a 1.5rem gap above. */
 .meal-form h3 { font-size: 1.1rem; margin: 1rem 0 0.5rem; }
+/* Stands where the add-meal toggle stood once the day holds its quota, so it wears the same
+   heading slot muted rather than styled as a control. */
+.meal-cap-note { color: var(--viz-muted); margin: 1rem 0 0.5rem; }
 /* Folded, the heading is the card's last visible element; dropping its bottom margin leaves the
    same 1rem card padding below it as above the tracker title. */
 .meal-form h3:last-child { margin-bottom: 0; }
