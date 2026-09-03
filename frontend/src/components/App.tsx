@@ -31,6 +31,9 @@ import { Welcome } from "./Welcome";
 // form has not submitted; apart from the chat and admin sections, which own their reads, the
 // components below it hold no server state of their own.
 //
+// The admin account is not a dieter: its screen keeps the chat and the per-user activity panel
+// and drops the tracking sections a regular account opens on.
+//
 // It also reads whether the account has recorded anything yet, because both the greeting and the
 // weight section's opening fold answer to that one reading and must not disagree about it.
 export function App({ email, api, dayEndHour, firstMealHour, mealGapHours, isAdmin, onSignOut }: {
@@ -236,6 +239,7 @@ export function App({ email, api, dayEndHour, firstMealHour, mealGapHours, isAdm
               activeViolations={activeViolations(questionnaire, data.days, todayStr, yesterdayStr)} />
       <main>
         <Alerts items={alerts} onDismiss={dismissAlerts} />
+        {!isAdmin && <>
         {firstVisit && <Welcome />}
         <WeightSection
           weight={weightQuery.data}
@@ -292,6 +296,7 @@ export function App({ email, api, dayEndHour, firstMealHour, mealGapHours, isAdm
           </div>
           </div>
         </CollapsibleSection>
+        </>}
         <CollapsibleSection className="chat-section" title="שאלות על אבא חטוב">
           <Chat api={api} sampleQuestions={configQuery.data.chat.sample_questions} />
         </CollapsibleSection>
