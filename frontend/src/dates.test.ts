@@ -211,12 +211,18 @@ describe("daysSince", () => {
 });
 
 describe("expandWeightSection", () => {
-  it("opens on the weigh-in day while the day holds no weighing", () => {
-    expect(expandWeightSection(THURSDAY, "THU", [{ date: "2026-08-20" }])).toBe(true);
+  it("opens on the weigh-in day when the last weighing is over 36 hours back", () => {
+    expect(expandWeightSection(THURSDAY, "THU", [{ date: "2026-08-25", at: "19:00" }])).toBe(true);
   });
 
-  it("stays folded once the day has been weighed", () => {
-    expect(expandWeightSection(THURSDAY, "THU", [{ date: "2026-08-27" }])).toBe(false);
+  it("stays folded while a weighing sits within the last 36 hours, yesterday morning's included", () => {
+    expect(expandWeightSection(THURSDAY, "THU", [{ date: "2026-08-27", at: "07:00" }])).toBe(false);
+    expect(expandWeightSection(THURSDAY, "THU", [{ date: "2026-08-26", at: "07:30" }])).toBe(false);
+  });
+
+  it("counts an untimed weighing at its day's latest moment", () => {
+    expect(expandWeightSection(THURSDAY, "THU", [{ date: "2026-08-25", at: null }])).toBe(false);
+    expect(expandWeightSection(THURSDAY, "THU", [{ date: "2026-08-24", at: null }])).toBe(true);
   });
 
   it("stays folded on every other day, weighed or not", () => {

@@ -1,6 +1,7 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { act, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { WeightSection } from "./WeightSection";
+import { WIND_DOWN_FOLD_MS, WIND_DOWN_SWEEP_MS } from "./useWindDownFold";
 import type { WeightPayload, WeightSettings } from "../types";
 import { DISCARD_EDITS_PROMPT } from "../edits";
 
@@ -57,6 +58,55 @@ describe("opening fold", () => {
 
   it("opens itself when told to, so a first-time user meets the weighing and not a fold", () => {
     renderSection({}, {}, true);
+    expect(screen.getByLabelText("המשקל היום")).toBeInTheDocument();
+  });
+});
+
+describe("timed wind-down", () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  it("winds an untouched auto-opened section down and folds it", () => {
+    renderSection({}, {}, true);
+    expect(document.querySelector("section.weight")).toHaveClass("section-waning");
+    act(() => { vi.advanceTimersByTime(WIND_DOWN_FOLD_MS); });
+    // The closing sweep needs the content on screen, so it unmounts only once the sweep is done.
+    expect(document.querySelector(".section-fold-body")).toHaveClass("section-folding");
+    expect(screen.getByLabelText("המשקל היום")).toBeInTheDocument();
+    act(() => { vi.advanceTimersByTime(WIND_DOWN_SWEEP_MS); });
+    expect(screen.queryByLabelText("המשקל היום")).toBeNull();
+    expect(document.querySelector("section.weight")).not.toHaveClass("section-waning");
+  });
+
+  it("stands down once the user starts typing a weight", () => {
+    renderSection({}, {}, true);
+    fireEvent.change(screen.getByLabelText("המשקל היום"), { target: { value: "76" } });
+    expect(document.querySelector("section.weight")).not.toHaveClass("section-waning");
+    act(() => { vi.advanceTimersByTime(WIND_DOWN_FOLD_MS + WIND_DOWN_SWEEP_MS); });
+    expect(screen.getByLabelText("המשקל היום")).toBeInTheDocument();
+  });
+
+  it("stands down once the user types into the target editor", () => {
+    renderSection({}, {}, true);
+    fireEvent.change(screen.getByLabelText("משקל יעד"), { target: { value: "72" } });
+    act(() => { vi.advanceTimersByTime(WIND_DOWN_FOLD_MS + WIND_DOWN_SWEEP_MS); });
+    expect(screen.getByLabelText("המשקל היום")).toBeInTheDocument();
+  });
+
+  it("hands the fold to a manual toggle for the rest of the visit", () => {
+    renderSection({}, {}, true);
+    const toggle = screen.getByRole("button", { name: /^משקל/ });
+    fireEvent.click(toggle);
+    fireEvent.click(toggle);
+    act(() => { vi.advanceTimersByTime(WIND_DOWN_FOLD_MS + WIND_DOWN_SWEEP_MS); });
+    expect(screen.getByLabelText("המשקל היום")).toBeInTheDocument();
+  });
+
+  it("never arms on a section that opened at rest", () => {
+    renderSection();
+    fireEvent.click(screen.getByRole("button", { name: /^משקל/ }));
+    expect(document.querySelector("section.weight")).not.toHaveClass("section-waning");
+    act(() => { vi.advanceTimersByTime(WIND_DOWN_FOLD_MS + WIND_DOWN_SWEEP_MS); });
     expect(screen.getByLabelText("המשקל היום")).toBeInTheDocument();
   });
 });

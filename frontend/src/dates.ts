@@ -64,11 +64,31 @@ export function daysSince(date: string, now: Date): number {
   return Math.round((midnight.getTime() - parseIsoDate(date).getTime()) / MS_PER_DAY);
 }
 
-// The weigh-in day opens the weight section expanded while the day still holds no weighing — the
-// one morning a week the section is what the user came to the page for.
+export function minutesOfDay(hhmm: string): number {
+  const [hours, minutes] = hhmm.split(":").map(Number);
+  return hours * 60 + minutes;
+}
+
+// A weighing this recent still answers the weigh-in: the window reaches back past the previous
+// morning, so a weigh-in taken a day early does not get re-prompted when its weekday comes round.
+const RECENT_WEIGHING_HOURS = 36;
+
+const MS_PER_MINUTE = 60_000;
+
+// Instant a weighing was taken. One recorded before times were kept is known only to its day and
+// counts as that day's latest moment, so an untimed weighing that may fall inside the recency
+// window is treated as if it does.
+function weighingInstant(entry: { date: string; at: string | null }): number {
+  const day = parseIsoDate(entry.date).getTime();
+  return entry.at === null ? day + MS_PER_DAY : day + minutesOfDay(entry.at) * MS_PER_MINUTE;
+}
+
+// The weigh-in day opens the weight section expanded while no weighing is recent enough to answer
+// it — the one morning a week the section is what the user came to the page for.
 export function expandWeightSection(now: Date, weekday: string,
-                                    entries: readonly { date: string }[]): boolean {
-  return isWeighInDay(now, weekday) && !entries.some((entry) => entry.date === isoDate(now));
+                                    entries: readonly { date: string; at: string | null }[]): boolean {
+  return isWeighInDay(now, weekday) && !entries.some(
+    (entry) => now.getTime() - weighingInstant(entry) < RECENT_WEIGHING_HOURS * MS_PER_HOUR);
 }
 
 export function yesterdayOf(now: Date): Date {

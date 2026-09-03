@@ -211,18 +211,18 @@ th { vertical-align: top; font-size: calc(var(--cell-font-size) - 1pt); }
 @media (min-width: 48rem) {
   th:not(:nth-last-child(-n+2)) { width: 8rem; }
 }
-/* An empty history panel's exit is a wind-down, not a vanishing act, so it cannot read as a
-   glitch: full presence for the first half, a deep dim across the back half — timed so delay
-   plus duration meet App's ten-second fold — and then the content sweeps closed via the grid
-   row while the title line stays. The body wrapper always carries the grid, so the sweep has a
-   single row to close. */
-.history-waning { animation: history-wane 5s ease 5s forwards; }
-@keyframes history-wane { to { opacity: 0.35; } }
-.history-body { display: grid; grid-template-rows: 1fr; }
-.history-body > div { min-height: 0; }
-.history-folding { animation: history-fold 0.8s ease forwards; }
-.history-folding > div { overflow: hidden; }
-@keyframes history-fold { to { grid-template-rows: 0fr; opacity: 0; } }
+/* A panel standing open unbidden makes its exit as a wind-down, not a vanishing act, so it
+   cannot read as a glitch: full presence for the first half, a deep dim across the back half —
+   timed so delay plus duration meet useWindDownFold's ten-second fold — and then the content
+   sweeps closed via the grid row while the title line stays. The body wrapper always carries
+   the grid, so the sweep has a single row to close. */
+.section-waning { animation: section-wane 5s ease 5s forwards; }
+@keyframes section-wane { to { opacity: 0.35; } }
+.section-fold-body { display: grid; grid-template-rows: 1fr; }
+.section-fold-body > div { min-height: 0; }
+.section-folding { animation: section-fold 0.8s ease forwards; }
+.section-folding > div { overflow: hidden; }
+@keyframes section-fold { to { grid-template-rows: 0fr; opacity: 0; } }
 /* Half the browser's default heading gap, so each section header sits close to the data it
    labels — for history, together with the table's own 0.5rem top margin. */
 .history h2 { margin-bottom: 0.25em; }
@@ -319,7 +319,7 @@ td.view-day { cursor: pointer; }
 @keyframes nudge-blink { 50% { opacity: 0.45; } }
 @media (prefers-reduced-motion: reduce) {
   .meal-form .section-toggle { animation: none; }
-  .history-waning, .history-folding { animation: none; }
+  .section-waning, .section-folding { animation: none; }
 }
 /* The day-summary heading before the day-end hour: de-emphasised, not disabled — it keeps its
    click, and hover still answers in the accent. */

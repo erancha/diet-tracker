@@ -2,7 +2,7 @@
 // line renders, the wording of the confirmations the section raises, and what a typed weight has
 // to satisfy to count. The components hold no arithmetic of their own.
 
-import { daysSince, ddmmLabel, isWeighInDay, parseIsoDate, weekdayLetter } from "./dates";
+import { daysSince, ddmmLabel, isWeighInDay, minutesOfDay, parseIsoDate, weekdayLetter } from "./dates";
 import type { ChartSpan, WeightEntry } from "./types";
 
 // The spans the range selector offers, in the order it lays them out. Mirrors CHART_SPANS in
@@ -137,11 +137,6 @@ const USUAL_HOUR_SAMPLE = 8;
 // Below this many timed weighings there is no habit to name, and reporting one from a couple of
 // readings would dress a coincidence up as a rhythm.
 const USUAL_HOUR_MIN = 3;
-
-function minutesOfDay(hhmm: string): number {
-  const [hours, minutes] = hhmm.split(":").map(Number);
-  return hours * 60 + minutes;
-}
 
 function hhmmOf(minutes: number): string {
   const pad = (n: number) => String(n).padStart(2, "0");
