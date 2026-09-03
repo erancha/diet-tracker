@@ -404,6 +404,9 @@ td.view-day { cursor: pointer; }
    keeps it out of the line box, leaving the row's height set by that text — which is what the
    top-pinned time above measures itself against. */
 .meal-list .meal-actions button { padding: 0.35rem; margin-block: -0.35rem; }
+/* The closing panel opens between the action row and the meal list; its own lead keeps the framed
+   fieldset from sitting tight against the buttons while staying anchored to the opener among them. */
+.close-day { margin-top: 1rem; }
 
 /* The day's weighing: a label, an input and its button on one line, wrapping onto the next only
    where a phone cannot hold them side by side. It is a paragraph, so the vertical margin is set

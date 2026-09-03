@@ -343,10 +343,10 @@ export function DayTracker({ questionnaire, today, firstMealHour, mealGapHours, 
           </button>
         )}
       </div>
-      <MealList questionnaire={questionnaire} meals={today.meals} expandLabels={expandLabels}
-                onEdit={startEdit} onDelete={onDeleteMeal} deletingId={deletingMealId} />
-      {/* Deleting or correcting a meal mid-close can narrow the day back under the window that
-          offered closing, and the panel folds away with the button that opened it. */}
+      {/* Ahead of the meal list: below it the panel read as belonging to the day's saved rows
+          rather than to the button that opened it. Deleting or correcting a meal mid-close can
+          narrow the day back under the window that offered closing, and the panel folds away with
+          that button. */}
       {closing && closable && (
         <div className="close-day">
           <ChoiceFieldset question={drinkingQuestion} selectedId={drinkingChoiceId}
@@ -358,6 +358,8 @@ export function DayTracker({ questionnaire, today, firstMealHour, mealGapHours, 
           </button>
         </div>
       )}
+      <MealList questionnaire={questionnaire} meals={today.meals} expandLabels={expandLabels}
+                onEdit={startEdit} onDelete={onDeleteMeal} deletingId={deletingMealId} />
     </CollapsibleSection>
   );
 }
