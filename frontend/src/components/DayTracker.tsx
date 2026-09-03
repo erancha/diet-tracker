@@ -7,6 +7,7 @@ import type { CarbSource, DayPayload, Meal, NewMeal, Question, Questionnaire } f
 import { ChoiceFieldset } from "./ChoiceFieldset";
 import { CollapsibleSection } from "./CollapsibleSection";
 import { DayDashboard } from "./DayDashboard";
+import { Icon } from "./Icon";
 import { MealList } from "./MealList";
 
 // The meal time the form opens on is the current clock rounded down to a five-minute mark: a
@@ -254,11 +255,19 @@ export function DayTracker({ questionnaire, today, firstMealHour, mealGapHours, 
       {atCap && formCollapsed ? (
         <p className="meal-cap-note">{`הושלמו ${maxMealsPerDay} ארוחות היום`}</p>
       ) : (
-      <CollapsibleSection className={nudging ? `meal-form nudge-${nudgePhase}` : "meal-form"}
+      <CollapsibleSection className={"meal-form"
+                            + (formCollapsed ? (nudging ? ` nudge-${nudgePhase}` : "") : " meal-form-open")}
                           headingLevel={3}
                           title={editing !== undefined ? "עדכון ארוחה" : "הוספת ארוחה"}
                           collapsed={formCollapsed}
                           onToggle={toggleForm}>
+        {/* Sits in the frame's far corner via the style sheet rather than in the heading row:
+            an aside there would restructure the header between open and folded, recreating the
+            toggle mid-interaction and dropping keyboard focus with it. */}
+        <button type="button" className="icon-only meal-form-close" aria-label="סגירת הטופס"
+                onClick={toggleForm}>
+          <Icon name="close" />
+        </button>
         <CarbSourceFields question={carbsQuestion} selectedId={carbsChoiceId}
                           expandLabels={expandLabels}
                           portionLabel={carbsQuestion.small_portion!.label}

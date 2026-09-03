@@ -1,5 +1,6 @@
 :root {
   --accent: #2e7d32;
+  --accent-border: #b6d0b8;
   --danger: #c62828;
   --viz-series-1: #2a78d6;
   --viz-series-2: #1baf7a;
@@ -123,9 +124,12 @@ fieldset { border: 1px solid #ddd; border-radius: 8px; margin: 0 0 1rem; padding
 /* A legend keeps its heading on one line. The longest heading (the carbs meal grade) spans
    ~20em — wider than a phone viewport at 1rem — so below ~26rem the font scales with the
    viewport instead of wrapping; the slope keeps a few percent of clearance down to 320px-wide
-   screens after the body, fieldset and legend paddings are taken out. */
-legend { font-weight: 600; padding: 0 0.5rem; white-space: nowrap; font-size: min(1rem, 4.8vw - 4px); }
+   screens after the body, fieldset, legend and open-meal-form-frame paddings are taken out. */
+legend { font-weight: 600; padding: 0 0.5rem; white-space: nowrap; font-size: min(1rem, 4.8vw - 6px); }
 label { display: block; padding: 0.35rem 0; cursor: pointer; }
+/* Radio groups run to eight options and the meal's flag checkboxes to six, so their rows close to
+   half the standalone label rhythm to keep the whole form near one phone screen. */
+fieldset > label, .meal-flags label { padding: 0.175rem 0; }
 /* Filled accent marks the action that writes; the variants exist so a control standing beside one
    cannot be mistaken for it. A variant sets only the palette triple, which the shared interaction
    states below read — so hover, focus and disabled are painted once for every variant there is. */
@@ -139,7 +143,7 @@ button {
 /* Outlined: a control that leaves or reveals rather than commits — cancelling a correction,
    opening the close-day panel, signing out. Cancel shares a form's action row with the filled
    submit, and the two must not read alike. */
-button.quiet { --btn-bg: #fff; --btn-fg: var(--accent); --btn-border: #b6d0b8; }
+button.quiet { --btn-bg: #fff; --btn-fg: var(--accent); --btn-border: var(--accent-border); }
 /* The escape hatch once it has something to destroy, since one button serves both that and the
    exit that costs nothing. */
 button.quiet.destructive { --btn-fg: var(--danger); --btn-border: #e6b3b3; }
@@ -335,6 +339,15 @@ td.view-day { cursor: pointer; }
 /* Folded, the heading is the card's last visible element; dropping its bottom margin leaves the
    same 1rem card padding below it as above the tracker title. */
 .meal-form h3:last-child { margin-bottom: 0; }
+/* Open, the form gains its own frame in the quiet buttons' accent tint, so the editing surface
+   reads as one bounded unit against the tracker card and its hairline fieldsets. The box takes
+   over the heading's 1rem gap above, and the heading sits on the frame's padding instead. */
+.meal-form-open { position: relative; border: 1px solid var(--accent-border); border-radius: 8px;
+                  padding: 0.75rem 1rem 1rem; margin-top: 1rem; }
+.meal-form-open h3 { margin-top: 0; }
+/* The close glyph holds the corner across the heading from the title (the left, in RTL), off the
+   flow so the heading keeps the full row and the fieldset below stays put. */
+.meal-form-close { position: absolute; top: 0.4rem; inset-inline-end: 0.5rem; }
 /* A fresh day renders the actions row and meal list with nothing in them; hiding them keeps
    their margins from deepening the card's bottom gap past its top padding. */
 .form-actions:empty, .meal-list:empty { display: none; }
@@ -349,7 +362,7 @@ td.view-day { cursor: pointer; }
 .carb-source > fieldset { margin-bottom: 0; }
 .carb-source .meal-flags { margin-top: 0.5rem; }
 /* Config-driven checkboxes must wrap on narrow phones instead of spilling off-screen. */
-.meal-flags { display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; }
+.meal-flags { display: flex; flex-wrap: wrap; gap: 0.25rem 1.5rem; }
 .meal-flags label { display: inline-flex; align-items: center; gap: 0.3rem; }
 /* The meal-time picker takes its own line so the checkbox row above keeps its wrap layout. */
 .meal-time { display: block; margin-top: 0.75rem; }
@@ -357,6 +370,9 @@ td.view-day { cursor: pointer; }
    reveal or discard. The top margin holds it off the inputs above, which would otherwise read as
    attached to the buttons. */
 .form-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 0.75rem; }
+/* Inside the form the only actions row is the second-source reveal, which stands between the carb
+   picker and the flag checkboxes; the bottom margin holds the checkboxes off it symmetrically. */
+.meal-form .form-actions { margin-bottom: 0.75rem; }
 /* Two or three labelled controls share this row, and the global button's 2.5rem side padding
    leaves a phone too little width for their labels — each would break across two lines. Here the
    padding gives way to the text, which stays whole; a row that still cannot hold every control

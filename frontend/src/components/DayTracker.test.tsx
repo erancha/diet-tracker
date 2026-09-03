@@ -631,7 +631,7 @@ describe("DayTracker", () => {
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     openMealForm();
-    expect(mealFormSection()).toHaveClass("meal-form", { exact: true });
+    expect(mealFormSection()).toHaveClass("meal-form meal-form-open", { exact: true });
 
     fireEvent.click(screen.getByRole("button", { name: "הוספת ארוחה" }));
 
@@ -795,6 +795,24 @@ describe("DayTracker", () => {
     expect(screen.getByLabelText("דרגה 4")).not.toBeChecked();
     expect(screen.getByLabelText("כולל ירקות")).not.toBeChecked();
     expect(screen.getByLabelText("שעת הארוחה")).toHaveValue("19:05");
+  });
+
+  it("folds the form from the corner close button, through the same discard guard", () => {
+    atLocalTime(19, 5);
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+    render(<DayTracker maxMealsPerDay={NO_CAP_MEALS} questionnaire={questionnaire} today={emptyDay}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    openMealForm();
+    fireEvent.click(screen.getByLabelText("דרגה 4"));
+    fireEvent.click(screen.getByRole("button", { name: "סגירת הטופס" }));
+
+    expect(confirmSpy).toHaveBeenCalledOnce();
+    expect(screen.getByRole("button", { name: "הוספת ארוחה" }))
+      .toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("button", { name: "סגירת הטופס" })).not.toBeInTheDocument();
   });
 
   it("asks before folding away a meal time picked off the opening default", () => {
