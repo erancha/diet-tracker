@@ -920,6 +920,21 @@ describe("DayTracker", () => {
     expect(onDeleteMeal).toHaveBeenCalledWith("b");
   });
 
+  it("disables a meal's delete button only while its deletion is in flight", () => {
+    const props = { maxMealsPerDay: NO_CAP_MEALS, questionnaire, today: trackedDay,
+                    firstMealHour: NO_NUDGE_HOUR, mealGapHours: NO_NUDGE_GAP_HOURS,
+                    onAddMeal: vi.fn(), onUpdateMeal: vi.fn(), onDeleteMeal: vi.fn(),
+                    onCloseDay: vi.fn() };
+    const { rerender } = render(<DayTracker {...props} deletingMealId="b" />);
+    expect(screen.getByRole("button", { name: "מחיקת ארוחה 13:30" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "מחיקת ארוחה 09:10" })).toBeEnabled();
+
+    // A failed deletion clears the in-flight id without removing the row; its button must come
+    // back rather than stay locked on a meal that still exists.
+    rerender(<DayTracker {...props} deletingMealId={undefined} />);
+    expect(screen.getByRole("button", { name: "מחיקת ארוחה 13:30" })).toBeEnabled();
+  });
+
   it("lists meals newest first", () => {
     render(<DayTracker maxMealsPerDay={NO_CAP_MEALS} questionnaire={questionnaire} today={trackedDay}
                        firstMealHour={NO_NUDGE_HOUR}

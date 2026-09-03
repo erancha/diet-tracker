@@ -282,6 +282,9 @@ export function App({ email, api, dayEndHour, firstMealHour, mealGapHours, onSig
             onAddMeal={(meal) => mealMutation.mutate(meal)}
             onUpdateMeal={(id, meal) => updateMealMutation.mutate({ id, meal })}
             onDeleteMeal={(id) => deleteMealMutation.mutate(id)}
+            // Pending covers the days refetch too — onSuccess returns the invalidation promise —
+            // so the row's delete control stays locked until the row itself leaves the list.
+            deletingMealId={deleteMealMutation.isPending ? deleteMealMutation.variables : undefined}
             onCloseDay={(answers) => submitMutation.mutate({ answers, date: todayStr })}
             headerAside={daySummaryFoldedIntoTracker ? daySummarySection : undefined}
           />

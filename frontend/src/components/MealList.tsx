@@ -12,7 +12,7 @@ const ADDITION_MARKERS: Record<string, string> = { sweet: "🍪", alcohol: "🍷
 // user checks, corrects or deletes — each row ending with the meal's effective points so the rows
 // visibly sum to the day's carb score. Per-meal editing and deletion render only when their
 // handlers are supplied (the live tracker); the read-only history view passes none.
-export function MealList({ questionnaire, meals, expandLabels, onEdit, onDelete }: {
+export function MealList({ questionnaire, meals, expandLabels, onEdit, onDelete, deletingId }: {
   questionnaire: Questionnaire;
   // Every grade a row names carries a list of what it covers, so the density is the caller's to
   // set rather than this component's to assume.
@@ -21,6 +21,9 @@ export function MealList({ questionnaire, meals, expandLabels, onEdit, onDelete 
   meals: Meal[];
   onEdit?: (meal: Meal) => void;
   onDelete?: (id: string) => void;
+  // The meal whose deletion is already on the wire. Its bin is held disabled until the row leaves
+  // the list, so a second tap cannot race the first into deleting an already-deleted record.
+  deletingId?: string;
 }) {
   const carbsQuestion = questionnaire.questions.find((q) => q.id === "carbs")!;
   const newestFirst = [...meals].reverse();
@@ -86,6 +89,7 @@ export function MealList({ questionnaire, meals, expandLabels, onEdit, onDelete 
               {onDelete && (
                 <button type="button" className="icon-only"
                         aria-label={`מחיקת ארוחה ${clockTimeOf(meal.at)}`}
+                        disabled={meal.id === deletingId}
                         onClick={() => { if (window.confirm("למחוק את הארוחה?")) onDelete(meal.id); }}>
                   <Icon name="remove" />
                 </button>

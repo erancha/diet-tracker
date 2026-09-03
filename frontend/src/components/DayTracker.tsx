@@ -47,7 +47,8 @@ const CLOSE_DAY_MIN_WINDOW_HOURS = 6;
 // so they always agree with the meal list rendered beside them — the server re-derives on submit
 // and stays the authority.
 export function DayTracker({ questionnaire, today, firstMealHour, mealGapHours, maxMealsPerDay,
-                             headerAside, onAddMeal, onUpdateMeal, onDeleteMeal, onCloseDay }: {
+                             headerAside, onAddMeal, onUpdateMeal, onDeleteMeal, deletingMealId,
+                             onCloseDay }: {
   questionnaire: Questionnaire;
   today: DayPayload;
   firstMealHour: number;
@@ -60,6 +61,8 @@ export function DayTracker({ questionnaire, today, firstMealHour, mealGapHours, 
   // Replaces the meal wholesale; a corrected time re-keys it, so the id is the one being replaced.
   onUpdateMeal: (id: string, meal: NewMeal) => void;
   onDeleteMeal: (id: string) => void;
+  // The meal whose onDeleteMeal call is still in flight; its row's delete control locks meanwhile.
+  deletingMealId?: string;
   onCloseDay: (answers: Record<string, number>) => void;
 }) {
   const carbsQuestion = questionnaire.questions.find((q) => q.id === "carbs")!;
@@ -334,7 +337,7 @@ export function DayTracker({ questionnaire, today, firstMealHour, mealGapHours, 
         )}
       </div>
       <MealList questionnaire={questionnaire} meals={today.meals} expandLabels={expandLabels}
-                onEdit={startEdit} onDelete={onDeleteMeal} />
+                onEdit={startEdit} onDelete={onDeleteMeal} deletingId={deletingMealId} />
       {/* Deleting or correcting a meal mid-close can narrow the day back under the window that
           offered closing, and the panel folds away with the button that opened it. */}
       {closing && closable && (
