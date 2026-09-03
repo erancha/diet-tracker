@@ -1078,6 +1078,66 @@ describe("DayTracker", () => {
     expect(screen.queryByRole("button", { name: "אישור וסגירה" })).toBeNull();
   });
 
+  it("close-day saves the composed meal itself and continues into closing", () => {
+    const onAddMeal = vi.fn();
+    const onCloseDay = vi.fn();
+    render(<DayTracker maxMealsPerDay={NO_CAP_MEALS} questionnaire={questionnaire} today={wideWindowDay}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
+                       onAddMeal={onAddMeal} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={onCloseDay} />);
+    openMealForm();
+    fireEvent.click(screen.getByLabelText("דרגה 4"));
+    fireEvent.click(screen.getByRole("button", { name: "סגירת יום" }));
+    expect(onAddMeal).toHaveBeenCalledOnce();
+    expect(screen.getByRole("button", { name: "הוספת ארוחה" }))
+      .toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(screen.getByLabelText("3 ליטר"));
+    fireEvent.click(screen.getByRole("button", { name: "אישור וסגירה" }));
+    expect(onCloseDay).toHaveBeenCalledWith({
+      carbs: 4, meals: 2, vegetables: 1, eating_window: 6.5, drinking: 3 });
+  });
+
+  it("close-day locks only while the composed meal cannot be saved yet", () => {
+    render(<DayTracker maxMealsPerDay={NO_CAP_MEALS} questionnaire={questionnaire} today={wideWindowDay}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    openMealForm();
+    fireEvent.click(screen.getByLabelText("כולל ירקות"));
+    expect(screen.getByRole("button", { name: "סגירת יום" })).toBeDisabled();
+    expect(screen.getByText("יש לשמור או לבטל את הארוחה שבטופס לפני סגירת היום"))
+      .toBeInTheDocument();
+  });
+
+  it("close-day's confirm waits for the meal it saved to land in the day's figures", () => {
+    render(<DayTracker maxMealsPerDay={NO_CAP_MEALS} questionnaire={questionnaire} today={wideWindowDay}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS} savingMeal
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "סגירת יום" }));
+    fireEvent.click(screen.getByLabelText("3 ליטר"));
+    expect(screen.getByRole("button", { name: "אישור וסגירה" })).toBeDisabled();
+  });
+
+  it("a meal composed after the close-day panel opened locks its confirm the same way", () => {
+    const onCloseDay = vi.fn();
+    render(<DayTracker maxMealsPerDay={NO_CAP_MEALS} questionnaire={questionnaire} today={wideWindowDay}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={onCloseDay} />);
+    fireEvent.click(screen.getByRole("button", { name: "סגירת יום" }));
+    fireEvent.click(screen.getByLabelText("3 ליטר"));
+    openMealForm();
+    fireEvent.click(screen.getByLabelText("דרגה 4"));
+    expect(screen.getByRole("button", { name: "אישור וסגירה" })).toBeDisabled();
+    expect(screen.getByText("יש לשמור או לבטל את הארוחה שבטופס לפני סגירת היום"))
+      .toBeInTheDocument();
+  });
+
   it("close-day appears only once two meals are recorded", () => {
     const singleMealDay: DayPayload = {
       date: "2026-08-20",

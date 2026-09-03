@@ -47,7 +47,7 @@ const CLOSE_DAY_MIN_WINDOW_HOURS = 6;
 // and stays the authority.
 export function DayTracker({ questionnaire, today, firstMealHour, mealGapHours, maxMealsPerDay,
                              headerAside, onAddMeal, onUpdateMeal, onDeleteMeal, deletingMealId,
-                             onCloseDay }: {
+                             savingMeal, onCloseDay }: {
   questionnaire: Questionnaire;
   today: DayPayload;
   firstMealHour: number;
@@ -62,6 +62,9 @@ export function DayTracker({ questionnaire, today, firstMealHour, mealGapHours, 
   onDeleteMeal: (id: string) => void;
   // The meal whose onDeleteMeal call is still in flight; its row's delete control locks meanwhile.
   deletingMealId?: string;
+  // True while a saved meal is still round-tripping into today's list; the close-day confirm
+  // waits on it so the figures it submits count that meal.
+  savingMeal?: boolean;
   onCloseDay: (answers: Record<string, number>) => void;
 }) {
   const carbsQuestion = questionnaire.questions.find((q) => q.id === "carbs")!;
@@ -128,6 +131,16 @@ export function DayTracker({ questionnaire, today, firstMealHour, mealGapHours, 
   const newMealDiverged = editing === undefined
     && (carbsChoiceId !== undefined || vegetables || fruit || pickedAdditions.size > 0
         || secondChoiceId !== undefined || mealTime !== pristineTime);
+
+  // Whether the form holds work only saving or cancelling can settle — a half-composed new meal
+  // or a moved edit. The day cannot close over it: the figures would omit a meal that exists
+  // nowhere else. A saveable one the close-day button saves itself and carries on; one not yet
+  // saveable locks the button instead.
+  const formHoldsUnsavedMeal = editDiverged || newMealDiverged;
+
+  // The same terms that let the save button commit the form: a picked grade, at a time the clock
+  // has reached.
+  const mealSaveable = carbsChoiceId !== undefined && !mealTimeIsFuture;
 
   // The meal inputs are the tallest thing here and are worth reading only when there is a meal to
   // report, so the tracker always opens on the day's figures and its recorded meals with the
@@ -337,12 +350,24 @@ export function DayTracker({ questionnaire, today, firstMealHour, mealGapHours, 
             {editDiverged ? "ביטול שינויים" : "יציאה מעריכה"}
           </button>
         )}
+        {/* A meal still being composed would go with the closed day — the tracker goes with it —
+            so closing folds it in rather than stopping over it: a saveable meal is saved by this
+            very click and the flow continues into the panel. Only a meal the form cannot save yet
+            holds the button, with the notice below saying why. */}
         {closable && (
-          <button type="button" className="quiet" onClick={() => setClosing((c) => !c)}>
+          <button type="button" className="quiet"
+                  disabled={!closing && formHoldsUnsavedMeal && !mealSaveable}
+                  onClick={() => {
+                    if (!closing && formHoldsUnsavedMeal) submitMeal();
+                    setClosing((c) => !c);
+                  }}>
             סגירת יום
           </button>
         )}
       </div>
+      {closable && formHoldsUnsavedMeal && (!mealSaveable || closing) && (
+        <p className="notice">יש לשמור או לבטל את הארוחה שבטופס לפני סגירת היום</p>
+      )}
       {/* Ahead of the meal list: below it the panel read as belonging to the day's saved rows
           rather than to the button that opened it. Deleting or correcting a meal mid-close can
           narrow the day back under the window that offered closing, and the panel folds away with
@@ -351,7 +376,11 @@ export function DayTracker({ questionnaire, today, firstMealHour, mealGapHours, 
         <div className="close-day">
           <ChoiceFieldset question={drinkingQuestion} selectedId={drinkingChoiceId}
                           onPick={(choice) => setDrinkingChoiceId(choice.id)} />
-          <button type="button" disabled={drinkingChoiceId === undefined}
+          {/* The opening button cannot cover a meal whose composing began after this panel was
+              already open, so the confirm holds the same line — and it also waits out a saved
+              meal's round trip, or the figures below would close without it. */}
+          <button type="button"
+                  disabled={drinkingChoiceId === undefined || formHoldsUnsavedMeal || savingMeal}
                   onClick={() => onCloseDay({ ...derived,
                     drinking: drinkingQuestion.choices.find((c) => c.id === drinkingChoiceId)!.value })}>
             אישור וסגירה
