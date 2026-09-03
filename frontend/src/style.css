@@ -184,9 +184,13 @@ button:disabled { --btn-bg: #e4e4e4; --btn-fg: #9a9a9a; --btn-border: #d8d8d8; c
    a weekday beside its date. Breaking one costs the row twice its height to save a few pixels of
    width, so the cells keep their line and the wrapper scrolls instead, which is what it is for.
    Headers are exempt: they are long, they stack by design, and holding them to one line would
-   near-triple the table's width. The landing's reference table sits outside this wrapper, its
-   sentence-length cells still free to wrap. */
+   near-triple the table's width. So are bound-label cells (marked .bound by the table): their
+   sentence-length wording held to one line would push its column past a phone screen's edge,
+   clipping the very answer that crossed the bound — so they wrap to whatever width their column
+   is given instead. The landing's reference table sits outside this wrapper, its sentence-length
+   cells still free to wrap. */
 .table-wrap td { white-space: nowrap; }
+.table-wrap td.bound { white-space: normal; }
 table { border-collapse: collapse; min-width: min(calc(var(--column-width) * 1.2), 100%); margin-top: 0.5rem; background: #fff; }
 /* A pixel under the 0.9rem the cells would otherwise read at, so the history grid's many columns
    hold their values without wrapping and the landing's reference table stays subordinate to the
@@ -201,9 +205,9 @@ th { vertical-align: top; font-size: calc(var(--cell-font-size) - 1pt); }
    delete control rides in — starts past the scroll edge, showing as a clipped icon. Every cell
    there runs a further pixel down on tighter padding, and the bin halves its own — which the cell's
    width reserve follows: enough that a row of plain numeric answers fits a 390px screen outright.
-   A row carrying one of the long bound labels ("פחות מ-2.5 ליטר !!") still overruns and scrolls,
-   since those cells hold their line by the nowrap rule above. The landing's reference table sits
-   outside the wrapper and keeps the page's reading size. */
+   A row carrying one of the long bound labels ("פחות מ-2.5 ליטר !!") also fits, its label
+   wrapping by the .bound rule above rather than dragging its column past the screen edge. The
+   landing's reference table sits outside the wrapper and keeps the page's reading size. */
 @media (max-width: 47.99rem) {
   .table-wrap { --delete-pad: 0.15rem; }
   .table-wrap :is(th, td) { --cell-font-size: calc(0.9rem - 2px); padding: 0.3rem; }

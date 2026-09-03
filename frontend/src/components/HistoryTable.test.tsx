@@ -32,6 +32,15 @@ describe("HistoryTable", () => {
     expect(screen.getByText("פחות מ-2.5 ליטר !!")).toHaveClass("violation");
   });
 
+  // A bound label is a sentence, not a quantity. Its cell is marked so the stylesheet can let it
+  // wrap where a phone-width column runs out of room; numeric answers stay single-line.
+  it("marks a bound-label cell as wrappable, leaving numeric cells single-line", () => {
+    const measured = [{ date: "2026-08-17", answers: { drinking: 2, window: 8 } }];
+    render(<HistoryTable questionnaire={fixtureQuestionnaire} days={measured} {...defaults} />);
+    expect(screen.getByText("פחות מ-2.5 ליטר !!")).toHaveClass("bound");
+    expect(screen.getByText("8")).not.toHaveClass("bound");
+  });
+
   it("names the unit once in the column header, not in every cell under it", () => {
     const measured = [{ date: "2026-08-17", answers: { drinking: 3, window: 8 } }];
     render(<HistoryTable questionnaire={fixtureQuestionnaire} days={measured} {...defaults} />);

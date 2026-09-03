@@ -2,7 +2,7 @@
 // questionnaire config. All functions take the questionnaire explicitly so they stay pure and
 // independently testable.
 
-import type { AnswerValue, Day, Question, Questionnaire, Rule } from "./types";
+import type { AnswerValue, Choice, Day, Question, Questionnaire, Rule } from "./types";
 import { isoDate, parseIsoDate, yesterdayOf } from "./dates";
 
 export function violates(rule: Rule, value: number): boolean {
@@ -71,14 +71,26 @@ export function valueLabel(question: Question, value: number): string {
   return question.unit === undefined ? String(value) : `${value} ${question.unit}`;
 }
 
+// The bound choice a value answers, or undefined where the value is a plain quantity — a points
+// score, a measured amount, or a non-bound choice.
+function boundChoice(question: Question, value: number): Choice | undefined {
+  if (question.type === "points") return undefined;
+  const choice = question.choices.find((c) => c.value === value);
+  return choice?.bound === true ? choice : undefined;
+}
+
+// Whether a value's display is a bound label rather than a number — the sentence-length texts a
+// layout may treat differently from single-word quantities.
+export function isBoundValue(question: Question, value: number): boolean {
+  return boundChoice(question, value) !== undefined;
+}
+
 // The same value under a heading that already names the unit: the number alone, so a column of
 // them reads as a column of quantities rather than repeating the unit down every row. A choice
 // phrased as an open-ended bound is not a quantity — its wording is the only thing that says what
 // it means — so it keeps its label whatever the heading says.
 export function headedValue(question: Question, value: number): string {
-  if (question.type === "points") return String(value);
-  const choice = question.choices.find((c) => c.value === value);
-  return choice?.bound === true ? choice.label : String(value);
+  return boundChoice(question, value)?.label ?? String(value);
 }
 
 // A question's heading for one scope. The config stores the base text once; a scope that shifts

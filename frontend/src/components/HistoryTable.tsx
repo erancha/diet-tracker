@@ -1,7 +1,7 @@
 import { useState, type KeyboardEvent } from "react";
 import type { Day, Questionnaire } from "../types";
 import { daysBefore, weekdayDdmmLabel } from "../dates";
-import { headedValue, isViolating, questionTitle } from "../violations";
+import { headedValue, isBoundValue, isViolating, questionTitle } from "../violations";
 import { Icon } from "./Icon";
 
 // Window lengths the reader can choose between, shortest first. The longest is bounded by the
@@ -122,7 +122,8 @@ export function HistoryTable({ questionnaire, days, today, deletableDates, viewe
                     ...(q.type === "points"
                       ? [violating && "heavy-day", viewable && "view-day"]
                       : [violating && "violation",
-                         q.warn_below !== undefined && value < q.warn_below && "shortfall"]),
+                         q.warn_below !== undefined && value < q.warn_below && "shortfall",
+                         isBoundValue(q, value) && "bound"]),
                     deleteClass,
                   ].filter(Boolean).join(" ");
                   return (
