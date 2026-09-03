@@ -100,6 +100,31 @@ def test_the_composed_question_never_exceeds_the_upstream_cap(store, questionnai
     assert composed == question
 
 
+def test_the_tracking_scope_of_the_app_rides_with_the_question(store, questionnaire):
+    composed = chat_context.with_user_context("שאלה", store, questionnaire, "u1", TODAY)
+
+    scope = data_of(composed, "שאלה")["תחומי המעקב של האפליקציה"]
+    assert 'שכפ"צ - שתיה (ליטר)' in scope["בשאלון היומי"]
+    assert "כולל מתוק" in scope["ברישום ארוחה"]
+    assert "מקור פחמימה" in scope["ברישום ארוחה"]
+    assert "משקל" in scope["בנוסף"]
+    assert scope["הערה"] == ("אלה כל שדות ההזנה באפליקציה. נושא שאינו ברשימה אין לו שדה "
+                             "באפליקציה, ולכן היעדרו מהנתונים אינו מעיד שהמשתמש לא צרך אותו.")
+
+
+def test_a_tight_budget_keeps_the_tracking_scope(store, questionnaire):
+    for i in range(30):
+        store.add_meal("u1", TODAY, meal(f"{TODAY}T{10 + i // 6:02}:{i % 6}0:00+03:00",
+                                         additions=["sweet"], vegetables=True))
+    question = "ש" * 3000
+
+    composed = chat_context.with_user_context(question, store, questionnaire, "u1", TODAY)
+
+    data = data_of(composed, question)
+    assert "היום" not in data
+    assert "תחומי המעקב של האפליקציה" in data
+
+
 def test_a_user_with_no_data_still_sends_the_empty_state(store, questionnaire):
     composed = chat_context.with_user_context("שאלה", store, questionnaire, "u1", TODAY)
 
