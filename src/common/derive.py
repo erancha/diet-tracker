@@ -3,6 +3,7 @@ computation exists as frontend/src/derive.ts for live dashboard feedback; both i
 must satisfy config/derive-vectors.json, and the server's result is the authority (floors,
 submit validation)."""
 
+import math
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -63,5 +64,7 @@ def derive(meals: list, weights: dict, addition_values: dict, small_portion) -> 
         carbs=carbs,
         meals=len(meals),
         vegetables=sum(1 for meal in meals if meal["vegetables"]),
-        eating_window=round(window.total_seconds() / 1800) / 2,
+        # Whole hours, rounded up: the window never understates itself, so the floor a
+        # submission must meet is the conservative bound of the recorded span.
+        eating_window=math.ceil(window.total_seconds() / 3600),
     )

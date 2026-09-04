@@ -46,18 +46,6 @@ function sourceWeight(choice: string, smallPortionFlag: boolean, weights: Record
 // never lowered when the meal's own grade is already heavier.
 const FRUIT_ESCALATION_CHOICE = "carb_grade_5";
 
-// The eating window is reported in half hours and must round exactly like the server code,
-// which is the authority: Python's round() sends a window landing exactly between two half
-// hours (a span ending in .25 or .75) to the nearest even half-hour count, not always upward
-// the way Math.round would. Everything else goes to the nearest half hour.
-function roundToHalfHour(hours: number): number {
-  const halves = hours * 2;
-  const whole = Math.floor(halves);
-  if (halves - whole > 0.5) return (whole + 1) / 2;
-  if (halves - whole < 0.5) return whole / 2;
-  return (whole % 2 === 0 ? whole : whole + 1) / 2;
-}
-
 // Each meal's effective carb contribution — its grade weight after fruit escalation, plus its
 // additions' surcharges — aligned with the input order so callers can label the meals they
 // passed in. The returned weights sum to the day's carb score.
@@ -106,6 +94,8 @@ export function deriveDay(meals: Pick<Meal, "at" | "carbs_choice" | "vegetables"
     carbs: mealWeights(meals, weights, additionValues, smallPortion).reduce((sum, w) => sum + w, 0),
     meals: meals.length,
     vegetables: meals.filter((m) => m.vegetables).length,
-    eating_window: roundToHalfHour(window / 3600_000),
+    // Whole hours, rounded up like the server: the window never understates itself, so the
+    // floor a submission must meet is the conservative bound of the recorded span.
+    eating_window: Math.ceil(window / 3600_000),
   };
 }

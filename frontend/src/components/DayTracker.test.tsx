@@ -26,7 +26,8 @@ const staleDerivedDay: DayPayload = {
 };
 
 // A day wide enough to offer close-day: trackedDay's first meal pushed back into the morning for
-// a 6.5-hour window, keeping the contradictory derived copy so the recomputation stays under test.
+// a 6.5-hour span the derivation reports as 7 whole hours, keeping the contradictory derived
+// copy so the recomputation stays under test.
 const wideWindowDay: DayPayload = {
   ...staleDerivedDay,
   meals: [{ ...trackedDay.meals[0], at: "2026-08-20T07:00:00+03:00" }, trackedDay.meals[1]],
@@ -39,7 +40,7 @@ const threeMealDay: DayPayload = {
   meals: [...trackedDay.meals,
           { id: "c", at: "2026-08-20T17:00:00+03:00", carbs_choice: "no_carbs", vegetables: false,
             fruit: false, additions: [], small_portion: false, second_source: null }],
-  derived: { carbs: 4, meals: 3, vegetables: 1, eating_window: 7.8 },
+  derived: { carbs: 4, meals: 3, vegetables: 1, eating_window: 8 },
 };
 
 // Pins the clock: the meal form's default time is derived from it, as are the future-time guard
@@ -118,7 +119,7 @@ describe("DayTracker", () => {
     expect(dashboardFigure("ציון")).toHaveTextContent("ציון: 4");
     expect(dashboardFigure("ארוחות")).toHaveTextContent("ארוחות: 2");
     expect(dashboardFigure("ירקות")).toHaveTextContent("ירקות: 1");
-    expect(dashboardFigure("חלון")).toHaveTextContent("חלון: 4.5 שעות");
+    expect(dashboardFigure("חלון")).toHaveTextContent("חלון: 5 שעות");
   });
 
   it("close-day submits values derived from the recorded meals", () => {
@@ -132,7 +133,7 @@ describe("DayTracker", () => {
     fireEvent.click(screen.getByLabelText("3 ליטר"));
     fireEvent.click(screen.getByRole("button", { name: "אישור וסגירה" }));
     expect(onCloseDay).toHaveBeenCalledWith({
-      carbs: 4, meals: 2, vegetables: 1, eating_window: 6.5, drinking: 3 });
+      carbs: 4, meals: 2, vegetables: 1, eating_window: 7, drinking: 3 });
   });
 
   it("renders each meal's time in bold", () => {
@@ -927,7 +928,7 @@ describe("DayTracker", () => {
                        onDeleteMeal={onDeleteMeal} onCloseDay={vi.fn()} />);
     expect(dashboardFigure("ציון")).toHaveTextContent("ציון: 4");
     expect(dashboardFigure("ארוחות")).toHaveTextContent("ארוחות: 2");
-    expect(dashboardFigure("חלון")).toHaveTextContent("חלון: 4.5 שעות");
+    expect(dashboardFigure("חלון")).toHaveTextContent("חלון: 5 שעות");
     // The folded inputs leave the carbs picker unrendered, so the only grade text on screen is
     // the recorded meal's own.
     expect(screen.getAllByText("דרגה 4")).toHaveLength(1);
@@ -1048,7 +1049,7 @@ describe("DayTracker", () => {
     fireEvent.click(screen.getByLabelText("3 ליטר"));
     fireEvent.click(screen.getByRole("button", { name: "אישור וסגירה" }));
     expect(onCloseDay).toHaveBeenCalledWith({
-      carbs: 4, meals: 2, vegetables: 1, eating_window: 6.5, drinking: 3 });
+      carbs: 4, meals: 2, vegetables: 1, eating_window: 7, drinking: 3 });
   });
 
   it("the close-day button leaves once its panel opens, so the flow ends in the confirm", () => {
@@ -1117,7 +1118,7 @@ describe("DayTracker", () => {
                   mealGapHours={NO_NUDGE_GAP_HOURS}
                   onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                   onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
-    expect(dashboardFigure("חלון")).toHaveTextContent("חלון: 4.5 שעות");
+    expect(dashboardFigure("חלון")).toHaveTextContent("חלון: 5 שעות");
     expect(screen.queryByRole("button", { name: "סגירת יום" })).toBeNull();
 
     rerender(<DayTracker maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={wideWindowDay}
@@ -1125,7 +1126,7 @@ describe("DayTracker", () => {
                          mealGapHours={NO_NUDGE_GAP_HOURS}
                          onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                          onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
-    expect(dashboardFigure("חלון")).toHaveTextContent("חלון: 6.5 שעות");
+    expect(dashboardFigure("חלון")).toHaveTextContent("חלון: 7 שעות");
     expect(screen.getByRole("button", { name: "סגירת יום" })).toBeInTheDocument();
   });
 
@@ -1164,7 +1165,7 @@ describe("DayTracker", () => {
     fireEvent.click(screen.getByLabelText("3 ליטר"));
     fireEvent.click(screen.getByRole("button", { name: "אישור וסגירה" }));
     expect(onCloseDay).toHaveBeenCalledWith({
-      carbs: 4, meals: 2, vegetables: 1, eating_window: 6.5, drinking: 3 });
+      carbs: 4, meals: 2, vegetables: 1, eating_window: 7, drinking: 3 });
   });
 
   it("close-day locks only while the composed meal cannot be saved yet", () => {

@@ -92,7 +92,7 @@
         "carbs": 16,
         "meals": 4,
         "vegetables": 2,
-        "eating_window": 12
+        "eating_window": 13
       }
     },
     {
@@ -200,7 +200,7 @@
       }
     },
     {
-      "name": "12.25h midpoint rounds down to the even half hour",
+      "name": "a quarter hour past twelve rounds up to thirteen whole hours",
       "meals": [
         {
           "at": "2026-08-20T08:00:00+03:00",
@@ -225,11 +225,11 @@
         "carbs": 1,
         "meals": 2,
         "vegetables": 0,
-        "eating_window": 12
+        "eating_window": 13
       }
     },
     {
-      "name": "12.75h midpoint rounds up to the even half hour",
+      "name": "three quarters past twelve rounds up the same",
       "meals": [
         {
           "at": "2026-08-20T08:00:00+03:00",
@@ -258,7 +258,7 @@
       }
     },
     {
-      "name": "20 minutes past the hour rounds to the next half hour",
+      "name": "twenty minutes past ten hours rounds up to eleven",
       "meals": [
         {
           "at": "2026-08-20T08:00:00+03:00",
@@ -283,7 +283,7 @@
         "carbs": 1,
         "meals": 2,
         "vegetables": 0,
-        "eating_window": 10.5
+        "eating_window": 11
       }
     },
     {

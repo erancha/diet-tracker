@@ -108,7 +108,7 @@ def test_submit_below_meal_floor_is_rejected_naming_the_field(env):
 def test_submit_at_exactly_the_floor_is_accepted(env):
     add_meal("carb_grade_7")
     add_meal("carb_grade_7", vegetables=False, at_time="19:34:00")
-    answers = {"drinking": 3, "vegetables": 1, "eating_window": 10.5, "meals": 2, "carbs": 16}
+    answers = {"drinking": 3, "vegetables": 1, "eating_window": 11, "meals": 2, "carbs": 16}
     response = api.handler(request("POST /days", {"answers": answers}), None)
     assert response["statusCode"] == 200
 
@@ -204,7 +204,7 @@ def test_add_meal_records_and_returns_recomputed_day(env):
     assert payload["derived"] == {"carbs": 0, "meals": 1, "vegetables": 1, "eating_window": 0}
     payload = body_of(add_meal("carb_grade_7", vegetables=False, at_time="13:30:00"))
     assert payload["derived"]["carbs"] == 7
-    assert payload["derived"]["eating_window"] == 4.5
+    assert payload["derived"]["eating_window"] == 5
 
 
 def test_a_meal_past_the_daily_cap_is_rejected(env):
