@@ -393,18 +393,29 @@ td.view-day { cursor: pointer; }
 /* The list ends the card, so its own bottom margin would double the card's padding there; the
    top margin stays, separating the meals from the action buttons above them. */
 .meal-list { list-style: none; padding: 0; margin: 1rem 0 0; }
-/* The text cell alone absorbs the row's free space, so every cell after it — the score, then the
-   controls — holds the same column down the list however long a label runs. Distributing the
-   space between the cells instead would let each one drift with the text it follows. */
-.meal-list li { padding: 0.25rem 0; display: flex; align-items: center; gap: 0.5rem; }
-/* The time opens the row as its own cell so the description beside it wraps against its own edge
-   rather than back under the time. Pinned to the row's top, since a description running to two
-   lines would otherwise centre the time against the middle of the pair. */
-.meal-list .meal-at { flex-shrink: 0; align-self: flex-start; }
-.meal-list .meal-text { flex: 1; }
-/* Sized for the widest score the carb scale reaches, so a two-digit day does not shift the column. */
-.meal-list .meal-points { flex-shrink: 0; min-width: 4ch; }
-.meal-list .meal-actions { display: flex; align-items: center; flex-shrink: 0; }
+/* One grid for the whole list, every column sized to its widest content, so times, texts, scores
+   and controls each hold an aligned column at minimal width — no cell stretches, so no blank run
+   ever parts a grade from the score that prices it. The rows dissolve into the grid
+   (display: contents) so the cells of every row share the same four columns, and the column gap
+   is the weight list's, so the two grids breathe at the same rhythm. */
+.meal-list { display: grid; align-items: center; gap: 0.5rem 1rem;
+             grid-template-columns: max-content minmax(0, max-content) max-content max-content; }
+.meal-list li { display: contents; }
+/* Each cell names its column, so a row missing a cell — a history day whose points no longer
+   resolve renders no score — leaves its column empty instead of pulling later cells across. The
+   time also pins to its row's top, since a description wrapping to two lines would otherwise
+   centre it against the middle of the pair. */
+.meal-list .meal-at { grid-column: 1; align-self: start; }
+.meal-list .meal-text { grid-column: 2; }
+.meal-list .meal-points { grid-column: 3; }
+.meal-list .meal-actions { grid-column: 4; }
+/* Sized for the widest score the carb scale reaches, so a two-digit day does not shift the
+   column; weighted like the weight rows' values, in either colour. */
+.meal-list .meal-points { min-width: 4ch; font-weight: 600; }
+/* The score reads in the dashboard's accent like the day total it feeds, ceding to the danger
+   colour when the meal is marked heavy. */
+.meal-list .meal-points:not(.heavy-meal) { color: var(--accent); }
+.meal-list .meal-actions { display: flex; align-items: center; }
 /* A tap target comfortable on a phone stands taller than the row's text. The negative block margin
    keeps it out of the line box, leaving the row's height set by that text — which is what the
    top-pinned time above measures itself against. */
@@ -476,14 +487,18 @@ td.view-day { cursor: pointer; }
 .weight-over-target .weight-latest,
 .weight-over-target .weight-summary .weight-gap,
 .weight-entries .over-target { color: var(--danger); }
-/* The measurements behind the chart. Each row puts the date, the weight and the delete control in
-   fixed cells so the column holds down the list however the values vary. */
+/* The measurements behind the chart: one grid whose columns — date, hour, weight, delete — each
+   sit at their widest content, aligned down the list with no cell stretched, so the delete
+   control reads right beside the weight it removes. The rows dissolve into the grid
+   (display: contents) so every row's cells share the same columns. */
 .weight-rhythm { margin: 0 0 0.5rem; opacity: 0.8; }
-.weight-entries { list-style: none; padding: 0; margin: 0.5rem 0 0; }
-.weight-entries li { display: flex; align-items: center; gap: 1rem; padding: 0.125rem 0; }
-.weight-entries .weight-entry-date { min-width: 6ch; font-weight: 600; }
-.weight-entries .weight-entry-at { min-width: 5ch; opacity: 0.7; font-variant-numeric: tabular-nums; }
-.weight-entries .weight-entry-kg { flex: 1; font-weight: 600; }
+.weight-entries { list-style: none; padding: 0; margin: 0.5rem 0 0; display: grid;
+                  grid-template-columns: repeat(4, max-content); align-items: center;
+                  gap: 0.25rem 1rem; }
+.weight-entries li { display: contents; }
+.weight-entries .weight-entry-date { font-weight: 600; }
+.weight-entries .weight-entry-at { opacity: 0.7; font-variant-numeric: tabular-nums; }
+.weight-entries .weight-entry-kg { font-weight: 600; }
 .weight-entries .far-over { font-weight: 800; }
 .weight-entries button { padding: 0.35rem; margin-block: -0.35rem; }
 
