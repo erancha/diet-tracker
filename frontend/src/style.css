@@ -330,7 +330,7 @@ td.view-day { cursor: pointer; }
 /* Kept near body size against the tracker's larger heading, so the fold reads as a row inside
    the panel rather than as a section of its own; its top margin opens the gap under whatever
    precedes it — the day's meal rows, or the dashboard while none are recorded. */
-.meal-form h3 { font-size: calc(1.1rem + 2px); margin: 1rem 0 0.5rem; }
+.meal-form h3 { font-size: calc(1.1rem + 2px); margin: 1.5rem 0 0.5rem; }
 /* Stands where the add-meal toggle stood once the day holds its quota, so it wears the same
    heading slot muted rather than styled as a control. */
 .meal-cap-note { color: var(--viz-muted); margin: 1rem 0 0.5rem; }

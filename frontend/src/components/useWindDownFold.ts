@@ -15,8 +15,8 @@ export const WIND_DOWN_SWEEP_MS = 800;
  * read as a mistake.
  *
  * `armed` says the open section is unbidden and the countdown should run; any engagement — the
- * section's own toggle, or the caller reporting one through disarm() — hands the fold to the
- * user for the rest of the visit. The caller renders the three readings with the style sheet's
+ * section's own toggle, a state the caller imposes through set(), or the caller reporting one
+ * through disarm() — hands the fold to the user for the rest of the visit. The caller renders the three readings with the style sheet's
  * section-fold classes: `waning` dresses the section for the whole armed stretch (the dim
  * animation carries its own delay), `folding` runs the closing sweep with the content still
  * mounted, and `collapsed` lands once the sweep is done.
@@ -35,6 +35,12 @@ export function useWindDownFold(armed: boolean, initiallyCollapsed: boolean) {
     setEngaged(true);
     setFolding(false);
   };
+  // An imposed state — the menu's global fold — engages like the section's own toggle does.
+  const set = (next: boolean) => {
+    setEngaged(true);
+    setFolding(false);
+    setCollapsed(next);
+  };
 
   useEffect(() => {
     if (!armed || engaged || collapsed) return;
@@ -44,5 +50,5 @@ export function useWindDownFold(armed: boolean, initiallyCollapsed: boolean) {
     return () => { clearTimeout(fold); clearTimeout(folded); };
   }, [armed, engaged, collapsed]);
 
-  return { collapsed, folding, waning: armed && !engaged && !collapsed, toggle, disarm };
+  return { collapsed, folding, waning: armed && !engaged && !collapsed, toggle, disarm, set };
 }

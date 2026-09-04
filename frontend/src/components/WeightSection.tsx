@@ -5,6 +5,7 @@ import { mayDiscardEdits } from "../edits";
 import { activeSpan, entriesWithin, kgLabel, offeredSpans, parseKg, rhythmReading, summarize, targetChangePrompt, type WeightSummary } from "../weight";
 import { CollapsibleSection } from "./CollapsibleSection";
 import { Icon } from "./Icon";
+import { useGlobalFold } from "./useFoldAll";
 import { useWindDownFold } from "./useWindDownFold";
 import { WeightChart } from "./WeightChart";
 import { WeightEntries } from "./WeightEntries";
@@ -122,6 +123,7 @@ export function WeightSection({ weight, settings, now, defaultExpanded,
   // Typing anywhere in the section — the weighing input or the target editor — claims it from
   // the automatic fold, reported by the change events bubbling to the wrapper below.
   const fold = useWindDownFold(defaultExpanded, !defaultExpanded);
+  useGlobalFold(fold.set);
   const todayStr = isoDate(now);
   const recordedToday = weight.entries.find((entry) => entry.date === todayStr);
   const summary = summarize(weight.entries, weight.target);

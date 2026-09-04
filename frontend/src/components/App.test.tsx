@@ -89,6 +89,44 @@ describe("App", () => {
     expect(screen.queryByRole("button", { name: "שאלון סיכום היום" })).toBeNull();
   });
 
+  it("folds every section from the menu's global toggle and opens them all again", async () => {
+    renderApp(false);
+    await screen.findByRole("button", { name: "יומן היום" });
+    const sections = ["משקל", "יומן היום", "היסטוריה", "שאלות על אבא חטוב"];
+
+    fireEvent.click(screen.getByRole("button", { name: "תפריט חשבון" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "צמצום כללי" }));
+    for (const name of sections)
+      expect(screen.getByRole("button", { name })).toHaveAttribute("aria-expanded", "false");
+
+    // The item now names the reverse sweep, which reopens everything.
+    fireEvent.click(screen.getByRole("button", { name: "תפריט חשבון" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "הרחבה כללית" }));
+    for (const name of sections)
+      expect(screen.getByRole("button", { name })).toHaveAttribute("aria-expanded", "true");
+    // The nested meal form is an editing affordance, not a display section: opening everything
+    // must not open a form whose unfolding starts composing a meal.
+    expect(screen.getByRole("button", { name: "הוספת ארוחה" }))
+      .toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("reaches the admin panel with the same global fold command", async () => {
+    const client = api();
+    (client.getAdminActivity as ReturnType<typeof vi.fn>).mockResolvedValue({ users: [] });
+    renderApp(true, client);
+    const panel = await screen.findByRole("button", { name: "פעילות משתמשים" });
+    expect(panel).toHaveAttribute("aria-expanded", "false");
+
+    // The first command folds; the panel rests folded already and stays put.
+    fireEvent.click(screen.getByRole("button", { name: "תפריט חשבון" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "צמצום כללי" }));
+    expect(panel).toHaveAttribute("aria-expanded", "false");
+
+    fireEvent.click(screen.getByRole("button", { name: "תפריט חשבון" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "הרחבה כללית" }));
+    expect(panel).toHaveAttribute("aria-expanded", "true");
+  });
+
   it("targets yesterday in the small hours while it holds unclosed meals", async () => {
     atClock(1, 0);
     renderApp(false, api({ yesterday: trackedDay(isoDate(yesterdayOf(new Date()))) }));

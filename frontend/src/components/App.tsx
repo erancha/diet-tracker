@@ -15,6 +15,7 @@ import { DayView } from "./DayView";
 import { Header } from "./Header";
 import { HistoryTable } from "./HistoryTable";
 import { TrendChart } from "./TrendChart";
+import { advanceFoldAll, FoldAllContext, useFoldAllEffect, type FoldAllCommand } from "./useFoldAll";
 import { useWindDownFold } from "./useWindDownFold";
 import { WeightSection } from "./WeightSection";
 import { Welcome } from "./Welcome";
@@ -23,7 +24,8 @@ import { Welcome } from "./Welcome";
 // yesterday's meal payloads, on-demand past-day payloads, the weight log) and every mutation —
 // meal recording and deletion, the day's closing through the tracker, day deletion, weight
 // recording, retargeting and deletion, and the account's reminder opt-out — plus the close →
-// alerts flow and the empty history panel's timed wind-down fold; apart from the chat and admin
+// alerts flow, the menu's global fold command, and the empty history panel's timed wind-down
+// fold; apart from the chat and admin
 // sections, which own their reads, the components below it hold no server state of their own.
 //
 // The tracker is the only way a day closes, and the day it targets is decided here: today,
@@ -69,6 +71,14 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, onSignOu
   const emptyHistory = historyQuery.data !== undefined
     && historyQuery.data.days.length === 0 && historyQuery.data.today.meals.length === 0;
   const historyFold = useWindDownFold(emptyHistory, false);
+
+  // The menu's global fold command, broadcast through FoldAllContext to the sections that hold
+  // their own collapsed state; the two states held right here — history and chat — take it
+  // directly, being above the provider.
+  const [foldAll, setFoldAll] = useState<FoldAllCommand>({ gen: 0, collapsed: false });
+  const [chatCollapsed, setChatCollapsed] = useState(false);
+  useFoldAllEffect(foldAll, historyFold.set);
+  useFoldAllEffect(foldAll, setChatCollapsed);
 
   // The history row whose read-only day view is open, or null when none is.
   const [viewedDate, setViewedDate] = useState<string | null>(null);
@@ -206,8 +216,13 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, onSignOu
     <>
       <Header email={email} onSignOut={onSignOut} muted={data.muted}
               onSetMuted={(muted) => setMutedMutation.mutate(muted)}
+              onFoldAll={() => setFoldAll(advanceFoldAll)}
+              // The item names the sweep a press will run, read off the last command rather than
+              // the sections' scattered states — hand-toggling sections does not rename it.
+              nextFoldCollapses={!foldAll.collapsed}
               activeViolations={activeViolations(questionnaire, data.days, todayStr, yesterdayStr)} />
       <main>
+      <FoldAllContext.Provider value={foldAll}>
         <Alerts items={alerts} onDismiss={dismissAlerts} />
         {!isAdmin && <>
         {firstVisit && <Welcome />}
@@ -269,10 +284,13 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, onSignOu
           </div>
         </CollapsibleSection>
         </>}
-        <CollapsibleSection className="chat-section" title="שאלות על אבא חטוב">
+        <CollapsibleSection className="chat-section" title="שאלות על אבא חטוב"
+                            collapsed={chatCollapsed}
+                            onToggle={() => setChatCollapsed((c) => !c)}>
           <Chat api={api} sampleQuestions={configQuery.data.chat.sample_questions} />
         </CollapsibleSection>
         {isAdmin && <AdminSection api={api} />}
+      </FoldAllContext.Provider>
       </main>
     </>
   );
