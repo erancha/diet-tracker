@@ -280,8 +280,20 @@ describe("Chat", () => {
 
     const question = screen.getByText("ומה עוד?").closest("li")!;
     expect(question).toHaveClass("chat-user");
-    expect(question.previousElementSibling).toBe(screen.getByRole("textbox").closest("li"));
+    expect(question.previousElementSibling).toBe(screen.getByText("תשובה 1").closest("li"));
     expect(screen.getByText("חושב…").closest("li")).toHaveClass("chat-assistant");
+    expect(screen.queryByRole("textbox")).toBeNull();
+  });
+
+  it("withdraws the composer while a question awaits its answer", async () => {
+    const chatApi = api({ ask: vi.fn().mockReturnValue(new Promise(() => {})) });
+    render(<Chat api={chatApi} sampleQuestions={[]} />);
+
+    await ask("שאלה");
+
+    expect(screen.queryByRole("textbox")).toBeNull();
+    expect(screen.queryByRole("button", { name: "שליחה" })).toBeNull();
+    expect(screen.getByText("חושב…")).toBeInTheDocument();
   });
 
   it("sends a follow-up as the labeled chain and replaces the turn in place", async () => {

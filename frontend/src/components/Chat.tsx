@@ -64,10 +64,11 @@ function renderQuestion(text: string): ReactNode {
 // offers permanent deletion behind a confirm, keyed by the timestamp the server stored it under.
 // An open answer offers a reply control: the next question is then sent as the turn's labeled
 // chain plus the new question, and the answered follow-up replaces the turn in place — a
-// conversation stays one row whose question text carries its whole history. While a reply is in
-// progress the whole composer moves into the transcript under the answer it extends — with the
-// pressed reply control and the thinking indicator marking the state — and returns to the top
-// once the follow-up is answered, canceled, or its turn deleted.
+// conversation stays one row whose question text carries its whole history. Choosing a reply
+// target moves the whole composer into the transcript under the answer it extends, and it
+// returns to the top once the follow-up is answered, canceled, or its turn deleted. While any
+// question awaits its answer the composer withdraws entirely — there is nothing to type at —
+// leaving the sent question and the thinking indicator to mark the state.
 // Configured sample questions render as one-tap links above the composer; a tap only fills the
 // input — nothing is sent, so no quota is spent before the user chooses to submit.
 export function Chat({ api, sampleQuestions }: {
@@ -81,7 +82,7 @@ export function Chat({ api, sampleQuestions }: {
   const [sourcesShown, setSourcesShown] = useState<Set<string>>(new Set());
   const [draft, setDraft] = useState("");
   // The question awaiting its answer, or null. Doubles as the pending flag: the composer is
-  // held while it is set, so at most one question is in flight.
+  // withdrawn while it is set, so at most one question is in flight.
   const [pendingQuestion, setPendingQuestion] = useState<string | null>(null);
   // The turn the next question follows up on, or null for a standalone question.
   const [replyTo, setReplyTo] = useState<ChatTurn | null>(null);
@@ -95,7 +96,7 @@ export function Chat({ api, sampleQuestions }: {
 
   const send = async () => {
     const question = draft.trim();
-    if (!question || pendingQuestion !== null) return;
+    if (!question) return;
     setDraft("");
     setError(null);
     setPendingQuestion(question);
@@ -170,7 +171,7 @@ export function Chat({ api, sampleQuestions }: {
               onClick={() => setDraft("")}><Icon name="close" /></button>
           )}
         </div>
-        <button type="submit" disabled={pendingQuestion !== null || draft.trim() === ""}>שליחה</button>
+        <button type="submit" disabled={draft.trim() === ""}>שליחה</button>
       </form>
     </>
   );
@@ -185,7 +186,7 @@ export function Chat({ api, sampleQuestions }: {
           ))}
         </div>
       )}
-      {replyTo === null && composer}
+      {replyTo === null && pendingQuestion === null && composer}
       {error && <div className="alert">{error}</div>}
       {(pendingQuestion !== null || turns.length > 0) && (
         <ul className="chat-messages">
@@ -235,7 +236,7 @@ export function Chat({ api, sampleQuestions }: {
               )}
               {replyTo?.at === turn.at && (
                 <>
-                  <li className="chat-composer">{composer}</li>
+                  {pendingQuestion === null && <li className="chat-composer">{composer}</li>}
                   {pendingExchange}
                 </>
               )}
