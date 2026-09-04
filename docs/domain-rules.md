@@ -67,8 +67,8 @@ a drink and a spoon of tahini outprices a plain grade 4, and a rule reading the 
 the cheaper plate the worse one. Each scope declares its bound once in `config/app.json` —
 `heavy_meal` on the carbs question for a single plate, weighed after the fruit escalation, the
 additions and the quantity rule; the `heavy_day` rule's `at_least` for the day's summed score.
-Neither bound derives from the other, and neither derives from `max`, which caps the day-end
-slider and bounds a submitted answer rather than judging one.
+Neither bound derives from the other, and neither derives from `max`, which bounds a closed
+day's stored answer rather than judging one.
 
 The two are set so that a day of heavy meals is a heavy day: three meals at the meal bound reach
 the day bound exactly, matching the three meals the `meals` question treats as the day's norm.
@@ -79,34 +79,46 @@ day the moment it reaches the bound, and the `heavy_day` rule nudges once the da
 
 ## Day lifecycle
 
-- **Questionnaire flooring** — recorded meals floor the end-of-day questionnaire: a day can admit
-  more than was tracked, never less. The server-side derivation is the authority for floors and
-  submit validation.
-- **Water-close** — a fully tracked day closes directly from the tracker with only water entered.
-- **Answerable day** — the day-end questionnaire answers a day that has ended, so it opens on the
-  last one that did: today from the day-end hour (the stack's `DayEndHour`) onward, yesterday for
-  the whole stretch before it, including the small hours after midnight. Today stays disabled in
-  the day picker until that hour.
+- **Water-close** — the tracker's close button is the only way a day closes, offered once the
+  recorded meals span the minimum eating window (`day_close.min_window_hours`), and it asks for
+  water alone: every other value is the derived reading of the meal log. A day whose meals never
+  span that window — or that was never tracked at all — stays unrecorded.
+- **Close validation** — the server re-derives the closing day from its stored meals and rejects
+  figures below that derivation, so the meal log stays the authority over what a closed day
+  claims.
+- **Reopening** — a closed day keeps the tracker on screen: its meals stay readable, as in the
+  history table's day view, behind a single add-meal control that asks to reopen the eating
+  window. Confirming deletes the day's record — the same deletion the history table offers,
+  under the same windows — while the meals survive, so the day is simply open again to take the
+  late meal and close over the fuller log.
+- **Small-hours grace window** — a day left unclosed at midnight does not vanish: while the clock
+  is still before the configured `day_close.close_until`, an unclosed yesterday holding meals
+  stays the tracker's target — its late meals can still be recorded or corrected, dated within
+  it, and its closing still lands on it. A just-closed yesterday stays on as well, reopenable,
+  until the delete bound. Past what applies, the tracker hands over to today. Deleting
+  yesterday's record shuts earlier, at `day_close.delete_until`, which never
+  outlives the close bound — so no deletion can leave a day that could not be re-closed. The API
+  enforces the same two windows from the same config values.
 - **Overdue meal** — the tracker's meal inputs sit folded behind the day's figures and its meal
   list, and open expanded when a meal is overdue. A day is overdue in two ways: it passes its
   first-meal hour (the stack's `FirstMealHour`) with nothing recorded, or its most recent meal
   falls the meal-gap span (the stack's `MealGapHours`) behind the clock. The gap is measured from
   when the meal was eaten and stands on its own, so a stale meal opens the inputs however early in
-  the day it is. Recording a meal restarts the gap, folding the inputs away again.
-- **Backfill** — entries can be backfilled to yesterday, so after-midnight meals land on the day
-  they belong to.
+  the day it is. Recording a meal restarts the gap, folding the inputs away again. The previous
+  day never nudges — it is over, not running late.
 
 ## Shared derivation
 
-The derivation is implemented once per runtime: `src/common/derive.py` server-side as the
-authority, `frontend/src/derive.ts` client-side for live dashboard feedback. Both implementations
+The derivation exists as one implementation per language: `src/common/derive.py` in the Python
+backend as the authority, `frontend/src/derive.ts` in the browser for live dashboard feedback.
+Both implementations
 must satisfy the shared test vectors in `config/derive-vectors.json`, keeping the two runtimes in
 lockstep.
 
 ## Weight
 
 The weight log runs beside the day tracker rather than inside it. A weight is measured, not
-judged: it enters no day score, no questionnaire floor, and no threshold alert, so a climbing
+judged: it enters no day score, no derived floor, and no threshold alert, so a climbing
 weight is something the chart shows rather than a nudge that fires.
 
 - **One measurement per calendar day**, in kilograms, recorded for today, carrying the wall-clock
@@ -117,10 +129,10 @@ weight is something the chart shows rather than a nudge that fires.
 - **A single current target**, revised in place. The chart draws it as a reference line and the
   section's at-a-glance summary reads the latest weight against it. A user who has never set one
   has no target, and the chart draws no line.
-- **Deletion at any date.** Day records and meals are confined to a today-and-yesterday window
-  because they feed scoring and the derived floors that validate a submission. A weight feeds
-  neither, so removing an old one restates nothing — and a measurement logged against the wrong
-  day would otherwise have no way out of the chart.
+- **Deletion at any date.** Day records and meals are confined to the running day and its
+  small-hours grace window because they feed scoring and the derived floors that validate a
+  close. A weight feeds neither, so removing an old one restates nothing — and a measurement
+  logged against the wrong day would otherwise have no way out of the chart.
 - **Chart span** — the chart opens on the configured number of months and offers wider spans only
   where the recorded series actually reaches past them.
 - **Weigh-in rhythm** — the recommendation the weight log serves is a weighing once a week, on the
@@ -143,9 +155,13 @@ weight is something the chart shows rather than a nudge that fires.
 
 `config/app.json` is the app's single versioned config. Its `questionnaire` element holds the
 questions, their numeric choice values (the carb meal-point weights among them), and the threshold
-alert rules; its `version` is stamped on every submitted day, so it tracks the questions and their
-values alone. Its `weight` element holds the weigh-in weekday and hour, the chart's opening span,
-and the kilogram bounds both the API and the frontend input constrain to.
+alert rules; its `version` is stamped on every closed day, so it tracks the questions and their
+values alone. Its `day_close` element holds the closing rules: the minimum eating window
+(`min_window_hours`), and the small-hours grace bounds — `close_until`, up to which an unclosed
+yesterday may still be closed and its meals written, and the never-later `delete_until`, up to
+which its record may still be deleted. Its `weight` element holds the
+weigh-in weekday and hour, the chart's opening span, and the kilogram bounds both the API and the
+frontend input constrain to.
 
 Both runtimes read the same file: the Lambda package carries it, and the frontend fetches it from
 its own origin. The weigh-in weekday and hour are the one part `scripts/deploy.sh` also lifts out
@@ -155,23 +171,24 @@ at deploy time, because an EventBridge cron expression is fixed when the stack d
 
 Scheduled jobs (EventBridge Scheduler, Asia/Jerusalem) run alongside the tracker:
 
-- **Last call** — the day's one fill reminder, late enough that the day is over in practice and
-  still inside it, so what it asks about is the day the user is living. It reaches every user
-  whose day remains unsubmitted, and tells one whose meals are already logged that the day is
-  open rather than untracked: everything but the water is recorded, and the questionnaire is what
-  closes it. A day carrying no meals gets the plain reminder.
+- **Last call** — the day's one tracking reminder, late enough that the day is over in practice
+  and still inside it, so what it asks about is the day the user is living. It reaches every user
+  whose day remains open, and tells one whose meals are already logged that the day awaits its
+  closing rather than its meals: everything but the water is recorded, and the tracker's close
+  button is what seals it. A day carrying no meals gets the plain record-your-meals reminder.
 - **Threshold alerts** — fire over consecutive days violating the configured thresholds, by email
   plus Telegram when a bot token is configured (see
   [Development & deployment](development.md#telegram-optional)).
 - **Weekly digest** — a weekly averages summary.
 - **Weigh-in reminder** — a weekly prompt to step on the scale, skipped for anyone who already
   recorded a weight on the weigh-in day itself, on the same channels as the alerts above.
-- **Trend chart** — a 7-day trend chart after each submit.
+- **Trend chart** — a 7-day trend chart after each closed day.
 
 Every job above reads its audience from the pool minus the accounts that have opted out, so one
 switch silences all of them — the unconditional weekly digest included. The switch is the account
 menu's second item, beside the sign-out it sits with because leaving is when a user decides they
 are done being reminded; it toggles, so the same item subscribes again. Opting out changes nothing
-inside the app: a muted account still sees its own violations on submit and in the header alarm,
+inside the app: a muted account still sees its own violations on closing a day and in the header
+alarm,
 and its day is left unrecorded as alerted, so a streak still live when notifications resume raises
 one then.

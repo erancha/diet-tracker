@@ -23,7 +23,7 @@ header h1 { margin-bottom: 0; }
 /* The account box sits on the page's left edge (flex end in this RTL layout) and holds a single
    row of account buttons; align-items flex-end keeps that row on the box's left edge rather than
    right-aligned per RTL default. It is auxiliary chrome, so it reads smaller than the
-   questionnaire controls and its buttons drop the global button's wide padding. */
+   tracker controls and its buttons drop the global button's wide padding. */
 header > span { display: flex; flex-direction: column; align-items: flex-end; font-size: 0.8rem; }
 header span button { font-size: inherit; padding: 0.3rem 0.9rem; }
 /* Sign-out and the alarm share one row so the alarm reads as part of the account box rather than
@@ -115,11 +115,8 @@ h1 { font-size: min(2.1rem, 9vw); color: var(--accent); margin-top: 0; }
    stay subordinate to their answers; here that reading is inverted, so the row is set above the
    values it names instead. */
 .landing-principles th { font-size: calc(var(--cell-font-size) + 2px); }
-.day-picker, .range-picker { display: flex; gap: 1rem; align-items: center; margin-bottom: 0.75rem; font-size: 0.9rem; }
-.day-picker label, .range-picker label { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0; cursor: pointer; }
-.range-picker { margin-top: 0.5rem; }
-/* The day it names has not ended yet, so the whole option — not just the radio — reads as blocked. */
-.day-picker label:has(input:disabled) { opacity: 0.5; cursor: default; }
+.range-picker { display: flex; gap: 1rem; align-items: center; margin-bottom: 0.75rem; font-size: 0.9rem; margin-top: 0.5rem; }
+.range-picker label { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0; cursor: pointer; }
 fieldset { border: 1px solid #ddd; border-radius: 8px; margin: 0 0 1rem; padding: 0.75rem 1rem; background: #fff; }
 /* A legend keeps its heading on one line. The longest heading (the carbs meal grade) spans
    ~20em — wider than a phone viewport at 1rem — so below ~26rem the font scales with the
@@ -288,9 +285,6 @@ td.view-day { cursor: pointer; }
   white-space: nowrap;
   direction: rtl;
 }
-.points-slider { display: flex; align-items: center; gap: 0.8rem; }
-.points-slider input[type="range"] { flex: 1; accent-color: var(--danger); background: linear-gradient(to left, #2e7d32, #f9a825, #c62828); height: 6px; border-radius: 3px; appearance: none; }
-.points-slider output { font-weight: 600; min-width: 2ch; text-align: center; }
 .day-tracker { margin-bottom: 1rem; }
 /* The tracker is the app's primary daily surface, so its header reads slightly larger than the
    other sections'. Those sit directly on the page and need the default heading margins to
@@ -330,19 +324,17 @@ td.view-day { cursor: pointer; }
   .meal-form .section-toggle { animation: none; }
   .section-waning, .section-folding { animation: none; }
 }
-/* The day-summary heading before the day-end hour: de-emphasised, not disabled — it keeps its
-   click, and hover still answers in the accent. */
-.day-not-ended .section-toggle { --btn-fg: #8a8a84; }
 /* Kept near body size against the tracker's larger heading, so the fold reads as a row inside
    the panel rather than as a section of its own; its top margin joins the dashboard's bottom
    margin for a 1.5rem gap above. */
-.meal-form h3 { font-size: 1.1rem; margin: 1rem 0 0.5rem; }
+.meal-form h3 { font-size: calc(1.1rem + 2px); margin: 1rem 0 0.5rem; }
 /* Stands where the add-meal toggle stood once the day holds its quota, so it wears the same
    heading slot muted rather than styled as a control. */
 .meal-cap-note { color: var(--viz-muted); margin: 1rem 0 0.5rem; }
-/* Folded, the heading is the card's last visible element; dropping its bottom margin leaves the
-   same 1rem card padding below it as above the tracker title. */
-.meal-form h3:last-child { margin-bottom: 0; }
+/* Folded, the heading is the card's last visible element. Its bottom margin collapses with the
+   action row's 0.75rem top margin, so 1.75rem here opens a clear rem of air before the close-day
+   button — the folded toggle must not read as that button's label. */
+.meal-form h3:last-child { margin-bottom: 1.75rem; }
 /* Open, the form gains its own frame in the quiet buttons' accent tint, so the editing surface
    reads as one bounded unit against the tracker card and its hairline fieldsets. The box takes
    over the heading's 1rem gap above, and the heading sits on the frame's padding instead. */
@@ -382,6 +374,11 @@ td.view-day { cursor: pointer; }
    padding gives way to the text, which stays whole; a row that still cannot hold every control
    drops one to the next line rather than breaking a label or running off the edge. */
 .form-actions button { padding-inline: 1rem; white-space: nowrap; }
+/* Grows the same 2px the open tracker's add-meal toggle carries over its own base size. */
+.reopen-toggle { font-size: calc(1rem + 2px); }
+/* Rides the closed tracker's action row beside the add-meal button, naming what that button
+   does to a closed day; muted, because it explains rather than acts. */
+.reopen-hint { align-self: center; font-size: 0.85rem; color: #8a8a84; }
 .tracker-dashboard { display: flex; gap: 1.2rem; flex-wrap: wrap; font-weight: 600; margin-bottom: 0.5rem; }
 /* Color falls on the figures alone, their labels staying body-colored chrome. The accent green
    reads as a measurement rather than a verdict, leaving red to mean only a heavy day —
@@ -411,6 +408,9 @@ td.view-day { cursor: pointer; }
 /* The closing panel opens between the action row and the meal list; its own lead keeps the framed
    fieldset from sitting tight against the buttons while staying anchored to the opener among them. */
 .close-day { margin-top: 1rem; }
+/* Names the step the panel is, in the accent the app acts in — the control that opened the
+   panel is gone by the time this shows. */
+.close-day-banner { margin: 0 0 0.6rem; font-size: 1.05rem; color: var(--accent); }
 
 /* The day's weighing: a label, an input and its button on one line, wrapping onto the next only
    where a phone cannot hold them side by side. It is a paragraph, so the vertical margin is set

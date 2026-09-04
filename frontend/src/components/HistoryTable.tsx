@@ -16,7 +16,8 @@ interface Props {
   // today rather than the newest recorded date, so a stretch with nothing recorded reads as the
   // gap it is instead of scrolling older days up into the week.
   today: string;
-  // Dates whose rows offer deletion — the backend accepts deletes only for today and yesterday.
+  // Dates whose rows offer deletion — today, and yesterday only while its small-hours delete
+  // bound still holds, matching the window the backend enforces.
   deletableDates: Set<string>;
   // The date whose day view is open, or null. Deletion is offered only there, so on a narrow
   // screen a mis-tap cannot delete a day the user has not opened and looked at.

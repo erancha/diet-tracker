@@ -90,7 +90,6 @@ fi
 HOSTED_UI_DOMAIN=$(stack_output "${APP}-cognito" HostedUiDomain)
 CLIENT_ID=$(stack_output "${APP}-cognito" UserPoolClientId)
 API_URL=$(stack_output "$APP" ApiUrl)
-DAY_END_HOUR=$(stack_output "$APP" DayEndHour)
 FIRST_MEAL_HOUR=$(stack_output "$APP" FirstMealHour)
 MEAL_GAP_HOURS=$(stack_output "$APP" MealGapHours)
 # public/ may be absent on a fresh clone — its only content is this gitignored file.
@@ -104,7 +103,6 @@ window.CONFIG = {
   apiUrl: "$API_URL",
   redirectUri: window.location.origin + "/",
   rootEmail: "${ADMIN_EMAIL}",
-  dayEndHour: ${DAY_END_HOUR},
   firstMealHour: ${FIRST_MEAL_HOUR},
   mealGapHours: ${MEAL_GAP_HOURS},
 };

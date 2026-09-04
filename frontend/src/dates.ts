@@ -104,17 +104,11 @@ export function last7Days(endDateStr: string): string[] {
   return Array.from({ length: 7 }, (_, i) => daysBefore(endDateStr, 6 - i));
 }
 
-// The day counts as over for questionnaire purposes from dayEndHour onward (delivered via
-// config.js from the stack's DayEndHour parameter). Until then the day is still accumulating
-// meals and cannot honestly be answered for.
-export function dayEnded(now: Date, dayEndHour: number): boolean {
-  return now.getHours() >= dayEndHour;
-}
-
-// A day with no recorded meals is headed for retrospective entry, so once it ends the day-end
-// questionnaire opens expanded instead of waiting behind its collapsed-by-default toggle.
-export function expandQuestionnaire(now: Date, dayEndHour: number, mealsRecorded: number, todaySubmitted: boolean): boolean {
-  return dayEnded(now, dayEndHour) && mealsRecorded === 0 && !todaySubmitted;
+// Whether the clock still sits before a small-hours bound like "02:00" — the form the day-close
+// grace times take in app.json. Compared by minutes of the local day, so the bound shuts for the
+// whole rest of the day once passed.
+export function beforeDailyCutoff(now: Date, cutoff: string): boolean {
+  return now.getHours() * 60 + now.getMinutes() < minutesOfDay(cutoff);
 }
 
 const MS_PER_HOUR = 3_600_000;
@@ -130,11 +124,4 @@ export function mealOverdue(now: Date, firstMealHour: number, mealGapHours: numb
   if (meals.length === 0) return now.getHours() >= firstMealHour;
   const lastMeal = Math.max(...meals.map((m) => Date.parse(m.at)));
   return now.getTime() - lastMeal >= mealGapHours * MS_PER_HOUR;
-}
-
-// The questionnaire closes a finished day, so the day it opens on is the last one that ended:
-// today from the day-end hour onward, yesterday for the whole stretch before it — the small
-// hours after midnight included, when the day just ended is the one awaiting answers.
-export function defaultDay(now: Date, dayEndHour: number): "today" | "yesterday" {
-  return dayEnded(now, dayEndHour) ? "today" : "yesterday";
 }

@@ -102,11 +102,23 @@ export interface MealsSettings {
   max_per_day: number;
 }
 
+// Small-hours grace bounds for the previous day, zero-padded "HH:MM" wall-clock times mirroring
+// DayCloseConfig in src/common/appconfig.py: until close_until the tracker still targets an
+// unclosed yesterday, and until delete_until (never later than close_until) its record may still
+// be deleted from the history table.
+export interface DayCloseSettings {
+  close_until: string;
+  delete_until: string;
+  // Eating-window hours a day's meals must span before the tracker offers closing.
+  min_window_hours: number;
+}
+
 // config/app.json as the frontend fetches it from its own origin.
 export interface AppConfigFile {
   questionnaire: Questionnaire;
   weight: WeightSettings;
   meals: MealsSettings;
+  day_close: DayCloseSettings;
   chat: ChatSettings;
 }
 

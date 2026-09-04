@@ -2,42 +2,44 @@ import { useCallback, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { alertMessage, type Api } from "../api";
 import { activeViolations, crossesThreshold } from "../violations";
-import type { AnswerValue, AppConfigFile, NewMeal, WeightPayload } from "../types";
-import { dayEnded, defaultDay, expandQuestionnaire, expandWeightSection, isoDate, yesterdayOf } from "../dates";
-import { mayDiscardEdits } from "../edits";
+import type { AppConfigFile, NewMeal, WeightPayload } from "../types";
+import { beforeDailyCutoff, expandWeightSection, isoDate, yesterdayOf } from "../dates";
 import { TARGET_UNSET_NOTICE } from "../weight";
 import { isFirstVisit } from "../firstVisit";
 import { AdminSection } from "./AdminSection";
 import { Alerts, type AlertItem } from "./Alerts";
 import { Chat } from "./Chat";
 import { CollapsibleSection } from "./CollapsibleSection";
-import { DayPicker, type DayChoice } from "./DayPicker";
 import { DayTracker } from "./DayTracker";
 import { DayView } from "./DayView";
 import { Header } from "./Header";
 import { HistoryTable } from "./HistoryTable";
-import { QuestionnaireForm } from "./QuestionnaireForm";
 import { TrendChart } from "./TrendChart";
 import { useWindDownFold } from "./useWindDownFold";
 import { WeightSection } from "./WeightSection";
 import { Welcome } from "./Welcome";
 
-// Top-level screen: owns the server data (app config, day history, today's and yesterday's meal
-// payloads, on-demand past-day payloads, the weight log) and every mutation — meal recording and
-// deletion, day submission with tracked floors, day deletion, weight recording, retargeting and
-// deletion, and the account's reminder opt-out — plus the submit → alerts flow,
-// the day-end section's fold it closes, the empty history panel's timed wind-down fold, and the
-// guard that keeps the day-end fold and the day picker from throwing away answers the day-end
-// form has not submitted; apart from the chat and admin sections, which own their reads, the
-// components below it hold no server state of their own.
+// Top-level screen: owns the server data (app config, day history, the tracked day's and
+// yesterday's meal payloads, on-demand past-day payloads, the weight log) and every mutation —
+// meal recording and deletion, the day's closing through the tracker, day deletion, weight
+// recording, retargeting and deletion, and the account's reminder opt-out — plus the close →
+// alerts flow and the empty history panel's timed wind-down fold; apart from the chat and admin
+// sections, which own their reads, the components below it hold no server state of their own.
+//
+// The tracker is the only way a day closes, and the day it targets is decided here: today,
+// except during the small-hours grace window while yesterday's meals still leave something to
+// act on — closing a day whose record is missing, or reopening one whose record is still
+// deletable. The tracker never leaves the screen: a closed day shows read-only behind a single
+// reopen gate. The grace bounds come from app.json, the same file the API reads, so both ends
+// enforce one window.
 //
 // The admin account is not a dieter: its screen keeps the chat and the per-user activity panel
 // and drops the tracking sections a regular account opens on.
 //
 // It also reads whether the account has recorded anything yet, because both the greeting and the
 // weight section's opening fold answer to that one reading and must not disagree about it.
-export function App({ email, api, dayEndHour, firstMealHour, mealGapHours, isAdmin, onSignOut }: {
-  email: string; api: Api; dayEndHour: number; firstMealHour: number; mealGapHours: number;
+export function App({ email, api, firstMealHour, mealGapHours, isAdmin, onSignOut }: {
+  email: string; api: Api; firstMealHour: number; mealGapHours: number;
   isAdmin: boolean; onSignOut: () => void;
 }) {
   const queryClient = useQueryClient();
@@ -48,16 +50,6 @@ export function App({ email, api, dayEndHour, firstMealHour, mealGapHours, isAdm
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
   // Stable so the alert strip's dismissal timer is not restarted by every re-render of this screen.
   const dismissAlerts = useCallback(() => setAlerts([]), []);
-  // The day-end section's fold once something has set it — the user's own toggle, or a submission
-  // folding the answered form away behind its confirmation. Null until then, because the fold the
-  // section opens on reads the day's state, which is not known before the history loads.
-  const [questionnaireCollapsed, setQuestionnaireCollapsed] = useState<boolean | null>(null);
-  // Whether the day-end form holds answers it has not submitted. The form is unmounted by the
-  // fold and reseeded by the day switch, both owned here, so its edits survive neither — this is
-  // what lets the two ask before spending them.
-  const [pendingAnswers, setPendingAnswers] = useState(false);
-  const todaySelectable = dayEnded(now, dayEndHour);
-  const [day, setDay] = useState<DayChoice>(() => defaultDay(now, dayEndHour));
 
   const configQuery = useQuery({
     queryKey: ["app-config"],
@@ -92,8 +84,8 @@ export function App({ email, api, dayEndHour, firstMealHour, mealGapHours, isAdm
   const submitMutation = useMutation({
     mutationFn: api.submitDay,
     onSuccess: (result, { answers }) => {
-      // A violated day is still a saved day, so the confirmation leads either way — the folded
-      // form would otherwise be the only sign the answers went through.
+      // A violated day is still a saved day, so the confirmation leads either way — the closed
+      // tracker would otherwise be the only sign the figures went through.
       const saved = `נשמר לתאריך ${result.date}!`;
       // A bound crossed today is painted red in the table beside the banner, so a clean-day claim
       // there reads as a contradiction; the banner names the crossing instead, as a notice — a
@@ -105,7 +97,6 @@ export function App({ email, api, dayEndHour, firstMealHour, mealGapHours, isAdm
           ? [{ kind: "ok", message: saved },
              { kind: "notice", message: "היום חצה סף (מסומן באדום בטבלה) — עדיין אין חריגה של ימים רצופים" }]
           : [{ kind: "ok", message: `${saved} אין חריגות היום ✔` }]);
-      setQuestionnaireCollapsed(true);
       queryClient.invalidateQueries({ queryKey: ["days"] });
     },
     onError: errorAlert("שמירת היום נכשלה"),
@@ -115,6 +106,9 @@ export function App({ email, api, dayEndHour, firstMealHour, mealGapHours, isAdm
     mutationFn: api.deleteDay,
     onSuccess: (result) => {
       setAlerts([{ kind: "ok", message: `הרשומה של ${result.date} נמחקה` }]);
+      // The deleted day's open read-only view would outlive its history row; any other open day
+      // is untouched — the tracker's reopen also deletes through here.
+      setViewedDate((viewed) => (viewed === result.date ? null : viewed));
       queryClient.invalidateQueries({ queryKey: ["days"] });
     },
     onError: errorAlert("מחיקת הרשומה נכשלה"),
@@ -127,13 +121,14 @@ export function App({ email, api, dayEndHour, firstMealHour, mealGapHours, isAdm
   });
 
   const updateMealMutation = useMutation({
-    mutationFn: ({ id, meal }: { id: string; meal: NewMeal }) => api.updateMeal(todayStr, id, meal),
+    mutationFn: ({ date, id, meal }: { date: string; id: string; meal: NewMeal }) =>
+      api.updateMeal(date, id, meal),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["days"] }),
     onError: errorAlert("עדכון הארוחה נכשל"),
   });
 
   const deleteMealMutation = useMutation({
-    mutationFn: (id: string) => api.deleteMeal(todayStr, id),
+    mutationFn: ({ date, id }: { date: string; id: string }) => api.deleteMeal(date, id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["days"] }),
     onError: errorAlert("מחיקת הארוחה נכשלה"),
   });
@@ -183,6 +178,7 @@ export function App({ email, api, dayEndHour, firstMealHour, mealGapHours, isAdm
   }
 
   const questionnaire = configQuery.data.questionnaire;
+  const dayClose = configQuery.data.day_close;
   const data = historyQuery.data;
   const firstVisit = isFirstVisit(data, weightQuery.data);
   // The weight section rests folded, and opens for the two occasions it is the reason the page
@@ -190,47 +186,21 @@ export function App({ email, api, dayEndHour, firstMealHour, mealGapHours, isAdm
   const openWeight = firstVisit
     || expandWeightSection(now, configQuery.data.weight.weigh_in.weekday, weightQuery.data.entries);
   const answersByDate = new Map(data.days.map((d) => [d.date, d.answers]));
-  const todaySubmitted = answersByDate.has(todayStr);
-  const selectedDate = day === "yesterday" ? yesterdayStr : todayStr;
 
-  const floors = day === "yesterday" ? data.yesterday.derived : data.today.derived;
-  const questionnaireOpen = questionnaireCollapsed === null
-    ? expandQuestionnaire(now, dayEndHour, data.today.meals.length, todaySubmitted)
-    : !questionnaireCollapsed;
+  // Yesterday's record leaves the deletable set before it leaves the closable one, so a deletion
+  // can never outlive the chance to re-close what it removed.
+  const beforeDeleteBound = beforeDailyCutoff(now, dayClose.delete_until);
+  const deletableDates = new Set(beforeDeleteBound ? [todayStr, yesterdayStr] : [todayStr]);
 
-  const submit = (answers: Record<string, AnswerValue>) =>
-    submitMutation.mutate({ answers, date: selectedDate });
-
-  // Folded, the day-end section is one title line, so it rides in the tracker's header row instead
-  // of costing a row of its own; open, it needs the page width and returns to its own row below.
-  // Its heading level follows that move, keeping the document outline ordered either way.
-  const daySummaryFoldedIntoTracker = !todaySubmitted && !questionnaireOpen;
-  const toggleDaySummary = () => {
-    if (mayDiscardEdits(pendingAnswers)) setQuestionnaireCollapsed(questionnaireOpen);
-  };
-  // Before the day-end hour the section answers for yesterday alone, so its heading waits in grey
-  // until the day it is named for can be answered.
-  const daySummarySection = (
-    <CollapsibleSection title="שאלון סיכום היום" collapsed={!questionnaireOpen}
-                        className={todaySelectable ? undefined : "day-not-ended"}
-                        headingLevel={daySummaryFoldedIntoTracker ? 3 : 2}
-                        onToggle={toggleDaySummary}>
-      <DayPicker todayStr={todayStr} yesterdayStr={yesterdayStr} value={day}
-                 todaySelectable={todaySelectable} dayEndHour={dayEndHour}
-                 onChange={(next) => { if (mayDiscardEdits(pendingAnswers)) setDay(next); }} />
-      {/* Re-keyed per day so switching between today and yesterday reseeds the form from the
-          newly selected day's saved answers. */}
-      <QuestionnaireForm
-        key={day}
-        questionnaire={questionnaire}
-        floors={floors}
-        stored={answersByDate.get(selectedDate)}
-        onSubmit={submit}
-        onValidationError={(message) => setAlerts([{ kind: "alert", message }])}
-        onPendingChange={setPendingAnswers}
-      />
-    </CollapsibleSection>
-  );
+  // The day the tracker stands on. Yesterday holds it only while its meals still leave something
+  // to act on there: closing while its record is missing and the close bound holds, or reopening
+  // while its record exists and is still deletable. Past both bounds the tracker is today's.
+  const targetsYesterday = data.yesterday.meals.length > 0
+    && (answersByDate.has(yesterdayStr)
+      ? beforeDeleteBound
+      : beforeDailyCutoff(now, dayClose.close_until));
+  const activeDay = targetsYesterday ? data.yesterday : data.today;
+  const activeDaySubmitted = answersByDate.has(activeDay.date);
 
   return (
     <>
@@ -250,27 +220,29 @@ export function App({ email, api, dayEndHour, firstMealHour, mealGapHours, isAdm
           onSetTarget={(kg) => setTargetMutation.mutate(kg)}
           onDelete={(date) => deleteWeightMutation.mutate(date)}
         />
-        {!todaySubmitted && (
-          <DayTracker
+        <DayTracker
             questionnaire={questionnaire}
-            today={data.today}
+            day={activeDay}
+            isToday={!targetsYesterday}
+            closed={activeDaySubmitted}
+            // Reopening deletes the closed record over the same mutation and windows the history
+            // table's delete control uses; the meals survive, so the day is simply open again.
+            onReopenDay={() => deleteMutation.mutate(activeDay.date)}
             firstMealHour={firstMealHour}
             mealGapHours={mealGapHours}
             maxMealsPerDay={configQuery.data.meals.max_per_day}
+            closeMinWindowHours={dayClose.min_window_hours}
             onAddMeal={(meal) => mealMutation.mutate(meal)}
-            onUpdateMeal={(id, meal) => updateMealMutation.mutate({ id, meal })}
-            onDeleteMeal={(id) => deleteMealMutation.mutate(id)}
+            onUpdateMeal={(id, meal) => updateMealMutation.mutate({ date: activeDay.date, id, meal })}
+            onDeleteMeal={(id) => deleteMealMutation.mutate({ date: activeDay.date, id })}
             // Pending covers the days refetch too — onSuccess returns the invalidation promise —
             // so the row's delete control stays locked until the row itself leaves the list.
-            deletingMealId={deleteMealMutation.isPending ? deleteMealMutation.variables : undefined}
+            deletingMealId={deleteMealMutation.isPending ? deleteMealMutation.variables.id : undefined}
             // Same refetch coverage: the close-day confirm waits until a saved meal is back in
-            // today's list, so the figures it submits count that meal.
+            // the day's list, so the figures it submits count that meal.
             savingMeal={mealMutation.isPending || updateMealMutation.isPending}
-            onCloseDay={(answers) => submitMutation.mutate({ answers, date: todayStr })}
-            headerAside={daySummaryFoldedIntoTracker ? daySummarySection : undefined}
-          />
-        )}
-        {!daySummaryFoldedIntoTracker && daySummarySection}
+            onCloseDay={(answers) => submitMutation.mutate({ answers, date: activeDay.date })}
+        />
         <CollapsibleSection title="היסטוריה" collapsed={historyFold.collapsed}
                             onToggle={historyFold.toggle}
                             className={historyFold.waning ? "history section-waning" : "history"}>
@@ -288,7 +260,7 @@ export function App({ email, api, dayEndHour, firstMealHour, mealGapHours, isAdm
             questionnaire={questionnaire}
             days={data.days}
             today={todayStr}
-            deletableDates={new Set([todayStr, yesterdayStr])}
+            deletableDates={deletableDates}
             viewedDate={viewedDate}
             onDelete={(date) => deleteMutation.mutate(date)}
             onView={setViewedDate}

@@ -13,12 +13,14 @@ closed from the tracker, and the week's trend over recorded history.
 - Four principles carry the whole tracker: drinking enough water, vegetables in your meals, a short
   eating window, and few meals a day. Their Hebrew initials spell שכפ"צ, the prefix every question
   in the app carries, and a table at the foot of the signed-out page lists them with their targets.
-- You log each meal as you eat it, and can still fill in yesterday after midnight. Those entries
-  answer three of the four principles by themselves — vegetables, eating window and meal count.
-- Water is the fourth principle, the one meals cannot answer, so a short end-of-day questionnaire
-  asks for it. What was already recorded sets the floor there: a day can admit more than was
-  logged, never less, and a fully logged day closes straight from the tracker once the water is
-  filled in.
+- You log each meal as you eat it. Those entries answer three of the four principles by
+  themselves — vegetables, eating window and meal count.
+- Water is the fourth principle, the one meals cannot answer, so closing the day asks for it and
+  nothing else. A day closes only from the tracker once its meals span the configured minimum
+  eating window (six hours today), and stays
+  closable through the small hours after midnight; a day never logged goes unrecorded. A closed
+  day stays readable, and one confirmation reopens it — record deleted, meals kept — to add a
+  forgotten meal and close again.
 - Beyond the four principles, the same entries yield a daily carb score for flours and sugars,
   where lower is better.
 - Weight is tracked on its own weekly rhythm, beside the daily log: each weigh-in is charted
@@ -26,13 +28,11 @@ closed from the tracker, and the week's trend over recorded history.
   compares with itself when it is taken at about the same time of day. The section reads back
   where you stand in that rhythm and opens itself on the weigh-in morning. Weight is measured
   rather than scored, so it changes no day's score and raises no alert.
-- Reminders go out by email, and by Telegram where a bot token is configured: a last call at the
-  end of a day still unsubmitted, saying the day is open rather than untracked once its meals are
-  logged, a weekly weigh-in reminder that skips anyone who already weighed in on the day itself,
-  an alert when a principle or the carb score stays past its limit several days running, and a
-  weekly summary of averages. The one reminder that shows up inside the app is the 7-day trend
-  chart after each submit. The account menu turns all of them off and back on, so leaving the app
-  does not mean going on being reminded by it.
+- Reminders go out by email, and by Telegram where a bot token is configured: a last call for a
+  day still unclosed, a weekly weigh-in reminder that skips anyone who already weighed in that
+  day, an alert when a principle or the carb score stays past its limit several days running, and
+  a weekly summary of averages. Inside the app, a 7-day trend chart shows after each closed day.
+  The account menu turns all reminders off and back on.
 - Questions about the diet's principles are answered inside the app: a chat section sends each
   question to the knowledge base of the diet's source documents, hosted on
   [Summaries.AI](https://github.com/erancha/Summaries.AI-public), and shows the answer with the
@@ -81,12 +81,13 @@ graph LR
     NUDGE -.optional.-> TG[Telegram bot]
 ```
 
-Meal scoring is implemented once per runtime — `src/common/derive.py` (the authority) and
-`frontend/src/derive.ts` (live dashboard feedback) — and both must satisfy the shared vectors in
-`config/derive-vectors.json`. `config/app.json` is the app-level config both runtimes read: the
+Meal scoring exists as one implementation per language — `src/common/derive.py` in the Python
+backend (the authority) and `frontend/src/derive.ts` in the browser for live dashboard
+feedback — and both must satisfy the shared vectors in `config/derive-vectors.json`. `config/app.json` is the app-level config both runtimes read: the
 questionnaire element holds the questions, their numeric choice values, and the threshold alert
-rules; the weight element holds the weigh-in schedule, the chart's opening span, and the kilogram
-bounds the API and the input both constrain to.
+rules; the day_close element holds the small-hours bounds up to which yesterday may still be
+closed or deleted; the weight element holds the weigh-in schedule, the chart's opening span, and
+the kilogram bounds the API and the input both constrain to.
 
 ## Details
 

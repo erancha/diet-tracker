@@ -85,11 +85,14 @@ def _reject_malformed_date(chosen):
     return None
 
 
-def _backfill_window():
-    """The days a record may be written or deleted for — today and yesterday, so after-midnight
-    corrections can still target the prior day."""
+def _grace_window(until):
+    """The days a write may target: today always, and yesterday while the clock still sits before
+    the given small-hours "HH:MM" bound — the stretch just after midnight in which the prior day
+    may still be closed, its meals corrected, or (under the earlier bound) its record deleted."""
     day = today()
-    return day, {day, days_before(day, 1)}
+    if clock_time() < until:
+        return day, {day, days_before(day, 1)}
+    return day, {day}
 
 
 def _reject_outside_window(chosen, allowed):
@@ -110,9 +113,10 @@ def _day_payload(store, questionnaire, sub, day) -> dict:
 
 
 def _submit(sub, body):
-    questionnaire = _questionnaire()
+    config = _config()
+    questionnaire = config.questionnaire
     answers = body["answers"]
-    day, allowed = _backfill_window()
+    day, allowed = _grace_window(config.day_close.close_until)
     chosen = body.get("date", day)
     rejection = _reject_outside_window(chosen, allowed)
     if rejection:
@@ -141,7 +145,8 @@ def _submit(sub, body):
 
 
 def _delete_day(sub, chosen):
-    _, allowed = _backfill_window()
+    # Deletion shuts earlier than closing, so a deleted yesterday can always still be re-closed.
+    _, allowed = _grace_window(_config().day_close.delete_until)
     rejection = _reject_outside_window(chosen, allowed)
     if rejection:
         return rejection
@@ -161,8 +166,8 @@ def _history(sub):
     return _response(200, {
         "days": [{"date": d, "answers": a} for d, a in sorted(history.items(), reverse=True)],
         "today": _day_payload(store, questionnaire, sub, day),
-        # Yesterday stays within the backfill window whether or not it was recorded, and a
-        # recorded day reopens for resubmission, so its floors are needed either way.
+        # Yesterday rides along for the small-hours grace window, in which the tracker still
+        # targets it: its meals and floors are what that view records and closes against.
         "yesterday": _day_payload(store, questionnaire, sub, yesterday),
         "muted": store.get_nudge_state(sub)["muted"],
     })
@@ -198,17 +203,19 @@ def _second_source_rejection(second, questionnaire):
     return None
 
 
-def _meal_rejection(body, day, questionnaire):
+def _meal_rejection(body, allowed, questionnaire):
     """The 400 response a meal body earns when a field cannot be stored, or None when the whole
-    body is legal. Recording and correcting a meal take identical bodies, so they share it."""
+    body is legal. Recording and correcting a meal take identical bodies, so they share it. The
+    meal's own timestamp names the day it lands on, which must be among the allowed days."""
     try:
         at = datetime.fromisoformat(body["at"])
     except ValueError:
         return _response(400, {"error": f"at ({body['at']!r}) is not a valid ISO timestamp"})
     if at.tzinfo is None:
         return _response(400, {"error": f"at ({body['at']!r}) must include a UTC offset"})
-    if at.date().isoformat() != day:
-        return _response(400, {"error": f"meals can only be recorded for today ({day})"})
+    if at.date().isoformat() not in allowed:
+        return _response(400,
+                         {"error": f"meals can only be recorded for {sorted(allowed)}"})
     if body["carbs_choice"] not in questionnaire.carb_weights():
         return _response(400, {"error": f"unknown carbs choice {body['carbs_choice']!r}"})
     if not isinstance(body["vegetables"], bool):
@@ -227,19 +234,13 @@ def _meal_rejection(body, day, questionnaire):
     return None
 
 
-def _wrong_correction_day(date, day):
-    """The 400 response for correcting a meal outside today, or None. A meal is stored under the
-    day it belongs to, and only the running day may still be corrected."""
-    return None if date == day \
-        else _response(400, {"error": f"meals can only be corrected for today ({day})"})
-
-
 def _add_meal(sub, body):
-    day = today()
     config = _config()
-    rejection = _meal_rejection(body, day, config.questionnaire)
+    _, allowed = _grace_window(config.day_close.close_until)
+    rejection = _meal_rejection(body, allowed, config.questionnaire)
     if rejection is not None:
         return rejection
+    day = datetime.fromisoformat(body["at"]).date().isoformat()
     store = _store()
     if store.has_day(sub, day):
         return _response(409, {"error": f"{day} is already submitted"})
@@ -253,37 +254,39 @@ def _update_meal(sub, date, meal_id, body):
     """Replaces a recorded meal with a new body: every field the tracker sets when recording,
     the time included. A corrected time re-keys the meal, so the reply carries the day's meals in
     their new order along with the re-derived values."""
-    day = today()
-    wrong_day = _wrong_correction_day(date, day)
-    if wrong_day is not None:
-        return wrong_day
-    questionnaire = _questionnaire()
-    rejection = _meal_rejection(body, day, questionnaire)
+    config = _config()
+    _, allowed = _grace_window(config.day_close.close_until)
+    outside = _reject_outside_window(date, allowed)
+    if outside is not None:
+        return outside
+    # A corrected time stays within the meal's own day: the correction rewrites the day's record,
+    # never moves the meal across the midnight boundary.
+    rejection = _meal_rejection(body, {date}, config.questionnaire)
     if rejection is not None:
         return rejection
     store = _store()
-    if store.has_day(sub, day):
-        return _response(409, {"error": f"{day} is already submitted"})
+    if store.has_day(sub, date):
+        return _response(409, {"error": f"{date} is already submitted"})
     try:
-        store.replace_meal(sub, day, meal_id, body)
+        store.replace_meal(sub, date, meal_id, body)
     except KeyError:
-        return _response(404, {"error": f"no meal {meal_id!r} for {day}"})
-    return _response(200, _day_payload(store, questionnaire, sub, day))
+        return _response(404, {"error": f"no meal {meal_id!r} for {date}"})
+    return _response(200, _day_payload(store, config.questionnaire, sub, date))
 
 
 def _delete_meal(sub, date, meal_id):
-    day = today()
-    wrong_day = _wrong_correction_day(date, day)
-    if wrong_day is not None:
-        return wrong_day
+    _, allowed = _grace_window(_config().day_close.close_until)
+    outside = _reject_outside_window(date, allowed)
+    if outside is not None:
+        return outside
     store = _store()
-    if store.has_day(sub, day):
-        return _response(409, {"error": f"{day} is already submitted"})
+    if store.has_day(sub, date):
+        return _response(409, {"error": f"{date} is already submitted"})
     try:
-        store.delete_meal(sub, day, meal_id)
+        store.delete_meal(sub, date, meal_id)
     except KeyError:
-        return _response(404, {"error": f"no meal {meal_id!r} for {day}"})
-    return _response(200, _day_payload(store, _questionnaire(), sub, day))
+        return _response(404, {"error": f"no meal {meal_id!r} for {date}"})
+    return _response(200, _day_payload(store, _questionnaire(), sub, date))
 
 
 def _weight_payload(store, sub) -> dict:

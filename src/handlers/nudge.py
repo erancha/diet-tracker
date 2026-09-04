@@ -19,13 +19,13 @@ from common.store import Store
 
 logger = get_logger(__name__)
 
-REMINDER_SUBJECT = "תזכורת — שאלון תזונה"
-REMINDER_TEXT = "עדיין לא מילאת את שאלון התזונה של היום 🌙"
+REMINDER_SUBJECT = "תזכורת — רישום ארוחות"
+REMINDER_TEXT = "עדיין לא רשמת ארוחות היום 🌙"
 
-# What the last call says to a day whose meals are logged: the questionnaire is all that is left,
-# so the nudge names that rather than repeating the reminder above.
+# What the last call says to a day whose meals are logged: closing it in the tracker is all that
+# is left, so the nudge names that rather than repeating the reminder above.
 OPEN_DAY_SUBJECT = "תזכורת — היום עדיין פתוח"
-OPEN_DAY_TEXT = "רשמת היום ארוחות ולא מילאת את השאלון 🌙 אפשר להשלים אותו עכשיו"
+OPEN_DAY_TEXT = "רשמת היום ארוחות ולא סגרת את היום 🌙 אפשר לסגור אותו עכשיו ביומן"
 
 SUMMARY_HEADING = "תובנות והמלצות לשבוע הבא:"
 
@@ -86,18 +86,19 @@ def _send(env, user, subject, text):
 
 
 def _unsubmitted(env, day) -> list:
-    """The users whose day holds no submitted questionnaire — the ones the last call addresses."""
+    """The users whose day holds no closed record — the ones the last call addresses."""
     return [user for user in env.users if not env.store.has_day(user.sub, day)]
 
 
 def _last_call(env):
-    """The day's one fill reminder, sent late enough that the day it asks about is over in
-    practice — and still inside it, so the answer is about the day the user is living.
+    """The day's one tracking reminder, sent late enough that the day it asks about is over in
+    practice — and still inside it, so what gets recorded is the day the user is living.
 
-    It nudges every user whose day remains unsubmitted, and tells one whose meals are already
-    logged that the day is open rather than untracked: everything but the water is recorded, and
-    the questionnaire is what closes it. A day carrying no meals gets the plain reminder, because
-    nothing about it has been tracked yet."""
+    It nudges every user whose day remains open, and tells one whose meals are already logged
+    that the day awaits its closing rather than its meals: everything but the water is recorded,
+    and the tracker's close button is what seals it. A day carrying no meals gets the plain
+    record-your-meals reminder — and with the tracker the only way a day closes, one that stays
+    untracked simply goes unrecorded."""
     day = today()
     for user in _unsubmitted(env, day):
         if env.store.get_meals(user.sub, day):

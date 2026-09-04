@@ -104,7 +104,7 @@ def test_the_tracking_scope_of_the_app_rides_with_the_question(store, questionna
     composed = chat_context.with_user_context("שאלה", store, questionnaire, "u1", TODAY)
 
     scope = data_of(composed, "שאלה")["תחומי המעקב של האפליקציה"]
-    assert 'שכפ"צ - שתיה (ליטר)' in scope["בשאלון היומי"]
+    assert 'שכפ"צ - שתיה (ליטר)' in scope["במעקב היומי"]
     assert "כולל מתוק" in scope["ברישום ארוחה"]
     assert "מקור פחמימה" in scope["ברישום ארוחה"]
     assert "משקל" in scope["בנוסף"]

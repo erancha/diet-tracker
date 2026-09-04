@@ -6,6 +6,7 @@ surface at load, before the first schedule fires or the first request is served.
 
 import json
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 
 from common.questionnaire import Questionnaire, parse
@@ -54,10 +55,25 @@ class MealsConfig:
 
 
 @dataclass(frozen=True)
+class DayCloseConfig:
+    """Small-hours grace bounds for the previous day, as zero-padded "HH:MM" wall-clock times
+    compared as strings against the Asia/Jerusalem clock. Until close_until, yesterday may still
+    be closed and its meals written; until delete_until, its day record may still be deleted.
+    The delete bound never outlives the close bound, so a deleted yesterday can always be
+    re-closed. Declared in the config so the API's windows and the frontend's controls agree
+    without either restating the times. min_window_hours is the eating window a day's recorded
+    meals must span before the tracker offers closing at all."""
+    close_until: str
+    delete_until: str
+    min_window_hours: float
+
+
+@dataclass(frozen=True)
 class AppConfig:
     questionnaire: Questionnaire
     weight: WeightConfig
     meals: MealsConfig
+    day_close: DayCloseConfig
 
 
 def _parse_weight(raw: dict) -> WeightConfig:
@@ -85,7 +101,31 @@ def _parse_meals(raw: dict) -> MealsConfig:
     return MealsConfig(max_per_day=cap)
 
 
+def _wall_clock(raw, key) -> str:
+    value = raw[key]
+    try:
+        canonical = datetime.strptime(value, "%H:%M").strftime("%H:%M")
+    except (TypeError, ValueError) as error:
+        raise ValueError(f"{key} {value!r} must be a zero-padded HH:MM wall-clock time") from error
+    if canonical != value:
+        raise ValueError(f"{key} {value!r} must be a zero-padded HH:MM wall-clock time")
+    return value
+
+
+def _parse_day_close(raw: dict) -> DayCloseConfig:
+    hours = raw["min_window_hours"]
+    if isinstance(hours, bool) or not isinstance(hours, (int, float)) or hours <= 0:
+        raise ValueError(f"min_window_hours {hours!r} must be a positive number of hours")
+    config = DayCloseConfig(close_until=_wall_clock(raw, "close_until"),
+                            delete_until=_wall_clock(raw, "delete_until"),
+                            min_window_hours=hours)
+    if config.delete_until > config.close_until:
+        raise ValueError(f"delete_until {config.delete_until} may not outlive "
+                         f"close_until {config.close_until}")
+    return config
+
+
 def load(path) -> AppConfig:
     raw = json.loads(Path(path).read_text(encoding="utf-8"))
     return AppConfig(questionnaire=parse(raw["questionnaire"]), weight=_parse_weight(raw["weight"]),
-                     meals=_parse_meals(raw["meals"]))
+                     meals=_parse_meals(raw["meals"]), day_close=_parse_day_close(raw["day_close"]))

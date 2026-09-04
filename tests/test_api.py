@@ -41,9 +41,10 @@ def body_of(response):
     return json.loads(response["body"])
 
 
-def meal_body(carbs_choice, vegetables, fruit, additions, at_time, small_portion, second_source):
+def meal_body(carbs_choice, vegetables, fruit, additions, at_time, small_portion, second_source,
+              day=None):
     """The body both recording and correcting a meal take, so the two helpers cannot drift."""
-    return {"at": f"{today()}T{at_time}+03:00", "carbs_choice": carbs_choice,
+    return {"at": f"{day or today()}T{at_time}+03:00", "carbs_choice": carbs_choice,
             "vegetables": vegetables, "fruit": fruit, "additions": list(additions),
             "small_portion": small_portion, "second_source": second_source}
 
@@ -143,6 +144,59 @@ def test_delete_day_and_backfill_window_rejection(env):
     old = api.handler(request("DELETE /days/{date}",
                               path_params={"date": days_before(today(), 5)}), None)
     assert old["statusCode"] == 400
+
+
+def test_yesterday_closes_only_inside_the_small_hours_window(env, monkeypatch):
+    yesterday = days_before(today(), 1)
+    # The env clock reads 07:42 — morning, past the configured 02:00 bound.
+    shut = api.handler(request("POST /days", {"answers": ANSWERS, "date": yesterday}), None)
+    assert shut["statusCode"] == 400
+    monkeypatch.setattr(api, "clock_time", lambda: "01:59")
+    still_open = api.handler(request("POST /days", {"answers": ANSWERS, "date": yesterday}), None)
+    assert still_open["statusCode"] == 200
+
+
+def test_yesterday_deletes_only_before_its_own_earlier_bound(env, monkeypatch):
+    yesterday = days_before(today(), 1)
+    monkeypatch.setattr(api, "clock_time", lambda: "01:00")
+    api.handler(request("POST /days", {"answers": ANSWERS, "date": yesterday}), None)
+    # 01:45 sits between the 01:30 delete bound and the 02:00 close bound: the record may still
+    # be re-closed but no longer deleted, so no deletion can strand an uncloseable gap.
+    monkeypatch.setattr(api, "clock_time", lambda: "01:45")
+    denied = api.handler(request("DELETE /days/{date}", path_params={"date": yesterday}), None)
+    assert denied["statusCode"] == 400
+    monkeypatch.setattr(api, "clock_time", lambda: "01:00")
+    ok = api.handler(request("DELETE /days/{date}", path_params={"date": yesterday}), None)
+    assert ok["statusCode"] == 200
+
+
+def test_meals_for_yesterday_write_inside_the_close_window(env, monkeypatch):
+    yesterday = days_before(today(), 1)
+    monkeypatch.setattr(api, "clock_time", lambda: "01:00")
+    added = api.handler(request("POST /meals", meal_body(
+        "carb_grade_3", True, False, (), "21:10:00", False, None, day=yesterday)), None)
+    assert added["statusCode"] == 200
+    payload = body_of(added)
+    assert payload["date"] == yesterday
+    meal_id = payload["meals"][0]["id"]
+    updated = api.handler(request("PUT /meals/{date}/{id}", meal_body(
+        "no_carbs", False, False, (), "21:40:00", False, None, day=yesterday),
+        path_params={"date": yesterday, "id": meal_id}), None)
+    assert updated["statusCode"] == 200
+    new_id = body_of(updated)["meals"][0]["id"]
+    deleted = api.handler(request("DELETE /meals/{date}/{id}",
+                                  path_params={"date": yesterday, "id": new_id}), None)
+    assert deleted["statusCode"] == 200
+    assert body_of(deleted)["meals"] == []
+
+
+def test_meals_for_a_submitted_yesterday_are_still_refused(env, monkeypatch):
+    yesterday = days_before(today(), 1)
+    monkeypatch.setattr(api, "clock_time", lambda: "01:00")
+    api.handler(request("POST /days", {"answers": ANSWERS, "date": yesterday}), None)
+    closed = api.handler(request("POST /meals", meal_body(
+        "carb_grade_3", True, False, (), "21:10:00", False, None, day=yesterday)), None)
+    assert closed["statusCode"] == 409
 
 
 def test_add_meal_records_and_returns_recomputed_day(env):

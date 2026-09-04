@@ -75,7 +75,7 @@ def _tracking_scope(questionnaire) -> dict:
     return {
         "ברישום ארוחה": [_TIME, _CARB_SOURCE, _SECOND_SOURCE, _SMALL_PORTION, _VEGETABLES,
                          _FRUIT] + [addition.label for addition in carbs.additions],
-        "בשאלון היומי": [question.day_title for question in questionnaire.questions],
+        "במעקב היומי": [question.day_title for question in questionnaire.questions],
         "בנוסף": ["משקל"],
         "הערה": "אלה כל שדות ההזנה באפליקציה. נושא שאינו ברשימה אין לו שדה באפליקציה, "
                 "ולכן היעדרו מהנתונים אינו מעיד שהמשתמש לא צרך אותו.",

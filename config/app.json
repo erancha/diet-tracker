@@ -260,6 +260,11 @@
   "meals": {
     "max_per_day": 5
   },
+  "day_close": {
+    "close_until": "02:00",
+    "delete_until": "01:30",
+    "min_window_hours": 6
+  },
   "weight": {
     "weigh_in": {
       "weekday": "THU",

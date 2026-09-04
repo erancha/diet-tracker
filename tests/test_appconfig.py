@@ -8,8 +8,10 @@ from common import appconfig
 
 LEGAL_MEALS = {"max_per_day": 5}
 
+LEGAL_DAY_CLOSE = {"close_until": "02:00", "delete_until": "01:30", "min_window_hours": 6}
 
-def write(tmp_path, weight, meals=LEGAL_MEALS):
+
+def write(tmp_path, weight, meals=LEGAL_MEALS, day_close=LEGAL_DAY_CLOSE):
     raw = {
         "questionnaire": {
             "version": 1,
@@ -19,6 +21,7 @@ def write(tmp_path, weight, meals=LEGAL_MEALS):
         },
         "weight": weight,
         "meals": meals,
+        "day_close": day_close,
     }
     path = tmp_path / "app.json"
     path.write_text(json.dumps(raw), encoding="utf-8")
@@ -37,6 +40,34 @@ def test_repo_config_carries_every_section():
     assert config.weight.chart_months == 3
     assert (config.weight.limits.min_kg, config.weight.limits.max_kg) == (20, 400)
     assert config.meals.max_per_day == 5
+    assert config.day_close.close_until == "02:00"
+    assert config.day_close.delete_until == "01:30"
+    assert config.day_close.min_window_hours == 6
+
+
+def test_day_close_bounds_must_be_padded_wall_clock_times(tmp_path):
+    # The bounds are compared as strings against the zero-padded clock, so "2:00" would sort
+    # before every real morning time and silently shut the window.
+    for bad in ("2:00", "02:60", "24:00", 2, None, "0200"):
+        path = write(tmp_path, LEGAL_WEIGHT, day_close={**LEGAL_DAY_CLOSE, "close_until": bad})
+        with pytest.raises(ValueError, match="close_until"):
+            appconfig.load(path)
+
+
+def test_day_close_min_window_must_be_a_positive_number_of_hours(tmp_path):
+    for bad in (0, -3, True, "6", None):
+        path = write(tmp_path, LEGAL_WEIGHT,
+                     day_close={**LEGAL_DAY_CLOSE, "min_window_hours": bad})
+        with pytest.raises(ValueError, match="min_window_hours"):
+            appconfig.load(path)
+
+
+def test_day_close_delete_bound_may_not_outlive_the_close_bound(tmp_path):
+    # A yesterday deletable after it can no longer be re-closed would strand a permanent gap.
+    path = write(tmp_path, LEGAL_WEIGHT,
+                 day_close={**LEGAL_DAY_CLOSE, "close_until": "01:30", "delete_until": "02:00"})
+    with pytest.raises(ValueError, match="delete_until"):
+        appconfig.load(path)
 
 
 def test_max_meals_per_day_must_be_a_positive_integer(tmp_path):

@@ -13,12 +13,6 @@ Parameters:
   AllowedOrigins:
     Type: CommaDelimitedList
     Default: 'http://localhost:8000'
-  DayEndHour:
-    Type: Number
-    Default: 20
-    Description: Asia/Jerusalem hour from which the day counts as over for the day-end
-      questionnaire; read by the frontend through its generated config. The night's last-call
-      nudge fires later, on its own half-hour schedule
   FirstMealHour:
     Type: Number
     Default: 11
@@ -532,8 +526,6 @@ Outputs:
     Value: !Sub 'https://${Api}.execute-api.${AWS::Region}.amazonaws.com'
   FirstMealHour:
     Value: !Ref FirstMealHour
-  DayEndHour:
-    Value: !Ref DayEndHour
   FrontendBucket:
     Value: !Ref FrontendBucket
   FrontendUrl:

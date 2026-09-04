@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dayEnded, dayLabel, daysBefore, daysSince, ddmmLabel, defaultDay, mealOverdue, expandQuestionnaire, expandWeightSection, isWeighInDay, isoDate, last7Days, parseIsoDate, weekdayDdmmLabel, weekdayLetter } from "./dates";
+import { beforeDailyCutoff, dayLabel, daysBefore, daysSince, ddmmLabel, mealOverdue, expandWeightSection, isWeighInDay, isoDate, last7Days, parseIsoDate, weekdayDdmmLabel, weekdayLetter } from "./dates";
 
 describe("isoDate", () => {
   it("formats a local date as YYYY-MM-DD with zero padding", () => {
@@ -72,35 +72,20 @@ describe("last7Days", () => {
   });
 });
 
-describe("dayEnded", () => {
-  it("counts the day as ended from the day-end hour onward", () => {
-    expect(dayEnded(new Date(2026, 7, 18, 20, 0), 20)).toBe(true);
+describe("beforeDailyCutoff", () => {
+  it("holds through the small hours before the bound", () => {
+    expect(beforeDailyCutoff(new Date(2026, 7, 18, 0, 5), "02:00")).toBe(true);
+    expect(beforeDailyCutoff(new Date(2026, 7, 18, 1, 59), "02:00")).toBe(true);
   });
 
-  it("counts the day as still running before the day-end hour", () => {
-    expect(dayEnded(new Date(2026, 7, 18, 19, 59), 20)).toBe(false);
+  it("shuts at the bound exactly and stays shut for the rest of the day", () => {
+    expect(beforeDailyCutoff(new Date(2026, 7, 18, 2, 0), "02:00")).toBe(false);
+    expect(beforeDailyCutoff(new Date(2026, 7, 18, 14, 0), "02:00")).toBe(false);
   });
 
-  it("counts the after-midnight hours as the new day still running", () => {
-    expect(dayEnded(new Date(2026, 7, 18, 2, 0), 20)).toBe(false);
-  });
-});
-
-describe("defaultDay", () => {
-  it("defaults to yesterday while today is still running", () => {
-    expect(defaultDay(new Date(2026, 7, 18, 10, 0), 20)).toBe("yesterday");
-  });
-
-  it("defaults to yesterday after midnight", () => {
-    expect(defaultDay(new Date(2026, 7, 18, 2, 0), 20)).toBe("yesterday");
-  });
-
-  it("defaults to today once the day has ended", () => {
-    expect(defaultDay(new Date(2026, 7, 18, 21, 0), 20)).toBe("today");
-  });
-
-  it("follows a different configured day-end hour", () => {
-    expect(defaultDay(new Date(2026, 7, 18, 19, 0), 19)).toBe("today");
+  it("compares minutes, not whole hours", () => {
+    expect(beforeDailyCutoff(new Date(2026, 7, 18, 1, 29), "01:30")).toBe(true);
+    expect(beforeDailyCutoff(new Date(2026, 7, 18, 1, 30), "01:30")).toBe(false);
   });
 });
 
@@ -144,32 +129,6 @@ describe("mealOverdue", () => {
   it("respects a different configured gap", () => {
     expect(mealOverdue(eleven, firstMealHour, 2, [mealAt(8, 30)])).toBe(true);
     expect(mealOverdue(eleven, firstMealHour, 6, [mealAt(8, 30)])).toBe(false);
-  });
-});
-
-describe("expandQuestionnaire", () => {
-  const eightPm = new Date(2026, 7, 18, 20, 0);
-  const beforeEight = new Date(2026, 7, 18, 19, 59);
-  const dayEndHour = 20;
-
-  it("expands from the day-end hour on an untracked, unsubmitted day", () => {
-    expect(expandQuestionnaire(eightPm, dayEndHour, 0, false)).toBe(true);
-  });
-
-  it("stays collapsed before the day-end hour", () => {
-    expect(expandQuestionnaire(beforeEight, dayEndHour, 0, false)).toBe(false);
-  });
-
-  it("respects a different configured day-end hour", () => {
-    expect(expandQuestionnaire(beforeEight, 19, 0, false)).toBe(true);
-  });
-
-  it("stays collapsed when meals were recorded", () => {
-    expect(expandQuestionnaire(eightPm, dayEndHour, 2, false)).toBe(false);
-  });
-
-  it("stays collapsed once today is submitted", () => {
-    expect(expandQuestionnaire(eightPm, dayEndHour, 0, true)).toBe(false);
   });
 });
 

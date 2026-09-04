@@ -23,9 +23,9 @@ def _violates_any(questionnaire, answers: dict) -> bool:
 
 def weekly_text(questionnaire, history: dict) -> str:
     if not history:
-        return "לא מולאו שאלונים השבוע"
+        return "לא נסגרו ימים השבוע"
     days = len(history)
-    lines = [f"סיכום שבועי — מולאו {days} מתוך 7 ימים", ""]
+    lines = [f"סיכום שבועי — נסגרו {days} מתוך 7 ימים", ""]
     for question in questionnaire.questions:
         values = [answers[question.id] for answers in history.values() if question.id in answers]
         if values:

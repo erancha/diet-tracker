@@ -1,5 +1,5 @@
-import { useEffect, useState, type ReactNode } from "react";
-import { clockTimeOf, mealOverdue } from "../dates";
+import { useEffect, useRef, useState } from "react";
+import { clockTimeOf, mealOverdue, parseIsoDate } from "../dates";
 import { carbsScales, deriveDay, smallPortionOffered } from "../derive";
 import { mayDiscardEdits } from "../edits";
 import { useExpandedGradeLabels } from "../gradeLabels";
@@ -29,43 +29,58 @@ const SECOND_SOURCE_REMOVE = "הסרת מקור פחמימה נוסף";
 const EXPAND_LABELS = "הרחבת שמות";
 const COLLAPSE_LABELS = "צמצום שמות";
 
+// What the closed day's one control asks before undoing the close: adding a meal to a closed
+// day means deleting its record — the same deletion the history table offers — and closing again
+// over the fuller log.
+const REOPEN_PROMPT = "האם לפתוח את חלון האכילה מחדש?";
+
 // How long each of the nudge's escalating beats runs before the next takes over. The blink rate
 // itself is the style sheet's, keyed by the phase the section's class carries.
 const NUDGE_ESCALATION_MS = 10_000;
 
-// Closing the day from here is offered only once the recorded meals span this much of the day;
-// anything narrower is a day still being eaten, whose figures would be closed too early. A day
-// under two meals derives a zero window, so it never reaches this floor either. The full day-end
-// questionnaire closes a day the tracker declines to.
-const CLOSE_DAY_MIN_WINDOW_HOURS = 6;
-
-// The intraday companion: records meals at the time they were eaten, shows the day's derived
-// values live, lists today's meals for in-place correction or deletion, and closes a fully
-// tracked day by asking only for water. Recorded meals are the evidence that floors the day-end
-// form; the dashboard and close-day values come from the vector-pinned client derivation twin,
-// so they always agree with the meal list rendered beside them — the server re-derives on submit
-// and stays the authority.
-export function DayTracker({ questionnaire, today, firstMealHour, mealGapHours, maxMealsPerDay,
-                             headerAside, onAddMeal, onUpdateMeal, onDeleteMeal, deletingMealId,
-                             savingMeal, onCloseDay }: {
+// The day's one journal: records meals at the time they were eaten, shows the day's derived
+// values live, lists the day's meals for in-place correction or deletion, closes a fully
+// tracked day by asking only for water, and holds a closed day read-only behind its reopen
+// gate. Normally the day is today; during the small-hours grace window it is yesterday, still
+// open for its late meals, its closing or its reopening. The dashboard and
+// close-day values come from the vector-pinned client derivation twin, so they always agree with
+// the meal list rendered beside them — the server re-derives on submit and stays the authority.
+export function DayTracker({ questionnaire, day, isToday = true, closed = false, firstMealHour,
+                             mealGapHours, maxMealsPerDay, closeMinWindowHours, onAddMeal,
+                             onUpdateMeal, onDeleteMeal, deletingMealId, savingMeal, onCloseDay,
+                             onReopenDay }: {
   questionnaire: Questionnaire;
-  today: DayPayload;
+  day: DayPayload;
+  // False during the small-hours grace window, when the payload is the previous day's: the day
+  // is over, so recorded times may run to its end, the overdue-meal nudge stays quiet, and the
+  // title names yesterday.
+  isToday?: boolean;
+  // True once the day holds a submitted record: the tracker then shows the meals read-only and
+  // one gated add-meal toggle whose confirmation calls onReopenDay.
+  closed?: boolean;
   firstMealHour: number;
   mealGapHours: number;
   // Meals the day may hold — the same ceiling the API enforces.
   maxMealsPerDay: number;
-  // Shares the tracker's title row, for a neighbouring section folded down to its own title line.
-  headerAside?: ReactNode;
+  // Eating-window hours the recorded meals must span before closing is offered (app.json's
+  // day_close.min_window_hours): anything narrower is a day still being eaten, whose figures
+  // would close too early. A day under two meals derives a zero window, so it never reaches this
+  // floor either — and with the tracker the only close, a day that never spans it stays
+  // unrecorded.
+  closeMinWindowHours: number;
   onAddMeal: (meal: NewMeal) => void;
   // Replaces the meal wholesale; a corrected time re-keys it, so the id is the one being replaced.
   onUpdateMeal: (id: string, meal: NewMeal) => void;
   onDeleteMeal: (id: string) => void;
   // The meal whose onDeleteMeal call is still in flight; its row's delete control locks meanwhile.
   deletingMealId?: string;
-  // True while a saved meal is still round-tripping into today's list; the close-day confirm
+  // True while a saved meal is still round-tripping into the day's list; the close-day confirm
   // waits on it so the figures it submits count that meal.
   savingMeal?: boolean;
   onCloseDay: (answers: Record<string, number>) => void;
+  // Deletes the closed day's record — the history table's own deletion path — so the day is open
+  // to take the meal the user came to add. Supplied whenever closed can be true.
+  onReopenDay?: () => void;
 }) {
   const carbsQuestion = questionnaire.questions.find((q) => q.id === "carbs")!;
   const drinkingQuestion = questionnaire.questions.find((q) => q.id === "drinking")!;
@@ -81,17 +96,21 @@ export function DayTracker({ questionnaire, today, firstMealHour, mealGapHours, 
   const [secondSourceOpen, setSecondSourceOpen] = useState(false);
   const [closing, setClosing] = useState(false);
   const [drinkingChoiceId, setDrinkingChoiceId] = useState<string | undefined>(undefined);
-  const [mealTime, setMealTime] = useState(() => defaultMealTime(new Date()));
+  // A running day opens the form on the clock rounded down to a five-minute mark; an already-over
+  // day opens on its last such mark, the neighbourhood of the late meal being backfilled.
+  const openingTime = () =>
+    isToday ? defaultMealTime(new Date()) : clockTime(24 * 60 - TIME_STEP_MINUTES);
+  const [mealTime, setMealTime] = useState(openingTime);
   // The time the form last opened on. Held rather than recomputed: the default walks with the
   // clock, and a freshly derived one would read ten minutes on as a time the user had picked.
   const [pristineTime, setPristineTime] = useState(mealTime);
   const [editingId, setEditingId] = useState<string | undefined>(undefined);
   const [expandLabels, setExpandLabels] = useExpandedGradeLabels();
 
-  // Today's meals always resolve against the current questionnaire, so deriveDay's throw on an
+  // The day's meals always resolve against the current questionnaire, so deriveDay's throw on an
   // unknown id is a real config/data fault, not a legal state — let the error boundary show it.
   const { weights, additionValues, smallPortion: portionRule } = carbsScales(carbsQuestion);
-  const derived = deriveDay(today.meals, weights, additionValues, portionRule);
+  const derived = deriveDay(day.meals, weights, additionValues, portionRule);
   // The lighter grades are not worth splitting by helping, so the box appears only where it moves
   // the score — and the flag goes with it, so a grade switched down cannot leave one stuck on.
   const offersSmallPortion = carbsChoiceId !== undefined
@@ -110,16 +129,17 @@ export function DayTracker({ questionnaire, today, firstMealHour, mealGapHours, 
   const secondSource: CarbSource | null = secondChoiceId === undefined ? null
     : { carbs_choice: secondChoiceId,
         small_portion: offersSecondSmallPortion && secondSmallPortion };
-  const closable = derived.eating_window >= CLOSE_DAY_MIN_WINDOW_HOURS;
+  const closable = derived.eating_window >= closeMinWindowHours;
 
-  // A meal cannot have been eaten yet, so the day's own clock caps the picker. Both values are
-  // zero-padded "HH:MM" on the same day, so they compare as strings.
+  // A meal cannot have been eaten yet, so a running day's own clock caps the picker — both values
+  // are zero-padded "HH:MM" on the same day, so they compare as strings. On the previous day every
+  // hour has already passed, so nothing is future there.
   const nowTime = clockTime(minutesOfDay(new Date()));
-  const mealTimeIsFuture = mealTime > nowTime;
+  const mealTimeIsFuture = isToday && mealTime > nowTime;
 
   // The meal under correction can vanish beneath the form — deleted from the list mid-edit, or
   // from another tab — and the form then goes back to recording a new meal.
-  const editing = today.meals.find((m) => m.id === editingId);
+  const editing = day.meals.find((m) => m.id === editingId);
 
   // Whether the form still matches the meal it opened on — what separates an exit from a discard,
   // for the one button that serves as both.
@@ -151,14 +171,33 @@ export function DayTracker({ questionnaire, today, firstMealHour, mealGapHours, 
   // A day holding its full quota of meals folds the recording inputs away: the section's place is
   // taken by a completion note, and only correcting a recorded meal still opens the form. Deleting
   // a meal brings the day back under the quota and the toggle back with it.
-  const atCap = today.meals.length >= maxMealsPerDay;
+  const atCap = day.meals.length >= maxMealsPerDay;
 
   // An overdue meal is called for from the fold rather than by opening the inputs uninvited: the
   // add-meal toggle blinks while it stands between the user and reporting the meal. Open inputs
   // silence the nudge, and so does a fresh meal arriving in the day's list; a day at its cap has
-  // nothing left to call for.
-  const nudging = !atCap && formCollapsed
-    && mealOverdue(new Date(), firstMealHour, mealGapHours, today.meals);
+  // nothing left to call for, and neither does the previous day — it is over, not running late.
+  const nudging = isToday && !atCap && formCollapsed
+    && mealOverdue(new Date(), firstMealHour, mealGapHours, day.meals);
+
+  // The panel opens below the day's meal list, past the fold more often than not, so it walks
+  // into view and hands focus to its first water choice rather than waiting to be found.
+  const closePanel = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!closing || !closable) return;
+    closePanel.current!.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    closePanel.current!.querySelector("input")!.focus();
+  }, [closing, closable]);
+
+  // The same instance stays mounted across the day's closing, so the close flow's state would
+  // otherwise survive into a day reopened later; once the record lands closed, nothing is
+  // mid-close anymore and the flow's panel and picked water reset with it.
+  useEffect(() => {
+    if (closed) {
+      setClosing(false);
+      setDrinkingChoiceId(undefined);
+    }
+  }, [closed]);
 
   // Which beat of the blink schedule the nudge is on: 0 opens it, 1 presses harder, 2 settles into
   // the slow standing reminder. The schedule restarts whenever the nudge returns, so a re-folded
@@ -176,7 +215,7 @@ export function DayTracker({ questionnaire, today, firstMealHour, mealGapHours, 
   // disabled while the picked time is still ahead of the clock.
   // Additions are sent in config order so the recorded list is deterministic.
   function submitMeal() {
-    const meal: NewMeal = { at: localIso(atClockTime(new Date(), mealTime)),
+    const meal: NewMeal = { at: localIso(atClockTime(parseIsoDate(day.date), mealTime)),
                             carbs_choice: carbsChoiceId!, vegetables, fruit,
                             additions: carbsQuestion.additions!
                               .filter((a) => pickedAdditions.has(a.id)).map((a) => a.id),
@@ -254,17 +293,39 @@ export function DayTracker({ questionnaire, today, firstMealHour, mealGapHours, 
   }
 
   return (
-    <CollapsibleSection className="day-tracker" title="יומן היום" headerAside={headerAside}
+    <CollapsibleSection className="day-tracker" title={isToday ? "יומן היום" : "יומן אתמול"}
                         summary={
       <DayDashboard questionnaire={questionnaire} derived={derived} />
     }>
-      {/* Governs every grade name below it — the pickers' and the meal rows' alike — so it leads
-          the tracker's contents rather than sitting inside either one. */}
+      {/* Governs every grade name below it — the pickers' and the meal rows' alike, the closed
+          day's read-only rows included — so it leads the tracker's contents rather than sitting
+          inside either branch. */}
       <div className="label-density">
         <button type="button" className="quiet" onClick={() => setExpandLabels(!expandLabels)}>
           {expandLabels ? COLLAPSE_LABELS : EXPAND_LABELS}
         </button>
       </div>
+      {closed ? (
+        <>
+          <div className="form-actions">
+            <button type="button" className="quiet reopen-toggle" onClick={() => {
+              if (!window.confirm(REOPEN_PROMPT)) return;
+              // Pre-opened here: the same instance stays mounted through the deletion's round
+              // trip, so the reopened day presents the inputs this click asked for.
+              setFormCollapsed(false);
+              onReopenDay!();
+            }}>
+              הוספת ארוחה
+            </button>
+            {/* The button undoes the close, so its effect stands spelled out beside it. */}
+            <span className="reopen-hint">(פתיחת חלון האכילה)</span>
+          </div>
+          {/* The recorded meals stay readable, as in the history table's day view, but carry no
+              controls: correcting one starts with reopening the day. */}
+          <MealList questionnaire={questionnaire} meals={day.meals} expandLabels={expandLabels} />
+        </>
+      ) : (
+        <>
       {atCap && formCollapsed ? (
         <p className="meal-cap-note">{`הושלמו ${maxMealsPerDay} ארוחות היום`}</p>
       ) : (
@@ -353,13 +414,14 @@ export function DayTracker({ questionnaire, today, firstMealHour, mealGapHours, 
         {/* A meal still being composed would go with the closed day — the tracker goes with it —
             so closing folds it in rather than stopping over it: a saveable meal is saved by this
             very click and the flow continues into the panel. Only a meal the form cannot save yet
-            holds the button, with the notice below saying why. */}
-        {closable && (
+            holds the button, with the notice below saying why. Once the panel is open the button
+            leaves: the flow runs forward to the confirmation, not back through a toggle. */}
+        {closable && !closing && (
           <button type="button" className="quiet"
-                  disabled={!closing && formHoldsUnsavedMeal && !mealSaveable}
+                  disabled={formHoldsUnsavedMeal && !mealSaveable}
                   onClick={() => {
-                    if (!closing && formHoldsUnsavedMeal) submitMeal();
-                    setClosing((c) => !c);
+                    if (formHoldsUnsavedMeal) submitMeal();
+                    setClosing(true);
                   }}>
             סגירת יום
           </button>
@@ -373,7 +435,10 @@ export function DayTracker({ questionnaire, today, firstMealHour, mealGapHours, 
           narrow the day back under the window that offered closing, and the panel folds away with
           that button. */}
       {closing && closable && (
-        <div className="close-day">
+        <div className="close-day" ref={closePanel}>
+          {/* The button that opened the panel is gone by now, so the panel names the step
+              itself — the water question alone would read as a stray form. */}
+          <h3 className="close-day-banner">השלב האחרון בסגירת היום</h3>
           <ChoiceFieldset question={drinkingQuestion} selectedId={drinkingChoiceId}
                           onPick={(choice) => setDrinkingChoiceId(choice.id)} />
           {/* The opening button cannot cover a meal whose composing began after this panel was
@@ -387,8 +452,10 @@ export function DayTracker({ questionnaire, today, firstMealHour, mealGapHours, 
           </button>
         </div>
       )}
-      <MealList questionnaire={questionnaire} meals={today.meals} expandLabels={expandLabels}
+      <MealList questionnaire={questionnaire} meals={day.meals} expandLabels={expandLabels}
                 onEdit={startEdit} onDelete={onDeleteMeal} deletingId={deletingMealId} />
+        </>
+      )}
     </CollapsibleSection>
   );
 }

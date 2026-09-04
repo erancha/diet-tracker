@@ -106,7 +106,7 @@ def test_weekly_sends_digest_to_every_user(env):
     assert targets == ["111", "a@gmail.com", "222", "b@gmail.com"]
     assert any("סיכום שבועי" in text for _, _, text in sent)
     assert any("ממוצע" in text for _, _, text in sent)
-    assert any("לא מולאו שאלונים השבוע" in text for _, _, text in sent)
+    assert any("לא נסגרו ימים השבוע" in text for _, _, text in sent)
 
 
 def test_weekly_appends_the_llm_summary_after_the_numeric_digest(env, monkeypatch):
@@ -131,7 +131,7 @@ def test_weekly_skips_the_llm_for_an_empty_week(env, monkeypatch):
     monkeypatch.setattr(nudge.chat, "ask",
                         lambda url, key, question: pytest.fail("asked the LLM with no data"))
     nudge._weekly(e)
-    assert all("לא מולאו שאלונים השבוע" in text for _, _, text in sent)
+    assert all("לא נסגרו ימים השבוע" in text for _, _, text in sent)
 
 
 def test_weekly_falls_back_to_the_plain_digest_when_the_llm_call_fails(env, monkeypatch, caplog):

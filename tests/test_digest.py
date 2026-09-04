@@ -3,7 +3,7 @@ from common.digest import weekly_summary_question, weekly_text
 
 
 def test_empty_history_message(numeric_questionnaire):
-    assert weekly_text(numeric_questionnaire, {}) == "לא מולאו שאלונים השבוע"
+    assert weekly_text(numeric_questionnaire, {}) == "לא נסגרו ימים השבוע"
 
 
 def test_weekly_text_reports_averages_and_clean_days(numeric_questionnaire):
@@ -12,7 +12,7 @@ def test_weekly_text_reports_averages_and_clean_days(numeric_questionnaire):
         "2026-08-20": {"carbs": 2, "drinking": 2},
     }
     text = weekly_text(numeric_questionnaire, history)
-    assert "מולאו 2 מתוך 7 ימים" in text
+    assert "נסגרו 2 מתוך 7 ימים" in text
     assert "carbs: ממוצע 4.5" in text
     assert "drinking: ממוצע 2.5" in text
     # 08-19 is clean; 08-20 violates low_drinking (2 < 2.5).
