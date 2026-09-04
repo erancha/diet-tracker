@@ -5,8 +5,8 @@ import type { Api } from "../api";
 import { AdminSection } from "./AdminSection";
 
 const LISTING = { users: [
-  { email: "active@gmail.com", days: 5, meals: 12 },
-  { email: "quiet@gmail.com", days: 0, meals: 0 },
+  { email: "active@gmail.com", days: 5, meals: 12, chats: 7 },
+  { email: "quiet@gmail.com", days: 0, meals: 0, chats: 0 },
 ] };
 
 function api(): Pick<Api, "getAdminActivity"> {
@@ -29,6 +29,7 @@ describe("AdminSection", () => {
     expect(rows[1].textContent).toContain("active@gmail.com");
     expect(rows[1].textContent).toContain("5");
     expect(rows[1].textContent).toContain("12");
+    expect(rows[1].textContent).toContain("7");
     expect(rows[2].textContent).toContain("quiet@gmail.com");
   });
 

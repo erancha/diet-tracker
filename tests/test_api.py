@@ -519,11 +519,13 @@ def test_notifications_route_rejects_a_non_boolean(env):
 @pytest.fixture
 def admin_env(env, monkeypatch):
     """The admin listing's environment on top of env: a mocked user pool the handler may list,
-    and the admin address the caller is recognized by."""
+    the admin address the caller is recognized by, and the chat transcript table the listing
+    counts questions from."""
     cognito = boto3.client("cognito-idp", region_name="eu-central-1")
     pool_id = cognito.create_user_pool(PoolName="p")["UserPool"]["Id"]
     monkeypatch.setenv("USER_POOL_ID", pool_id)
     monkeypatch.setenv("ADMIN_EMAIL", "admin@gmail.com")
+    monkeypatch.setenv("CHAT_HISTORY_TABLE", "chat_history")
     return cognito, pool_id
 
 
@@ -540,6 +542,7 @@ def test_admin_activity_refuses_every_other_account(admin_env):
 
 
 def test_admin_activity_counts_the_trailing_week_most_active_first(admin_env):
+    from common import chat_history
     from common.store import Store
     cognito, pool_id = admin_env
     active = signed_up(cognito, pool_id, "active@gmail.com")
@@ -551,12 +554,16 @@ def test_admin_activity_counts_the_trailing_week_most_active_first(admin_env):
     store.put_day(active, days_before(today(), 7), ANSWERS, 3, "t")
     store.add_meal(active, today(), meal_body("carb_grade_3", True, False, (), "09:10:00",
                                               False, None))
+    chats = boto3.resource("dynamodb").Table("chat_history")
+    chat_history.append(chats, active, "שאלה מהשבוע", "תשובה", [])
+    chats.put_item(Item={"pk": active, "sk": f"{days_before(today(), 8)}T10:00:00+00:00",
+                         "question": "שאלה ישנה", "answer": "תשובה", "sources": "[]"})
     # The admin claim matches case-insensitively, like the sign-up allowlist.
     response = api.handler(request("GET /admin/activity", email="Admin@Gmail.com"), None)
     assert response["statusCode"] == 200
     listed = body_of(response)["users"]
-    assert listed[0] == {"email": "active@gmail.com", "days": 2, "meals": 1}
-    assert {"email": "quiet@gmail.com", "days": 0, "meals": 0} in listed
-    assert {"email": "admin@gmail.com", "days": 0, "meals": 0} in listed
+    assert listed[0] == {"email": "active@gmail.com", "days": 2, "meals": 1, "chats": 1}
+    assert {"email": "quiet@gmail.com", "days": 0, "meals": 0, "chats": 0} in listed
+    assert {"email": "admin@gmail.com", "days": 0, "meals": 0, "chats": 0} in listed
     # Counts and the address only — an activity overview must never carry recorded content.
-    assert all(set(user) == {"email", "days", "meals"} for user in listed)
+    assert all(set(user) == {"email", "days", "meals", "chats"} for user in listed)

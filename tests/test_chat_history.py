@@ -5,12 +5,6 @@ from common import chat_history
 
 @pytest.fixture
 def table(ddb):
-    ddb.create_table(TableName="chat_history",
-                     KeySchema=[{"AttributeName": "pk", "KeyType": "HASH"},
-                                {"AttributeName": "sk", "KeyType": "RANGE"}],
-                     AttributeDefinitions=[{"AttributeName": "pk", "AttributeType": "S"},
-                                           {"AttributeName": "sk", "AttributeType": "S"}],
-                     BillingMode="PAY_PER_REQUEST")
     return ddb.Table("chat_history")
 
 
@@ -86,6 +80,19 @@ def test_delete_of_a_missing_turn_raises(table):
 
     with pytest.raises(KeyError):
         chat_history.delete(table, "u2", at)
+
+
+def test_count_range_covers_whole_boundary_days_for_the_asking_user_alone(table):
+    for sk in ("2026-08-29T00:00:00+00:00", "2026-09-04T23:59:59+00:00"):
+        table.put_item(Item={"pk": "u1", "sk": sk, "question": "ש", "answer": "ת",
+                             "sources": "[]"})
+    table.put_item(Item={"pk": "u1", "sk": "2026-08-28T23:59:59+00:00", "question": "ש",
+                         "answer": "ת", "sources": "[]"})
+    table.put_item(Item={"pk": "u2", "sk": "2026-08-30T12:00:00+00:00", "question": "ש",
+                         "answer": "ת", "sources": "[]"})
+
+    assert chat_history.count_range(table, "u1", "2026-08-29", "2026-09-04") == 2
+    assert chat_history.count_range(table, "u2", "2026-08-29", "2026-09-04") == 1
 
 
 def test_turns_follows_pagination_to_the_end():

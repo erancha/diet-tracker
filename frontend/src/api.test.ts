@@ -117,7 +117,7 @@ describe("createApi", () => {
   });
 
   it("reads the admin activity listing from its own path", async () => {
-    const listing = { users: [{ email: "a@gmail.com", days: 2, meals: 5 }] };
+    const listing = { users: [{ email: "a@gmail.com", days: 2, meals: 5, chats: 3 }] };
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify(listing)));
     vi.stubGlobal("fetch", fetchMock);
 

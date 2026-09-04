@@ -4,11 +4,11 @@ import type { AdminActivityUser } from "../types";
 import { CollapsibleSection } from "./CollapsibleSection";
 import { useGlobalFold } from "./useFoldAll";
 
-// The admin's per-user activity overview: every pool account with its trailing-week closed-day
-// and meal counts, in the server's most-active-first order. Rendered for the admin alone (the
-// API refuses anyone else), resting folded and asking the server only when first opened — the
-// listing costs two count queries per pool account, so a page load must not spend that on a
-// section nobody opened.
+// The admin's per-user activity overview: every pool account with its trailing-week closed-day,
+// meal, and chat-question counts, in the server's most-active-first order. Rendered for the
+// admin alone (the API refuses anyone else), resting folded and asking the server only when
+// first opened — the listing costs three count queries per pool account, so a page load must
+// not spend that on a section nobody opened.
 export function AdminSection({ api }: { api: Pick<Api, "getAdminActivity"> }) {
   const [collapsed, setCollapsed] = useState(true);
   useGlobalFold(setCollapsed);
@@ -31,7 +31,7 @@ export function AdminSection({ api }: { api: Pick<Api, "getAdminActivity"> }) {
           <table>
             <caption>שבעת הימים האחרונים</caption>
             <thead>
-              <tr><th>משתמש</th><th>ימים שנסגרו</th><th>ארוחות</th></tr>
+              <tr><th>משתמש</th><th>ימים שנסגרו</th><th>ארוחות</th><th>שאלות</th></tr>
             </thead>
             <tbody>
               {users.map((user) => (
@@ -39,6 +39,7 @@ export function AdminSection({ api }: { api: Pick<Api, "getAdminActivity"> }) {
                   <td>{user.email}</td>
                   <td>{user.days}</td>
                   <td>{user.meals}</td>
+                  <td>{user.chats}</td>
                 </tr>
               ))}
             </tbody>

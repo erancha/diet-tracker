@@ -17,7 +17,7 @@ from datetime import date, datetime
 
 import boto3
 
-from common import appconfig, rules, users, weight
+from common import appconfig, chat_history, rules, users, weight
 from common.dates import clock_time, days_before, now_iso, today
 from common.derive import derive
 from common.log import get_logger
@@ -353,20 +353,24 @@ def _delete_weight(sub, chosen):
 
 
 def _admin_activity(email):
-    """Every user in the pool with their trailing-week day and meal counts, most active first —
-    for the admin account alone. Counts and addresses only, never recorded content: this is an
-    activity overview, not a data export."""
+    """Every user in the pool with their trailing-week day, meal, and chat-question counts,
+    most active first — for the admin account alone. Counts and addresses only, never recorded
+    content: this is an activity overview, not a data export. Chat turns are stamped in UTC
+    while the week runs on local days, so the chat window's edges sit at UTC midnight, a few
+    hours after the local day boundary the other counts honour."""
     if email.lower() != os.environ["ADMIN_EMAIL"].lower():
         return _response(403, {"error": "admin only"})
     store = _store()
+    chats = boto3.resource("dynamodb").Table(os.environ["CHAT_HISTORY_TABLE"])
     end = today()
     start = days_before(end, 6)
     listed = [{"email": user.email,
                "days": store.count_days_range(user.sub, start, end),
-               "meals": store.count_meals_range(user.sub, start, end)}
+               "meals": store.count_meals_range(user.sub, start, end),
+               "chats": chat_history.count_range(chats, user.sub, start, end)}
               for user in users.list_users(boto3.client("cognito-idp"),
                                            os.environ["USER_POOL_ID"])]
-    listed.sort(key=lambda user: user["days"] + user["meals"], reverse=True)
+    listed.sort(key=lambda user: user["days"] + user["meals"] + user["chats"], reverse=True)
     return _response(200, {"users": listed})
 
 

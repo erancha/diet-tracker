@@ -38,9 +38,9 @@ def _load_template():
 
 
 def test_admin_listing_is_routed_gated_and_granted_pool_access():
-    # The admin activity route needs three things wired together: the route itself, the address
-    # the caller is recognized by, and the right to enumerate the pool — a missing one surfaces
-    # only when the admin opens the listing on a deployed stack.
+    # The admin activity route needs four things wired together: the route itself, the address
+    # the caller is recognized by, the right to enumerate the pool, and the right to count chat
+    # turns — a missing one surfaces only when the admin opens the listing on a deployed stack.
     template = _load_template()
     api_function = template["Resources"]["ApiFunction"]["Properties"]
     routes = {(e["Properties"]["Method"], e["Properties"]["Path"])
@@ -48,6 +48,7 @@ def test_admin_listing_is_routed_gated_and_granted_pool_access():
     assert ("GET", "/admin/activity") in routes
     assert api_function["Environment"]["Variables"]["ADMIN_EMAIL"] == "AdminEmail"
     assert "ListUsersPolicy" in api_function["Policies"]
+    assert {"DynamoDBReadPolicy": {"TableName": "ChatHistoryTable"}} in api_function["Policies"]
     assert "ListUsersPolicy" in template["Resources"]["NudgeFunction"]["Properties"]["Policies"]
     assert "AdminEmail=" in DEPLOY.read_text()
 

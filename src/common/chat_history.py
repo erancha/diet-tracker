@@ -47,6 +47,18 @@ def delete(table, sub, at):
         raise KeyError(at)
 
 
+def count_range(table, sub, start_day, end_day) -> int:
+    """Stored turns across the inclusive day range, counted inside DynamoDB so transcript
+    content never leaves the table. Sort keys are ISO timestamps, so a day string sorts before
+    every timestamp of that day and the upper bound closes past the last one. A folded
+    follow-up chain counts as the single turn it is stored as."""
+    return table.query(
+        Select="COUNT",
+        KeyConditionExpression=Key("pk").eq(sub) & Key("sk").between(start_day,
+                                                                     f"{end_day}\xff"),
+    )["Count"]
+
+
 def turns(table, sub):
     """The user's full transcript, newest first. Reads every page: a silently truncated history
     would read as deleted conversation once a transcript outgrows one query page."""

@@ -304,6 +304,9 @@ Resources:
             TableName: !Ref NudgeStateTable
         - DynamoDBCrudPolicy:
             TableName: !Ref WeightsTable
+        # Read-only: the admin activity listing only counts stored chat turns.
+        - DynamoDBReadPolicy:
+            TableName: !Ref ChatHistoryTable
         - !Ref ListUsersPolicy
 
   ChatFunction:

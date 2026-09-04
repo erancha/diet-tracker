@@ -202,6 +202,7 @@ export interface AdminActivityUser {
   email: string;
   days: number;
   meals: number;
+  chats: number;
 }
 
 export interface AdminActivity {
