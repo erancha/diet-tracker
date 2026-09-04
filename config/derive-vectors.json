@@ -621,7 +621,7 @@
       }
     },
     {
-      "name": "a second carb source adds its own grade",
+      "name": "a heavy second source adds its grade at the half helping",
       "meals": [
         {
           "at": "2026-08-20T13:00:00+03:00",
@@ -632,30 +632,7 @@
           "small_portion": false,
           "second_source": {
             "carbs_choice": "carb_grade_7",
-            "small_portion": false
-          }
-        }
-      ],
-      "derived": {
-        "carbs": 9,
-        "meals": 1,
-        "vegetables": 1,
-        "eating_window": 0
-      }
-    },
-    {
-      "name": "a second carb source carries its own small portion",
-      "meals": [
-        {
-          "at": "2026-08-20T13:00:00+03:00",
-          "carbs_choice": "carb_grade_2",
-          "vegetables": true,
-          "fruit": false,
-          "additions": [],
-          "small_portion": false,
-          "second_source": {
-            "carbs_choice": "carb_grade_7",
-            "small_portion": true
+            "portion": "half"
           }
         }
       ],
@@ -667,7 +644,30 @@
       }
     },
     {
-      "name": "a second source under the portion rule keeps its full grade",
+      "name": "a heavy second source adds its grade at the quarter helping",
+      "meals": [
+        {
+          "at": "2026-08-20T13:00:00+03:00",
+          "carbs_choice": "carb_grade_2",
+          "vegetables": true,
+          "fruit": false,
+          "additions": [],
+          "small_portion": false,
+          "second_source": {
+            "carbs_choice": "carb_grade_7",
+            "portion": "quarter"
+          }
+        }
+      ],
+      "derived": {
+        "carbs": 3.75,
+        "meals": 1,
+        "vegetables": 1,
+        "eating_window": 0
+      }
+    },
+    {
+      "name": "a light second source merges into the higher grade",
       "meals": [
         {
           "at": "2026-08-20T13:00:00+03:00",
@@ -677,13 +677,36 @@
           "additions": [],
           "small_portion": false,
           "second_source": {
-            "carbs_choice": "carb_grade_3",
-            "small_portion": true
+            "carbs_choice": "carb_grade_1",
+            "portion": null
           }
         }
       ],
       "derived": {
-        "carbs": 5,
+        "carbs": 2,
+        "meals": 1,
+        "vegetables": 0,
+        "eating_window": 0
+      }
+    },
+    {
+      "name": "the merge keeps the heavier of two light grades",
+      "meals": [
+        {
+          "at": "2026-08-20T13:00:00+03:00",
+          "carbs_choice": "carb_grade_1",
+          "vegetables": false,
+          "fruit": false,
+          "additions": [],
+          "small_portion": false,
+          "second_source": {
+            "carbs_choice": "carb_grade_2",
+            "portion": null
+          }
+        }
+      ],
+      "derived": {
+        "carbs": 2,
         "meals": 1,
         "vegetables": 0,
         "eating_window": 0
@@ -710,7 +733,7 @@
           "small_portion": false,
           "second_source": {
             "carbs_choice": "carb_grade_1",
-            "small_portion": false
+            "portion": null
           }
         },
         {
@@ -722,12 +745,12 @@
           "small_portion": false,
           "second_source": {
             "carbs_choice": "carb_grade_4",
-            "small_portion": false
+            "portion": "half"
           }
         }
       ],
       "derived": {
-        "carbs": 16,
+        "carbs": 15,
         "meals": 3,
         "vegetables": 0,
         "eating_window": 6
@@ -747,7 +770,7 @@
           "small_portion": false,
           "second_source": {
             "carbs_choice": "carb_grade_7",
-            "small_portion": true
+            "portion": "half"
           }
         }
       ],
@@ -783,5 +806,20 @@
     "label": "כמות קטנה",
     "from_value": 4,
     "percent": 50
+  },
+  "second_source": {
+    "light_grade_max": 2,
+    "portions": [
+      {
+        "id": "quarter",
+        "label": "רבע מנה",
+        "percent": 25
+      },
+      {
+        "id": "half",
+        "label": "חצי מנה",
+        "percent": 50
+      }
+    ]
   }
 }

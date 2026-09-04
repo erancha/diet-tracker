@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useGlobalFold } from "./useFoldAll";
 import { clockTimeOf, mealOverdue, parseIsoDate } from "../dates";
 import { carbsScales, deriveDay, smallPortionOffered } from "../derive";
@@ -86,13 +86,19 @@ export function DayTracker({ questionnaire, day, isToday = true, closed = false,
 }) {
   const carbsQuestion = questionnaire.questions.find((q) => q.id === "carbs")!;
   const drinkingQuestion = questionnaire.questions.find((q) => q.id === "drinking")!;
+  const { weights, additionValues, smallPortion: portionRule, secondSource: secondRule } =
+    carbsScales(carbsQuestion);
+  // The fullest helping the contract offers — the default a heavy second grade opens on, so an
+  // unconsidered save never under-prices the plate.
+  const defaultPortionId =
+    secondRule.portions.reduce((a, b) => (b.percent > a.percent ? b : a)).id;
   const [carbsChoiceId, setCarbsChoiceId] = useState<string | undefined>(undefined);
   const [vegetables, setVegetables] = useState(false);
   const [fruit, setFruit] = useState(false);
   const [pickedAdditions, setPickedAdditions] = useState<Set<string>>(new Set());
   const [smallPortion, setSmallPortion] = useState(false);
   const [secondChoiceId, setSecondChoiceId] = useState<string | undefined>(undefined);
-  const [secondSmallPortion, setSecondSmallPortion] = useState(false);
+  const [secondPortionId, setSecondPortionId] = useState(defaultPortionId);
   // Held apart from the picked grade so the group can stand open and unanswered: revealing it is
   // the user saying a second source is coming, and until a grade is picked the meal has none.
   const [secondSourceOpen, setSecondSourceOpen] = useState(false);
@@ -115,8 +121,7 @@ export function DayTracker({ questionnaire, day, isToday = true, closed = false,
 
   // The day's meals always resolve against the current questionnaire, so deriveDay's throw on an
   // unknown id is a real config/data fault, not a legal state — let the error boundary show it.
-  const { weights, additionValues, smallPortion: portionRule } = carbsScales(carbsQuestion);
-  const derived = deriveDay(day.meals, weights, additionValues, portionRule);
+  const derived = deriveDay(day.meals, weights, additionValues, portionRule, secondRule);
   // Once recording one more meal would cross the meals rule's bound — from the third recorded
   // meal under the production config — every add-meal control carries the warning styling, so
   // the caution lands before that meal is recorded rather than through the history row after.
@@ -128,8 +133,15 @@ export function DayTracker({ questionnaire, day, isToday = true, closed = false,
   // the score — and the flag goes with it, so a grade switched down cannot leave one stuck on.
   const offersSmallPortion = carbsChoiceId !== undefined
     && smallPortionOffered(portionRule, weights[carbsChoiceId]);
-  const offersSecondSmallPortion = secondChoiceId !== undefined
-    && smallPortionOffered(portionRule, weights[secondChoiceId]);
+  // A second source rides only on a light primary grade — the same bound the API enforces — and
+  // never on a no-carb plate, whose only carb would simply be the primary.
+  const allowsSecond = (choiceId: string) =>
+    weights[choiceId] > 0 && weights[choiceId] <= secondRule.light_grade_max;
+  const offersSecondSource = carbsChoiceId !== undefined && allowsSecond(carbsChoiceId);
+  // A light second grade merges into the plate and records no helping; only a heavier one asks
+  // which helping it was.
+  const secondIsHeavy = secondChoiceId !== undefined
+    && weights[secondChoiceId] > secondRule.light_grade_max;
   // The same grades under their own heading, and under an id of their own: sharing the carbs
   // question's id would put both groups on one radio name, where picking a second grade would
   // clear the first.
@@ -140,8 +152,7 @@ export function DayTracker({ questionnaire, day, isToday = true, closed = false,
   // What the form currently says the plate's second source is: a picked grade makes one, an open
   // but unanswered group does not.
   const secondSource: CarbSource | null = secondChoiceId === undefined ? null
-    : { carbs_choice: secondChoiceId,
-        small_portion: offersSecondSmallPortion && secondSmallPortion };
+    : { carbs_choice: secondChoiceId, portion: secondIsHeavy ? secondPortionId : null };
   const closable = derived.eating_window >= closeMinWindowHours;
 
   // A meal cannot have been eaten yet, so a running day's own clock caps the picker — both values
@@ -272,7 +283,7 @@ export function DayTracker({ questionnaire, day, isToday = true, closed = false,
 
   function clearSecondSource() {
     setSecondChoiceId(undefined);
-    setSecondSmallPortion(false);
+    setSecondPortionId(defaultPortionId);
     setSecondSourceOpen(false);
   }
 
@@ -298,7 +309,8 @@ export function DayTracker({ questionnaire, day, isToday = true, closed = false,
     setPickedAdditions(new Set(meal.additions));
     setSmallPortion(meal.small_portion);
     setSecondChoiceId(meal.second_source === null ? undefined : meal.second_source.carbs_choice);
-    setSecondSmallPortion(meal.second_source !== null && meal.second_source.small_portion);
+    setSecondPortionId(meal.second_source === null || meal.second_source.portion === null
+      ? defaultPortionId : meal.second_source.portion);
     setSecondSourceOpen(meal.second_source !== null);
     setMealTime(clockTimeOf(meal.at));
     setEditingId(meal.id);
@@ -357,27 +369,52 @@ export function DayTracker({ questionnaire, day, isToday = true, closed = false,
         </button>
         <CarbSourceFields question={carbsQuestion} selectedId={carbsChoiceId}
                           expandLabels={expandLabels}
-                          portionLabel={carbsQuestion.small_portion!.label}
-                          portionOffered={offersSmallPortion} smallPortion={smallPortion}
-                          onPick={(id) => setCarbsChoiceId(id)}
-                          onSmallPortion={setSmallPortion} />
+                          onPick={(id) => {
+                            setCarbsChoiceId(id);
+                            // A primary the contract bars from carrying a second source takes the
+                            // open group and its picked grade with it.
+                            if (!allowsSecond(id)) clearSecondSource();
+                          }}>
+          {offersSmallPortion && (
+            <div className="meal-flags">
+              <label>
+                <input type="checkbox" checked={smallPortion}
+                       onChange={(e) => setSmallPortion(e.target.checked)} />
+                {" "}{carbsQuestion.small_portion!.label}
+              </label>
+            </div>
+          )}
+        </CarbSourceFields>
         {secondSourceOpen && (
           <CarbSourceFields question={secondSourceQuestion} selectedId={secondChoiceId}
                             expandLabels={expandLabels}
-                            portionLabel={carbsQuestion.small_portion!.label}
-                            portionOffered={offersSecondSmallPortion}
-                            smallPortion={secondSmallPortion}
-                            onPick={(id) => setSecondChoiceId(id)}
-                            onSmallPortion={setSecondSmallPortion} />
+                            onPick={(id) => setSecondChoiceId(id)}>
+            {secondIsHeavy && (
+              <div className="meal-flags">
+                <label>
+                  גודל המנה{" "}
+                  <select value={secondPortionId}
+                          onChange={(e) => setSecondPortionId(e.target.value)}>
+                    {secondRule.portions.map((portion) => (
+                      <option key={portion.id} value={portion.id}>{portion.label}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            )}
+          </CarbSourceFields>
         )}
         {/* A plate carrying a second carb source is the exception, so the group is revealed on
-            demand rather than standing open on every meal. */}
-        <div className="form-actions">
-          <button type="button" className="quiet"
-                  onClick={() => (secondSourceOpen ? clearSecondSource() : setSecondSourceOpen(true))}>
-            {secondSourceOpen ? SECOND_SOURCE_REMOVE : SECOND_SOURCE_ADD}
-          </button>
-        </div>
+            demand — and offered only beside a light primary grade, the one place the contract
+            admits one. An open group outlives a repick only through the remove control here. */}
+        {(offersSecondSource || secondSourceOpen) && (
+          <div className="form-actions">
+            <button type="button" className="quiet"
+                    onClick={() => (secondSourceOpen ? clearSecondSource() : setSecondSourceOpen(true))}>
+              {secondSourceOpen ? SECOND_SOURCE_REMOVE : SECOND_SOURCE_ADD}
+            </button>
+          </div>
+        )}
         <div className="meal-flags">
           <label>
             <input type="checkbox" checked={vegetables}
@@ -477,33 +514,21 @@ export function DayTracker({ questionnaire, day, isToday = true, closed = false,
   );
 }
 
-// One carb source's inputs: its grade group, and under it the reduced-helping box the portion
-// rule offers from its threshold up. The box belongs to the grade above it — a plate may carry two
-// sources, and only this pairing says which grade a helping halves.
-function CarbSourceFields({ question, selectedId, expandLabels, portionLabel, portionOffered,
-                            smallPortion, onPick, onSmallPortion }: {
+// One carb source's inputs: its grade group, and under it whatever quantity control that source
+// carries — the main grade's small-portion box, or a heavy second source's helping picker. The
+// control belongs to the grade above it, so this pairing is what says which grade it reduces.
+function CarbSourceFields({ question, selectedId, expandLabels, onPick, children }: {
   question: Question;
   selectedId: string | undefined;
   expandLabels: boolean;
-  portionLabel: string;
-  portionOffered: boolean;
-  smallPortion: boolean;
   onPick: (choiceId: string) => void;
-  onSmallPortion: (checked: boolean) => void;
+  children?: ReactNode;
 }) {
   return (
     <div className="carb-source">
       <ChoiceFieldset question={question} selectedId={selectedId} scope="meal"
                       expandLabels={expandLabels} onPick={(choice) => onPick(choice.id)} />
-      {portionOffered && (
-        <div className="meal-flags">
-          <label>
-            <input type="checkbox" checked={smallPortion}
-                   onChange={(e) => onSmallPortion(e.target.checked)} />
-            {" "}{portionLabel}
-          </label>
-        </div>
-      )}
+      {children}
     </div>
   );
 }
@@ -516,7 +541,7 @@ function minutesOfDay(at: Date): number {
 // so a null matches only another null.
 function sourcesDiffer(a: CarbSource | null, b: CarbSource | null): boolean {
   if (a === null || b === null) return a !== b;
-  return a.carbs_choice !== b.carbs_choice || a.small_portion !== b.small_portion;
+  return a.carbs_choice !== b.carbs_choice || a.portion !== b.portion;
 }
 
 // "HH:MM" for a count of minutes since local midnight.

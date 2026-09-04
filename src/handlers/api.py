@@ -109,7 +109,8 @@ def _day_payload(store, questionnaire, sub, day) -> dict:
     return {"date": day, "meals": meals,
             "derived": asdict(derive(meals, questionnaire.carb_weights(),
                                      questionnaire.addition_values(),
-                                     questionnaire.small_portion()))}
+                                     questionnaire.small_portion(),
+                                     questionnaire.second_source()))}
 
 
 def _submit(sub, body):
@@ -123,7 +124,8 @@ def _submit(sub, body):
         return rejection
     store = _store()
     floors = derive(store.get_meals(sub, chosen), questionnaire.carb_weights(),
-                    questionnaire.addition_values(), questionnaire.small_portion())
+                    questionnaire.addition_values(), questionnaire.small_portion(),
+                    questionnaire.second_source())
     try:
         questionnaire.validate_answers(answers, floors=asdict(floors))
     except ValueError as error:
@@ -188,18 +190,28 @@ def _get_day(sub, chosen):
 NO_CARBS_CHOICE = "no_carbs"
 
 
-def _second_source_rejection(second, questionnaire):
-    """The 400 a meal's second carb source earns, or None when it is storable. It is a grade and a
-    helping of its own — the pair the derivation prices beside the meal's main grade."""
-    if not isinstance(second, dict) or set(second) != {"carbs_choice", "small_portion"}:
+def _second_source_rejection(body, questionnaire):
+    """The 400 a meal's second carb source earns, or None when it is storable. A second source
+    rides only on a light primary grade; a light second grade merges and carries no portion,
+    while a heavier one must carry one of the declared helping sizes."""
+    second = body["second_source"]
+    rule = questionnaire.second_source()
+    weights = questionnaire.carb_weights()
+    if not isinstance(second, dict) or set(second) != {"carbs_choice", "portion"}:
         return _response(400, {
-            "error": "second_source must carry exactly a carbs_choice and a small_portion"})
-    if second["carbs_choice"] not in questionnaire.carb_weights():
+            "error": "second_source must carry exactly a carbs_choice and a portion"})
+    if second["carbs_choice"] not in weights:
         return _response(400, {"error": f"unknown carbs choice {second['carbs_choice']!r}"})
     if second["carbs_choice"] == NO_CARBS_CHOICE:
         return _response(400, {"error": f"{NO_CARBS_CHOICE!r} is not a second carb source"})
-    if not isinstance(second["small_portion"], bool):
-        return _response(400, {"error": "second_source small_portion must be a boolean"})
+    if not rule.allows_primary(weights[body["carbs_choice"]]):
+        return _response(400, {
+            "error": "a second source is allowed only beside a light primary grade"})
+    if rule.is_light(weights[second["carbs_choice"]]):
+        if second["portion"] is not None:
+            return _response(400, {"error": "a light second source carries no portion"})
+    elif not any(portion.id == second["portion"] for portion in rule.portions):
+        return _response(400, {"error": f"unknown portion {second['portion']!r}"})
     return None
 
 
@@ -230,7 +242,7 @@ def _meal_rejection(body, allowed, questionnaire):
     if unknown:
         return _response(400, {"error": f"unknown additions {unknown!r}"})
     if body["second_source"] is not None:
-        return _second_source_rejection(body["second_source"], questionnaire)
+        return _second_source_rejection(body, questionnaire)
     return None
 
 

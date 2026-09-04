@@ -27,6 +27,11 @@ def _from_dynamo(value):
 # here on has a home again without one.
 _RETIRED_GRADES: dict[str, tuple[str, str | None]] = {}
 
+# Grades that priced as light — merged rather than summed, no helping recorded — under every
+# questionnaire version that wrote second sources in the flag shape. Frozen ids, like
+# _RETIRED_GRADES: they describe records already written, not the current config's boundary.
+_LEGACY_LIGHT_SECOND_GRADES = frozenset({"carb_grade_1", "carb_grade_2"})
+
 # The attributes one stored meal carries beside its keys. Named once so the record written and the
 # API body it is projected from cannot drift apart.
 MEAL_ATTRIBUTES = ("at", "carbs_choice", "vegetables", "fruit", "additions", "small_portion",
@@ -54,13 +59,22 @@ def _meal_from_item(item) -> dict:
     additions supersede the boolean sweet flag, so a legacy sweet meal reads as a single sweet
     addition. A meal recorded under a grade the questionnaire has since retired reads as its
     current equivalent — either of its sources — so nothing downstream is handed an id the config
-    no longer knows."""
+    no longer knows.
+
+    A second source recorded before helpings carried a small-portion flag instead of a portion
+    id. Such a record reads under the current contract: a light second grade carries no portion,
+    and a heavier one reads as the half helping — the flagged helping was exactly that, and a
+    full helping has no expression anymore, so half is the nearest the contract still speaks."""
     additions = item.get("additions", ["sweet"] if item.get("sweet", False) else [])
     carbs_choice, additions = _current_grade(item["carbs_choice"], additions)
     second = item.get("second_source")
     if second is not None:
         second_choice, additions = _current_grade(second["carbs_choice"], additions)
-        second = {"carbs_choice": second_choice, "small_portion": second["small_portion"]}
+        if "portion" in second:
+            portion = second["portion"]
+        else:
+            portion = None if second_choice in _LEGACY_LIGHT_SECOND_GRADES else "half"
+        second = {"carbs_choice": second_choice, "portion": portion}
     return {"id": item["sk"].split("#", 1)[1], "at": item["at"], "carbs_choice": carbs_choice,
             "vegetables": item["vegetables"], "fruit": item.get("fruit", False),
             "additions": additions, "small_portion": item.get("small_portion", False),

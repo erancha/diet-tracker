@@ -1,6 +1,6 @@
 {
   "questionnaire": {
-    "version": 12,
+    "version": 13,
     "questions": [
       {
         "id": "drinking",
@@ -216,6 +216,21 @@
           "label": "כמות קטנה",
           "from_value": 4,
           "percent": 50
+        },
+        "second_source": {
+          "light_grade_max": 2,
+          "portions": [
+            {
+              "id": "quarter",
+              "label": "רבע מנה",
+              "percent": 25
+            },
+            {
+              "id": "half",
+              "label": "חצי מנה",
+              "percent": 50
+            }
+          ]
         }
       }
     ],

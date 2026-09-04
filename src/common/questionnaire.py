@@ -40,6 +40,39 @@ class SmallPortion:
 
 
 @dataclass(frozen=True)
+class Portion:
+    """One helping size a second carb source may be recorded at — a fraction of a full serving,
+    weighed at `percent` of the source's grade."""
+    id: str
+    label: str
+    percent: float
+
+
+@dataclass(frozen=True)
+class SecondSource:
+    """The second-carb-source contract: which plates may carry one and how it prices.
+
+    A plate earns a second source only around a light primary grade — one whose weight sits in
+    (0, light_grade_max]. A second source that is itself light merges into the plate, the higher
+    of the two grades speaking for both, and carries no portion. A heavier second source is
+    always a reduced helping, one of `portions`, adding its grade at that helping's percentage."""
+    light_grade_max: float
+    portions: tuple[Portion, ...]
+
+    def is_light(self, weight: float) -> bool:
+        return weight <= self.light_grade_max
+
+    def allows_primary(self, weight: float) -> bool:
+        return 0 < weight <= self.light_grade_max
+
+    def portion_percent(self, portion_id: str) -> float:
+        for portion in self.portions:
+            if portion.id == portion_id:
+                return portion.percent
+        raise KeyError(portion_id)
+
+
+@dataclass(frozen=True)
 class Question:
     id: str
     type: str
@@ -68,6 +101,8 @@ class Question:
     additions: tuple[Choice, ...] | None
     # Present only on the carbs question: the quantity axis the grade ladder does not carry.
     small_portion: "SmallPortion | None"
+    # Present only on the carbs question: the contract for a plate's second carb source.
+    second_source: "SecondSource | None"
 
     @property
     def day_title(self) -> str:
@@ -149,6 +184,13 @@ class Questionnaire:
             raise ValueError("carbs question must declare small_portion")
         return declared
 
+    def second_source(self) -> SecondSource:
+        """The carbs question's second-source contract; the config must declare it."""
+        declared = self.question("carbs").second_source
+        if declared is None:
+            raise ValueError("carbs question must declare second_source")
+        return declared
+
     def validate_answers(self, answers: dict, floors: dict | None = None) -> None:
         """Rejects answers outside each question's domain: a single question accepts only its
         choice values, a points question its 0..max range. A value equal to its entry in floors
@@ -210,6 +252,11 @@ def parse(raw: dict) -> Questionnaire:
                                        from_value=q["small_portion"]["from_value"],
                                        percent=q["small_portion"]["percent"])
             if "small_portion" in q else None,
+            second_source=SecondSource(
+                light_grade_max=q["second_source"]["light_grade_max"],
+                portions=tuple(Portion(id=p["id"], label=p["label"], percent=p["percent"])
+                               for p in q["second_source"]["portions"]))
+            if "second_source" in q else None,
         ))
     questions = tuple(questions)
     rules = []

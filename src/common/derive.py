@@ -30,7 +30,8 @@ def _source_weight(choice, small_portion_flag, weights, small_portion) -> float:
     return weight
 
 
-def derive(meals: list, weights: dict, addition_values: dict, small_portion) -> Derived:
+def derive(meals: list, weights: dict, addition_values: dict, small_portion,
+           second_source) -> Derived:
     if not meals:
         return Derived(carbs=0, meals=0, vegetables=0, eating_window=0)
     ordered = sorted(meals, key=lambda meal: datetime.fromisoformat(meal["at"]))
@@ -42,13 +43,17 @@ def derive(meals: list, weights: dict, addition_values: dict, small_portion) -> 
         # plate, so a small portion must not discount it.
         weight = _source_weight(meal["carbs_choice"], meal["small_portion"], weights,
                                 small_portion)
-        # A plate drawing on two carb sources — a grade 2 bowl beside a slice of white bread —
-        # has no single grade that tells the truth, so the second source carries its own and the
-        # two are summed.
+        # A plate drawing on two light carb sources is one method-approved plate, so the higher
+        # grade speaks for both. A heavier second source — a slice of white bread beside a grade 2
+        # bowl — is always a reduced helping, adding its grade at the helping's percentage.
         second = meal["second_source"]
         if second is not None:
-            weight += _source_weight(second["carbs_choice"], second["small_portion"], weights,
-                                     small_portion)
+            second_weight = weights[second["carbs_choice"]]
+            if second_source.is_light(second_weight):
+                weight = max(weight, second_weight)
+            else:
+                weight += (second_weight
+                           * second_source.portion_percent(second["portion"]) / 100)
         if meal["fruit"]:
             fruits += 1
             if fruits > 1:

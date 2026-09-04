@@ -42,6 +42,11 @@ export interface Question {
   // up — where a lighter helping is a distinction worth drawing and the reduced weight still
   // lands above zero.
   small_portion?: { label: string; from_value: number; percent: number };
+  // Present only on the carbs question: the second-carb-source contract. A plate earns a second
+  // source only around a light primary grade — one weighing in (0, light_grade_max]. A second
+  // source that is itself light merges into the plate, the higher grade speaking for both; a
+  // heavier one is always one of the reduced helpings, adding its grade at that percentage.
+  second_source?: { light_grade_max: number; portions: PortionOption[] };
   // Display floor: history answers below it redden on their own, day by day — unlike a rule's
   // bound, which alarms only after its consecutive-days streak.
   warn_below?: number;
@@ -125,12 +130,20 @@ export interface AppConfigFile {
 // A single question's stored answer — always a number (points, counts, hours, liters).
 export type AnswerValue = number;
 
-/** One carb source on a plate: the grade it drew on, and whether it was eaten as a small
- * portion. A meal's main source is spelled flat across carbs_choice and small_portion; a second
- * one is carried as this pair. */
+/** One helping size a second carb source may be recorded at — a fraction of a full serving,
+ * weighed at `percent` of the source's grade. */
+export interface PortionOption {
+  id: string;
+  label: string;
+  percent: number;
+}
+
+/** A plate's second carb source: the grade it drew on and the helping it was eaten as. A light
+ * grade merges into the plate and carries no portion (null); a heavier grade always carries one
+ * of the configured portion ids. */
 export interface CarbSource {
   carbs_choice: string;
-  small_portion: boolean;
+  portion: string | null;
 }
 
 export interface Meal {
@@ -145,9 +158,9 @@ export interface Meal {
   // Whether the meal was a small portion of its grade — the quantity the grade itself no longer
   // carries.
   small_portion: boolean;
-  // A second carb source on the same plate — a slice of white bread beside a grade 2 bowl — with
-  // its own grade and helping, because no single grade prices such a plate honestly. Null on a
-  // plate that drew on one source.
+  // A second carb source on the same plate. A light one merges into the plate, the higher grade
+  // speaking for both; a heavier one — a slice of white bread beside a grade 2 bowl — rides as a
+  // reduced helping priced beside the plate's grade. Null on a plate that drew on one source.
   second_source: CarbSource | null;
 }
 

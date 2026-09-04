@@ -101,9 +101,30 @@ def test_meal_stored_before_the_second_source_reads_as_drawing_on_one(store, ddb
 def test_a_second_carb_source_roundtrips_with_its_own_helping(store):
     store.add_meal("u1", "2026-08-20", meal(
         "2026-08-20T13:30:00+03:00", "carb_grade_2", vegetables=True,
-        second_source={"carbs_choice": "carb_grade_7", "small_portion": True}))
+        second_source={"carbs_choice": "carb_grade_7", "portion": "quarter"}))
     assert store.get_meals("u1", "2026-08-20")[0]["second_source"] == {
-        "carbs_choice": "carb_grade_7", "small_portion": True}
+        "carbs_choice": "carb_grade_7", "portion": "quarter"}
+
+
+def _store_meal_with_second(ddb, second):
+    ddb.Table("meals").put_item(Item={
+        "pk": "u1", "sk": "2026-08-20#09:10:00-abc123",
+        "at": "2026-08-20T09:10:00+03:00", "carbs_choice": "carb_grade_2", "vegetables": True,
+        "fruit": False, "additions": [], "small_portion": False, "second_source": second})
+
+
+def test_a_flag_shaped_second_source_reads_under_the_portion_contract(store, ddb):
+    # A light legacy second grade merges and carries no portion; a heavier one reads as the half
+    # helping whether or not the flag was set — a full legacy helping has no expression anymore.
+    _store_meal_with_second(ddb, {"carbs_choice": "carb_grade_1", "small_portion": False})
+    assert store.get_meals("u1", "2026-08-20")[0]["second_source"] == {
+        "carbs_choice": "carb_grade_1", "portion": None}
+    _store_meal_with_second(ddb, {"carbs_choice": "carb_grade_7", "small_portion": True})
+    assert store.get_meals("u1", "2026-08-20")[0]["second_source"] == {
+        "carbs_choice": "carb_grade_7", "portion": "half"}
+    _store_meal_with_second(ddb, {"carbs_choice": "carb_grade_7", "small_portion": False})
+    assert store.get_meals("u1", "2026-08-20")[0]["second_source"] == {
+        "carbs_choice": "carb_grade_7", "portion": "half"}
 
 
 def _store_meal(ddb, carbs_choice, additions):
@@ -143,9 +164,9 @@ def test_a_retired_grade_on_the_second_source_reads_as_its_replacement(store, dd
         "pk": "u1", "sk": "2026-08-20#09:10:00-abc123",
         "at": "2026-08-20T09:10:00+03:00", "carbs_choice": "carb_grade_2", "vegetables": True,
         "fruit": False, "additions": [], "small_portion": False,
-        "second_source": {"carbs_choice": "retired_heavy", "small_portion": False}})
+        "second_source": {"carbs_choice": "retired_heavy", "portion": None}})
     stored = store.get_meals("u1", "2026-08-20")[0]
-    assert stored["second_source"] == {"carbs_choice": "no_carbs", "small_portion": False}
+    assert stored["second_source"] == {"carbs_choice": "no_carbs", "portion": None}
     assert stored["additions"] == ["fat"]
 
 

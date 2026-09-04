@@ -228,19 +228,27 @@ def test_meal_additions_add_their_costs_on_top_of_its_grade(env):
     assert payload["derived"]["carbs"] == 10
 
 
-def test_a_second_carb_source_is_priced_beside_the_meals_own_grade(env):
+def test_a_heavy_second_source_is_priced_at_its_helping_beside_the_meals_own_grade(env):
     # A grade 2 plate carrying a slice of white bread: the plate keeps its grade, and the bread
     # costs half of grade 7 as the helping it was.
     payload = body_of(add_meal("carb_grade_2", second_source={
-        "carbs_choice": "carb_grade_7", "small_portion": True}))
+        "carbs_choice": "carb_grade_7", "portion": "half"}))
     assert payload["derived"]["carbs"] == 5.5
     assert payload["meals"][0]["second_source"] == {"carbs_choice": "carb_grade_7",
-                                                    "small_portion": True}
+                                                    "portion": "half"}
+
+
+def test_a_light_second_source_merges_into_the_higher_grade(env):
+    # Quinoa beside beans: two light sources are one method-approved plate, so the higher grade
+    # speaks for both.
+    payload = body_of(add_meal("carb_grade_2", second_source={
+        "carbs_choice": "carb_grade_1", "portion": None}))
+    assert payload["derived"]["carbs"] == 2
 
 
 def test_correcting_a_meal_can_drop_its_second_carb_source(env):
     meal_id = body_of(add_meal("carb_grade_2", second_source={
-        "carbs_choice": "carb_grade_7", "small_portion": False}))["meals"][0]["id"]
+        "carbs_choice": "carb_grade_7", "portion": "quarter"}))["meals"][0]["id"]
     payload = body_of(update_meal(meal_id, "carb_grade_2"))
     assert payload["meals"][0]["second_source"] is None
     assert payload["derived"]["carbs"] == 2
@@ -248,7 +256,7 @@ def test_correcting_a_meal_can_drop_its_second_carb_source(env):
 
 def test_add_meal_rejects_an_unknown_second_carb_source(env):
     response = add_meal("carb_grade_2", second_source={"carbs_choice": "nope",
-                                                       "small_portion": False})
+                                                       "portion": "half"})
     assert response["statusCode"] == 400
     assert "nope" in body_of(response)["error"]
 
@@ -257,22 +265,45 @@ def test_add_meal_rejects_the_no_carb_grade_as_a_second_source(env):
     # Drawing on no carb source is what carrying no second source says, so the grade that names it
     # would be a second way of saying the same thing.
     response = add_meal("carb_grade_2", second_source={"carbs_choice": "no_carbs",
-                                                       "small_portion": False})
+                                                       "portion": None})
     assert response["statusCode"] == 400
     assert "no_carbs" in body_of(response)["error"]
+
+
+def test_add_meal_rejects_a_second_source_beside_a_primary_that_is_not_light(env):
+    # A second source rides only on a light primary grade; a no-carb plate's only carb would
+    # simply be the primary.
+    heavy = add_meal("carb_grade_4", second_source={"carbs_choice": "carb_grade_7",
+                                                    "portion": "half"})
+    assert heavy["statusCode"] == 400
+    assert "light primary" in body_of(heavy)["error"]
+    no_carb = add_meal("no_carbs", second_source={"carbs_choice": "carb_grade_1",
+                                                  "portion": None})
+    assert no_carb["statusCode"] == 400
+
+
+def test_add_meal_rejects_a_helping_that_breaks_the_second_source_contract(env):
+    # A light second grade merges and carries no helping; a heavier one must carry a declared one.
+    light_with_helping = add_meal("carb_grade_2", second_source={
+        "carbs_choice": "carb_grade_1", "portion": "half"})
+    assert light_with_helping["statusCode"] == 400
+    heavy_without = add_meal("carb_grade_2", second_source={
+        "carbs_choice": "carb_grade_7", "portion": None})
+    assert heavy_without["statusCode"] == 400
+    unknown_helping = add_meal("carb_grade_2", second_source={
+        "carbs_choice": "carb_grade_7", "portion": "crumb"})
+    assert unknown_helping["statusCode"] == 400
+    assert "crumb" in body_of(unknown_helping)["error"]
 
 
 def test_add_meal_rejects_a_second_source_that_is_not_a_grade_and_a_helping(env):
     missing = add_meal("carb_grade_2", second_source={"carbs_choice": "carb_grade_7"})
     assert missing["statusCode"] == 400
     stray = add_meal("carb_grade_2", second_source={"carbs_choice": "carb_grade_7",
-                                                    "small_portion": False, "fruit": True})
+                                                    "portion": "half", "fruit": True})
     assert stray["statusCode"] == 400
     unstructured = add_meal("carb_grade_2", second_source="carb_grade_7")
     assert unstructured["statusCode"] == 400
-    flag = add_meal("carb_grade_2", second_source={"carbs_choice": "carb_grade_7",
-                                                   "small_portion": "yes"})
-    assert flag["statusCode"] == 400
 
 
 def test_add_meal_rejects_an_unknown_addition(env):

@@ -92,12 +92,15 @@ def _day_detail(store, questionnaire, sub, day) -> dict:
     """One day's meals in Hebrew vocabulary, beside the carb score they derive to."""
     meals = store.get_meals(sub, day)
     derived = derive(meals, questionnaire.carb_weights(), questionnaire.addition_values(),
-                     questionnaire.small_portion())
+                     questionnaire.small_portion(), questionnaire.second_source())
     carbs = questionnaire.question("carbs")
     grade_labels = {choice.id: choice.label for choice in carbs.choices}
     addition_labels = {addition.id: addition.label for addition in carbs.additions}
+    portion_labels = {portion.id: portion.label
+                      for portion in questionnaire.second_source().portions}
     return {"ציון פחמימות": derived.carbs,
-            "ארוחות": [_meal_entry(meal, grade_labels, addition_labels) for meal in meals]}
+            "ארוחות": [_meal_entry(meal, grade_labels, addition_labels, portion_labels)
+                       for meal in meals]}
 
 
 def _grade_label(labels, choice, small_portion) -> str:
@@ -106,14 +109,16 @@ def _grade_label(labels, choice, small_portion) -> str:
     return labels[choice]
 
 
-def _meal_entry(meal, grade_labels, addition_labels) -> dict:
+def _meal_entry(meal, grade_labels, addition_labels, portion_labels) -> dict:
     entry = {_TIME: meal["at"][11:16],
              _CARB_SOURCE: _grade_label(grade_labels, meal["carbs_choice"],
                                         meal["small_portion"])}
     second = meal["second_source"]
     if second is not None:
-        entry[_SECOND_SOURCE] = _grade_label(grade_labels, second["carbs_choice"],
-                                             second["small_portion"])
+        label = grade_labels[second["carbs_choice"]]
+        if second["portion"] is not None:
+            label = f"{label} ({portion_labels[second['portion']]})"
+        entry[_SECOND_SOURCE] = label
     if meal["vegetables"]:
         entry[_VEGETABLES] = True
     if meal["fruit"]:

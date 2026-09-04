@@ -66,9 +66,13 @@ export const trackerQuestionnaire: Questionnaire = {
                   { id: "fat", label: "כולל הרבה שומן", value: 2 }],
       tooltip: "המטרה היא ציון נמוך", day_qualifier: "סיכום ציון", meal_qualifier: "דרגת הארוחה",
       small_portion: { label: "כמות קטנה", from_value: 5, percent: 50 },
-      // Two grades list what they cover and two do not, so the label-density switch is exercised
-      // over both kinds at once.
+      second_source: { light_grade_max: 2,
+                       portions: [{ id: "quarter", label: "רבע מנה", percent: 25 },
+                                  { id: "half", label: "חצי מנה", percent: 50 }] },
+      // Grades with and without an examples list, so the label-density switch is exercised over
+      // both kinds at once; carb_grade_2 is the light grade the second-source contract admits.
       choices: [{ id: "no_carbs", label: "ללא פחמימות", value: 0 },
+                { id: "carb_grade_2", label: "דרגה 2", examples: "קינואה", value: 2 },
                 { id: "carb_grade_4", label: "דרגה 4", examples: "אורז לבן", value: 4 },
                 { id: "grade4b", label: "דרגה 4!", value: 4 },
                 { id: "carb_grade_7", label: "דרגה 7", examples: "קמח לבן", value: 7 }] },
