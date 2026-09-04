@@ -2,7 +2,7 @@ import json
 import urllib.error
 
 import pytest
-from conftest import APP_CONFIG
+from conftest import APP_CONFIG, _table
 
 from common import chat as chat_client
 from common.dates import today
@@ -18,16 +18,7 @@ def env(monkeypatch, ddb):
     monkeypatch.setenv("STATE_TABLE", "state")
     monkeypatch.setenv("WEIGHTS_TABLE", "weights")
     monkeypatch.setenv("APP_CONFIG_PATH", str(APP_CONFIG))
-    ddb.create_table(TableName="chat_quota",
-                     KeySchema=[{"AttributeName": "pk", "KeyType": "HASH"}],
-                     AttributeDefinitions=[{"AttributeName": "pk", "AttributeType": "S"}],
-                     BillingMode="PAY_PER_REQUEST")
-    ddb.create_table(TableName="chat_history",
-                     KeySchema=[{"AttributeName": "pk", "KeyType": "HASH"},
-                                {"AttributeName": "sk", "KeyType": "RANGE"}],
-                     AttributeDefinitions=[{"AttributeName": "pk", "AttributeType": "S"},
-                                           {"AttributeName": "sk", "AttributeType": "S"}],
-                     BillingMode="PAY_PER_REQUEST")
+    _table(ddb, "chat_quota", with_sort_key=False)
     monkeypatch.setenv("CHAT_QUOTA_TABLE", "chat_quota")
     monkeypatch.setenv("CHAT_HISTORY_TABLE", "chat_history")
     monkeypatch.setenv("CHAT_DAILY_LIMIT", "2")
