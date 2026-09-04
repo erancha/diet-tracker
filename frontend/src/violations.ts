@@ -58,14 +58,21 @@ export function isHeavyMeal(question: Question, points: number): boolean {
   return points >= question.heavy_meal!;
 }
 
+// A day's score wherever it shows as the day's mark. Whole: the half-points a small portion
+// derives are real to the rules and to what the server stores, but a mark of 29.5 reads as a
+// precision the grades never claim.
+export function scoreLabel(value: number): string {
+  return String(Math.round(value));
+}
+
 // The choice label for an exactly-matching value, for the places that show a value on its own —
 // a radio option, a chart tooltip — where nothing else names the unit. Stored values between
 // choice anchors, or past them, are legal, since the meal log derives them, and carry the unit
 // themselves. A points question stores a summed score, not a picked choice, so its value is
-// always shown as the number: a score of 3 happening to equal grade3's per-meal weight does not
-// mean grade3 was eaten.
+// always shown as the rounded score: a score of 3 happening to equal grade3's per-meal weight
+// does not mean grade3 was eaten.
 export function valueLabel(question: Question, value: number): string {
-  if (question.type === "points") return String(value);
+  if (question.type === "points") return scoreLabel(value);
   const choice = question.choices.find((c) => c.value === value);
   if (choice !== undefined) return choice.label;
   return question.unit === undefined ? String(value) : `${value} ${question.unit}`;
@@ -88,8 +95,10 @@ export function isBoundValue(question: Question, value: number): boolean {
 // The same value under a heading that already names the unit: the number alone, so a column of
 // them reads as a column of quantities rather than repeating the unit down every row. A choice
 // phrased as an open-ended bound is not a quantity — its wording is the only thing that says what
-// it means — so it keeps its label whatever the heading says.
+// it means — so it keeps its label whatever the heading says. A points score is the day's mark
+// and reads as the whole number scoreLabel makes of it.
 export function headedValue(question: Question, value: number): string {
+  if (question.type === "points") return scoreLabel(value);
   return boundChoice(question, value)?.label ?? String(value);
 }
 

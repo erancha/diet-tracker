@@ -181,13 +181,16 @@ button:disabled { --btn-bg: #e4e4e4; --btn-fg: #9a9a9a; --btn-border: #d8d8d8; c
    a weekday beside its date. Breaking one costs the row twice its height to save a few pixels of
    width, so the cells keep their line and the wrapper scrolls instead, which is what it is for.
    Headers are exempt: they are long, they stack by design, and holding them to one line would
-   near-triple the table's width. So are bound-label cells (marked .bound by the table): their
-   sentence-length wording held to one line would push its column past a phone screen's edge,
-   clipping the very answer that crossed the bound — so they wrap to whatever width their column
-   is given instead. The landing's reference table sits outside this wrapper, its sentence-length
-   cells still free to wrap. */
+   near-triple the table's width. Bound-label cells (marked .bound by the table) carry sentence-
+   length wording that would either stretch the row several lines tall or drag its column past a
+   phone screen's edge; the zero max-width takes them out of the column-sizing negotiation
+   entirely, so the column stays the width its header and numeric answers earn — the table fits
+   the screen exactly as if the label were a number — and the label truncates at that width.
+   The ellipsis loses nothing the reader cannot recover: the red background still flags the
+   crossed bound, and the cell's title holds the full wording. The landing's reference table
+   sits outside this wrapper, its sentence-length cells free to wrap. */
 .table-wrap td { white-space: nowrap; }
-.table-wrap td.bound { white-space: normal; }
+.table-wrap td.bound { max-width: 0; overflow: hidden; text-overflow: ellipsis; }
 table { border-collapse: collapse; min-width: min(calc(var(--column-width) * 1.2), 100%); margin-top: 0.5rem; background: #fff; }
 /* A pixel under the 0.9rem the cells would otherwise read at, so the history grid's many columns
    hold their values without wrapping and the landing's reference table stays subordinate to the
@@ -202,9 +205,9 @@ th { vertical-align: top; font-size: calc(var(--cell-font-size) - 1pt); }
    delete control rides in — starts past the scroll edge, showing as a clipped icon. Every cell
    there runs a further pixel down on tighter padding, and the bin halves its own — which the cell's
    width reserve follows: enough that a row of plain numeric answers fits a 390px screen outright.
-   A row carrying one of the long bound labels ("פחות מ-2.5 ליטר !!") also fits, its label
-   wrapping by the .bound rule above rather than dragging its column past the screen edge. The
-   landing's reference table sits outside the wrapper and keeps the page's reading size. */
+   A row carrying one of the long bound labels ("פחות מ-2.5 ליטר !!") stays one line tall, its
+   label truncated by the .bound rule above rather than dragging its column past the screen edge.
+   The landing's reference table sits outside the wrapper and keeps the page's reading size. */
 @media (max-width: 47.99rem) {
   .table-wrap { --delete-pad: 0.15rem; }
   .table-wrap :is(th, td) { --cell-font-size: calc(0.9rem - 2px); padding: 0.3rem; }
@@ -325,16 +328,16 @@ td.view-day { cursor: pointer; }
   .section-waning, .section-folding { animation: none; }
 }
 /* Kept near body size against the tracker's larger heading, so the fold reads as a row inside
-   the panel rather than as a section of its own; its top margin joins the dashboard's bottom
-   margin for a 1.5rem gap above. */
+   the panel rather than as a section of its own; its top margin opens the gap under whatever
+   precedes it — the day's meal rows, or the dashboard while none are recorded. */
 .meal-form h3 { font-size: calc(1.1rem + 2px); margin: 1rem 0 0.5rem; }
 /* Stands where the add-meal toggle stood once the day holds its quota, so it wears the same
    heading slot muted rather than styled as a control. */
 .meal-cap-note { color: var(--viz-muted); margin: 1rem 0 0.5rem; }
-/* Folded, the heading is the card's last visible element. Its bottom margin collapses with the
-   action row's 0.75rem top margin, so 1.75rem here opens a clear rem of air before the close-day
-   button — the folded toggle must not read as that button's label. */
-.meal-form h3:last-child { margin-bottom: 1.75rem; }
+/* Worn by an add-meal control — the form toggle's label or the closed day's reopen button —
+   once one more meal would cross the meals bound: the same red the history paints after the
+   fact, shown while the choice can still go differently. */
+.meal-add-warn { color: var(--danger); font-weight: 700; }
 /* Open, the form gains its own frame in the quiet buttons' accent tint, so the editing surface
    reads as one bounded unit against the tracker card and its hairline fieldsets. The box takes
    over the heading's 1rem gap above, and the heading sits on the frame's padding instead. */
@@ -347,9 +350,9 @@ td.view-day { cursor: pointer; }
 /* A fresh day renders the actions row and meal list with nothing in them; hiding them keeps
    their margins from deepening the card's bottom gap past its top padding. */
 .form-actions:empty, .meal-list:empty { display: none; }
-/* Leads the tracker's contents on a line of its own, pushed to the row's far end so it reads as a
-   setting over what follows rather than as the first of the meal form's controls. */
-.label-density { display: flex; justify-content: flex-end; margin-bottom: -0.5rem; }
+/* Ends the tracker card on a line of its own, pushed to the row's far end so it reads as a
+   quiet setting under the day's contents rather than as one of their controls. */
+.label-density { display: flex; justify-content: flex-end; margin-top: 0.75rem; }
 .label-density button { padding: 0.15rem 0.6rem; font-size: 0.8rem; white-space: nowrap; }
 /* A carb source is its grade group plus the helping that qualifies it, so the two travel as one
    block: the fieldset gives up its own bottom margin and the block carries the gap instead,
@@ -379,7 +382,8 @@ td.view-day { cursor: pointer; }
 /* Rides the closed tracker's action row beside the add-meal button, naming what that button
    does to a closed day; muted, because it explains rather than acts. */
 .reopen-hint { align-self: center; font-size: 0.85rem; color: #8a8a84; }
-.tracker-dashboard { display: flex; gap: 1.2rem; flex-wrap: wrap; font-weight: 600; margin-bottom: 0.5rem; }
+.tracker-dashboard { display: flex; gap: 1.2rem; flex-wrap: wrap; font-weight: 600;
+                     font-size: calc(1rem + 1px); margin-bottom: 0.5rem; }
 /* Color falls on the figures alone, their labels staying body-colored chrome. The accent green
    reads as a measurement rather than a verdict, leaving red to mean only a heavy day —
    so an all-green line means the day is on track. */

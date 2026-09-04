@@ -8,16 +8,16 @@ import { Icon } from "./Icon";
 // Row marker per addition id; a retired id falls back to its raw id, like retired grade choices.
 const ADDITION_MARKERS: Record<string, string> = { sweet: "🍪", alcohol: "🍷", nuts: "🥜", fat: "🥑" };
 
-// A day's meal list rendered newest first — the top row is the meal just recorded, the one the
-// user checks, corrects or deletes — each row ending with the meal's effective points so the rows
-// visibly sum to the day's carb score. Per-meal editing and deletion render only when their
+// A day's meal list rendered in time order, reading top to bottom as the day unfolded — the
+// bottom row is the meal just recorded — each row ending with the meal's effective points so the
+// rows visibly sum to the day's carb score. Per-meal editing and deletion render only when their
 // handlers are supplied (the live tracker); the read-only history view passes none.
 export function MealList({ questionnaire, meals, expandLabels, onEdit, onDelete, deletingId }: {
   questionnaire: Questionnaire;
   // Every grade a row names carries a list of what it covers, so the density is the caller's to
   // set rather than this component's to assume.
   expandLabels: boolean;
-  // Chronological, as the server stores them; rendering reverses to newest first.
+  // Chronological, as the server stores them — the order the rows render in.
   meals: Meal[];
   onEdit?: (meal: Meal) => void;
   onDelete?: (id: string) => void;
@@ -26,7 +26,6 @@ export function MealList({ questionnaire, meals, expandLabels, onEdit, onDelete,
   deletingId?: string;
 }) {
   const carbsQuestion = questionnaire.questions.find((q) => q.id === "carbs")!;
-  const newestFirst = [...meals].reverse();
 
   // A history day may reference a choice or addition id retired by a later questionnaire
   // version, making its weights unknowable here; per-meal points render only when the whole day
@@ -35,12 +34,12 @@ export function MealList({ questionnaire, meals, expandLabels, onEdit, onDelete,
   const points = meals.every((m) => weights[m.carbs_choice] !== undefined
       && (m.second_source === null || weights[m.second_source.carbs_choice] !== undefined)
       && m.additions.every((a) => additionValues[a] !== undefined))
-    ? mealWeights(newestFirst, weights, additionValues, smallPortion)
+    ? mealWeights(meals, weights, additionValues, smallPortion)
     : undefined;
 
   return (
     <ul className="meal-list">
-      {newestFirst.map((meal, index) => {
+      {meals.map((meal, index) => {
         const choice = carbsQuestion.choices.find((c) => c.id === meal.carbs_choice);
         const second = meal.second_source === null ? undefined
           : carbsQuestion.choices.find((c) => c.id === meal.second_source!.carbs_choice);

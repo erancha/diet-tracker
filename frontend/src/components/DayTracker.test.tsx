@@ -32,6 +32,16 @@ const wideWindowDay: DayPayload = {
   meals: [{ ...trackedDay.meals[0], at: "2026-08-20T07:00:00+03:00" }, trackedDay.meals[1]],
 };
 
+// trackedDay plus a third meal: the smallest log where recording another meal would cross the
+// meals rule's bound.
+const threeMealDay: DayPayload = {
+  ...trackedDay,
+  meals: [...trackedDay.meals,
+          { id: "c", at: "2026-08-20T17:00:00+03:00", carbs_choice: "no_carbs", vegetables: false,
+            fruit: false, additions: [], small_portion: false, second_source: null }],
+  derived: { carbs: 4, meals: 3, vegetables: 1, eating_window: 7.8 },
+};
+
 // Pins the clock: the meal form's default time is derived from it, as are the future-time guard
 // on the submit button and the hour that starts the add-meal nudge on an unrecorded day.
 const atLocalTime = (hour: number, minute = 0) => {
@@ -942,14 +952,14 @@ describe("DayTracker", () => {
     expect(screen.getByRole("button", { name: "מחיקת ארוחה 13:30" })).toBeEnabled();
   });
 
-  it("lists meals newest first", () => {
+  it("lists meals in time order, oldest first", () => {
     render(<DayTracker maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={trackedDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     const times = screen.getAllByText(/^\d{2}:\d{2}$/).map((el) => el.textContent);
-    expect(times).toEqual(["13:30", "09:10"]);
+    expect(times).toEqual(["09:10", "13:30"]);
   });
 
   it("shows each meal's effective points at the end of its row", () => {
@@ -1356,5 +1366,56 @@ describe("DayTracker", () => {
     const onReopenDay = renderClosed();
     fireEvent.click(screen.getByRole("button", { name: "הוספת ארוחה" }));
     expect(onReopenDay).not.toHaveBeenCalled();
+  });
+
+  // From the third recorded meal, one more would cross the meals rule's bound. The warning rides
+  // the add-meal controls themselves — the form toggle's label and the closed day's reopen
+  // control — before that meal exists to redden a history row.
+  const renderWithMeals = (day: DayPayload, closed = false) =>
+    render(<DayTracker maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire}
+                       day={day} closed={closed} onReopenDay={vi.fn()}
+                       firstMealHour={NO_NUDGE_HOUR} mealGapHours={NO_NUDGE_GAP_HOURS}
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+
+  it("warns on the add-meal toggle once another meal would cross the meals bound", () => {
+    renderWithMeals(threeMealDay);
+    const toggle = screen.getByRole("button", { name: "הוספת ארוחה" });
+    expect(within(toggle).getByText("הוספת ארוחה")).toHaveClass("meal-add-warn");
+  });
+
+  it("keeps the add-meal toggle plain while another meal stays within the meals bound", () => {
+    renderWithMeals(trackedDay);
+    const toggle = screen.getByRole("button", { name: "הוספת ארוחה" });
+    expect(toggle.querySelector(".meal-add-warn")).toBeNull();
+  });
+
+  it("carries the warning onto the closed day's reopen control", () => {
+    renderWithMeals(threeMealDay, true);
+    expect(screen.getByRole("button", { name: "הוספת ארוחה" })).toHaveClass("meal-add-warn");
+  });
+
+  it("keeps the reopen control plain while another meal stays within the meals bound", () => {
+    renderWithMeals(trackedDay, true);
+    expect(screen.getByRole("button", { name: "הוספת ארוחה" })).not.toHaveClass("meal-add-warn");
+  });
+
+  // The day's record leads the panel, the form for the next meal below it.
+  it("lists the recorded meals above the add-meal toggle", () => {
+    renderWithMeals(trackedDay);
+    const list = screen.getByText("13:30").closest("ul")!;
+    const toggle = screen.getByRole("button", { name: "הוספת ארוחה" });
+    expect(list.compareDocumentPosition(toggle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  // A small portion of grade 7 derives 3.5 points; the mark the dashboard shows reads whole.
+  it("rounds the dashboard's mark to a whole number", () => {
+    renderWithMeals({
+      ...emptyDay,
+      meals: [{ id: "h", at: "2026-08-20T09:00:00+03:00", carbs_choice: "carb_grade_7",
+                vegetables: false, fruit: false, additions: [], small_portion: true,
+                second_source: null }],
+    });
+    expect(dashboardFigure("ציון")).toHaveTextContent("ציון: 4");
   });
 });

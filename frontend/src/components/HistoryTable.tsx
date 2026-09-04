@@ -116,6 +116,9 @@ export function HistoryTable({ questionnaire, days, today, deletableDates, viewe
                   const value = day.answers[q.id];
                   const viewable = q.type === "points";
                   const violating = isViolating(questionnaire, q.id, value);
+                  // A bound label is truncated to the row's single-line height by the stylesheet,
+                  // so its cell carries the full wording in its title.
+                  const bound = q.type !== "points" && isBoundValue(q, value);
                   // The score column signals a heavy day with red text alone; the violation
                   // background stays on the answer columns, where a value under its question's
                   // warn floor reddens without it.
@@ -124,11 +127,12 @@ export function HistoryTable({ questionnaire, days, today, deletableDates, viewe
                       ? [violating && "heavy-day", viewable && "view-day"]
                       : [violating && "violation",
                          q.warn_below !== undefined && value < q.warn_below && "shortfall",
-                         isBoundValue(q, value) && "bound"]),
+                         bound && "bound"]),
                     deleteClass,
                   ].filter(Boolean).join(" ");
                   return (
                     <td key={q.id} className={classes || undefined}
+                        title={bound ? cellText(q.id, value) : undefined}
                         {...(viewable && {
                           role: "button", tabIndex: 0, "aria-label": `הצגת היומן של ${day.date}`,
                           onClick: () => onView(day.date),

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { activeViolations, crossesThreshold, isHeavyMeal, isViolating, panelTitle, questionTitle, trendPanels, valueLabel, violates } from "./violations";
+import { activeViolations, crossesThreshold, headedValue, isHeavyMeal, isViolating, panelTitle, questionTitle, trendPanels, valueLabel, violates } from "./violations";
 import type { Day, Question, Questionnaire, Rule } from "./types";
 
 const carbs: Question = {
@@ -160,6 +160,13 @@ describe("valueLabel", () => {
   it("renders points questions as the score, even when it collides with a choice value", () => {
     expect(valueLabel(carbs, 3)).toBe("3");
     expect(valueLabel(carbs, 17)).toBe("17");
+  });
+
+  // Small portions derive half-points; the day's mark still reads whole in every display path.
+  it("rounds a fractional score to a whole mark", () => {
+    expect(valueLabel(carbs, 29.5)).toBe("30");
+    expect(headedValue(carbs, 29.5)).toBe("30");
+    expect(headedValue(carbs, 11.4)).toBe("11");
   });
 });
 

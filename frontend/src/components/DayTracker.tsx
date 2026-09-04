@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { clockTimeOf, mealOverdue, parseIsoDate } from "../dates";
 import { carbsScales, deriveDay, smallPortionOffered } from "../derive";
 import { mayDiscardEdits } from "../edits";
+import { isViolating } from "../violations";
 import { useExpandedGradeLabels } from "../gradeLabels";
 import type { CarbSource, DayPayload, Meal, NewMeal, Question, Questionnaire } from "../types";
 import { ChoiceFieldset } from "./ChoiceFieldset";
@@ -111,6 +112,13 @@ export function DayTracker({ questionnaire, day, isToday = true, closed = false,
   // unknown id is a real config/data fault, not a legal state — let the error boundary show it.
   const { weights, additionValues, smallPortion: portionRule } = carbsScales(carbsQuestion);
   const derived = deriveDay(day.meals, weights, additionValues, portionRule);
+  // Once recording one more meal would cross the meals rule's bound — from the third recorded
+  // meal under the production config — every add-meal control carries the warning styling, so
+  // the caution lands before that meal is recorded rather than through the history row after.
+  const addMealWarns = isViolating(questionnaire, "meals", derived.meals + 1);
+  const addMealTitle = addMealWarns
+    ? <span className="meal-add-warn">הוספת ארוחה</span>
+    : "הוספת ארוחה";
   // The lighter grades are not worth splitting by helping, so the box appears only where it moves
   // the score — and the flag goes with it, so a grade switched down cannot leave one stuck on.
   const offersSmallPortion = carbsChoiceId !== undefined
@@ -297,18 +305,12 @@ export function DayTracker({ questionnaire, day, isToday = true, closed = false,
                         summary={
       <DayDashboard questionnaire={questionnaire} derived={derived} />
     }>
-      {/* Governs every grade name below it — the pickers' and the meal rows' alike, the closed
-          day's read-only rows included — so it leads the tracker's contents rather than sitting
-          inside either branch. */}
-      <div className="label-density">
-        <button type="button" className="quiet" onClick={() => setExpandLabels(!expandLabels)}>
-          {expandLabels ? COLLAPSE_LABELS : EXPAND_LABELS}
-        </button>
-      </div>
       {closed ? (
         <>
           <div className="form-actions">
-            <button type="button" className="quiet reopen-toggle" onClick={() => {
+            <button type="button"
+                    className={"quiet reopen-toggle" + (addMealWarns ? " meal-add-warn" : "")}
+                    onClick={() => {
               if (!window.confirm(REOPEN_PROMPT)) return;
               // Pre-opened here: the same instance stays mounted through the deletion's round
               // trip, so the reopened day presents the inputs this click asked for.
@@ -326,13 +328,17 @@ export function DayTracker({ questionnaire, day, isToday = true, closed = false,
         </>
       ) : (
         <>
+      {/* The day's record leads the panel, the form for the next meal below it — so the row just
+          saved sits right above the toggle that recorded it. */}
+      <MealList questionnaire={questionnaire} meals={day.meals} expandLabels={expandLabels}
+                onEdit={startEdit} onDelete={onDeleteMeal} deletingId={deletingMealId} />
       {atCap && formCollapsed ? (
         <p className="meal-cap-note">{`הושלמו ${maxMealsPerDay} ארוחות היום`}</p>
       ) : (
       <CollapsibleSection className={"meal-form"
                             + (formCollapsed ? (nudging ? ` nudge-${nudgePhase}` : "") : " meal-form-open")}
                           headingLevel={3}
-                          title={editing !== undefined ? "עדכון ארוחה" : "הוספת ארוחה"}
+                          title={editing !== undefined ? "עדכון ארוחה" : addMealTitle}
                           collapsed={formCollapsed}
                           onToggle={toggleForm}>
         {/* Sits in the frame's far corner via the style sheet rather than in the heading row:
@@ -430,10 +436,8 @@ export function DayTracker({ questionnaire, day, isToday = true, closed = false,
       {closable && formHoldsUnsavedMeal && (!mealSaveable || closing) && (
         <p className="notice">יש לשמור או לבטל את הארוחה שבטופס לפני סגירת היום</p>
       )}
-      {/* Ahead of the meal list: below it the panel read as belonging to the day's saved rows
-          rather than to the button that opened it. Deleting or correcting a meal mid-close can
-          narrow the day back under the window that offered closing, and the panel folds away with
-          that button. */}
+      {/* Deleting or correcting a meal mid-close can narrow the day back under the window that
+          offered closing, and the panel folds away with that button. */}
       {closing && closable && (
         <div className="close-day" ref={closePanel}>
           {/* The button that opened the panel is gone by now, so the panel names the step
@@ -452,10 +456,16 @@ export function DayTracker({ questionnaire, day, isToday = true, closed = false,
           </button>
         </div>
       )}
-      <MealList questionnaire={questionnaire} meals={day.meals} expandLabels={expandLabels}
-                onEdit={startEdit} onDelete={onDeleteMeal} deletingId={deletingMealId} />
         </>
       )}
+      {/* Governs every grade name above it — the pickers' and the meal rows' alike, the closed
+          day's read-only rows included — sitting outside either branch. It closes the card as a
+          quiet setting rather than leading it as if it were the day's first control. */}
+      <div className="label-density">
+        <button type="button" className="quiet" onClick={() => setExpandLabels(!expandLabels)}>
+          {expandLabels ? COLLAPSE_LABELS : EXPAND_LABELS}
+        </button>
+      </div>
     </CollapsibleSection>
   );
 }

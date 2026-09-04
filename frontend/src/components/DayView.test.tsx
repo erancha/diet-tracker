@@ -17,10 +17,10 @@ describe("DayView", () => {
     expect(screen.queryByRole("radio")).toBeNull();
   });
 
-  it("lists meals newest first", () => {
+  it("lists meals in time order, oldest first", () => {
     render(<DayView questionnaire={trackerQuestionnaire} day={trackedDay} onClose={vi.fn()} />);
     const times = screen.getAllByText(/^\d{2}:\d{2}$/).map((el) => el.textContent);
-    expect(times).toEqual(["13:30", "09:10"]);
+    expect(times).toEqual(["09:10", "13:30"]);
   });
 
   it("states explicitly that a day without meals was not tracked", () => {
@@ -35,8 +35,9 @@ describe("DayView", () => {
   it("marks the points of a meal reaching the meal bound, and a score reaching the day rule", () => {
     const highDay = { ...trackedDay, derived: { ...trackedDay.derived, carbs: 10 } };
     render(<DayView questionnaire={trackerQuestionnaire} day={highDay} onClose={vi.fn()} />);
-    // Newest first: the grade 4 plate costs 4 and reaches the bound; the no-carb meal costs 0.
-    const [heavy, light] = Array.from(document.querySelectorAll(".meal-points"));
+    // In time order the no-carb morning meal (0 points) leads; the grade 4 plate after it costs
+    // 4 and reaches the bound.
+    const [light, heavy] = Array.from(document.querySelectorAll(".meal-points"));
     expect(heavy).toHaveTextContent("4");
     expect(heavy).toHaveClass("heavy-meal");
     expect(light).not.toHaveClass("heavy-meal");

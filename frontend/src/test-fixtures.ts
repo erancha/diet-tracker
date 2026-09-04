@@ -51,7 +51,9 @@ export const fixtureQuestionnaire: Questionnaire = {
 // small-portion threshold) with surcharge additions and the portion rule, plus a drinking
 // question for day close. The at_least carbs rule keeps the violation/heavy-day styling
 // interplay under test in the history table, and heavy_meal is the per-meal bound: grade 4
-// reaches it on its own, and a lighter grade reaches it once additions are priced in.
+// reaches it on its own, and a lighter grade reaches it once additions are priced in. The
+// meals rule sets the ceiling the tracker's add-meal warning reads: with one meal fewer than
+// its at_least already recorded, adding another would violate it.
 export const trackerQuestionnaire: Questionnaire = {
   version: 3,
   questions: [
@@ -73,6 +75,7 @@ export const trackerQuestionnaire: Questionnaire = {
   ],
   rules: [
     { id: "heavy_day", question_id: "carbs", at_least: 8, consecutive_days: 2, message: "m" },
+    { id: "many_meals", question_id: "meals", at_least: 4, consecutive_days: 2, message: "m2" },
   ],
 };
 
