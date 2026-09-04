@@ -248,7 +248,7 @@ td.shortfall { color: var(--danger); }
    cell, the dashboard total, and a meal's points. In the dashboard it reaches the figure rather
    than the whole item, so the alarm sits on the number its label merely names, and its
    specificity outranks the green that figure otherwise carries. */
-td.heavy-day, .tracker-dashboard .heavy-day .value, .meal-list .heavy-meal { color: var(--danger); }
+td.heavy-day, .tracker-dashboard .heavy-day .score, .meal-list .heavy-meal { color: var(--danger); }
 /* The bin is lifted out of the cell's line and pinned to the cell's far edge, so it holds one
    position down the column rather than trailing whatever the row's score happens to measure.
    Out of flow it contributes no width, so the cell reserves its footprint as padding instead: the
@@ -382,13 +382,18 @@ td.view-day { cursor: pointer; }
 /* Rides the closed tracker's action row beside the add-meal button, naming what that button
    does to a closed day; muted, because it explains rather than acts. */
 .reopen-hint { align-self: center; font-size: 0.85rem; color: #8a8a84; }
+/* Every carb-score figure — the day total in the dashboard and each meal's points — wears one
+   face: same size, weight and colour, so the rows read beyond doubt as the same kind of number
+   the total sums. Danger overrides for a heavy day or meal outrank this green by specificity. */
+.score { font-weight: 800; font-size: calc(1rem + 1px); color: var(--accent); }
 .tracker-dashboard { display: flex; gap: 1.2rem; flex-wrap: wrap; font-weight: 600;
                      font-size: calc(1rem + 1px); margin-bottom: 0.5rem; }
 /* Color falls on the figures alone, their labels staying body-colored chrome. The accent green
    reads as a measurement rather than a verdict, leaving red to mean only a heavy day —
    so an all-green line means the day is on track. */
 .tracker-dashboard .value { color: var(--accent); }
-/* The dashboard is already semibold, so the score needs extra weight to stand out. */
+/* The score's label matches its figure's weight, so the pair stands out of the semibold line
+   as one item. */
 .tracker-dashboard strong { font-weight: 800; }
 /* The list ends the card, so its own bottom margin would double the card's padding there; the
    top margin stays, separating the meals from the action buttons above them. */
@@ -410,11 +415,8 @@ td.view-day { cursor: pointer; }
 .meal-list .meal-points { grid-column: 3; }
 .meal-list .meal-actions { grid-column: 4; }
 /* Sized for the widest score the carb scale reaches, so a two-digit day does not shift the
-   column; weighted like the weight rows' values, in either colour. */
-.meal-list .meal-points { min-width: 4ch; font-weight: 600; }
-/* The score reads in the dashboard's accent like the day total it feeds, ceding to the danger
-   colour when the meal is marked heavy. */
-.meal-list .meal-points:not(.heavy-meal) { color: var(--accent); }
+   column; the face itself is the shared score styling. */
+.meal-list .meal-points { min-width: 4ch; }
 .meal-list .meal-actions { display: flex; align-items: center; }
 /* A tap target comfortable on a phone stands taller than the row's text. The negative block margin
    keeps it out of the line box, leaving the row's height set by that text — which is what the

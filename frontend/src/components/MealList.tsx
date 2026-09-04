@@ -71,7 +71,7 @@ export function MealList({ questionnaire, meals, expandLabels, onEdit, onDelete,
                 eaten small. */}
             {points !== undefined && (
               <span className={isHeavyMeal(carbsQuestion, points[index])
-                      ? "meal-points heavy-meal" : "meal-points"}
+                      ? "meal-points score heavy-meal" : "meal-points score"}
                     title={carbsQuestion.tooltip}>
                 {" · "}{points[index]}
               </span>

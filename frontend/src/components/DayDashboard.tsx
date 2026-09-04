@@ -21,7 +21,7 @@ export function DayDashboard({ questionnaire, derived }: {
       <strong title={carbsQuestion.tooltip}
               className={isViolating(questionnaire, carbsQuestion.id, derived.carbs)
                 ? "heavy-day" : undefined}>
-        ציון: <span className="value">{scoreLabel(derived.carbs)}</span>
+        ציון: <span className="score">{scoreLabel(derived.carbs)}</span>
       </strong>
     </div>
   );
