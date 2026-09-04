@@ -225,35 +225,35 @@
         "question_id": "drinking",
         "below": 2.5,
         "consecutive_days": 2,
-        "message": "פחות מ-{value} ליטר שתיה {days} ימים ברצוף"
+        "message": "פחות מ-{value} ליטר שתיה {days} ימים ברצף"
       },
       {
         "id": "no_vegetables",
         "question_id": "vegetables",
         "below": 1,
         "consecutive_days": 2,
-        "message": "אף ארוחה עם ירקות {days} ימים ברצוף"
+        "message": "אף ארוחה עם ירקות {days} ימים ברצף"
       },
       {
         "id": "long_eating_window",
         "question_id": "eating_window",
         "at_least": 12.1,
         "consecutive_days": 3,
-        "message": "חלון אכילה מעל 12 שעות {days} ימים ברצוף"
+        "message": "חלון אכילה מעל 12 שעות {days} ימים ברצף"
       },
       {
         "id": "too_many_meals",
         "question_id": "meals",
         "at_least": 4,
         "consecutive_days": 2,
-        "message": "מעל 3 ארוחות או נשנושים {days} ימים ברצוף"
+        "message": "מעל 3 ארוחות או נשנושים {days} ימים ברצף"
       },
       {
         "id": "heavy_day",
         "question_id": "carbs",
         "at_least": 12,
         "consecutive_days": 2,
-        "message": "ציון יומי {value} ומעלה {days} ימים ברצוף"
+        "message": "ציון יומי {value} ומעלה {days} ימים ברצף"
       }
     ]
   },

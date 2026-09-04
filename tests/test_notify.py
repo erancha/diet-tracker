@@ -10,13 +10,13 @@ from common import notify, rules
 
 def test_violation_text_leads_the_bullets_with_a_header():
     violations = [
-        rules.Violation("drinking", 2, "פחות מ-2.5 ליטר שתיה 2 ימים ברצוף"),
-        rules.Violation("carbs", 3, "ציון יומי 12 ומעלה 3 ימים ברצוף"),
+        rules.Violation("drinking", 2, "פחות מ-2.5 ליטר שתיה 2 ימים ברצף"),
+        rules.Violation("carbs", 3, "ציון יומי 12 ומעלה 3 ימים ברצף"),
     ]
     assert notify.violation_text(violations) == (
         "התראות תזונה:\n"
-        "• פחות מ-2.5 ליטר שתיה 2 ימים ברצוף\n"
-        "• ציון יומי 12 ומעלה 3 ימים ברצוף"
+        "• פחות מ-2.5 ליטר שתיה 2 ימים ברצף\n"
+        "• ציון יומי 12 ומעלה 3 ימים ברצף"
     )
 
 

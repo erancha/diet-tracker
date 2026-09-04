@@ -109,7 +109,7 @@ describe("Header", () => {
   });
 
   it("badges the alarm with the violation count and toggles the messages open and closed", async () => {
-    const messages = ["ציון פחמימות 11 ומעלה 3 ימים ברצוף", "פחות מ-2.5 ליטר שתיה 2 ימים ברצוף"];
+    const messages = ["ציון פחמימות 11 ומעלה 3 ימים ברצף", "פחות מ-2.5 ליטר שתיה 2 ימים ברצף"];
     render(<Header {...props} activeViolations={messages} />);
 
     const alarm = screen.getByRole("button", { name: "חריגות פעילות" });
