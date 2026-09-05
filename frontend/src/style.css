@@ -536,7 +536,7 @@ button.section-summary, button.transcript-toggle {
    that is clicked open with its muted source table behind a more/less text toggle. The section
    follows the trends section; as with .trends h2, the heading's own margin is what shows
    through, so the extra rem of separation rides on the restated browser default. */
-.chat-section h2 { margin-top: calc(0.83em + 1rem); }
+.chat-section h2 { margin-top: calc(0.83em + 1rem); margin-bottom: 0.75rem;}
 .chat-messages { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.5rem; }
 .chat-messages li { border-radius: 8px; padding: 0.5rem 0.8rem; max-width: 85%; }
 .chat-messages li p { margin: 0; white-space: pre-wrap; }
