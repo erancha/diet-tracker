@@ -49,6 +49,9 @@ export interface Question {
   // Display floor: history answers below it redden on their own, day by day — unlike a rule's
   // bound, which alarms only after its consecutive-days streak.
   warn_below?: number;
+  // The day value the plan treats as routine: a history cell holding any other value is bolded,
+  // so deviations to either side stand out down the column while routine days recede.
+  norm?: number;
   // What the question measures. Named once in the day-scope heading, so the values under it are
   // free to read as bare numbers instead of repeating it per row.
   unit?: string;

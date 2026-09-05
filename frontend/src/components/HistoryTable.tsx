@@ -127,6 +127,7 @@ export function HistoryTable({ questionnaire, days, today, deletableDates, viewe
                       ? [violating && "heavy-day", viewable && "view-day"]
                       : [violating && "violation",
                          q.warn_below !== undefined && value < q.warn_below && "shortfall",
+                         q.norm !== undefined && value !== q.norm && "off-norm",
                          bound && "bound"]),
                     deleteClass,
                   ].filter(Boolean).join(" ");

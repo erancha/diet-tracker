@@ -43,6 +43,7 @@
         "text": "שכפ\"צ - כמות ירקות",
         "unit": "ארוחות",
         "warn_below": 2,
+        "norm": 2,
         "choices": [
           {
             "id": "none",

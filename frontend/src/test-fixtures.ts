@@ -19,8 +19,10 @@ export const fixtureQuestionnaire: Questionnaire = {
       text: "שתיה",
       unit: "ליטר",
       // Above the rule's bound, so the middle choice exercises the warn-floor styling alone
-      // while the bottom one still carries the full violation.
+      // while the bottom one still carries the full violation. The norm sits between the
+      // choices, so values off it in either direction exercise the off-norm bolding.
       warn_below: 4,
+      norm: 3,
       panel_title: "שתיה (ליטרים)",
       choices: [
         { id: "low", label: "פחות מ-2.5 ליטר !!", value: 2, bound: true },

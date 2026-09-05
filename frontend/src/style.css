@@ -264,6 +264,9 @@ td.violation { background: #ffebee; color: var(--danger); }
 /* An answer under its question's warn floor: red text alone, a day-by-day nudge milder than the
    background a rule crossing earns. */
 td.shortfall { color: var(--danger); }
+/* An answer off its question's declared norm: bold, so a deviation to either side stands out
+   down the column while routine days recede. */
+td.off-norm { font-weight: bold; }
 /* A heavy day or meal reads as red text pinned to the price that earned it: the history score
    cell, the dashboard total, and a meal's points. In the dashboard it reaches the figure rather
    than the whole item, so the alarm sits on the number its label merely names, and its

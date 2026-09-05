@@ -213,6 +213,16 @@ describe("HistoryTable", () => {
     expect(screen.getByText("4")).not.toHaveClass("shortfall");
   });
 
+  it("bolds an answer off its question's norm, in either direction", () => {
+    render(<HistoryTable questionnaire={fixtureQuestionnaire}
+      days={[{ date: "2026-08-17", answers: { drinking: 3, window: 8 } },
+             { date: "2026-08-16", answers: { drinking: 4 } }]} {...defaults} />);
+    expect(screen.getByText("3")).not.toHaveClass("off-norm");
+    expect(screen.getByText("4")).toHaveClass("off-norm");
+    // The window question declares no norm, so its cells never bold.
+    expect(screen.getByText("8")).not.toHaveClass("off-norm");
+  });
+
   it("reddens a score reaching the day rule; the violation background never reaches the score column", () => {
     render(<HistoryTable questionnaire={trackerQuestionnaire}
       days={[{ date: "2026-08-16", answers: { carbs: 8, drinking: 3 } },
