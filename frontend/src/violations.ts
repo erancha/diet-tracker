@@ -6,7 +6,9 @@ import type { AnswerValue, Choice, Day, Question, Questionnaire, Rule } from "./
 import { isoDate, parseIsoDate, yesterdayOf } from "./dates";
 
 export function violates(rule: Rule, value: number): boolean {
-  return rule.at_least !== undefined ? value >= rule.at_least : value < rule.below!;
+  if (rule.at_least !== undefined) return value >= rule.at_least;
+  if (rule.above !== undefined) return value > rule.above;
+  return value < rule.below!;
 }
 
 // Formatted messages of the rules whose violating streak is still running — the client-side
@@ -30,9 +32,19 @@ export function activeViolations(questionnaire: Questionnaire, days: Day[],
       day = yesterdayOf(day);
     }
     if (streak < rule.consecutive_days) return [];
-    const threshold = rule.at_least ?? rule.below!;
+    const threshold = rule.at_least ?? rule.above ?? rule.below!;
     return [rule.message.replaceAll("{days}", String(streak)).replaceAll("{value}", String(threshold))];
   });
+}
+
+// The configured bound of a question's rule, phrased for display beside the red violation
+// marks. Read from the live rules so the shown limit can never drift from what isViolating
+// paints; undefined where no rule bounds the question and nothing ever marks red.
+export function ruleBoundLabel(questionnaire: Questionnaire, questionId: string): string | undefined {
+  const rule = questionnaire.rules.find((r) => r.question_id === questionId);
+  if (rule === undefined) return undefined;
+  const over = rule.at_least ?? rule.above;
+  return over !== undefined ? `מעל ${over}` : `פחות מ-${rule.below}`;
 }
 
 export function isViolating(questionnaire: Questionnaire, questionId: string, value: number): boolean {

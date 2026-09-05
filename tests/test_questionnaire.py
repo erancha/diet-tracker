@@ -101,8 +101,20 @@ def test_below_rule_violates_under_threshold():
     assert rule.violates(1.9) and not rule.violates(2)
 
 
+def test_above_rule_violates_strictly_over_threshold():
+    raw = minimal(rules=[{"id": "long", "question_id": "carbs", "above": 12,
+                          "consecutive_days": 1, "message": "long {days}"}])
+    rule = parse(raw).rules[0]
+    assert rule.violates(12.5) and not rule.violates(12)
+    assert rule.threshold == 12
+
+
 def test_rule_must_have_exactly_one_comparator():
     raw = minimal(rules=[{"id": "bad", "question_id": "carbs", "at_least": 8, "below": 2,
+                          "consecutive_days": 1, "message": "x {days}"}])
+    with pytest.raises(ValueError, match="exactly one"):
+        parse(raw)
+    raw = minimal(rules=[{"id": "bad", "question_id": "carbs", "at_least": 8, "above": 12,
                           "consecutive_days": 1, "message": "x {days}"}])
     with pytest.raises(ValueError, match="exactly one"):
         parse(raw)

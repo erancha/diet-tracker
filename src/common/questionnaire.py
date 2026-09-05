@@ -133,6 +133,7 @@ class Rule:
     id: str
     question_id: str
     at_least: float | None
+    above: float | None
     below: float | None
     consecutive_days: int
     message: str
@@ -140,13 +141,17 @@ class Rule:
     def violates(self, value) -> bool:
         if self.at_least is not None:
             return value >= self.at_least
+        if self.above is not None:
+            return value > self.above
         return value < self.below
 
     @property
     def threshold(self) -> float:
-        """The comparator bound: at_least when set, otherwise below."""
+        """The bound of whichever comparator the rule sets."""
         if self.at_least is not None:
             return self.at_least
+        if self.above is not None:
+            return self.above
         return self.below
 
 
@@ -256,11 +261,11 @@ def parse(raw: dict) -> Questionnaire:
     questions = tuple(questions)
     rules = []
     for r in raw["rules"]:
-        comparators = [k for k in ("at_least", "below") if k in r]
+        comparators = [k for k in ("at_least", "above", "below") if k in r]
         if len(comparators) != 1:
-            raise ValueError(f"rule {r['id']!r} must set exactly one of at_least/below")
+            raise ValueError(f"rule {r['id']!r} must set exactly one of at_least/above/below")
         rules.append(Rule(id=r["id"], question_id=r["question_id"],
-                          at_least=r.get("at_least"), below=r.get("below"),
+                          at_least=r.get("at_least"), above=r.get("above"), below=r.get("below"),
                           consecutive_days=r["consecutive_days"], message=r["message"]))
     rules = tuple(rules)
     question_ids = [q.id for q in questions]

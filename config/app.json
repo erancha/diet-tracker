@@ -255,7 +255,7 @@
       {
         "id": "long_eating_window",
         "question_id": "eating_window",
-        "at_least": 12.1,
+        "above": 12,
         "consecutive_days": 3,
         "message": "חלון אכילה מעל 12 שעות {days} ימים ברצף"
       },

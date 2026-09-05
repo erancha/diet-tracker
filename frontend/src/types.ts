@@ -64,6 +64,7 @@ export interface Rule {
   id: string;
   question_id: string;
   at_least?: number;
+  above?: number;
   below?: number;
   consecutive_days: number;
   message: string;

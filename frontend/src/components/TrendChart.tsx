@@ -2,7 +2,7 @@ import { CartesianGrid, Line, LineChart, ResponsiveContainer, Scatter, ScatterCh
 import type { Day, DayPayload, Question, Questionnaire } from "../types";
 import { dayLabel, last7Days } from "../dates";
 import { domainFor, liveTrendDay, ticksFor } from "../trend";
-import { headedValue, isViolating, panelTitle, questionTitle, trendPanels, valueLabel } from "../violations";
+import { headedValue, isViolating, panelTitle, questionTitle, ruleBoundLabel, trendPanels, valueLabel } from "../violations";
 
 // Shared horizontal geometry across the panels and the violations strip: the panels reserve the
 // y-axis width axis-side, the strip (which has no y-axis) reserves it as left margin, so every
@@ -94,11 +94,15 @@ function TrendPanel({ questionnaire, question, dayStrs, dayByDate, index, showXA
   const color = `var(--viz-series-${index + 1})`;
   const data = panelData(questionnaire, question, dayStrs, dayByDate);
   const domain = domainFor(question, data.map((d) => d.value));
+  const boundLabel = ruleBoundLabel(questionnaire, question.id);
   return (
     <div className="trend-panel">
-      <div className="trend-panel-title">
+      {/* The chart container is LTR for the axes; the heading flips back so the Hebrew title
+          leads from the right and the limit note follows it in reading order. */}
+      <div className="trend-panel-title" dir="rtl">
         <span className="trend-chip" style={{ background: color }} />
         {title}
+        {boundLabel !== undefined && <span className="trend-panel-limit">(חריגה: {boundLabel})</span>}
       </div>
       <ResponsiveContainer width="100%" height={showXAxis ? 122 : 104}>
         <LineChart data={data} margin={{ top: 6, right: MARGIN_RIGHT, bottom: 0, left: 0 }}>

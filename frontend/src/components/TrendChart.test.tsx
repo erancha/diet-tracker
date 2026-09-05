@@ -55,6 +55,19 @@ describe("TrendChart", () => {
   it("charts the carb-score panel first even when it is configured last", () => {
     const { container } = render(<TrendChart questionnaire={withCarbsPanel} days={days} today={emptyToday} endDate="2026-08-18" />);
     const titles = [...container.querySelectorAll(".trend-panel-title")].map((el) => el.textContent);
-    expect(titles).toEqual(["פחמימות (ציון)", "שתיה (ליטרים)", "חלון אכילה (שעות)"]);
+    expect(titles).toEqual(["פחמימות (ציון)", "שתיה (ליטרים)(חריגה: פחות מ-2.5)", "חלון אכילה (שעות)"]);
+  });
+
+  it("shows each ruled panel's configured limit in its title and leaves unruled panels bare", () => {
+    const { container } = render(<TrendChart questionnaire={fixtureQuestionnaire} days={days} today={emptyToday} endDate="2026-08-18" />);
+    const titles = [...container.querySelectorAll(".trend-panel-title")].map((el) => el.textContent);
+    expect(titles).toEqual(["שתיה (ליטרים)(חריגה: פחות מ-2.5)", "חלון אכילה (שעות)"]);
+  });
+
+  it("lays each title row out right-to-left so the limit follows the title in reading order", () => {
+    const { container } = render(<TrendChart questionnaire={fixtureQuestionnaire} days={days} today={emptyToday} endDate="2026-08-18" />);
+    for (const row of container.querySelectorAll(".trend-panel-title")) {
+      expect(row.getAttribute("dir")).toBe("rtl");
+    }
   });
 });

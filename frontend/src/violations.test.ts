@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { activeViolations, crossesThreshold, headedValue, isHeavyMeal, isViolating, panelTitle, questionTitle, trendPanels, valueLabel, violates } from "./violations";
+import { activeViolations, crossesThreshold, headedValue, isHeavyMeal, isViolating, panelTitle, questionTitle, ruleBoundLabel, trendPanels, valueLabel, violates } from "./violations";
 import type { Day, Question, Questionnaire, Rule } from "./types";
 
 const carbs: Question = {
@@ -16,6 +16,7 @@ const meals: Question = {
 };
 const heavy: Rule = { id: "heavy", question_id: "carbs", at_least: 8, consecutive_days: 2, message: "x {days}" };
 const few: Rule = { id: "few", question_id: "meals", below: 3, consecutive_days: 2, message: "y {days}" };
+const long: Rule = { id: "long", question_id: "meals", above: 12, consecutive_days: 2, message: "z {days}" };
 const questionnaire: Questionnaire = { version: 3, questions: [carbs, meals], rules: [heavy, few] };
 
 describe("violates", () => {
@@ -25,6 +26,11 @@ describe("violates", () => {
     expect(violates(few, 2)).toBe(true);
     expect(violates(few, 3)).toBe(false);
   });
+
+  it("treats an above threshold as strictly over", () => {
+    expect(violates(long, 12.5)).toBe(true);
+    expect(violates(long, 12)).toBe(false);
+  });
 });
 
 describe("isViolating", () => {
@@ -32,6 +38,24 @@ describe("isViolating", () => {
     expect(isViolating(questionnaire, "carbs", 9)).toBe(true);
     expect(isViolating(questionnaire, "carbs", 2)).toBe(false);
     expect(isViolating(questionnaire, "meals", 2)).toBe(true);
+  });
+});
+
+describe("ruleBoundLabel", () => {
+  it("phrases an at_least bound as above the value", () => {
+    expect(ruleBoundLabel(questionnaire, "carbs")).toBe("מעל 8");
+  });
+
+  it("phrases a below bound as less than the value", () => {
+    expect(ruleBoundLabel(questionnaire, "meals")).toBe("פחות מ-3");
+  });
+
+  it("phrases an above bound as above the value", () => {
+    expect(ruleBoundLabel({ ...questionnaire, rules: [long] }, "meals")).toBe("מעל 12");
+  });
+
+  it("is undefined for a question no rule bounds", () => {
+    expect(ruleBoundLabel({ ...questionnaire, rules: [] }, "carbs")).toBeUndefined();
   });
 });
 
