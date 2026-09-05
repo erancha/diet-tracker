@@ -353,8 +353,18 @@ button.section-summary, button.transcript-toggle {
 /* A dip-and-return pulse rather than an on/off square wave: the label stays legible at the
    bottom of the dip, and never sits dimmed waiting for the next cycle. */
 @keyframes nudge-blink { 50% { opacity: 0.45; } }
+/* Folded, the trends section shows only its headline graph, and nothing says more lie behind
+   it — so the disclosure triangle alone pulses: eagerly at first, easing through a middle beat,
+   then settling into a slow standing hint. Each chained animation's delay lands where the
+   previous one's iterations end (10s and 30s in). Refolding restarts the eager phase, since the
+   selector matches anew. */
+.trends .section-toggle[aria-expanded="false"]::before {
+  animation: nudge-blink 0.5s ease-in-out 20, nudge-blink 1s ease-in-out 10s 20,
+             nudge-blink 2s ease-in-out 30s infinite;
+}
 @media (prefers-reduced-motion: reduce) {
   .meal-form .section-toggle { animation: none; }
+  .trends .section-toggle[aria-expanded="false"]::before { animation: none; }
   .section-waning, .section-folding { animation: none; }
 }
 /* Kept near body size against the tracker's larger heading, so the fold reads as a row inside
