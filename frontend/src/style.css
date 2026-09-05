@@ -92,7 +92,12 @@ h1 .app-icon { width: 1em; height: 1em; vertical-align: middle; margin-inline-en
 /* The condensed view fills the viewport so the repo link rides the page's bottom edge; the
    expanded view scrolls past a screen anyway, and there the link keeps the fixed gap it shares
    with the principles table instead. */
-.landing-brief { min-height: calc(100dvh - var(--page-pad-top) - var(--page-pad-bottom)); }
+.landing-brief {
+  min-height: calc(100dvh - var(--page-pad-top) - var(--page-pad-bottom));
+  /* Half a rem of extra air on both side edges, on top of the body's page padding: the splash
+     pitch breathes wider than the reading pages, which keep the tighter shared measure. */
+  margin-inline: 0.5rem;
+}
 /* The title sits a rem off the page top, and its gap to the summary is half the browser's default
    plus the same rem of air. The column is a flex container, so these margins stand rather than
    collapsing into each other — the intro's own share is halved alongside the title's. */
@@ -105,9 +110,11 @@ h1 .app-icon { width: 1em; height: 1em; vertical-align: middle; margin-inline-en
 .landing-brief h1 { margin-top: auto; text-align: center; font-size: min(2.6rem, 11vw); }
 .landing-brief .landing-repo { margin-top: auto; }
 .landing-intro, .landing-condensed { margin-top: 0.5em; margin-bottom: 0.6rem; }
+/* The condensed pitch is the page's whole message, so it reads a touch larger than body copy. */
+.landing-condensed { font-size: calc(1em + 2px); }
 /* In both views the toggle sits between the content and the sign-in button, a rem off each, so
    the screen's single action doesn't read as part of the toggle's line. */
-.landing .more-toggle { margin-block: 1rem; }
+.landing .more-toggle { margin-block: 1rem; font-size: calc(var(--more-toggle-font-size) + 1px); }
 /* On a phone the bullets wrap several times, so the marker column is trimmed well below the browser
    default to widen the text measure. From tablet width up the line has room either way, and the
    default indent returns. */
@@ -579,7 +586,9 @@ button.section-summary, button.transcript-toggle {
    colors non-interactive text like headings and values. */
 .more-toggle {
   --btn-bg: transparent; --btn-fg: var(--accent); --btn-border: transparent;
-  display: block; padding: 0; margin-top: 0.35rem; border-radius: 0; font-size: 0.8rem;
+  --more-toggle-font-size: 0.8rem;
+  display: block; padding: 0; margin-top: 0.35rem; border-radius: 0;
+  font-size: var(--more-toggle-font-size);
   text-decoration: underline;
 }
 /* The citations table sizes to its two short columns: the global table min-width serves the wide
