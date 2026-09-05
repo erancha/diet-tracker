@@ -1,3 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <text y="0.9em" font-size="90">🥗</text>
+  <!-- Emoji glyphs overrun their em box (Segoe UI Emoji's ascent alone passes 1em) and the
+       svg clips at the viewBox, so the glyph keeps clearance on every side: this same asset
+       also renders at heading size, where clipping would show. -->
+  <text x="50" y="52" font-size="72" text-anchor="middle" dominant-baseline="central">🥗</text>
 </svg>
