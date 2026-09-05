@@ -18,9 +18,9 @@
    gap before the page starts rather than as its edge. */
 body { font-family: system-ui, sans-serif; max-width: var(--column-width); margin: 0 auto; padding: var(--page-pad-top) 1rem var(--page-pad-bottom); background: #fafafa; color: #212121; }
 /* The title's own heading margins are dropped: the body's top padding already sets the page's
-   edge, and the weight line below reads as the title's own status line rather than as a separate
-   block, so the row closes tight on both sides. */
-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.35rem; }
+   edge. Below, a full rem of air parts the title row from the weight line, so the status line
+   reads as the page's first content rather than as part of the title block. */
+header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 1.35rem; }
 header h1 { margin-bottom: 0; }
 /* The account box sits on the page's left edge (flex end in this RTL layout) and holds a single
    row of account buttons; align-items flex-end keeps that row on the box's left edge rather than
