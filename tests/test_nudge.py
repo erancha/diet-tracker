@@ -177,7 +177,7 @@ def test_the_weigh_in_job_is_dispatchable_by_name(env, monkeypatch):
 def record_meal(store, sub, day, at_time="09:10:00"):
     store.add_meal(sub, day, {"at": f"{day}T{at_time}+03:00", "carbs_choice": "carb_grade_3",
                              "vegetables": True, "fruit": False, "additions": [],
-                             "small_portion": False, "second_source": None})
+                             "portion": None, "second_source": None})
 
 
 def test_last_call_tells_a_user_who_recorded_meals_that_the_day_is_still_open(env):

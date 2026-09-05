@@ -10,7 +10,7 @@ const emptyDay = (date: string): DayPayload => ({
 
 const meal: Meal = {
   id: "m1", at: "2026-08-28T09:00:00", carbs_choice: "c", vegetables: true, fruit: false,
-  additions: [], small_portion: false, second_source: null,
+  additions: [], portion: null, second_source: null,
 };
 
 const EMPTY_HISTORY: HistoryResponse = {

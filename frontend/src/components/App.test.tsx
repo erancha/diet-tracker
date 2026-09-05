@@ -25,7 +25,7 @@ function trackedDay(date: string): DayPayload {
   return {
     date,
     meals: [{ id: "m", at: `${date}T21:00:00+03:00`, carbs_choice: "no_carbs", vegetables: false,
-              fruit: false, additions: [], small_portion: false, second_source: null }],
+              fruit: false, additions: [], portion: null, second_source: null }],
     derived: { carbs: 0, meals: 1, vegetables: 0, eating_window: 0 },
   };
 }

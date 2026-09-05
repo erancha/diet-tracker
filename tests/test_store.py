@@ -6,11 +6,11 @@ from common.store import Store
 ANSWERS = {"drinking": 3, "vegetables": 2, "eating_window": 10.4, "meals": 3, "carbs": 12}
 
 
-def meal(at, carbs_choice, vegetables=False, fruit=False, additions=(), small_portion=False,
+def meal(at, carbs_choice, vegetables=False, fruit=False, additions=(), portion=None,
          second_source=None):
     """One meal in the shape the store writes, so each test spells out only what it is about."""
     return {"at": at, "carbs_choice": carbs_choice, "vegetables": vegetables, "fruit": fruit,
-            "additions": list(additions), "small_portion": small_portion,
+            "additions": list(additions), "portion": portion,
             "second_source": second_source}
 
 
@@ -48,7 +48,7 @@ def test_meals_roundtrip_chronological_and_per_day(store):
     assert [m["id"] for m in meals] == [earlier, later]
     assert meals[0] == {"id": earlier, "at": "2026-08-20T09:10:00+03:00",
                         "carbs_choice": "no_carbs", "vegetables": True, "fruit": True,
-                        "additions": [], "small_portion": False, "second_source": None}
+                        "additions": [], "portion": None, "second_source": None}
     assert meals[1]["additions"] == ["sweet"]
 
 
@@ -101,9 +101,9 @@ def test_meal_stored_before_the_second_source_reads_as_drawing_on_one(store, ddb
 def test_a_second_carb_source_roundtrips_with_its_own_helping(store):
     store.add_meal("u1", "2026-08-20", meal(
         "2026-08-20T13:30:00+03:00", "carb_grade_2", vegetables=True,
-        second_source={"carbs_choice": "carb_grade_7", "portion": "quarter"}))
+        second_source={"carbs_choice": "carb_grade_7", "portion": "small"}))
     assert store.get_meals("u1", "2026-08-20")[0]["second_source"] == {
-        "carbs_choice": "carb_grade_7", "portion": "quarter"}
+        "carbs_choice": "carb_grade_7", "portion": "small"}
 
 
 def _store_meal_with_second(ddb, second):
@@ -114,17 +114,42 @@ def _store_meal_with_second(ddb, second):
 
 
 def test_a_flag_shaped_second_source_reads_under_the_portion_contract(store, ddb):
-    # A light legacy second grade merges and carries no portion; a heavier one reads as the half
-    # helping whether or not the flag was set — a full legacy helping has no expression anymore.
+    # A light legacy second grade merges and carries no portion; a heavier one reads as the
+    # medium helping whether or not the flag was set — the flagged helping was a reduced one,
+    # and medium is the nearest the current scale still speaks.
     _store_meal_with_second(ddb, {"carbs_choice": "carb_grade_1", "small_portion": False})
     assert store.get_meals("u1", "2026-08-20")[0]["second_source"] == {
         "carbs_choice": "carb_grade_1", "portion": None}
     _store_meal_with_second(ddb, {"carbs_choice": "carb_grade_7", "small_portion": True})
     assert store.get_meals("u1", "2026-08-20")[0]["second_source"] == {
-        "carbs_choice": "carb_grade_7", "portion": "half"}
+        "carbs_choice": "carb_grade_7", "portion": "medium"}
     _store_meal_with_second(ddb, {"carbs_choice": "carb_grade_7", "small_portion": False})
     assert store.get_meals("u1", "2026-08-20")[0]["second_source"] == {
-        "carbs_choice": "carb_grade_7", "portion": "half"}
+        "carbs_choice": "carb_grade_7", "portion": "medium"}
+
+
+def test_a_helping_from_the_retired_scale_reads_as_its_rank_order_equivalent(store, ddb):
+    # quarter/half were the helping ids second sources first shipped under; they read as the
+    # current scale's small/medium so nothing downstream meets an id the config no longer knows.
+    _store_meal_with_second(ddb, {"carbs_choice": "carb_grade_7", "portion": "quarter"})
+    assert store.get_meals("u1", "2026-08-20")[0]["second_source"]["portion"] == "small"
+    _store_meal_with_second(ddb, {"carbs_choice": "carb_grade_7", "portion": "half"})
+    assert store.get_meals("u1", "2026-08-20")[0]["second_source"]["portion"] == "medium"
+
+
+def test_a_meal_stored_with_the_small_portion_flag_reads_as_the_small_helping(store, ddb):
+    # The boolean predates the helping scale: a flagged meal was a reduced serving, so it reads
+    # as the scale's smallest helping; an unflagged one carries no helping at all.
+    ddb.Table("meals").put_item(Item={
+        "pk": "u1", "sk": "2026-08-20#09:10:00-abc123",
+        "at": "2026-08-20T09:10:00+03:00", "carbs_choice": "carb_grade_7", "vegetables": False,
+        "fruit": False, "additions": [], "small_portion": True})
+    assert store.get_meals("u1", "2026-08-20")[0]["portion"] == "small"
+    ddb.Table("meals").put_item(Item={
+        "pk": "u1", "sk": "2026-08-20#09:10:00-abc123",
+        "at": "2026-08-20T09:10:00+03:00", "carbs_choice": "carb_grade_7", "vegetables": False,
+        "fruit": False, "additions": [], "small_portion": False})
+    assert store.get_meals("u1", "2026-08-20")[0]["portion"] is None
 
 
 def _store_meal(ddb, carbs_choice, additions):
@@ -199,7 +224,7 @@ def test_replace_meal_rewrites_every_field_and_reorders_an_edited_time(store):
     assert [m["id"] for m in meals][0] == new_id
     assert meals[0] == {"id": new_id, "at": "2026-08-20T09:10:00+03:00", "carbs_choice": "no_carbs",
                         "vegetables": True, "fruit": True, "additions": ["sweet"],
-                        "small_portion": False, "second_source": None}
+                        "portion": None, "second_source": None}
     assert len(meals) == 2
 
 

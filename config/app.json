@@ -1,6 +1,6 @@
 {
   "questionnaire": {
-    "version": 13,
+    "version": 14,
     "questions": [
       {
         "id": "drinking",
@@ -212,25 +212,28 @@
             "value": 7
           }
         ],
-        "small_portion": {
-          "label": "כמות קטנה",
+        "portions": {
           "from_value": 4,
-          "percent": 50
-        },
-        "second_source": {
-          "light_grade_max": 2,
-          "portions": [
+          "options": [
             {
-              "id": "quarter",
-              "label": "רבע מנה",
-              "percent": 25
+              "id": "small",
+              "label": "מנה קטנה",
+              "percent": 60
             },
             {
-              "id": "half",
-              "label": "חצי מנה",
-              "percent": 50
+              "id": "medium",
+              "label": "מנה בינונית",
+              "percent": 80
+            },
+            {
+              "id": "full",
+              "label": "מנה רגילה",
+              "percent": 100
             }
           ]
+        },
+        "second_source": {
+          "light_grade_max": 2
         }
       }
     ],

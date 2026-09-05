@@ -109,7 +109,7 @@ def _day_payload(store, questionnaire, sub, day) -> dict:
     return {"date": day, "meals": meals,
             "derived": asdict(derive(meals, questionnaire.carb_weights(),
                                      questionnaire.addition_values(),
-                                     questionnaire.small_portion(),
+                                     questionnaire.portions(),
                                      questionnaire.second_source()))}
 
 
@@ -124,7 +124,7 @@ def _submit(sub, body):
         return rejection
     store = _store()
     floors = derive(store.get_meals(sub, chosen), questionnaire.carb_weights(),
-                    questionnaire.addition_values(), questionnaire.small_portion(),
+                    questionnaire.addition_values(), questionnaire.portions(),
                     questionnaire.second_source())
     try:
         questionnaire.validate_answers(answers, floors=asdict(floors))
@@ -210,7 +210,8 @@ def _second_source_rejection(body, questionnaire):
     if rule.is_light(weights[second["carbs_choice"]]):
         if second["portion"] is not None:
             return _response(400, {"error": "a light second source carries no portion"})
-    elif not any(portion.id == second["portion"] for portion in rule.portions):
+    elif not any(portion.id == second["portion"]
+                 for portion in questionnaire.portions().options):
         return _response(400, {"error": f"unknown portion {second['portion']!r}"})
     return None
 
@@ -234,8 +235,14 @@ def _meal_rejection(body, allowed, questionnaire):
         return _response(400, {"error": "vegetables must be a boolean"})
     if not isinstance(body["fruit"], bool):
         return _response(400, {"error": "fruit must be a boolean"})
-    if not isinstance(body["small_portion"], bool):
-        return _response(400, {"error": "small_portion must be a boolean"})
+    portion = body["portion"]
+    if portion is not None:
+        rule = questionnaire.portions()
+        if not isinstance(portion, str) or all(p.id != portion for p in rule.options):
+            return _response(400, {"error": f"unknown portion {portion!r}"})
+        if not rule.offered_for(questionnaire.carb_weights()[body["carbs_choice"]]):
+            return _response(400, {
+                "error": "a portion is offered only from the threshold grade up"})
     if not isinstance(body["additions"], list):
         return _response(400, {"error": "additions must be a list"})
     unknown = [a for a in body["additions"] if a not in questionnaire.addition_values()]

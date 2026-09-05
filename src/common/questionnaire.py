@@ -21,55 +21,52 @@ QUESTION_TYPES = {"single", "points"}
 
 
 @dataclass(frozen=True)
-class SmallPortion:
-    """The reduced-quantity option a carbs choice may be recorded at.
-
-    The grade ladder ranks a meal by its carb source alone, so quantity is recorded separately: a
-    meal marked as a small portion counts its grade's weight at `percent`. It is offered only from
-    `from_value` up, where a lighter helping is a distinction worth drawing and the reduced weight
-    still lands above zero."""
-    label: str
-    from_value: float
-    percent: float
-
-    def offered_for(self, weight: float) -> bool:
-        return weight >= self.from_value
-
-    def weigh(self, weight: float) -> float:
-        return weight * self.percent / 100
-
-
-@dataclass(frozen=True)
 class Portion:
-    """One helping size a second carb source may be recorded at — a fraction of a full serving,
-    weighed at `percent` of the source's grade."""
+    """One helping size a carb source may be recorded at, weighed at `percent` of its grade."""
     id: str
     label: str
     percent: float
 
 
 @dataclass(frozen=True)
+class Portions:
+    """The helping-size scale shared by both of a plate's carb sources.
+
+    The grade ladder ranks a meal by its carb source alone, so quantity is recorded separately as
+    one of `options`. The primary source offers the choice only from `from_value` up, where a
+    lighter helping is a distinction worth drawing; a heavy second source always names its
+    helping, whatever its grade."""
+    from_value: float
+    options: tuple[Portion, ...]
+
+    def offered_for(self, weight: float) -> bool:
+        return weight >= self.from_value
+
+    def percent(self, portion_id: str) -> float:
+        for portion in self.options:
+            if portion.id == portion_id:
+                return portion.percent
+        raise KeyError(portion_id)
+
+    def weigh(self, weight: float, portion_id: str) -> float:
+        return weight * self.percent(portion_id) / 100
+
+
+@dataclass(frozen=True)
 class SecondSource:
-    """The second-carb-source contract: which plates may carry one and how it prices.
+    """The second-carb-source contract: which plates may carry one and how it merges.
 
     A plate earns a second source only around a light primary grade — one whose weight sits in
     (0, light_grade_max]. A second source that is itself light merges into the plate, the higher
-    of the two grades speaking for both, and carries no portion. A heavier second source is
-    always a reduced helping, one of `portions`, adding its grade at that helping's percentage."""
+    of the two grades speaking for both, and carries no portion. A heavier second source always
+    carries one of the shared helping sizes, adding its grade at that helping's percentage."""
     light_grade_max: float
-    portions: tuple[Portion, ...]
 
     def is_light(self, weight: float) -> bool:
         return weight <= self.light_grade_max
 
     def allows_primary(self, weight: float) -> bool:
         return 0 < weight <= self.light_grade_max
-
-    def portion_percent(self, portion_id: str) -> float:
-        for portion in self.portions:
-            if portion.id == portion_id:
-                return portion.percent
-        raise KeyError(portion_id)
 
 
 @dataclass(frozen=True)
@@ -100,7 +97,7 @@ class Question:
     # so they never appear in the grade picker or carb_weights().
     additions: tuple[Choice, ...] | None
     # Present only on the carbs question: the quantity axis the grade ladder does not carry.
-    small_portion: "SmallPortion | None"
+    portions: "Portions | None"
     # Present only on the carbs question: the contract for a plate's second carb source.
     second_source: "SecondSource | None"
 
@@ -177,11 +174,11 @@ class Questionnaire:
             raise ValueError("carbs question must declare additions")
         return {addition.id: addition.value for addition in additions}
 
-    def small_portion(self) -> SmallPortion:
-        """The carbs question's reduced-portion option; the config must declare it."""
-        declared = self.question("carbs").small_portion
+    def portions(self) -> Portions:
+        """The carbs question's helping-size scale; the config must declare it."""
+        declared = self.question("carbs").portions
         if declared is None:
-            raise ValueError("carbs question must declare small_portion")
+            raise ValueError("carbs question must declare portions")
         return declared
 
     def second_source(self) -> SecondSource:
@@ -248,14 +245,12 @@ def parse(raw: dict) -> Questionnaire:
             heavy_meal=q.get("heavy_meal"),
             additions=tuple(Choice(id=a["id"], label=a["label"], value=a["value"])
                             for a in q["additions"]) if "additions" in q else None,
-            small_portion=SmallPortion(label=q["small_portion"]["label"],
-                                       from_value=q["small_portion"]["from_value"],
-                                       percent=q["small_portion"]["percent"])
-            if "small_portion" in q else None,
-            second_source=SecondSource(
-                light_grade_max=q["second_source"]["light_grade_max"],
-                portions=tuple(Portion(id=p["id"], label=p["label"], percent=p["percent"])
-                               for p in q["second_source"]["portions"]))
+            portions=Portions(
+                from_value=q["portions"]["from_value"],
+                options=tuple(Portion(id=p["id"], label=p["label"], percent=p["percent"])
+                              for p in q["portions"]["options"]))
+            if "portions" in q else None,
+            second_source=SecondSource(light_grade_max=q["second_source"]["light_grade_max"])
             if "second_source" in q else None,
         ))
     questions = tuple(questions)

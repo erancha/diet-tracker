@@ -32,9 +32,13 @@ _RETIRED_GRADES: dict[str, tuple[str, str | None]] = {}
 # _RETIRED_GRADES: they describe records already written, not the current config's boundary.
 _LEGACY_LIGHT_SECOND_GRADES = frozenset({"carb_grade_1", "carb_grade_2"})
 
+# Helping ids of the scale second sources first shipped under, mapped to their rank-order
+# equivalents on the current shared scale. Frozen ids describing records already written.
+_RETIRED_PORTIONS = {"quarter": "small", "half": "medium"}
+
 # The attributes one stored meal carries beside its keys. Named once so the record written and the
 # API body it is projected from cannot drift apart.
-MEAL_ATTRIBUTES = ("at", "carbs_choice", "vegetables", "fruit", "additions", "small_portion",
+MEAL_ATTRIBUTES = ("at", "carbs_choice", "vegetables", "fruit", "additions", "portion",
                    "second_source")
 
 # Sort key of the weights table's target item. It sorts past every ISO date, keeping the single
@@ -61,23 +65,30 @@ def _meal_from_item(item) -> dict:
     current equivalent — either of its sources — so nothing downstream is handed an id the config
     no longer knows.
 
-    A second source recorded before helpings carried a small-portion flag instead of a portion
-    id. Such a record reads under the current contract: a light second grade carries no portion,
-    and a heavier one reads as the half helping — the flagged helping was exactly that, and a
-    full helping has no expression anymore, so half is the nearest the contract still speaks."""
+    Quantity predates the shared helping scale twice over. A meal recorded under the boolean
+    small-portion flag reads as the scale's smallest helping when flagged and as no helping at
+    all otherwise. A second source recorded before helpings carried that flag too: a light
+    second grade carries no portion, and a heavier one reads as the medium helping — the flagged
+    helping was a reduced serving, and medium is the nearest the current scale still speaks.
+    Portion ids from the scale the helpings first shipped under read as their current
+    rank-order equivalents."""
     additions = item.get("additions", ["sweet"] if item.get("sweet", False) else [])
     carbs_choice, additions = _current_grade(item["carbs_choice"], additions)
     second = item.get("second_source")
     if second is not None:
         second_choice, additions = _current_grade(second["carbs_choice"], additions)
         if "portion" in second:
-            portion = second["portion"]
+            portion = _RETIRED_PORTIONS.get(second["portion"], second["portion"])
         else:
-            portion = None if second_choice in _LEGACY_LIGHT_SECOND_GRADES else "half"
+            portion = None if second_choice in _LEGACY_LIGHT_SECOND_GRADES else "medium"
         second = {"carbs_choice": second_choice, "portion": portion}
+    if "portion" in item:
+        portion = _RETIRED_PORTIONS.get(item["portion"], item["portion"])
+    else:
+        portion = "small" if item.get("small_portion", False) else None
     return {"id": item["sk"].split("#", 1)[1], "at": item["at"], "carbs_choice": carbs_choice,
             "vegetables": item["vegetables"], "fruit": item.get("fruit", False),
-            "additions": additions, "small_portion": item.get("small_portion", False),
+            "additions": additions, "portion": portion,
             "second_source": second}
 
 

@@ -22,7 +22,7 @@ def questionnaire():
 
 def meal(at, choice="carb_grade_2", **overrides):
     base = {"at": at, "carbs_choice": choice, "vegetables": False, "fruit": False,
-            "additions": [], "small_portion": False, "second_source": None}
+            "additions": [], "portion": None, "second_source": None}
     return {**base, **overrides}
 
 
@@ -53,8 +53,8 @@ def test_today_and_yesterday_meals_are_detailed_with_hebrew_labels(store, questi
     store.add_meal("u1", TODAY, meal(f"{TODAY}T12:30:00+03:00", choice="carb_grade_2",
                                      additions=["sweet"], vegetables=True))
     store.add_meal("u1", YESTERDAY, meal(
-        f"{YESTERDAY}T09:00:00+03:00", choice="carb_grade_4", small_portion=True,
-        second_source={"carbs_choice": "carb_grade_7", "portion": "half"}))
+        f"{YESTERDAY}T09:00:00+03:00", choice="carb_grade_4", portion="small",
+        second_source={"carbs_choice": "carb_grade_7", "portion": "medium"}))
 
     composed = chat_context.with_user_context("שאלה", store, questionnaire, "u1", TODAY)
     data = data_of(composed, "שאלה")
@@ -69,10 +69,11 @@ def test_today_and_yesterday_meals_are_detailed_with_hebrew_labels(store, questi
     assert "פרי" not in entry
 
     yesterday_detail = data["אתמול"]
-    assert yesterday_detail["ציון פחמימות"] == 5.5  # grade 4 halved + grade 7 at the half helping
+    # grade 4 at the small helping + grade 7 at the medium helping: 2.4 + 5.6
+    assert yesterday_detail["ציון פחמימות"] == 8
     (entry,) = yesterday_detail["ארוחות"]
-    assert entry["מקור פחמימה"] == "דרגה 4 (כמות קטנה)"
-    assert entry["מקור פחמימה נוסף"] == "דרגה 7 (חצי מנה)"
+    assert entry["מקור פחמימה"] == "דרגה 4 (מנה קטנה)"
+    assert entry["מקור פחמימה נוסף"] == "דרגה 7 (מנה בינונית)"
 
 
 def test_a_tight_budget_sheds_meal_detail_before_day_summaries(store, questionnaire):

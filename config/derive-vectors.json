@@ -15,6 +15,29 @@
     "nuts": 3,
     "fat": 2
   },
+  "portions": {
+    "from_value": 4,
+    "options": [
+      {
+        "id": "small",
+        "label": "מנה קטנה",
+        "percent": 60
+      },
+      {
+        "id": "medium",
+        "label": "מנה בינונית",
+        "percent": 80
+      },
+      {
+        "id": "full",
+        "label": "מנה רגילה",
+        "percent": 100
+      }
+    ]
+  },
+  "second_source": {
+    "light_grade_max": 2
+  },
   "vectors": [
     {
       "name": "empty day",
@@ -35,7 +58,7 @@
           "vegetables": true,
           "fruit": false,
           "additions": [],
-          "small_portion": false,
+          "portion": null,
           "second_source": null
         }
       ],
@@ -55,7 +78,7 @@
           "vegetables": true,
           "fruit": false,
           "additions": [],
-          "small_portion": false,
+          "portion": null,
           "second_source": null
         },
         {
@@ -64,7 +87,7 @@
           "vegetables": true,
           "fruit": false,
           "additions": [],
-          "small_portion": false,
+          "portion": null,
           "second_source": null
         },
         {
@@ -73,7 +96,7 @@
           "vegetables": false,
           "fruit": false,
           "additions": [],
-          "small_portion": false,
+          "portion": null,
           "second_source": null
         },
         {
@@ -84,7 +107,7 @@
           "additions": [
             "alcohol"
           ],
-          "small_portion": false,
+          "portion": null,
           "second_source": null
         }
       ],
@@ -106,7 +129,7 @@
           "additions": [
             "fat"
           ],
-          "small_portion": false,
+          "portion": null,
           "second_source": null
         }
       ],
@@ -128,7 +151,7 @@
           "additions": [
             "fat"
           ],
-          "small_portion": false,
+          "portion": null,
           "second_source": null
         }
       ],
@@ -148,7 +171,7 @@
           "vegetables": false,
           "fruit": false,
           "additions": [],
-          "small_portion": false,
+          "portion": null,
           "second_source": null
         },
         {
@@ -159,7 +182,7 @@
           "additions": [
             "nuts"
           ],
-          "small_portion": false,
+          "portion": null,
           "second_source": null
         }
       ],
@@ -179,7 +202,7 @@
           "vegetables": false,
           "fruit": false,
           "additions": [],
-          "small_portion": false,
+          "portion": null,
           "second_source": null
         },
         {
@@ -188,7 +211,7 @@
           "vegetables": true,
           "fruit": false,
           "additions": [],
-          "small_portion": false,
+          "portion": null,
           "second_source": null
         }
       ],
@@ -208,7 +231,7 @@
           "vegetables": false,
           "fruit": false,
           "additions": [],
-          "small_portion": false,
+          "portion": null,
           "second_source": null
         },
         {
@@ -217,7 +240,7 @@
           "vegetables": false,
           "fruit": false,
           "additions": [],
-          "small_portion": false,
+          "portion": null,
           "second_source": null
         }
       ],
@@ -237,7 +260,7 @@
           "vegetables": false,
           "fruit": false,
           "additions": [],
-          "small_portion": false,
+          "portion": null,
           "second_source": null
         },
         {
@@ -246,7 +269,7 @@
           "vegetables": false,
           "fruit": false,
           "additions": [],
-          "small_portion": false,
+          "portion": null,
           "second_source": null
         }
       ],
@@ -266,7 +289,7 @@
           "vegetables": false,
           "fruit": false,
           "additions": [],
-          "small_portion": false,
+          "portion": null,
           "second_source": null
         },
         {
@@ -275,7 +298,7 @@
           "vegetables": false,
           "fruit": false,
           "additions": [],
-          "small_portion": false,
+          "portion": null,
           "second_source": null
         }
       ],
@@ -295,7 +318,7 @@
           "vegetables": false,
           "fruit": true,
           "additions": [],
-          "small_portion": false,
+          "portion": null,
           "second_source": null
         }
       ],
@@ -315,7 +338,7 @@
           "vegetables": false,
           "fruit": true,
           "additions": [],
-          "small_portion": false,
+          "portion": null,
           "second_source": null
         },
         {
@@ -324,7 +347,7 @@
           "vegetables": false,
           "fruit": true,
           "additions": [],
-          "small_portion": false,
+          "portion": null,
           "second_source": null
         }
       ],
@@ -344,7 +367,7 @@
           "vegetables": false,
           "fruit": true,
           "additions": [],
-          "small_portion": false,
+          "portion": null,
           "second_source": null
         },
         {
@@ -353,7 +376,7 @@
           "vegetables": false,
           "fruit": true,
           "additions": [],
-          "small_portion": false,
+          "portion": null,
           "second_source": null
         },
         {
@@ -362,7 +385,7 @@
           "vegetables": false,
           "fruit": true,
           "additions": [],
-          "small_portion": false,
+          "portion": null,
           "second_source": null
         }
       ],
@@ -382,7 +405,7 @@
           "vegetables": false,
           "fruit": true,
           "additions": [],
-          "small_portion": false,
+          "portion": null,
           "second_source": null
         },
         {
@@ -391,7 +414,7 @@
           "vegetables": false,
           "fruit": true,
           "additions": [],
-          "small_portion": false,
+          "portion": null,
           "second_source": null
         }
       ],
@@ -411,7 +434,7 @@
           "vegetables": false,
           "fruit": true,
           "additions": [],
-          "small_portion": false,
+          "portion": null,
           "second_source": null
         },
         {
@@ -420,7 +443,7 @@
           "vegetables": false,
           "fruit": true,
           "additions": [],
-          "small_portion": false,
+          "portion": null,
           "second_source": null
         }
       ],
@@ -442,7 +465,7 @@
           "additions": [
             "sweet"
           ],
-          "small_portion": false,
+          "portion": null,
           "second_source": null
         }
       ],
@@ -464,7 +487,7 @@
           "additions": [
             "sweet"
           ],
-          "small_portion": false,
+          "portion": null,
           "second_source": null
         }
       ],
@@ -484,7 +507,7 @@
           "vegetables": false,
           "fruit": true,
           "additions": [],
-          "small_portion": false,
+          "portion": null,
           "second_source": null
         },
         {
@@ -495,7 +518,7 @@
           "additions": [
             "sweet"
           ],
-          "small_portion": false,
+          "portion": null,
           "second_source": null
         }
       ],
@@ -518,7 +541,7 @@
             "alcohol",
             "sweet"
           ],
-          "small_portion": false,
+          "portion": null,
           "second_source": null
         }
       ],
@@ -538,12 +561,12 @@
           "vegetables": false,
           "fruit": false,
           "additions": [],
-          "small_portion": true,
+          "portion": "small",
           "second_source": null
         }
       ],
       "derived": {
-        "carbs": 3.5,
+        "carbs": 4.2,
         "meals": 1,
         "vegetables": 0,
         "eating_window": 0
@@ -558,7 +581,7 @@
           "vegetables": false,
           "fruit": false,
           "additions": [],
-          "small_portion": true,
+          "portion": "small",
           "second_source": null
         }
       ],
@@ -578,7 +601,7 @@
           "vegetables": false,
           "fruit": true,
           "additions": [],
-          "small_portion": false,
+          "portion": null,
           "second_source": null
         },
         {
@@ -587,7 +610,7 @@
           "vegetables": false,
           "fruit": true,
           "additions": [],
-          "small_portion": true,
+          "portion": "small",
           "second_source": null
         }
       ],
@@ -609,19 +632,19 @@
           "additions": [
             "sweet"
           ],
-          "small_portion": true,
+          "portion": "small",
           "second_source": null
         }
       ],
       "derived": {
-        "carbs": 7.5,
+        "carbs": 8.2,
         "meals": 1,
         "vegetables": 0,
         "eating_window": 0
       }
     },
     {
-      "name": "a heavy second source adds its grade at the half helping",
+      "name": "a heavy second source adds its grade at the medium helping",
       "meals": [
         {
           "at": "2026-08-20T13:00:00+03:00",
@@ -629,22 +652,22 @@
           "vegetables": true,
           "fruit": false,
           "additions": [],
-          "small_portion": false,
+          "portion": null,
           "second_source": {
             "carbs_choice": "carb_grade_7",
-            "portion": "half"
+            "portion": "medium"
           }
         }
       ],
       "derived": {
-        "carbs": 5.5,
+        "carbs": 7.6,
         "meals": 1,
         "vegetables": 1,
         "eating_window": 0
       }
     },
     {
-      "name": "a heavy second source adds its grade at the quarter helping",
+      "name": "a heavy second source adds its grade at the small helping",
       "meals": [
         {
           "at": "2026-08-20T13:00:00+03:00",
@@ -652,15 +675,15 @@
           "vegetables": true,
           "fruit": false,
           "additions": [],
-          "small_portion": false,
+          "portion": null,
           "second_source": {
             "carbs_choice": "carb_grade_7",
-            "portion": "quarter"
+            "portion": "small"
           }
         }
       ],
       "derived": {
-        "carbs": 3.75,
+        "carbs": 6.2,
         "meals": 1,
         "vegetables": 1,
         "eating_window": 0
@@ -675,7 +698,7 @@
           "vegetables": false,
           "fruit": false,
           "additions": [],
-          "small_portion": false,
+          "portion": null,
           "second_source": {
             "carbs_choice": "carb_grade_1",
             "portion": null
@@ -698,7 +721,7 @@
           "vegetables": false,
           "fruit": false,
           "additions": [],
-          "small_portion": false,
+          "portion": null,
           "second_source": {
             "carbs_choice": "carb_grade_2",
             "portion": null
@@ -721,7 +744,7 @@
           "vegetables": false,
           "fruit": true,
           "additions": [],
-          "small_portion": false,
+          "portion": null,
           "second_source": null
         },
         {
@@ -730,7 +753,7 @@
           "vegetables": false,
           "fruit": true,
           "additions": [],
-          "small_portion": false,
+          "portion": null,
           "second_source": {
             "carbs_choice": "carb_grade_1",
             "portion": null
@@ -742,15 +765,15 @@
           "vegetables": false,
           "fruit": true,
           "additions": [],
-          "small_portion": false,
+          "portion": null,
           "second_source": {
             "carbs_choice": "carb_grade_4",
-            "portion": "half"
+            "portion": "medium"
           }
         }
       ],
       "derived": {
-        "carbs": 15,
+        "carbs": 15.2,
         "meals": 3,
         "vegetables": 0,
         "eating_window": 6
@@ -767,22 +790,22 @@
           "additions": [
             "sweet"
           ],
-          "small_portion": false,
+          "portion": null,
           "second_source": {
             "carbs_choice": "carb_grade_7",
-            "portion": "half"
+            "portion": "medium"
           }
         }
       ],
       "derived": {
-        "carbs": 9.5,
+        "carbs": 11.6,
         "meals": 1,
         "vegetables": 0,
         "eating_window": 0
       }
     },
     {
-      "name": "the lowest offered grade halves at a small portion",
+      "name": "the lowest offered grade discounts at a small portion",
       "meals": [
         {
           "at": "2026-08-20T13:00:00+03:00",
@@ -790,36 +813,79 @@
           "vegetables": true,
           "fruit": false,
           "additions": [],
-          "small_portion": true,
+          "portion": "small",
           "second_source": null
         }
       ],
       "derived": {
-        "carbs": 2,
+        "carbs": 2.4,
+        "meals": 1,
+        "vegetables": 1,
+        "eating_window": 0
+      }
+    },
+    {
+      "name": "a medium portion counts its grade at its percentage",
+      "meals": [
+        {
+          "at": "2026-08-20T13:00:00+03:00",
+          "carbs_choice": "carb_grade_5",
+          "vegetables": false,
+          "fruit": false,
+          "additions": [],
+          "portion": "medium",
+          "second_source": null
+        }
+      ],
+      "derived": {
+        "carbs": 4,
+        "meals": 1,
+        "vegetables": 0,
+        "eating_window": 0
+      }
+    },
+    {
+      "name": "a full portion leaves the grade whole",
+      "meals": [
+        {
+          "at": "2026-08-20T13:00:00+03:00",
+          "carbs_choice": "carb_grade_6",
+          "vegetables": false,
+          "fruit": false,
+          "additions": [],
+          "portion": "full",
+          "second_source": null
+        }
+      ],
+      "derived": {
+        "carbs": 6,
+        "meals": 1,
+        "vegetables": 0,
+        "eating_window": 0
+      }
+    },
+    {
+      "name": "a heavy second source may ride at the full helping",
+      "meals": [
+        {
+          "at": "2026-08-20T13:00:00+03:00",
+          "carbs_choice": "carb_grade_2",
+          "vegetables": true,
+          "fruit": false,
+          "additions": [],
+          "portion": null,
+          "second_source": {
+            "carbs_choice": "carb_grade_7",
+            "portion": "full"
+          }
+        }
+      ],
+      "derived": {
+        "carbs": 9,
         "meals": 1,
         "vegetables": 1,
         "eating_window": 0
       }
     }
-  ],
-  "small_portion": {
-    "label": "כמות קטנה",
-    "from_value": 4,
-    "percent": 50
-  },
-  "second_source": {
-    "light_grade_max": 2,
-    "portions": [
-      {
-        "id": "quarter",
-        "label": "רבע מנה",
-        "percent": 25
-      },
-      {
-        "id": "half",
-        "label": "חצי מנה",
-        "percent": 50
-      }
-    ]
-  }
+  ]
 }

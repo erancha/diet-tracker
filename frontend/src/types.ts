@@ -37,16 +37,15 @@ export interface Question {
   // too many nuts), each with the point cost it adds on top of the meal's grade. Not choices,
   // so they never appear in the grade picker.
   additions?: Choice[];
-  // Present only on the carbs question: the quantity axis the grade ladder does not carry. A meal
-  // marked as this portion counts its grade's weight at `percent`, offered only from `from_value`
-  // up — where a lighter helping is a distinction worth drawing and the reduced weight still
-  // lands above zero.
-  small_portion?: { label: string; from_value: number; percent: number };
+  // Present only on the carbs question: the quantity axis the grade ladder does not carry — the
+  // helping-size scale shared by both of a plate's carb sources. The primary source offers the
+  // choice only from `from_value` up, where a lighter helping is a distinction worth drawing.
+  portions?: { from_value: number; options: PortionOption[] };
   // Present only on the carbs question: the second-carb-source contract. A plate earns a second
   // source only around a light primary grade — one weighing in (0, light_grade_max]. A second
   // source that is itself light merges into the plate, the higher grade speaking for both; a
-  // heavier one is always one of the reduced helpings, adding its grade at that percentage.
-  second_source?: { light_grade_max: number; portions: PortionOption[] };
+  // heavier one always carries one of the shared helpings, adding its grade at that percentage.
+  second_source?: { light_grade_max: number };
   // Display floor: history answers below it redden on their own, day by day — unlike a rule's
   // bound, which alarms only after its consecutive-days streak.
   warn_below?: number;
@@ -130,8 +129,7 @@ export interface AppConfigFile {
 // A single question's stored answer — always a number (points, counts, hours, liters).
 export type AnswerValue = number;
 
-/** One helping size a second carb source may be recorded at — a fraction of a full serving,
- * weighed at `percent` of the source's grade. */
+/** One helping size a carb source may be recorded at, weighed at `percent` of its grade. */
 export interface PortionOption {
   id: string;
   label: string;
@@ -155,12 +153,13 @@ export interface Meal {
   // Addition ids from the carbs question's additions (e.g. "sweet"); the server normalizes
   // legacy sweet-flag records into this shape.
   additions: string[];
-  // Whether the meal was a small portion of its grade — the quantity the grade itself no longer
-  // carries.
-  small_portion: boolean;
+  // The helping the meal's own grade was eaten as — one of the configured portion ids, or null
+  // when no helping is recorded: a grade below the scale's threshold, or a meal the server read
+  // from before the scale existed.
+  portion: string | null;
   // A second carb source on the same plate. A light one merges into the plate, the higher grade
-  // speaking for both; a heavier one — a slice of white bread beside a grade 2 bowl — rides as a
-  // reduced helping priced beside the plate's grade. Null on a plate that drew on one source.
+  // speaking for both; a heavier one — a slice of white bread beside a grade 2 bowl — rides at
+  // its recorded helping priced beside the plate's grade. Null on a plate that drew on one source.
   second_source: CarbSource | null;
 }
 
@@ -215,7 +214,7 @@ export interface NewMeal {
   vegetables: boolean;
   fruit: boolean;
   additions: string[];
-  small_portion: boolean;
+  portion: string | null;
   second_source: CarbSource | null;
 }
 

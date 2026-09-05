@@ -62,7 +62,7 @@ def test_returns_the_upstream_answer_and_sources(env, monkeypatch):
 def test_the_upstream_question_carries_the_askers_tracked_data(env, ddb, monkeypatch):
     Store("days", "meals", "state", "weights", dynamodb=ddb).add_meal("u1", today(), {
         "at": f"{today()}T12:30:00+03:00", "carbs_choice": "carb_grade_2", "vegetables": True,
-        "fruit": False, "additions": [], "small_portion": False, "second_source": None})
+        "fruit": False, "additions": [], "portion": None, "second_source": None})
     asked = {}
     monkeypatch.setattr(chat_handler.chat, "ask", lambda api_url, key, question:
                         asked.update(question=question) or {"answer": "ת", "sources": []})

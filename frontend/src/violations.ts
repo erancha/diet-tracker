@@ -58,9 +58,9 @@ export function isHeavyMeal(question: Question, points: number): boolean {
   return points >= question.heavy_meal!;
 }
 
-// A day's score wherever it shows as the day's mark. Whole: the half-points a small portion
-// derives are real to the rules and to what the server stores, but a mark of 29.5 reads as a
-// precision the grades never claim.
+// A day's score wherever it shows as the day's mark. Whole: the fractional points a reduced
+// helping derives are real to the rules and to what the server stores, but a mark of 29.5 reads
+// as a precision the grades never claim.
 export function scoreLabel(value: number): string {
   return String(Math.round(value));
 }

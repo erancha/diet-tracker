@@ -48,7 +48,7 @@ export const fixtureQuestionnaire: Questionnaire = {
 
 // Questionnaire as the tracker components consume it: a per-meal carbs points question (two
 // choices sharing a numeric value, to catch id/value mix-ups; one grade either side of the
-// small-portion threshold) with surcharge additions and the portion rule, plus a drinking
+// portion threshold) with the surcharge additions and the shared helping scale, plus a drinking
 // question for day close. The at_least carbs rule keeps the violation/heavy-day styling
 // interplay under test in the history table, and heavy_meal is the per-meal bound: grade 4
 // reaches it on its own, and a lighter grade reaches it once additions are priced in. The
@@ -65,10 +65,11 @@ export const trackerQuestionnaire: Questionnaire = {
                   { id: "nuts", label: "כולל הרבה אגוזים או שקדים", value: 3 },
                   { id: "fat", label: "כולל הרבה שומן", value: 2 }],
       tooltip: "המטרה היא ציון נמוך", day_qualifier: "סיכום ציון", meal_qualifier: "דרגת הארוחה",
-      small_portion: { label: "כמות קטנה", from_value: 5, percent: 50 },
-      second_source: { light_grade_max: 2,
-                       portions: [{ id: "quarter", label: "רבע מנה", percent: 25 },
-                                  { id: "half", label: "חצי מנה", percent: 50 }] },
+      portions: { from_value: 5,
+                  options: [{ id: "small", label: "מנה קטנה", percent: 60 },
+                            { id: "medium", label: "מנה בינונית", percent: 80 },
+                            { id: "full", label: "מנה רגילה", percent: 100 }] },
+      second_source: { light_grade_max: 2 },
       // Grades with and without an examples list, so the label-density switch is exercised over
       // both kinds at once; carb_grade_2 is the light grade the second-source contract admits.
       choices: [{ id: "no_carbs", label: "ללא פחמימות", value: 0 },
@@ -88,8 +89,8 @@ export const trackerQuestionnaire: Questionnaire = {
 export const trackedDay: DayPayload = {
   date: "2026-08-20",
   meals: [
-    { id: "a", at: "2026-08-20T09:10:00+03:00", carbs_choice: "no_carbs", vegetables: true, fruit: false, additions: [], small_portion: false, second_source: null },
-    { id: "b", at: "2026-08-20T13:30:00+03:00", carbs_choice: "carb_grade_4", vegetables: false, fruit: true, additions: [], small_portion: false, second_source: null },
+    { id: "a", at: "2026-08-20T09:10:00+03:00", carbs_choice: "no_carbs", vegetables: true, fruit: false, additions: [], portion: null, second_source: null },
+    { id: "b", at: "2026-08-20T13:30:00+03:00", carbs_choice: "carb_grade_4", vegetables: false, fruit: true, additions: [], portion: null, second_source: null },
   ],
   derived: { carbs: 4, meals: 2, vegetables: 1, eating_window: 5 },
 };

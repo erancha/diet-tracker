@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { clockTimeOf, mealOverdue, parseIsoDate } from "../dates";
-import { carbsScales, deriveDay, smallPortionOffered } from "../derive";
+import { carbsScales, deriveDay, portionOffered } from "../derive";
 import { mayDiscardEdits } from "../edits";
 import { isViolating } from "../violations";
 import { useExpandedGradeLabels } from "../gradeLabels";
@@ -85,17 +85,17 @@ export function DayTracker({ questionnaire, day, isToday = true, closed = false,
 }) {
   const carbsQuestion = questionnaire.questions.find((q) => q.id === "carbs")!;
   const drinkingQuestion = questionnaire.questions.find((q) => q.id === "drinking")!;
-  const { weights, additionValues, smallPortion: portionRule, secondSource: secondRule } =
+  const { weights, additionValues, portions: portionRule, secondSource: secondRule } =
     carbsScales(carbsQuestion);
-  // The fullest helping the contract offers — the default a heavy second grade opens on, so an
+  // The fullest helping the scale offers — the default either portion picker opens on, so an
   // unconsidered save never under-prices the plate.
   const defaultPortionId =
-    secondRule.portions.reduce((a, b) => (b.percent > a.percent ? b : a)).id;
+    portionRule.options.reduce((a, b) => (b.percent > a.percent ? b : a)).id;
   const [carbsChoiceId, setCarbsChoiceId] = useState<string | undefined>(undefined);
   const [vegetables, setVegetables] = useState(false);
   const [fruit, setFruit] = useState(false);
   const [pickedAdditions, setPickedAdditions] = useState<Set<string>>(new Set());
-  const [smallPortion, setSmallPortion] = useState(false);
+  const [portionId, setPortionId] = useState(defaultPortionId);
   const [secondChoiceId, setSecondChoiceId] = useState<string | undefined>(undefined);
   const [secondPortionId, setSecondPortionId] = useState(defaultPortionId);
   // Held apart from the picked grade so the group can stand open and unanswered: revealing it is
@@ -128,10 +128,11 @@ export function DayTracker({ questionnaire, day, isToday = true, closed = false,
   const addMealTitle = addMealWarns
     ? <span className="meal-add-warn">הוספת ארוחה</span>
     : "הוספת ארוחה";
-  // The lighter grades are not worth splitting by helping, so the box appears only where it moves
-  // the score — and the flag goes with it, so a grade switched down cannot leave one stuck on.
-  const offersSmallPortion = carbsChoiceId !== undefined
-    && smallPortionOffered(portionRule, weights[carbsChoiceId]);
+  // The lighter grades are not worth splitting by helping, so the picker appears only where it
+  // moves the score — and the helping goes with it, so a grade switched down cannot leave a
+  // reduced one stuck on.
+  const offersPortion = carbsChoiceId !== undefined
+    && portionOffered(portionRule, weights[carbsChoiceId]);
   // A second source rides only on a light primary grade — the same bound the API enforces — and
   // never on a no-carb plate, whose only carb would simply be the primary.
   const allowsSecond = (choiceId: string) =>
@@ -170,7 +171,7 @@ export function DayTracker({ questionnaire, day, isToday = true, closed = false,
 
   // A half-composed new meal is worth the same guard as a correction: the form holds the only copy
   // of it. Its baseline is the blank form recording opens on rather than a stored meal, and the
-  // small-portion box is not among the terms because it exists only once a grade is picked.
+  // portion picker is not among the terms because it exists only once a grade is picked.
   const newMealDiverged = editing === undefined
     && (carbsChoiceId !== undefined || vegetables || fruit || pickedAdditions.size > 0
         || secondChoiceId !== undefined || mealTime !== pristineTime);
@@ -242,7 +243,7 @@ export function DayTracker({ questionnaire, day, isToday = true, closed = false,
                             carbs_choice: carbsChoiceId!, vegetables, fruit,
                             additions: carbsQuestion.additions!
                               .filter((a) => pickedAdditions.has(a.id)).map((a) => a.id),
-                            small_portion: offersSmallPortion && smallPortion,
+                            portion: offersPortion ? portionId : null,
                             second_source: secondSource };
     if (editing !== undefined) onUpdateMeal(editing.id, meal);
     else onAddMeal(meal);
@@ -274,10 +275,27 @@ export function DayTracker({ questionnaire, day, isToday = true, closed = false,
         || vegetables !== meal.vegetables
         || fruit !== meal.fruit
         || mealTime !== clockTimeOf(meal.at)
-        || (offersSmallPortion && smallPortion) !== meal.small_portion
+        || (offersPortion ? portionId : null) !== meal.portion
         || sourcesDiffer(secondSource, meal.second_source)
         || pickedAdditions.size !== meal.additions.length
         || meal.additions.some((id) => !pickedAdditions.has(id));
+  }
+
+  // Both carb sources ask the same helping question off the same scale, so one control renders
+  // for whichever source currently offers it.
+  function portionPicker(value: string, onPick: (id: string) => void) {
+    return (
+      <div className="meal-flags">
+        <label>
+          גודל המנה{" "}
+          <select value={value} onChange={(e) => onPick(e.target.value)}>
+            {portionRule.options.map((portion) => (
+              <option key={portion.id} value={portion.id}>{portion.label}</option>
+            ))}
+          </select>
+        </label>
+      </div>
+    );
   }
 
   function clearSecondSource() {
@@ -291,7 +309,7 @@ export function DayTracker({ questionnaire, day, isToday = true, closed = false,
     setVegetables(false);
     setFruit(false);
     setPickedAdditions(new Set());
-    setSmallPortion(false);
+    setPortionId(defaultPortionId);
     clearSecondSource();
     const opensOn = defaultMealTime(new Date());
     setMealTime(opensOn);
@@ -306,7 +324,7 @@ export function DayTracker({ questionnaire, day, isToday = true, closed = false,
     setVegetables(meal.vegetables);
     setFruit(meal.fruit);
     setPickedAdditions(new Set(meal.additions));
-    setSmallPortion(meal.small_portion);
+    setPortionId(meal.portion === null ? defaultPortionId : meal.portion);
     setSecondChoiceId(meal.second_source === null ? undefined : meal.second_source.carbs_choice);
     setSecondPortionId(meal.second_source === null || meal.second_source.portion === null
       ? defaultPortionId : meal.second_source.portion);
@@ -374,33 +392,13 @@ export function DayTracker({ questionnaire, day, isToday = true, closed = false,
                             // open group and its picked grade with it.
                             if (!allowsSecond(id)) clearSecondSource();
                           }}>
-          {offersSmallPortion && (
-            <div className="meal-flags">
-              <label>
-                <input type="checkbox" checked={smallPortion}
-                       onChange={(e) => setSmallPortion(e.target.checked)} />
-                {" "}{carbsQuestion.small_portion!.label}
-              </label>
-            </div>
-          )}
+          {offersPortion && portionPicker(portionId, setPortionId)}
         </CarbSourceFields>
         {secondSourceOpen && (
           <CarbSourceFields question={secondSourceQuestion} selectedId={secondChoiceId}
                             expandLabels={expandLabels}
                             onPick={(id) => setSecondChoiceId(id)}>
-            {secondIsHeavy && (
-              <div className="meal-flags">
-                <label>
-                  גודל המנה{" "}
-                  <select value={secondPortionId}
-                          onChange={(e) => setSecondPortionId(e.target.value)}>
-                    {secondRule.portions.map((portion) => (
-                      <option key={portion.id} value={portion.id}>{portion.label}</option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-            )}
+            {secondIsHeavy && portionPicker(secondPortionId, setSecondPortionId)}
           </CarbSourceFields>
         )}
         {/* A plate carrying a second carb source is the exception, so the group is revealed on

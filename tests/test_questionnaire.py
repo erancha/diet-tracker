@@ -22,7 +22,7 @@ def minimal(**overrides):
 
 def test_repo_config_loads_with_numeric_choices_and_threshold_rules():
     q = appconfig.load(APP_CONFIG).questionnaire
-    assert q.version == 13
+    assert q.version == 14
     carbs = q.question("carbs")
     assert carbs.type == "points" and carbs.max == 35
     # One bound defines a heavy meal, another a heavy day; the day bound lives on its rule.
@@ -41,7 +41,10 @@ def test_repo_config_loads_with_numeric_choices_and_threshold_rules():
     # Fat is an accompaniment of any grade, not a grade of its own, so it never returns to the
     # scale as the heavy no-carb grade it replaced.
     assert "no_carbs_heavy" not in q.carb_weights()
-    assert q.small_portion().percent == 50
+    # Quantity is one shared scale for both of a plate's carb sources; the primary picker offers
+    # it only from the threshold grade up.
+    assert [p.percent for p in q.portions().options] == [60, 80, 100]
+    assert q.portions().from_value == 4
     assert q.addition_values() == {"sweet": 4, "alcohol": 4, "nuts": 3, "fat": 2}
     # Additions are accompaniments, never grades — they must not leak into the grade picker.
     assert not set(q.addition_values()) & set(q.carb_weights())

@@ -21,16 +21,20 @@ class Derived:
     eating_window: float
 
 
-def _source_weight(choice, small_portion_flag, weights, small_portion) -> float:
-    """What one carb source on a plate weighs: its grade, at the reduced helping where the
-    quantity rule offers one. A meal's main grade and its second source price identically."""
+def _source_weight(choice, portion_id, weights, portions) -> float:
+    """What the plate's main carb source weighs: its grade, at its recorded helping where the
+    quantity rule offers one. The helping id must resolve against the declared scale even below
+    the offered grade — a bad id is a data fault, never a quiet full serving — but it discounts
+    only from the threshold up, matching where the picker exists."""
     weight = weights[choice]
-    if small_portion_flag and small_portion.offered_for(weight):
-        weight = small_portion.weigh(weight)
+    if portion_id is not None and portions.offered_for(weight):
+        return portions.weigh(weight, portion_id)
+    if portion_id is not None:
+        portions.percent(portion_id)
     return weight
 
 
-def derive(meals: list, weights: dict, addition_values: dict, small_portion,
+def derive(meals: list, weights: dict, addition_values: dict, portions,
            second_source) -> Derived:
     if not meals:
         return Derived(carbs=0, meals=0, vegetables=0, eating_window=0)
@@ -40,20 +44,19 @@ def derive(meals: list, weights: dict, addition_values: dict, small_portion,
     for meal in ordered:
         # Quantity applies to each source's own grade, before the fruit escalation floors their
         # sum: the escalation prices a second fruit, not the helping of whatever else was on the
-        # plate, so a small portion must not discount it.
-        weight = _source_weight(meal["carbs_choice"], meal["small_portion"], weights,
-                                small_portion)
+        # plate, so a reduced helping must not discount it.
+        weight = _source_weight(meal["carbs_choice"], meal["portion"], weights, portions)
         # A plate drawing on two light carb sources is one method-approved plate, so the higher
         # grade speaks for both. A heavier second source — a slice of white bread beside a grade 2
-        # bowl — is always a reduced helping, adding its grade at the helping's percentage.
+        # bowl — always carries a helping from the shared scale, adding its grade at that
+        # helping's percentage.
         second = meal["second_source"]
         if second is not None:
             second_weight = weights[second["carbs_choice"]]
             if second_source.is_light(second_weight):
                 weight = max(weight, second_weight)
             else:
-                weight += (second_weight
-                           * second_source.portion_percent(second["portion"]) / 100)
+                weight += portions.weigh(second_weight, second["portion"])
         if meal["fruit"]:
             fruits += 1
             if fruits > 1:

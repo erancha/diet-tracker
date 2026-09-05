@@ -39,7 +39,7 @@ describe("isHeavyMeal", () => {
   it("judges the plate's whole cost against the configured bound", () => {
     expect(isHeavyMeal(carbs, 4)).toBe(true);
     expect(isHeavyMeal(carbs, 3.9)).toBe(false);
-    // The cost a caller passes already carries the additions and the halved small portion, so a
+    // The cost a caller passes already carries the additions and the reduced helping, so a
     // light grade beside a drink is heavy while a small helping of a steep grade is not.
     expect(isHeavyMeal(carbs, 2 + 4)).toBe(true);
     expect(isHeavyMeal(carbs, 7 / 2)).toBe(false);
@@ -162,7 +162,7 @@ describe("valueLabel", () => {
     expect(valueLabel(carbs, 17)).toBe("17");
   });
 
-  // Small portions derive half-points; the day's mark still reads whole in every display path.
+  // Reduced helpings derive fractional points; the day's mark still reads whole in every display path.
   it("rounds a fractional score to a whole mark", () => {
     expect(valueLabel(carbs, 29.5)).toBe("30");
     expect(headedValue(carbs, 29.5)).toBe("30");

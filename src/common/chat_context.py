@@ -24,7 +24,7 @@ _HEADER = "\n\n---\nנתוני המעקב של השואל (JSON):\n"
 _TIME = "שעה"
 _CARB_SOURCE = "מקור פחמימה"
 _SECOND_SOURCE = "מקור פחמימה נוסף"
-_SMALL_PORTION = "כמות קטנה"
+_PORTION = "גודל המנה"
 _VEGETABLES = "ירקות"
 _FRUIT = "פרי"
 _ADDITIONS = "תוספות"
@@ -73,7 +73,7 @@ def _tracking_scope(questionnaire) -> dict:
     reading an untracked subject as an unrecorded one."""
     carbs = questionnaire.question("carbs")
     return {
-        "ברישום ארוחה": [_TIME, _CARB_SOURCE, _SECOND_SOURCE, _SMALL_PORTION, _VEGETABLES,
+        "ברישום ארוחה": [_TIME, _CARB_SOURCE, _SECOND_SOURCE, _PORTION, _VEGETABLES,
                          _FRUIT] + [addition.label for addition in carbs.additions],
         "במעקב היומי": [question.day_title for question in questionnaire.questions],
         "בנוסף": ["משקל"],
@@ -92,27 +92,27 @@ def _day_detail(store, questionnaire, sub, day) -> dict:
     """One day's meals in Hebrew vocabulary, beside the carb score they derive to."""
     meals = store.get_meals(sub, day)
     derived = derive(meals, questionnaire.carb_weights(), questionnaire.addition_values(),
-                     questionnaire.small_portion(), questionnaire.second_source())
+                     questionnaire.portions(), questionnaire.second_source())
     carbs = questionnaire.question("carbs")
     grade_labels = {choice.id: choice.label for choice in carbs.choices}
     addition_labels = {addition.id: addition.label for addition in carbs.additions}
     portion_labels = {portion.id: portion.label
-                      for portion in questionnaire.second_source().portions}
+                      for portion in questionnaire.portions().options}
     return {"ציון פחמימות": derived.carbs,
             "ארוחות": [_meal_entry(meal, grade_labels, addition_labels, portion_labels)
                        for meal in meals]}
 
 
-def _grade_label(labels, choice, small_portion) -> str:
-    if small_portion:
-        return f"{labels[choice]} ({_SMALL_PORTION})"
+def _grade_label(labels, choice, portion, portion_labels) -> str:
+    if portion is not None:
+        return f"{labels[choice]} ({portion_labels[portion]})"
     return labels[choice]
 
 
 def _meal_entry(meal, grade_labels, addition_labels, portion_labels) -> dict:
     entry = {_TIME: meal["at"][11:16],
              _CARB_SOURCE: _grade_label(grade_labels, meal["carbs_choice"],
-                                        meal["small_portion"])}
+                                        meal["portion"], portion_labels)}
     second = meal["second_source"]
     if second is not None:
         label = grade_labels[second["carbs_choice"]]

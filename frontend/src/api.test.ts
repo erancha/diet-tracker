@@ -50,7 +50,7 @@ describe("createApi", () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response('{"date": "2026-08-22"}'));
     vi.stubGlobal("fetch", fetchMock);
     const meal = { at: "2026-08-22T13:30:00+03:00", carbs_choice: "carb_grade_4", vegetables: true,
-                   fruit: false, additions: ["sweet"], small_portion: false, second_source: null };
+                   fruit: false, additions: ["sweet"], portion: null, second_source: null };
 
     await createApi(cfg, tokens).updateMeal("2026-08-22", "13:30:00-abcdef", meal);
 
