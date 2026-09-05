@@ -113,7 +113,8 @@ function TrendPanel({ questionnaire, question, dayStrs, dayByDate, index, showXA
             hide={!showXAxis}
             tickLine={false}
             axisLine={{ stroke: "var(--viz-baseline)" }}
-            tick={{ fontSize: 11, fill: "var(--viz-muted)" }}
+            // Bold: the one visible date row serves every panel in the stack, not just its own.
+            tick={{ fontSize: 11, fontWeight: 700, fill: "var(--viz-muted)" }}
           />
           <YAxis
             domain={domain}
@@ -145,7 +146,9 @@ export function TrendChart({ questionnaire, days, today, endDate }: {
   if (liveDay) dayByDate.set(liveDay.date, liveDay);
   return (
     <div className="trend" dir="ltr">
-      <div className="trend-legend"><span className="trend-legend-dot" /> חריגה</div>
+      {/* The chart container is LTR for the axes; the legend flips back so it leads from the
+          right like the panel headings. */}
+      <div className="trend-legend" dir="rtl"><span className="trend-legend-dot" /> חריגה</div>
       {panels.map((question, index) => (
         <TrendPanel
           key={question.id}
