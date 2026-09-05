@@ -276,4 +276,13 @@ def parse(raw: dict) -> Questionnaire:
             raise ValueError(f"rule {rule.id!r} references unknown question {rule.question_id!r}")
         if "{days}" not in rule.message:
             raise ValueError(f"rule {rule.id!r} message must contain {{days}}")
+    # A points question's day-scope bound lives on its rule (heavy_meal covers the meal scope),
+    # and the frontend trend panel grids its y-axis at multiples of that limit
+    # (frontend/src/trend.ts), so an at_least/above rule must exist.
+    for question in questions:
+        if question.type == "points" and not any(
+                r.question_id == question.id and (r.at_least is not None or r.above is not None)
+                for r in rules):
+            raise ValueError(f"points question {question.id!r} needs an at_least or above rule "
+                             f"bounding its day score")
     return Questionnaire(version=raw["version"], questions=questions, rules=rules)

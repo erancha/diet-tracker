@@ -93,7 +93,7 @@ function TrendPanel({ questionnaire, question, dayStrs, dayByDate, index, showXA
 }) {
   const color = `var(--viz-series-${index + 1})`;
   const data = panelData(questionnaire, question, dayStrs, dayByDate);
-  const domain = domainFor(question, data.map((d) => d.value));
+  const domain = domainFor(questionnaire, question, data.map((d) => d.value));
   const boundLabel = ruleBoundLabel(questionnaire, question.id);
   return (
     <div className="trend-panel">
@@ -117,7 +117,7 @@ function TrendPanel({ questionnaire, question, dayStrs, dayByDate, index, showXA
           />
           <YAxis
             domain={domain}
-            ticks={ticksFor(question)}
+            ticks={ticksFor(questionnaire, question)}
             width={Y_AXIS_WIDTH}
             tickLine={false}
             axisLine={false}

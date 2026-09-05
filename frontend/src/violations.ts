@@ -37,11 +37,16 @@ export function activeViolations(questionnaire: Questionnaire, days: Day[],
   });
 }
 
+// The rule bounding a question, or undefined where none does and nothing ever marks red.
+export function questionRule(questionnaire: Questionnaire, questionId: string): Rule | undefined {
+  return questionnaire.rules.find((r) => r.question_id === questionId);
+}
+
 // The configured bound of a question's rule, phrased for display beside the red violation
 // marks. Read from the live rules so the shown limit can never drift from what isViolating
-// paints; undefined where no rule bounds the question and nothing ever marks red.
+// paints; undefined where no rule bounds the question.
 export function ruleBoundLabel(questionnaire: Questionnaire, questionId: string): string | undefined {
-  const rule = questionnaire.rules.find((r) => r.question_id === questionId);
+  const rule = questionRule(questionnaire, questionId);
   if (rule === undefined) return undefined;
   const over = rule.at_least ?? rule.above;
   return over !== undefined ? `מעל ${over}` : `פחות מ-${rule.below}`;

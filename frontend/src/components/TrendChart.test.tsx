@@ -19,12 +19,15 @@ const emptyToday: DayPayload = {
 // The fixture panels plus a carb-score points panel configured last, mirroring the production
 // config where the carbs question follows the single-type questions.
 const carbsPanel: Question = {
-  id: "carbs", type: "points", text: "פחמימות", panel_qualifier: "ציון", max: 30,
+  id: "carbs", type: "points", text: "פחמימות", panel_qualifier: "ציון",
   choices: [{ id: "no_carbs", label: "ללא פחמימות", value: 0 }],
 };
 const withCarbsPanel: Questionnaire = {
   ...fixtureQuestionnaire,
   questions: [...fixtureQuestionnaire.questions, carbsPanel],
+  rules: [...fixtureQuestionnaire.rules,
+          { id: "heavy_day", question_id: "carbs", at_least: 12,
+            consecutive_days: 2, message: "m {days}" }],
 };
 
 describe("TrendChart", () => {
@@ -55,7 +58,7 @@ describe("TrendChart", () => {
   it("charts the carb-score panel first even when it is configured last", () => {
     const { container } = render(<TrendChart questionnaire={withCarbsPanel} days={days} today={emptyToday} endDate="2026-08-18" />);
     const titles = [...container.querySelectorAll(".trend-panel-title")].map((el) => el.textContent);
-    expect(titles).toEqual(["פחמימות (ציון)", "שתיה (ליטרים)(חריגה: פחות מ-2.5)", "חלון אכילה (שעות)"]);
+    expect(titles).toEqual(["פחמימות (ציון)(חריגה: מעל 12)", "שתיה (ליטרים)(חריגה: פחות מ-2.5)", "חלון אכילה (שעות)"]);
   });
 
   it("shows each ruled panel's configured limit in its title and leaves unruled panels bare", () => {

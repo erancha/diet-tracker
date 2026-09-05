@@ -87,6 +87,15 @@ def test_non_numeric_heavy_meal_is_rejected():
         parse(raw)
 
 
+def test_points_question_without_an_over_rule_is_rejected():
+    with pytest.raises(ValueError, match="at_least or above"):
+        parse(minimal(rules=[]))
+    raw = minimal(rules=[{"id": "low", "question_id": "carbs", "below": 2,
+                          "consecutive_days": 1, "message": "low {days}"}])
+    with pytest.raises(ValueError, match="at_least or above"):
+        parse(raw)
+
+
 def test_rule_violates_compares_numerically():
     q = parse(minimal())
     rule = q.rules[0]
@@ -95,9 +104,10 @@ def test_rule_violates_compares_numerically():
 
 
 def test_below_rule_violates_under_threshold():
-    raw = minimal(rules=[{"id": "low", "question_id": "carbs", "below": 2,
-                          "consecutive_days": 1, "message": "low {days}"}])
-    rule = parse(raw).rules[0]
+    raw = minimal()
+    raw["rules"].append({"id": "low", "question_id": "carbs", "below": 2,
+                         "consecutive_days": 1, "message": "low {days}"})
+    rule = parse(raw).rules[1]
     assert rule.violates(1.9) and not rule.violates(2)
 
 
