@@ -207,15 +207,13 @@ describe("questionTitle", () => {
 });
 
 describe("trendPanels", () => {
-  it("splits questions by panel heading presence", () => {
-    const { panels, strip } = trendPanels(questionnaire);
-    expect(panels.map((q) => q.id)).toEqual(["carbs"]);
-    expect(strip.map((q) => q.id)).toEqual(["meals"]);
+  it("charts only questions carrying a panel heading", () => {
+    expect(trendPanels(questionnaire).map((q) => q.id)).toEqual(["carbs"]);
   });
 
   it("charts a question whose panel heading is a qualifier on its text", () => {
     const derived: Question = { ...carbs, panel_title: undefined, panel_qualifier: "ציון, נמוך = טוב" };
-    const { panels } = trendPanels({ ...questionnaire, questions: [derived, meals] });
+    const panels = trendPanels({ ...questionnaire, questions: [derived, meals] });
     expect(panels.map((q) => q.id)).toEqual(["carbs"]);
   });
 
@@ -224,7 +222,7 @@ describe("trendPanels", () => {
       id: "drinking", type: "single", text: "שתיה", panel_title: "שתיה (ליטרים)",
       choices: [{ id: "l3", label: "3 ליטר", value: 3 }],
     };
-    const { panels } = trendPanels({ ...questionnaire, questions: [drinking, carbs, meals] });
+    const panels = trendPanels({ ...questionnaire, questions: [drinking, carbs, meals] });
     expect(panels.map((q) => q.id)).toEqual(["carbs", "drinking"]);
   });
 });

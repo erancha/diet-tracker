@@ -300,7 +300,6 @@ td.view-day { cursor: pointer; }
 .trend-panel-title { display: flex; align-items: center; gap: 0.35rem; font-size: 12px; font-weight: 700; margin: 0 0 0.15rem; }
 .trend-chip { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
 .trend-panel-limit { color: var(--viz-critical); font-weight: 400; }
-.trend-violation-tick { stroke: var(--viz-critical); stroke-width: 2; }
 .trend-legend { display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; margin-bottom: 0.5rem; }
 .trend-legend-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--viz-critical); display: inline-block; }
 .trend-tooltip {

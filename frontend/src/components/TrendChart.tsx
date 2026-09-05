@@ -1,12 +1,11 @@
-import { CartesianGrid, Line, LineChart, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis } from "recharts";
+import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { Day, DayPayload, Question, Questionnaire } from "../types";
 import { dayLabel, last7Days } from "../dates";
 import { domainFor, liveTrendDay, ticksFor } from "../trend";
-import { headedValue, isViolating, panelTitle, questionTitle, ruleBoundLabel, trendPanels, valueLabel } from "../violations";
+import { isViolating, panelTitle, ruleBoundLabel, trendPanels, valueLabel } from "../violations";
 
-// Shared horizontal geometry across the panels and the violations strip: the panels reserve the
-// y-axis width axis-side, the strip (which has no y-axis) reserves it as left margin, so every
-// chart plots the 7 day columns at identical x positions.
+// Every panel reserves the same y-axis width, so the 7 day columns plot at identical x positions
+// down the stack and the one visible date axis dates them all.
 const Y_AXIS_WIDTH = 40;
 const MARGIN_RIGHT = 14;
 
@@ -17,12 +16,6 @@ interface PanelPoint {
   value: number | null;
   choiceLabel: string | null;
   violating: boolean;
-}
-
-interface StripPoint {
-  label: string;
-  y: number;
-  violations: string[];
 }
 
 function panelData(questionnaire: Questionnaire, question: Question, dayStrs: string[], dayByDate: Map<string, Day>): PanelPoint[] {
@@ -36,18 +29,6 @@ function panelData(questionnaire: Questionnaire, question: Question, dayStrs: st
   });
 }
 
-function stripData(questionnaire: Questionnaire, otherQuestions: Question[], dayStrs: string[], dayByDate: Map<string, Day>): StripPoint[] {
-  return dayStrs.map((date) => {
-    const day = dayByDate.get(date);
-    const violations = day
-      ? otherQuestions
-          .filter((q) => q.id in day.answers && isViolating(questionnaire, q.id, day.answers[q.id]))
-          .map((q) => `${questionTitle(q, "day")}: ${headedValue(q, day.answers[q.id])}`)
-      : [];
-    return { label: dayLabel(date), y: 0, violations };
-  });
-}
-
 function PanelDot({ cx, cy, payload, color }: { cx?: number; cy?: number; payload?: PanelPoint; color: string }) {
   if (cx == null || cy == null || payload!.value == null) return null;
   const violating = payload!.violating;
@@ -58,28 +39,6 @@ function PanelTooltip({ active, payload }: { active?: boolean; payload?: { paylo
   if (!active || !payload?.length || payload[0].payload.value == null) return null;
   const point = payload[0].payload;
   return <div className="trend-tooltip">{dayLabel(point.date)} · {point.choiceLabel}</div>;
-}
-
-function StripTicks({ cx, cy, payload }: { cx?: number; cy?: number; payload?: StripPoint }) {
-  if (cx == null || cy == null || payload!.violations.length === 0) return null;
-  return (
-    <g>
-      {payload!.violations.map((_, j) => {
-        const x = cx + (j - (payload!.violations.length - 1) / 2) * 5;
-        return <line key={j} x1={x} y1={cy - 4} x2={x} y2={cy + 4} className="trend-violation-tick" />;
-      })}
-    </g>
-  );
-}
-
-function StripTooltip({ active, payload }: { active?: boolean; payload?: { payload: StripPoint }[] }) {
-  if (!active || !payload?.length || payload[0].payload.violations.length === 0) return null;
-  const point = payload[0].payload;
-  return (
-    <div className="trend-tooltip">
-      {point.violations.map((text) => <div key={text}>{point.label} · {text}</div>)}
-    </div>
-  );
 }
 
 function TrendPanel({ questionnaire, question, dayStrs, dayByDate, index, showXAxis, title }: {
@@ -132,13 +91,12 @@ function TrendPanel({ questionnaire, question, dayStrs, dayByDate, index, showXA
   );
 }
 
-// 7-day trend: one line panel per chartable question, then a strip marking days where any
-// non-chartable question violated a rule. Ends at today once today has recorded meals — its
-// running carb score charts live — else at the latest submitted date.
+// 7-day trend: one line panel per chartable question. Ends at today once today has recorded
+// meals — its running carb score charts live — else at the latest submitted date.
 export function TrendChart({ questionnaire, days, today, endDate }: {
   questionnaire: Questionnaire; days: Day[]; today: DayPayload; endDate: string;
 }) {
-  const { panels, strip } = trendPanels(questionnaire);
+  const panels = trendPanels(questionnaire);
   if (panels.length === 0) return null;
   const liveDay = liveTrendDay(today, days);
   const dayStrs = last7Days(liveDay?.date ?? endDate);
@@ -161,14 +119,6 @@ export function TrendChart({ questionnaire, days, today, endDate }: {
           title={panelTitle(question)!}
         />
       ))}
-      <ResponsiveContainer width="100%" height={22}>
-        <ScatterChart margin={{ top: 2, right: MARGIN_RIGHT, bottom: 2, left: Y_AXIS_WIDTH }}>
-          <XAxis dataKey="label" type="category" scale="point" hide />
-          <YAxis dataKey="y" hide domain={[-1, 1]} />
-          <Tooltip content={<StripTooltip />} />
-          <Scatter data={stripData(questionnaire, strip, dayStrs, dayByDate)} shape={<StripTicks />} isAnimationActive={false} />
-        </ScatterChart>
-      </ResponsiveContainer>
     </div>
   );
 }
