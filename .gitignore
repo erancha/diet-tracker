@@ -14,6 +14,8 @@ docs/superpowers/*
 
 # AI-session working files stay local; CLAUDE.md is tracked as contributor documentation
 .claude/
+# Regenerable knowledge-graph output the /graphify skill derives from the repo
+graphify-out/
 
 # Session AWS credentials — tracked only as aws-config.example.sh
 /scripts/aws-config.sh
