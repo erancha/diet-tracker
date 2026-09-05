@@ -93,10 +93,14 @@ function TrendPanel({ questionnaire, question, dayStrs, dayByDate, index, showXA
 
 // 7-day trend: one line panel per chartable question. Ends at today once today has recorded
 // meals — its running carb score charts live — else at the latest submitted date.
-export function TrendChart({ questionnaire, days, today, endDate }: {
+export function TrendChart({ questionnaire, days, today, endDate, headlineOnly = false }: {
   questionnaire: Questionnaire; days: Day[]; today: DayPayload; endDate: string;
+  // Condensed rendering for the folded trends section: the legend and the headline panel alone —
+  // trendPanels orders the summed carb score first, so that is the panel that stays on screen.
+  headlineOnly?: boolean;
 }) {
-  const panels = trendPanels(questionnaire);
+  const allPanels = trendPanels(questionnaire);
+  const panels = headlineOnly ? allPanels.slice(0, 1) : allPanels;
   if (panels.length === 0) return null;
   const liveDay = liveTrendDay(today, days);
   const dayStrs = last7Days(liveDay?.date ?? endDate);
