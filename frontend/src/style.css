@@ -10,11 +10,13 @@
   --viz-baseline: #c3c2b7;
   --viz-muted: #898781;
   --column-width: 48rem;
+  --page-pad-top: 0.6rem;
+  --page-pad-bottom: 1rem;
 }
 /* The top edge is tighter than the other three: both screens open on the app title, which sits
    directly on this padding with no heading margin of its own, so a full rem here would read as a
    gap before the page starts rather than as its edge. */
-body { font-family: system-ui, sans-serif; max-width: var(--column-width); margin: 0 auto; padding: 0.6rem 1rem 1rem; background: #fafafa; color: #212121; }
+body { font-family: system-ui, sans-serif; max-width: var(--column-width); margin: 0 auto; padding: var(--page-pad-top) 1rem var(--page-pad-bottom); background: #fafafa; color: #212121; }
 /* The title's own heading margins are dropped: the body's top padding already sets the page's
    edge, and the weight line below reads as the title's own status line rather than as a separate
    block, so the row closes tight on both sides. */
@@ -82,12 +84,30 @@ header .alarm { --btn-bg: #ffebee; --btn-fg: var(--danger); --btn-border: #f3c9c
    whichever section happens to shout loudest. The viewport term keeps it off the account box on a
    narrow phone. */
 h1 { font-size: min(2.1rem, 9vw); color: var(--accent); margin-top: 0; }
+/* The tab's icon beside the name, sized by the heading's own em so the pair scales as one line;
+   middle alignment centers the emoji's square against the letters, which have no descenders to
+   meet a baseline-seated box. */
+h1 .app-icon { width: 1em; height: 1em; vertical-align: middle; margin-inline-end: 0.15em; }
 .landing { display: flex; flex-direction: column; }
-/* Half the browser's default gap between the title and the summary it introduces. The column is a
-   flex container, so these margins stand rather than collapsing into each other — the intro's own
-   share is halved alongside the title's. */
-.landing h1 { margin-bottom: 0.335em; }
-.landing-intro { margin-top: 0.5em; margin-bottom: 0.6rem; }
+/* The condensed view fills the viewport so the repo link rides the page's bottom edge; the
+   expanded view scrolls past a screen anyway, and there the link keeps the fixed gap it shares
+   with the principles table instead. */
+.landing-brief { min-height: calc(100dvh - var(--page-pad-top) - var(--page-pad-bottom)); }
+/* The title sits a rem off the page top, and its gap to the summary is half the browser's default
+   plus the same rem of air. The column is a flex container, so these margins stand rather than
+   collapsing into each other — the intro's own share is halved alongside the title's. */
+.landing h1 { margin-top: 1rem; margin-bottom: calc(0.335em + 1rem); }
+/* Two auto margins — above the title and above the repo link — split the condensed view's spare
+   height evenly, centering the pitch between the page top and the link riding the bottom edge;
+   both collapse to zero once the content fills the screen. The title takes hero treatment —
+   centered, display-sized, viewport-capped to one line — while body copy stays start-aligned to
+   read, as does the expanded view's title, which crowns a reading page rather than a splash. */
+.landing-brief h1 { margin-top: auto; text-align: center; font-size: min(2.6rem, 11vw); }
+.landing-brief .landing-repo { margin-top: auto; }
+.landing-intro, .landing-condensed { margin-top: 0.5em; margin-bottom: 0.6rem; }
+/* In both views the toggle sits between the content and the sign-in button, a rem off each, so
+   the screen's single action doesn't read as part of the toggle's line. */
+.landing .more-toggle { margin-block: 1rem; }
 /* On a phone the bullets wrap several times, so the marker column is trimmed well below the browser
    default to widen the text measure. From tablet width up the line has room either way, and the
    default indent returns. */
@@ -530,10 +550,11 @@ td.view-day { cursor: pointer; }
   line-clamp: 3; overflow: hidden;
 }
 .chat-assistant { align-self: flex-end; background: #fff; border: 1px solid #e0e0da; }
-/* The citations' more/less toggle: underlined link text at the source line's size, so it stays
-   part of the answer bubble's muted footer rather than a full control. The underline carries the
-   clickability — accent green alone also colors non-interactive text like headings and values. */
-.chat-sources-toggle {
+/* The shared more/less expander — the chat citations' toggle and the landing's condensed-view
+   one: underlined link text rather than a full control, so in the chat it stays part of the
+   answer bubble's muted footer. The underline carries the clickability — accent green alone also
+   colors non-interactive text like headings and values. */
+.more-toggle {
   --btn-bg: transparent; --btn-fg: var(--accent); --btn-border: transparent;
   display: block; padding: 0; margin-top: 0.35rem; border-radius: 0; font-size: 0.8rem;
   text-decoration: underline;

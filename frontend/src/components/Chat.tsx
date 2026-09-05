@@ -206,7 +206,7 @@ export function Chat({ api, sampleQuestions }: {
                   <p>{turn.answer}</p>
                   {turn.sources.length > 0 && (
                     <>
-                      <button type="button" className="chat-sources-toggle"
+                      <button type="button" className="more-toggle"
                         aria-expanded={sourcesShown.has(turn.at)}
                         onClick={() => toggleSources(turn.at)}>
                         {sourcesShown.has(turn.at) ? "פחות" : "יותר"}

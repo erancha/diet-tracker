@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { APP_TITLE } from "../appTitle";
+import { AppHeading } from "./AppHeading";
 import { Icon } from "./Icon";
 
 // App chrome: the title, the account menu, and — while rule violations are still active — an
@@ -43,7 +43,7 @@ export function Header({ email, muted, onSignOut, onSetMuted, onFoldAll, nextFol
   return (
     <>
       <header>
-        <h1>{APP_TITLE}</h1>
+        <AppHeading />
         <span className="account" ref={account}>
           <span className="account-actions">
             {activeViolations.length > 0 && (
