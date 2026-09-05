@@ -38,7 +38,7 @@ export function MealList({ questionnaire, meals, expandLabels, onEdit, onDelete,
     : undefined;
 
   return (
-    <ul className="meal-list">
+    <ul className={expandLabels ? "meal-list expanded-labels" : "meal-list"}>
       {meals.map((meal, index) => {
         const choice = carbsQuestion.choices.find((c) => c.id === meal.carbs_choice);
         const second = meal.second_source === null ? undefined

@@ -436,6 +436,9 @@ button.section-summary, button.transcript-toggle {
 .meal-list { display: grid; align-items: center; gap: 0.5rem 1rem;
              grid-template-columns: max-content minmax(0, max-content) max-content max-content; }
 .meal-list li { display: contents; }
+/* Full grade names run several lines per row, so the expanded density trades a point of size for
+   the extra text; relative to the inherited size, not a restated absolute. */
+.meal-list.expanded-labels { font-size: calc(1em - 1px); }
 /* Each cell names its column, so a row missing a cell — a history day whose points no longer
    resolve renders no score — leaves its column empty instead of pulling later cells across. The
    time also pins to its row's top, since a description wrapping to two lines would otherwise
