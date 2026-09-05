@@ -6,15 +6,16 @@
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <!--
   Standalone walkthrough of one tracked day, published beside the app at /demo.html and linked
-  from the README. It replays a single session — sign-in, three meals, closing the day, the
-  week's trend — against a rebuilt copy of the app's screen: the components' markup, style.css
-  scoped to .screen with its viewport-dependent values pinned to a 390px phone, and ports of
-  derive.ts, violations.ts, trend.ts and dates.ts, so every figure shown is derived here rather
-  than written in.
+  from the README. It replays a single session — sign-in from the condensed landing pitch, three
+  meals recorded as they happen, the day closed from the tracker, and the week's trends — against
+  a rebuilt copy of the app's screen: the components' markup, style.css scoped to .screen with its
+  viewport-dependent values pinned to a 390px phone, and ports of derive.ts, violations.ts,
+  trend.ts and dates.ts, so every figure shown is derived here rather than written in.
 
   The questionnaire config and the recorded history below are a matched snapshot, not live
-  reads. The narration names specific carb grades and scores, so a later questionnaire version
-  would relabel days that were never answered under it.
+  reads. The narration names specific carb grades, scores and rule thresholds, so a later
+  questionnaire version would relabel days that were never answered under it. The weight and
+  admin sections sit outside the replayed session and are not rebuilt here.
 -->
 <title>יום ביומן</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -135,7 +136,7 @@ body {
   margin: -13px 0 0 -13px; border-radius: 50%;
   border: 2px solid rgba(46,125,50,0.85);
   background: rgba(46,125,50,0.16);
-  pointer-events: none; opacity: 0; z-index: 6;
+  pointer-events: none; opacity: 0; z-index: 20;
   transition: transform 420ms cubic-bezier(.4,.15,.2,1), opacity 200ms linear;
 }
 .tap.on { opacity: 1; }
@@ -244,18 +245,19 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .tap { transition: none; }
-  .spot.on { animation: none; }
   .track span { transition: none; }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
    THE APP — frontend/src/style.css, scoped to .screen and resolved for a
-   390px viewport (the vw-dependent legend and shared-header-row sizes and the
-   ≥48rem rules are pinned to that width rather than the artifact's own
-   viewport).
+   390px viewport (the vw-dependent title, legend and landing sizes, and the
+   ≥48rem / ≤47.99rem rules, are pinned to that width rather than the
+   artifact's own viewport). Rules for surfaces the walkthrough never renders
+   (the weight section, the chat transcript, the day view) are left out.
    ───────────────────────────────────────────────────────────────────────── */
 .screen {
   --accent: #2e7d32;
+  --accent-border: #b6d0b8;
   --danger: #c62828;
   --viz-series-1: #2a78d6;
   --viz-series-2: #1baf7a;
@@ -264,10 +266,9 @@ body {
   --viz-grid: #e1e0d9;
   --viz-baseline: #c3c2b7;
   --viz-muted: #898781;
-  --column-width: 48rem;
   direction: rtl;
   font-family: system-ui, sans-serif;
-  padding: 1rem;
+  padding: 0.6rem 1rem 1rem;
   background: #fafafa;
   color: #212121;
   font-size: 16px;
@@ -278,27 +279,64 @@ body {
 .screen h2 { font-size: 1.5em; }
 .screen h3 { font-size: 1.17em; }
 .screen ul { padding-inline-start: 40px; }
-.screen header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 1rem; }
-.screen header > span { display: flex; flex-direction: column; align-items: flex-end; gap: 0.3rem; font-size: 0.8rem; }
+.screen header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.35rem; }
+.screen header h1 { margin-bottom: 0; }
+.screen header > span { display: flex; flex-direction: column; align-items: flex-end; font-size: 0.8rem; }
 .screen header span button { font-size: inherit; padding: 0.3rem 0.9rem; }
 .screen header .account-actions { display: flex; align-items: center; gap: 0.4rem; }
-.screen header .alarm { --btn-bg: #ffebee; --btn-fg: var(--danger); --btn-border: #f3c9cc; display: inline-flex; align-items: center; gap: 0.25rem; }
-.screen h1 { font-size: 1.4rem; color: var(--accent); }
+.screen header .account { position: relative; }
+.screen header button.account-trigger { padding: 0.7rem; }
+.screen header .account-trigger .icon { width: 1.375rem; height: 1.375rem; }
+.screen header button.account-trigger[aria-expanded="true"]:not(:disabled) { --btn-bg: #dfe4e6; --btn-fg: var(--accent); }
+.screen header .account-menu {
+  --menu-pad: 0.25rem; --menu-text-inset: 0.8rem;
+  position: absolute; top: 100%; inset-inline-end: 0; z-index: 10; margin-top: 0.3rem;
+  min-width: max-content;
+  background: #fff; border: 1px solid #e0e0da; border-radius: 8px; padding: var(--menu-pad);
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.13);
+}
+.screen header .account-menu, .screen header .account-menu [role="menu"] { display: flex; flex-direction: column; }
+.screen header .account-email {
+  margin: 0 calc(-1 * var(--menu-pad)) var(--menu-pad);
+  padding: 0.3rem calc(var(--menu-text-inset) + var(--menu-pad)) 0.45rem;
+  font-size: 0.85em; color: #8a8a84; border-block-end: 1px solid #e0e0da;
+}
+.screen header .account-menu button {
+  --btn-bg: transparent; --btn-fg: inherit; --btn-border: transparent;
+  display: flex; align-items: center; gap: 0.5rem;
+  font-size: 0.9rem;
+  text-align: start; padding: 0.45rem var(--menu-text-inset); border-radius: 6px; white-space: nowrap;
+}
+.screen header .alarm { --btn-bg: #ffebee; --btn-fg: var(--danger); --btn-border: #f3c9cc;
+                        display: inline-flex; align-items: center; gap: 0.25rem; }
+.screen h1 { font-size: 2.1rem; color: var(--accent); margin-top: 0; }
+.screen h1 .app-icon { width: 1em; height: 1em; vertical-align: middle; margin-inline-end: 0.15em; }
 .screen .landing { display: flex; flex-direction: column; }
-.screen .landing-intro { margin-bottom: 0.6rem; }
+.screen .landing-brief { min-height: 632px; }
+.screen .landing h1 { margin-top: 1rem; margin-bottom: calc(0.335em + 1rem); }
+.screen .landing-brief h1 { margin-top: auto; text-align: center; font-size: 2.6rem; }
+.screen .landing-brief .landing-repo { margin-top: auto; }
+.screen .landing-intro, .screen .landing-condensed { margin-top: 0.5em; margin-bottom: 0.6rem; }
+.screen .landing .more-toggle { margin-block: 1rem; }
 .screen .landing-summary { margin-top: 0; padding-inline-start: 1.2rem; }
 .screen .landing-summary li { margin-bottom: 0.6rem; }
 .screen .landing-principles, .screen .landing-repo { margin-top: 2.5rem; }
 .screen .landing-principles { min-width: 0; width: 100%; color: #5f5f5f; }
 .screen .landing-principles caption { text-align: start; font-weight: 600; margin-bottom: 0.4rem; }
 .screen .landing-principles td:first-child { white-space: nowrap; }
-.screen .day-picker, .screen .range-picker { display: flex; gap: 1rem; align-items: center; margin-bottom: 0.75rem; font-size: 0.9rem; }
+.screen .landing-principles th { font-size: calc(var(--cell-font-size) + 2px); }
 .screen fieldset { border: 1px solid #ddd; border-radius: 8px; margin: 0 0 1rem; padding: 0.75rem 1rem; background: #fff; }
-.screen legend { font-weight: 600; padding: 0 0.5rem; white-space: nowrap; font-size: 14.72px; }
+.screen legend { font-weight: 600; padding: 0 0.5rem; white-space: nowrap; font-size: 12.72px; }
 .screen label { display: block; padding: 0.35rem 0; cursor: pointer; }
-.screen button { --btn-bg: var(--accent); --btn-fg: #fff; --btn-border: var(--accent); background: var(--btn-bg); color: var(--btn-fg); border: 1px solid var(--btn-border); border-radius: 8px; padding: 0.6rem 2.5rem; font-size: 1rem; cursor: pointer; font-family: inherit; }
-.screen button.quiet { --btn-bg: #fff; --btn-fg: var(--accent); --btn-border: #b6d0b8; }
-.screen button.icon-only { --btn-bg: transparent; --btn-fg: inherit; --btn-border: transparent; display: inline-flex; padding: 0.3rem; border-radius: 50%; }
+.screen fieldset > label, .screen .meal-flags label { padding: 0.175rem 0; }
+.screen button {
+  --btn-bg: var(--accent); --btn-fg: #fff; --btn-border: var(--accent);
+  background: var(--btn-bg); color: var(--btn-fg); border: 1px solid var(--btn-border);
+  border-radius: 8px; padding: 0.6rem 2.5rem; font-size: 1rem; cursor: pointer; font-family: inherit;
+}
+.screen button.quiet { --btn-bg: #fff; --btn-fg: var(--accent); --btn-border: var(--accent-border); }
+.screen button.icon-only { --btn-bg: transparent; --btn-fg: inherit; --btn-border: transparent;
+                           display: inline-flex; padding: 0.3rem; border-radius: 50%; }
 .screen button:hover:not(:disabled) { filter: brightness(0.93); }
 .screen button.icon-only:hover:not(:disabled) { --btn-bg: #eceff1; filter: none; }
 .screen button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -307,16 +345,22 @@ body {
 .screen .alert { background: #ffebee; color: var(--danger); border-radius: 8px; padding: 0.6rem 1rem; margin-bottom: 0.5rem; white-space: pre-line; }
 .screen .ok { background: #e8f5e9; color: var(--accent); border-radius: 8px; padding: 0.6rem 1rem; margin-bottom: 0.5rem; }
 .screen .notice { background: #fff8e1; color: #795500; border-radius: 8px; padding: 0.6rem 1rem; margin-bottom: 0.5rem; }
-.screen .table-wrap { overflow-x: auto; margin-left: 0; }
+.screen .table-wrap { --delete-pad: 0.15rem; overflow-x: auto; margin-left: 0; }
+.screen .table-wrap td { white-space: nowrap; }
+.screen .table-wrap td.bound { max-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .screen table { border-collapse: collapse; min-width: 100%; margin-top: 0.5rem; background: #fff; }
-.screen th, .screen td { --cell-font-size: 0.9rem; border: 1px solid #ddd; padding: 0.4rem 0.6rem; text-align: right; font-size: var(--cell-font-size); }
+.screen th, .screen td { --cell-font-size: calc(0.9rem - 2px); border: 1px solid #ddd; padding: 0.3rem;
+                         text-align: right; font-size: var(--cell-font-size); }
 .screen th { vertical-align: top; font-size: calc(var(--cell-font-size) - 1pt); }
-.screen .history h2 { margin-bottom: 0.25em; }
+.screen .section-fold-body { display: grid; grid-template-rows: 1fr; }
+.screen .section-fold-body > div { min-height: 0; }
+.screen .trends h2 { margin-bottom: 0.25em; margin-top: calc(0.83em + 1rem); }
 .screen td.violation { background: #ffebee; color: var(--danger); }
-.screen td.high-score, .screen .tracker-dashboard .high-score .value, .screen .meal-list .high-grade { color: var(--danger); }
-.screen .delete-day { margin-inline-start: 0.4rem; }
+.screen td.shortfall { color: var(--danger); }
+.screen td.heavy-day, .screen .tracker-dashboard .heavy-day .score, .screen .meal-list .heavy-meal { color: var(--danger); }
+.screen .day-score { display: inline-block; min-width: 2ch; font-variant-numeric: tabular-nums; }
 .screen td.view-day { cursor: pointer; }
-.screen .day-tracker, .screen .day-view { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1rem; }
+.screen .day-tracker { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; }
 .screen .trend { margin: 0 0 1.5rem; }
 .screen .trend-panel { border: 1px solid #ddd; border-radius: 8px; padding: 0.6rem 0.5rem 0.4rem; background: #fff; }
 .screen .trend-panel + .trend-panel { margin-top: 1.75rem; }
@@ -325,35 +369,61 @@ body {
 .screen .trend-violation-tick { stroke: var(--viz-critical); stroke-width: 2; }
 .screen .trend-legend { display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; margin-bottom: 0.5rem; }
 .screen .trend-legend-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--viz-critical); display: inline-block; }
-.screen .day-tracker { margin-bottom: 1rem; }
 .screen .day-tracker h2 { font-size: 1.6rem; margin: 0 0 0.4em; }
-.screen .section-header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 1rem; }
-.screen .section-header h3 { margin: 0; }
-.screen .day-tracker .section-header h2, .screen .day-tracker .section-header h3 { font-size: 21.3px; }
-.screen .section-toggle { --btn-bg: transparent; --btn-fg: inherit; --btn-border: transparent; font: inherit; font-weight: 600; padding: 0; cursor: pointer; }
-.screen .section-toggle::before { content: "▾ "; font-size: 0.9em; }
+.screen .section-toggle { --btn-bg: transparent; --btn-fg: inherit; --btn-border: transparent;
+                          font: inherit; font-weight: 600; padding: 0; cursor: pointer; }
+.screen .section-toggle::before { content: "▾ "; font-size: calc(0.9em + 1px); }
 .screen .section-toggle[aria-expanded="false"]::before { content: "◂ "; }
 .screen .section-toggle:hover:not(:disabled) { --btn-fg: var(--accent); filter: none; }
-.screen .meal-form h3 { font-size: 1.1rem; margin: 1rem 0 0.5rem; }
-.screen .meal-form h3:last-child { margin-bottom: 0; }
+.screen button.section-summary { --btn-bg: transparent; --btn-border: transparent;
+                                 font-size: 0.9rem; padding: 0 0 0.4rem; }
+.screen .meal-form h3 { font-size: calc(1.1rem + 2px); margin: 1.5rem 0 0.5rem; }
+.screen .meal-add-warn { color: var(--danger); font-weight: 700; }
+.screen .meal-form-open { position: relative; border: 1px solid var(--accent-border); border-radius: 8px;
+                          padding: 0.75rem 1rem 1rem; margin-top: 1rem; }
+.screen .meal-form-open h3 { margin-top: 0; }
+.screen .meal-form-close { position: absolute; top: 0.4rem; inset-inline-end: 0.5rem; }
 .screen .form-actions:empty, .screen .meal-list:empty { display: none; }
-.screen .meal-flags { display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; }
+.screen .label-density { display: flex; justify-content: flex-end; margin-top: 0.75rem; }
+.screen .label-density button { padding: 0.15rem 0.6rem; font-size: 0.8rem; white-space: nowrap; }
+.screen .carb-source { margin-bottom: 1rem; }
+.screen .carb-source > fieldset { margin-bottom: 0; }
+.screen .meal-flags { display: flex; flex-wrap: wrap; gap: 0.25rem 1.5rem; }
 .screen .meal-flags label { display: inline-flex; align-items: center; gap: 0.3rem; }
 .screen .meal-time { display: block; margin-top: 0.75rem; }
-.screen .form-actions { display: flex; gap: 1rem; margin-top: 0.75rem; }
-.screen .tracker-dashboard { display: flex; gap: 1.2rem; flex-wrap: wrap; font-weight: 600; margin-bottom: 0.5rem; }
+.screen .form-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 0.75rem; }
+.screen .meal-form .form-actions { margin-bottom: 0.75rem; }
+.screen .form-actions button { padding-inline: 1rem; white-space: nowrap; }
+.screen .reopen-toggle { font-size: calc(1rem + 2px); }
+.screen .reopen-hint { align-self: center; font-size: 0.85rem; color: #8a8a84; }
+.screen .score { font-weight: 800; font-size: calc(1rem + 1px); color: var(--accent); }
+.screen .tracker-dashboard { display: flex; gap: 1.2rem; flex-wrap: wrap; font-weight: 600;
+                             font-size: calc(1rem + 1px); margin-bottom: 0.5rem; }
 .screen .tracker-dashboard .value { color: var(--accent); }
 .screen .tracker-dashboard strong { font-weight: 800; }
-.screen .meal-list { list-style: none; padding: 0; margin: 1rem 0 0; }
-.screen .meal-list li { padding: 0.25rem 0; display: flex; align-items: center; gap: 0.5rem; }
-.screen .meal-list .meal-at { flex-shrink: 0; align-self: flex-start; }
-.screen .meal-list .meal-text { flex: 1; }
-.screen .meal-list .meal-points { flex-shrink: 0; min-width: 4ch; }
-.screen .meal-list .meal-actions { display: flex; align-items: center; flex-shrink: 0; }
+.screen .meal-list { list-style: none; padding: 0; margin: 1rem 0 0;
+                     display: grid; align-items: center; gap: 0.5rem 1rem;
+                     grid-template-columns: max-content minmax(0, max-content) max-content max-content; }
+.screen .meal-list li { display: contents; }
+.screen .meal-list .meal-at { grid-column: 1; align-self: start; }
+.screen .meal-list .meal-text { grid-column: 2; }
+.screen .meal-list .meal-points { grid-column: 3; min-width: 4ch; }
+.screen .meal-list .meal-actions { grid-column: 4; display: flex; align-items: center; }
 .screen .meal-list .meal-actions button { padding: 0.35rem; margin-block: -0.35rem; }
 .screen input[type="time"] { font-family: inherit; font-size: 1rem; padding: 0.15rem 0.3rem; }
 .screen a { color: #1a5fb4; }
-.screen .close-day { margin-top: 0.75rem; }
+.screen .close-day { margin-top: 1rem; }
+.screen .close-day-banner { margin: 0 0 0.6rem; font-size: 1.05rem; color: var(--accent); }
+.screen .chat-section h2 { margin-top: calc(0.83em + 1rem); margin-bottom: 0.75rem; }
+.screen .chat-samples { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.5rem; }
+.screen .chat-samples button { font-size: 0.85rem; padding: 0.25rem 0.6rem; }
+.screen .chat form { display: flex; gap: 0.5rem; margin-bottom: 1.75rem; }
+.screen .chat .composer { flex: 1; position: relative; display: flex; }
+.screen .chat .composer textarea { flex: 1; padding: 0.3rem 0.4rem; padding-inline-end: 2.2rem;
+                                   font: inherit; resize: none; min-height: 2lh; }
+.screen .more-toggle { --btn-bg: transparent; --btn-fg: var(--accent); --btn-border: transparent;
+                       display: block; padding: 0; margin-top: 0.35rem; border-radius: 0;
+                       font-size: 0.8rem; text-decoration: underline; }
 </style>
 </head>
 <body>
@@ -367,7 +437,7 @@ body {
   <div class="about" id="about" hidden>
     <p class="lede">
       מסלול שלם באפליקציה, על מסך טלפון: התחברות עם Google, שלוש ארוחות שנרשמות בזמן שהן קורות,
-      סגירת היום מתוך היומן, וגרף המגמה של השבוע.
+      סגירת היום מתוך היומן, וגרפי המגמה של השבוע — הכול על הממשק העדכני של האפליקציה.
       <strong>ההיסטוריה שמאחורי הכול היא נתונים חיים</strong> — חמישה ימים שנשלחו ושבע־עשרה ארוחות
       שנקראו היישר מ־DynamoDB.
     </p>
@@ -376,7 +446,9 @@ body {
     <div>
       <h3>ההיסטוריה</h3>
       <p>הימים 20–24 באוגוסט 2026 והארוחות שלהם הם הרשומות האמיתיות — תשובות, ציוני פחמימות,
-        חלונות אכילה והכול — שנסרקו מהטבלאות החיות <code>DaysTable</code> ו־<code>MealsTable</code>.</p>
+        חלונות אכילה והכול — שנסרקו מהטבלאות החיות <code>DaysTable</code> ו־<code>MealsTable</code>.
+        הם נקראים כאן דרך גרסת השאלון הנוכחית, כך שהסימונים האדומים נופלים היכן שהספים של היום
+        שמים אותם.</p>
     </div>
     <div>
       <h3>היום שנרשם כאן</h3>
@@ -385,8 +457,9 @@ body {
     </div>
     <div>
       <h3>הניקוד</h3>
-      <p>הפחמימות נמדדות כמו בגולף — כל ארוחה מוסיפה את הנקודות של הדרגה שנבחרה לה, ונמוך יותר עדיף.
-        כל ערך שמופיע כאן מחושב בגזירה של האפליקציה עצמה, ולא נכתב ביד.</p>
+      <p>הפחמימות נמדדות כמו בגולף — כל ארוחה מוסיפה את מחירה הכולל: דרגת הפחמימה, מקור שני אם
+        היה, ותוספות כמו מתוק או אלכוהול. נמוך יותר עדיף, וכל ערך שמופיע כאן מחושב בגזירה של
+        האפליקציה עצמה, לא נכתב ביד.</p>
     </div>
     <div>
       <h3>המקור</h3>
@@ -402,7 +475,7 @@ body {
         <div class="device">
         <div class="viewport" id="viewport">
           <div class="statusbar">
-            <span id="clock">11:48</span>
+            <span id="clock">11:47</span>
             <span class="glyphs">▮▮▯ ⌁ 78%</span>
           </div>
           <div class="screen" id="screen" dir="rtl" lang="he"></div>
@@ -417,7 +490,7 @@ body {
           <button type="button" class="primary" id="playpause">השהיה</button>
           <button type="button" id="restart">מהתחלה</button>
           <button type="button" id="speed">1×</button>
-          <span class="clockread" id="beatread">1 / 27</span>
+          <span class="clockread" id="beatread">1 / 31</span>
         </div>
       </div>
     </div>
@@ -431,68 +504,77 @@ body {
 "use strict";
 
 /* ═══════════════════════════════════════════════════════════════════════
-   config/app.json's questionnaire element, pinned at version 9 — see the head comment on
+   config/app.json's questionnaire element, pinned at version 13 — see the head comment on
    why this walkthrough carries a snapshot rather than reading the live config.
    ═══════════════════════════════════════════════════════════════════════ */
 const Q = {
-  version: 9,
+  version: 13,
   questions: [
-    { id: "drinking", type: "single", text: 'שכפ"צ - שתיה', panel_title: "שתיה (ליטרים)",
+    { id: "drinking", type: "single", text: 'שכפ"צ - שתיה', unit: "ליטר", panel_title: "שתיה (ליטרים)",
       choices: [
-        { id: "under_2_5l", label: "פחות מ-2.5 ליטר !!", value: 2.0 },
+        { id: "under_2_5l", label: "פחות מ-2.5 ליטר !!", value: 2.0, bound: true },
         { id: "l2_5", label: "2.5 ליטר", value: 2.5 },
         { id: "l3", label: "3 ליטר", value: 3 },
         { id: "l3_5", label: "3.5 ליטר", value: 3.5 },
         { id: "l4", label: "4 ליטר", value: 4 }] },
-    { id: "vegetables", type: "single", text: 'שכפ"צ - כמות ירקות',
+    { id: "vegetables", type: "single", text: 'שכפ"צ - כמות ירקות', unit: "ארוחות", warn_below: 2,
       choices: [
         { id: "none", label: "אף ארוחה !!", value: 0 },
         { id: "meals1", label: "ב-1 ארוחות", value: 1 },
         { id: "meals2", label: "ב-2 ארוחות", value: 2 },
         { id: "meals3", label: "ב-3 ארוחות", value: 3 }] },
-    { id: "eating_window", type: "single", text: 'שכפ"צ - פתיחת חלון אכילה', panel_title: "חלון אכילה (שעות)",
+    { id: "eating_window", type: "single", text: 'שכפ"צ - פתיחת חלון אכילה', unit: "שעות",
+      panel_title: "חלון אכילה (שעות)",
       choices: [
         { id: "h8", label: "8 שעות", value: 8 },
         { id: "h9", label: "9 שעות", value: 9 },
         { id: "h10", label: "10 שעות", value: 10 },
         { id: "h11", label: "11 שעות", value: 11 },
         { id: "h12", label: "12 שעות", value: 12 },
-        { id: "over_12", label: "מעל 12 שעות !!", value: 13 }] },
-    { id: "meals", type: "single", text: 'שכפ"צ - צמצום מספר ארוחות',
+        { id: "over_12", label: "מעל 12 שעות !!", value: 13, bound: true }] },
+    { id: "meals", type: "single", text: 'שכפ"צ - צמצום מספר ארוחות', unit: "ארוחות",
       choices: [
         { id: "m2", label: "2 ארוחות", value: 2 },
         { id: "m3", label: "3 ארוחות", value: 3 },
-        { id: "over_3", label: "מעל 3 ארוחות / נשנושים בין הארוחות !!", value: 4 }] },
+        { id: "over_3", label: "מעל 3 ארוחות / נשנושים בין הארוחות !!", value: 4, bound: true }] },
     { id: "carbs", type: "points", text: "פחמימות / קמחים / סוכרים",
       day_qualifier: "סיכום ציון", meal_qualifier: "דרגת הארוחה",
       tooltip: "כל ארוחה שנרשמת ביומן מוסיפה את הנקודות של דרגת הפחמימות שנבחרה לה; הציון היומי הוא סכום הנקודות מכל הארוחות. כמו בגולף — המטרה היא ציון נמוך ככל האפשר",
-      panel_qualifier: "ציון, נמוך = טוב", max: 35,
+      panel_qualifier: "ציון, נמוך = טוב", max: 35, heavy_meal: 4,
       additions: [
         { id: "sweet", label: "כולל מתוק", value: 4 },
         { id: "alcohol", label: "כולל אלכוהול לא יבש", value: 4 },
         { id: "nuts", label: "כולל הרבה אגוזים או שקדים", value: 3 },
-        { id: "fat", label: "כולל הרבה שומן (אבוקדו, טחינה, גבינה שמנה, טיגון)", value: 2 }],
+        { id: "fat", label: "כולל הרבה שומן (אבוקדו, טחינה, גבינה שמנה, טיגון, 2+ נקניקיות)", value: 2 }],
       choices: [
-        { id: "no_carbs", label: "ללא מקור פחמימה (ירקות, חלבון, שומן)", value: 0 },
-        { id: "grade1", label: "דרגה 1 (קטניות)", value: 1 },
-        { id: "grade2", label: "דרגה 2 (שיבולת שועל, קינואה, ..)", value: 2 },
-        { id: "grade3", label: 'דרגה 3 (אורז מלא, תפו"א)', value: 3 },
-        { id: "grade4", label: "דרגה 4 (אורז לבן, בטטה, סלק, תירס)", value: 4 },
-        { id: "grade5", label: "דרגה 5 (פירות): יותר מפרי אחד | כמות משמעותית של מיץ סחוט", value: 5 },
-        { id: "grade6_7", label: "דרגות 6-7 (קמחים מלאים, שיבולת שועל דקה | קמח לבן, סוכר ודומיו): ~ כוס פסטה", value: 6 },
-        { id: "grade7_light", label: "דרגה 7: ~ חטיף אנרגיה בינוני | לחמניה קטנה | פרוסת לחם ~", value: 7 },
-        { id: "grade7_heavy", label: "דרגה 7!: ~ כריך+ | פיצה+ | פרוסת עוגה/עוגיות | קרוטונים+ !!", value: 8 }] }
+        { id: "no_carbs", label: "ללא מקור פחמימה", examples: "ירקות, חלבון, שומן", value: 0 },
+        { id: "carb_grade_1", label: "דרגה 1", examples: "קטניות", value: 1 },
+        { id: "carb_grade_2", label: "דרגה 2", examples: "קינואה, כוסמת, שיבולת שועל עבה, ארטישוק ירושלמי", value: 2 },
+        { id: "carb_grade_3", label: "דרגה 3", examples: "אורז מלא, תפוח אדמה", value: 3 },
+        { id: "carb_grade_4", label: "דרגה 4", examples: "אורז לבן, בטטה, סלק, תירס", value: 4 },
+        { id: "carb_grade_5", label: "דרגה 5", examples: "פירות", value: 5 },
+        { id: "carb_grade_6", label: "דרגה 6", examples: "קמח מלא, שיבולת שועל דקה", value: 6 },
+        { id: "carb_grade_7", label: "דרגה 7", examples: "קמח לבן, סוכר ודומיו", value: 7 }],
+      small_portion: { label: "כמות קטנה", from_value: 4, percent: 50 },
+      second_source: { light_grade_max: 2,
+        portions: [
+          { id: "quarter", label: "רבע מנה", percent: 25 },
+          { id: "half", label: "חצי מנה", percent: 50 }] } }
   ],
   rules: [
-    { id: "low_drinking", question_id: "drinking", below: 2.5, consecutive_days: 2, message: "פחות מ-{value} ליטר שתיה {days} ימים ברצוף" },
-    { id: "no_vegetables", question_id: "vegetables", below: 1, consecutive_days: 2, message: "אף ארוחה עם ירקות {days} ימים ברצוף" },
-    { id: "long_eating_window", question_id: "eating_window", at_least: 12.1, consecutive_days: 3, message: "חלון אכילה מעל 12 שעות {days} ימים ברצוף" },
-    { id: "too_many_meals", question_id: "meals", at_least: 4, consecutive_days: 2, message: "מעל 3 ארוחות או נשנושים {days} ימים ברצוף" },
-    { id: "heavy_carbs", question_id: "carbs", at_least: 11, consecutive_days: 2, message: "ציון פחמימות {value} ומעלה {days} ימים ברצוף" }
+    { id: "low_drinking", question_id: "drinking", below: 2.5, consecutive_days: 2, message: "פחות מ-{value} ליטר שתיה {days} ימים ברצף" },
+    { id: "no_vegetables", question_id: "vegetables", below: 1, consecutive_days: 2, message: "אף ארוחה עם ירקות {days} ימים ברצף" },
+    { id: "long_eating_window", question_id: "eating_window", at_least: 12.1, consecutive_days: 3, message: "חלון אכילה מעל 12 שעות {days} ימים ברצף" },
+    { id: "too_many_meals", question_id: "meals", at_least: 4, consecutive_days: 2, message: "מעל 3 ארוחות או נשנושים {days} ימים ברצף" },
+    { id: "heavy_day", question_id: "carbs", at_least: 12, consecutive_days: 2, message: "ציון יומי {value} ומעלה {days} ימים ברצף" }
   ]
 };
 
-/* Recorded days, newest first, in the shape GET /days returns them. */
+/* Sample questions the chat offers, from config/app.json's chat element. */
+const CHAT_SAMPLES = ["עקרונות", "ירקות מנקים", "חלון אכילה", "חשקים", "חלבון"];
+
+/* Recorded days, newest first, in the shape GET /days returns them. The meal ids below are
+   expressed in the current questionnaire's vocabulary; the recorded values are unchanged. */
 const HISTORY = [
   { date: "2026-08-24", answers: { carbs: 11, drinking: 4,   meals: 3, vegetables: 2, eating_window: 8 } },
   { date: "2026-08-23", answers: { carbs: 18, drinking: 4,   meals: 3, vegetables: 3, eating_window: 10.5 } },
@@ -506,35 +588,50 @@ const YESTERDAY = "2026-08-24";
 const EMAIL = "erancha@gmail.com";
 
 /* ═══════════════════════════════════════════════════════════════════════
-   Domain — ports of frontend/src/{derive,violations,trend,dates}.ts
+   Domain — ports of frontend/src/{derive,violations,trend,dates,gradeLabels}.ts
    ═══════════════════════════════════════════════════════════════════════ */
 const carbsQ = Q.questions.find(q => q.id === "carbs");
 const drinkingQ = Q.questions.find(q => q.id === "drinking");
 const WEIGHTS = Object.fromEntries(carbsQ.choices.map(c => [c.id, c.value]));
 const ADDITIONS = Object.fromEntries(carbsQ.additions.map(a => [a.id, a.value]));
-const HIGH_SCORE_FRACTION = 0.3;
-const HIGH_GRADE_THRESHOLD = 3;
-const CLOSE_DAY_MIN_WINDOW_HOURS = 6;
-const TIME_STEP_MINUTES = 10;
-const REPORT_LAG_MINUTES = 20;
-
-function roundToHalfHour(hours) {
-  const halves = hours * 2, whole = Math.floor(halves);
-  if (halves - whole > 0.5) return (whole + 1) / 2;
-  if (halves - whole < 0.5) return whole / 2;
-  return (whole % 2 === 0 ? whole : whole + 1) / 2;
-}
+const SMALL_PORTION = carbsQ.small_portion;
+const SECOND_SOURCE = carbsQ.second_source;
+const FRUIT_ESCALATION_CHOICE = "carb_grade_5";
+const CLOSE_DAY_MIN_WINDOW_HOURS = 6;   // app.json day_close.min_window_hours
+const TIME_STEP_MINUTES = 5;
 
 function minutesOf(at) { const [h, m] = at.slice(11, 16).split(":").map(Number); return h * 60 + m; }
 
+function sourceWeight(choice, smallPortionFlag) {
+  const weight = WEIGHTS[choice];
+  if (smallPortionFlag && weight >= SMALL_PORTION.from_value) {
+    return (weight * SMALL_PORTION.percent) / 100;
+  }
+  return weight;
+}
+
+/* derive.ts mealWeights: quantity, then the second source (light merges, heavy adds a reduced
+   helping), then fruit escalation, then additions. */
 function mealWeights(meals) {
   const chronological = meals.map((meal, index) => ({ meal, index }))
     .sort((a, b) => minutesOf(a.meal.at) - minutesOf(b.meal.at));
   const result = new Array(meals.length);
   let fruits = 0;
   for (const { meal, index } of chronological) {
-    let weight = WEIGHTS[meal.carbs_choice];
-    if (meal.fruit) { fruits += 1; if (fruits > 1) weight = Math.max(weight, WEIGHTS.grade5); }
+    let weight = sourceWeight(meal.carbs_choice, meal.small_portion);
+    if (meal.second_source !== null) {
+      const secondWeight = WEIGHTS[meal.second_source.carbs_choice];
+      if (secondWeight <= SECOND_SOURCE.light_grade_max) {
+        weight = Math.max(weight, secondWeight);
+      } else {
+        const helping = SECOND_SOURCE.portions.find(p => p.id === meal.second_source.portion);
+        weight += (secondWeight * helping.percent) / 100;
+      }
+    }
+    if (meal.fruit) {
+      fruits += 1;
+      if (fruits > 1) weight = Math.max(weight, WEIGHTS[FRUIT_ESCALATION_CHOICE]);
+    }
     for (const addition of meal.additions) weight += ADDITIONS[addition];
     result[index] = weight;
   }
@@ -549,30 +646,16 @@ function deriveDay(meals) {
     carbs: mealWeights(meals).reduce((sum, w) => sum + w, 0),
     meals: meals.length,
     vegetables: meals.filter(m => m.vegetables).length,
-    eating_window: roundToHalfHour(span / 60)
+    /* Whole hours, rounded up like the server: the window never understates itself. */
+    eating_window: Math.ceil(span / 60)
   };
 }
 
+/* violations.ts */
 const violates = (rule, value) => rule.at_least !== undefined ? value >= rule.at_least : value < rule.below;
 const isViolating = (id, value) => Q.rules.some(r => r.question_id === id && violates(r, value));
-const isHighScore = (q, value) => q.max !== undefined && value > q.max * HIGH_SCORE_FRACTION;
-
-function valueLabel(q, value) {
-  if (q.type === "points") return String(value);
-  const c = q.choices.find(c => c.value === value);
-  return c ? c.label : String(value);
-}
-function questionTitle(q, scope) {
-  const qualifier = scope === "day" ? q.day_qualifier : scope === "meal" ? q.meal_qualifier : q.panel_qualifier;
-  return qualifier === undefined ? q.text : q.text + " (" + qualifier + ")";
-}
-function panelTitle(q) {
-  if (q.panel_title !== undefined) return q.panel_title;
-  return q.panel_qualifier !== undefined ? questionTitle(q, "panel") : undefined;
-}
-const PANELS = Q.questions.filter(q => panelTitle(q) !== undefined)
-  .sort((a, b) => Number(b.type === "points") - Number(a.type === "points"));
-const STRIP = Q.questions.filter(q => !PANELS.includes(q));
+const isHeavyMeal = points => points >= carbsQ.heavy_meal;
+const scoreLabel = value => String(Math.round(value));
 
 function activeViolations(days) {
   const newest = days[0];
@@ -593,6 +676,33 @@ function activeViolations(days) {
   });
 }
 
+function boundChoice(q, value) {
+  if (q.type === "points") return undefined;
+  const c = q.choices.find(c => c.value === value);
+  return c && c.bound === true ? c : undefined;
+}
+function headedValue(q, value) {
+  if (q.type === "points") return scoreLabel(value);
+  const bound = boundChoice(q, value);
+  return bound !== undefined ? bound.label : String(value);
+}
+function questionTitle(q, scope) {
+  const qualifier = scope === "day" ? (q.day_qualifier !== undefined ? q.day_qualifier : q.unit)
+    : scope === "meal" ? q.meal_qualifier : q.panel_qualifier;
+  return qualifier === undefined ? q.text : q.text + " (" + qualifier + ")";
+}
+function panelTitle(q) {
+  if (q.panel_title !== undefined) return q.panel_title;
+  return q.panel_qualifier !== undefined ? questionTitle(q, "panel") : undefined;
+}
+const PANELS = Q.questions.filter(q => panelTitle(q) !== undefined)
+  .sort((a, b) => Number(b.type === "points") - Number(a.type === "points"));
+const STRIP = Q.questions.filter(q => !PANELS.includes(q));
+
+/* gradeLabels.ts — the walkthrough keeps the default density, examples spelled out. */
+const choiceLabel = (choice, expanded) =>
+  expanded && choice.examples !== undefined ? choice.label + " (" + choice.examples + ")" : choice.label;
+
 /* dates.ts */
 const WEEKDAY_LETTERS = ["א", "ב", "ג", "ד", "ה", "ו", "ש"];
 function parseIso(s) { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); }
@@ -605,12 +715,11 @@ function ddmmLabel(s) { const [, m, d] = s.split("-"); return d + "/" + m; }
 function weekdayDdmm(s) { return WEEKDAY_LETTERS[parseIso(s).getDay()] + "׳ " + ddmmLabel(s); }
 function last7Days(end) { return Array.from({ length: 7 }, (_, i) => daysBefore(end, 6 - i)); }
 
-/* trend.ts */
-const OPEN_BOUND_LABEL = /^(מעל|פחות מ-?)\s*\d/;
+/* trend.ts — gridlines skip the choices the config marks as open-ended bounds. */
 const EDGE_PADDING = 0.08;
 function ticksFor(q) {
   if (q.type === "points") return [0, q.max / 2, q.max];
-  const measured = q.choices.filter(c => !OPEN_BOUND_LABEL.test(c.label));
+  const measured = q.choices.filter(c => c.bound !== true);
   const values = [...new Set(measured.map(c => c.value))].sort((a, b) => a - b);
   const min = values[0], max = values[values.length - 1], midTarget = (min + max) / 2;
   const mid = values.reduce((closest, v) => Math.abs(v - midTarget) < Math.abs(closest - midTarget) ? v : closest, min);
@@ -644,24 +753,39 @@ const GLYPHS = {
   edit: '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
   remove: '<path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/>'
         + '<path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>',
+  close: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
   alarm: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>',
+  alarmOff: '<path d="M8.7 3A6 6 0 0 1 18 8a21.3 21.3 0 0 0 .6 5"/>'
+          + '<path d="M17 17H3s3-2 3-9a4.67 4.67 0 0 1 .3-1.7"/>'
+          + '<path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/><path d="m2 2 20 20"/>',
   openDay: '<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>',
+  menu: '<path d="M3 6h18"/><path d="M3 12h18"/><path d="M3 18h18"/>',
+  foldAll: '<path d="m7 20 5-5 5 5"/><path d="m7 4 5 5 5-5"/>',
+  unfoldAll: '<path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/>',
+  signOut: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/>',
 };
 const icon = name => '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"'
   + ' stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"'
   + ' focusable="false">' + GLYPHS[name] + "</svg>";
 
+const APP_HEADING = '<h1><img class="app-icon" src="favicon.svg" alt=""> מעקב תזונה</h1>';
+
 const state = {
   screen: "landing",
+  landingExpanded: false,
   meals: [],
   formOpen: false,
   pick: { carbs_choice: null, vegetables: false, fruit: false, additions: [] },
-  mealTime: "11:30",
+  mealTime: "11:50",
   closing: false,
   drinking: null,
   submitted: false,
-  alarmOpen: false,
-  ok: null
+  ok: null,
+  menuOpen: false,
+  /* The condensed view is the browser's default before a press chooses otherwise (viewMode.ts),
+     so the session opens with the trends section folded to its summary line. */
+  trendsOpen: false,
+  fullView: false
 };
 
 function days() {
@@ -675,16 +799,31 @@ function days() {
   return [{ date: TODAY, answers }, ...HISTORY];
 }
 
+/* ── Landing.tsx: the condensed pitch, or the full summary once "יותר" is pressed ─────── */
 function landingHtml() {
-  return '<main class="landing">' +
-    "<h1>מעקב תזונה</h1>" +
+  const repoLink = '<p class="landing-repo"><a href="https://github.com/erancha/diet-tracker">קוד המקור ב-GitHub</a></p>';
+  const signIn = '<button type="button" data-t="signin">התחברות עם Google</button>';
+  if (!state.landingExpanded) {
+    return '<main class="landing landing-brief">' + APP_HEADING +
+      '<p class="landing-condensed">תזונה בלי לספור קלוריות: רושמים כל ארוחה, והאפליקציה עוזרת לשמור על ארבעה הרגלים פשוטים — שכפ"צ (<strong>ש</strong>תיה, <strong>כ</strong>מות ירקות, <strong>פ</strong>תיחת חלון אכילה, <strong>צ</strong>מצום ארוחות).</p>' +
+      "<p class=\"landing-condensed\">יש גם עוזר חכם — צ'אט בתוך האפליקציה שעונה על שאלות על התוכנית, ישירות מתוך מסמכי המקור שלה.</p>" +
+      '<p class="landing-condensed">וההתקדמות נראית לעין: גרפים לאורך זמן ומעקב משקל שבועי מול היעד.</p>' +
+      '<button type="button" class="more-toggle" data-t="more">יותר</button>' +
+      signIn + repoLink +
+    "</main>";
+  }
+  return '<main class="landing">' + APP_HEADING +
     '<p class="landing-intro">אפליקציית SaaS חינמית — יומן ארוחות יומי שעוזר לשמור על הרגלי אכילה בריאים לאורך זמן. לא סופרים קלוריות, אלא בוחנים את אופי כל ארוחה ואת המרווחים ביניהן, לפי ארבעת עקרונות השכפ"צ (<a href="#landing-principles">בטבלה שבסוף העמוד</a>):</p>' +
     '<ul class="landing-summary">' +
-      "<li>כל ארוחה נרשמת כשהיא נאכלת, ואפשר להשלים את יום אתמול גם אחרי חצות. מהרישום נגזרים שלושה מעקרונות השכפ\"צ — כמות הירקות, חלון האכילה ומספר הארוחות — וציון פחמימות / קמחים / סוכרים (נמוך = טוב)</li>" +
-      "<li>שתיית המים היא העיקרון היחיד שאינו נגזר מהיומן, ולכן יום שתועד במלואו נסגר בשאלון סיכום היום עם מילוי כמות המים בלבד</li>" +
-      "<li>האפליקציה כוללת תזכורת כשדיווח של יום חסר, התראה כשעיקרון שכפ\"צ או ציון הפחמימות חורגים כמה ימים ברצף, סיכום שבועי וגרף מגמה של שבעת הימים האחרונים אחרי כל שליחה</li>" +
+      "<li>כל ארוחה נרשמת כשהיא נאכלת, ואפשר להשלים את יום אתמול גם אחרי חצות. מהרישום נגזרים שלושה מארבעת עקרונות השכפ\"צ: כמות הירקות, חלון האכילה ומספר הארוחות</li>" +
+      "<li>שתיית המים היא העיקרון הרביעי, היחיד שאינו נגזר מהיומן, ולכן יום שתועד במלואו נסגר בשאלון סיכום היום עם מילוי כמות המים בלבד</li>" +
+      '<li>מעבר לשכפ"צ, מהרישום מחושב גם ציון יומי של <a href="carb-grades.html">פחמימות / קמחים / סוכרים</a> (נמוך = טוב)</li>' +
+      "<li>גרף משקל שבועי: שקילה מול משקל יעד</li>" +
+      "<li>תזכורות והתראות נשלחות במייל: תזכורת כשדיווח של יום חסר, תזכורת שקילה שבועית, התראה כשציון הפחמימות חורג כמה ימים ברצף וסיכום שבועי</li>" +
+      "<li>שאלות על עקרונות התוכנית נענות בצ'אט בתוך האפליקציה, מתוך מסמכי המקור של התוכנית</li>" +
     "</ul>" +
-    '<button type="button" data-t="signin">התחברות עם Google</button>' +
+    '<button type="button" class="more-toggle" data-t="more">פחות</button>' +
+    signIn +
     '<table class="landing-principles" id="landing-principles">' +
       '<caption>שכפ"צ - העקרונות המרכזיים של המעקב</caption>' +
       "<thead><tr><th>העיקרון</th><th>היעד היומי</th></tr></thead><tbody>" +
@@ -693,82 +832,124 @@ function landingHtml() {
       "<tr><td><strong>פ</strong>תיחת חלון אכילה</td><td>עד 12 שעות מהארוחה הראשונה ועד האחרונה</td></tr>" +
       "<tr><td><strong>צ</strong>מצום מספר ארוחות</td><td>2-3 ארוחות, בלי נשנושים ביניהן</td></tr>" +
       "</tbody></table>" +
-    '<p class="landing-repo"><a href="#">קוד המקור ב-GitHub</a></p>' +
+    repoLink +
   "</main>";
 }
 
+/* ── Header.tsx: the title, the account menu, and the alarm while violations are active ── */
+function headerHtml(violations) {
+  let html = "<header>" + APP_HEADING + '<span class="account"><span class="account-actions">';
+  if (violations.length > 0) {
+    html += '<button type="button" class="alarm" data-t="alarm">' + icon("alarm") + " " + violations.length + "</button>";
+  }
+  html += '<button type="button" class="icon-only account-trigger" aria-expanded="' + state.menuOpen +
+    '" data-t="menu">' + icon(state.menuOpen ? "close" : "menu") + "</button></span>";
+  if (state.menuOpen) {
+    html += '<span class="account-menu"><span class="account-email">' + EMAIL + '</span><span role="menu">' +
+      '<button type="button" role="menuitem">' + icon("alarmOff") + "ביטול התראות</button>" +
+      '<button type="button" role="menuitem" data-t="view-item">' +
+        icon(state.fullView ? "foldAll" : "unfoldAll") +
+        (state.fullView ? "תצוגה מצומצמת" : "תצוגה מלאה") + "</button>" +
+      '<button type="button" role="menuitem">' + icon("signOut") + "התנתקות</button>" +
+    "</span></span>";
+  }
+  return html + "</span></header>";
+}
+
+/* ── DayDashboard.tsx: the tracker's always-visible summary line ──────── */
 function dashboardHtml(derived) {
-  const hot = isHighScore(carbsQ, derived.carbs) ? ' class="high-score"' : "";
+  const heavy = isViolating("carbs", derived.carbs) ? ' class="heavy-day"' : "";
   return '<div class="tracker-dashboard" data-t="dashboard">' +
+    '<span>ארוחות: <span class="value">' + derived.meals + "</span>" +
+      ' (חלון: <span class="value">' + derived.eating_window + "</span> שעות)</span>" +
     '<span>ירקות: <span class="value">' + derived.vegetables + "</span></span>" +
-    '<span>חלון: <span class="value">' + derived.eating_window + "</span> שעות</span>" +
-    '<span>ארוחות: <span class="value">' + derived.meals + "</span></span>" +
-    "<strong" + hot + ">ציון: " + '<span class="value">' + derived.carbs + "</span></strong>" +
+    "<strong" + heavy + ">ציון: " + '<span class="score">' + scoreLabel(derived.carbs) + "</span></strong>" +
   "</div>";
 }
 
 const ADDITION_MARKERS = { sweet: "🍪", alcohol: "🍷", nuts: "🥜", fat: "🥑" };
 
+/* ── MealList.tsx: chronological rows, each ending with its effective points ──────────── */
 function mealListHtml(meals, interactive) {
-  const newestFirst = [...meals].reverse();
-  const points = mealWeights(newestFirst);
-  return '<ul class="meal-list" data-t="meal-list">' + newestFirst.map((meal, i) => {
+  const points = mealWeights(meals);
+  return '<ul class="meal-list" data-t="meal-list">' + meals.map((meal, i) => {
     const choice = carbsQ.choices.find(c => c.id === meal.carbs_choice);
     const time = meal.at.slice(11, 16);
-    const grade = choice.value > HIGH_GRADE_THRESHOLD
-      ? '<span class="high-grade">' + esc(choice.label) + "</span>" : esc(choice.label);
     const marks = (meal.vegetables ? " · 🥗" : "") + (meal.fruit ? " · 🍎" : "") +
       meal.additions.map(id => " · " + ADDITION_MARKERS[id]).join("");
     const actions = interactive
       ? '<span class="meal-actions"><button type="button" class="icon-only">' + icon("edit") + "</button>" +
-        '<button type="button" class="icon-only">' + icon("remove") + "</button></span>" : "";
+        '<button type="button" class="icon-only">' + icon("remove") + "</button></span>"
+      : '<span class="meal-actions"></span>';
     return "<li>" +
       '<strong class="meal-at">' + time + "</strong>" +
-      '<span class="meal-text">' + grade + marks + "</span>" +
-      '<span class="meal-points"> · ' + points[i] + "</span>" + actions +
+      '<span class="meal-text"><span>' + esc(choiceLabel(choice, true)) + "</span>" + marks + "</span>" +
+      '<span class="meal-points score' + (isHeavyMeal(points[i]) ? " heavy-meal" : "") + '"> · ' +
+        points[i] + "</span>" + actions +
     "</li>";
   }).join("") + "</ul>";
 }
 
-function choiceFieldsetHtml(q, selectedId, scope, prefix) {
+function choiceFieldsetHtml(q, selectedId, scope, prefix, expanded) {
   return "<fieldset><legend>" + esc(questionTitle(q, scope)) + "</legend>" +
     q.choices.map(c =>
       '<label data-t="' + prefix + c.id + '">' +
         '<input type="radio" tabindex="-1"' + (selectedId === c.id ? " checked" : "") + "> " +
-        esc(c.label) +
+        esc(choiceLabel(c, expanded)) +
       "</label>").join("") +
   "</fieldset>";
 }
 
-// The day-end questionnaire is never opened in the demo, so it is always the one folded title
-// line: a heading beside the tracker's own title while the tracker shows, its own row once the
-// day is submitted and the tracker is gone.
-function daySummaryHtml(level) {
-  return "<section><h" + level + '><button type="button" class="section-toggle"' +
-    ' aria-expanded="false">שאלון סיכום יום</button></h' + level + "></section>";
-}
-
+/* ── DayTracker.tsx: the day's one journal — open, or closed behind its reopen gate ───── */
 function trackerHtml() {
   const derived = deriveDay(state.meals);
   const closable = derived.eating_window >= CLOSE_DAY_MIN_WINDOW_HOURS;
   const p = state.pick;
-  let html = '<section class="day-tracker" data-t="tracker">' +
-    '<div class="section-header">' +
-      '<h2><button type="button" class="section-toggle" aria-expanded="true">יומן היום</button></h2>' +
-      daySummaryHtml(3) +
-    "</div>" +
-    dashboardHtml(derived) +
-    '<section class="meal-form"><h3><button type="button" class="section-toggle" data-t="form-toggle"' +
-      ' aria-expanded="' + (state.formOpen ? "true" : "false") + '">הוספת ארוחה</button></h3>';
+  /* From the third recorded meal (under this config), one more would cross the meals rule, so
+     every add-meal control carries the warning styling before that meal is recorded. */
+  const addMealWarns = isViolating("meals", derived.meals + 1);
+  const addMealTitle = addMealWarns ? '<span class="meal-add-warn">הוספת ארוחה</span>' : "הוספת ארוחה";
 
+  let html = '<section class="day-tracker" data-t="tracker">' +
+    '<h2><button type="button" class="section-toggle" aria-expanded="true">יומן היום</button></h2>' +
+    dashboardHtml(derived);
+
+  if (state.submitted) {
+    return html +
+      '<div class="form-actions">' +
+        '<button type="button" class="quiet reopen-toggle' + (addMealWarns ? " meal-add-warn" : "") +
+          '" data-t="reopen">הוספת ארוחה</button>' +
+        '<span class="reopen-hint">(פתיחת חלון האכילה)</span>' +
+      "</div>" +
+      mealListHtml(state.meals, false) +
+      '<div class="label-density"><button type="button" class="quiet">צמצום שמות</button></div>' +
+    "</section>";
+  }
+
+  html += mealListHtml(state.meals, true);
+
+  html += '<section class="meal-form' + (state.formOpen ? " meal-form-open" : "") + '">' +
+    '<h3><button type="button" class="section-toggle" data-t="form-toggle"' +
+    ' aria-expanded="' + (state.formOpen ? "true" : "false") + '">' + addMealTitle + "</button></h3>";
   if (state.formOpen) {
-    html += choiceFieldsetHtml(carbsQ, p.carbs_choice, "meal", "grade-") +
-      '<div class="meal-flags">' +
-        '<label data-t="flag-veg"><input type="checkbox" tabindex="-1"' + (p.vegetables ? " checked" : "") + "> כולל ירקות</label>" +
-        '<label data-t="flag-fruit"><input type="checkbox" tabindex="-1"' + (p.fruit ? " checked" : "") + "> כולל פרי</label>" +
-        carbsQ.additions.map(a =>
-          '<label data-t="flag-' + a.id + '"><input type="checkbox" tabindex="-1"' +
-          (p.additions.includes(a.id) ? " checked" : "") + "> " + esc(a.label) + "</label>").join("") +
+    html += '<button type="button" class="icon-only meal-form-close">' + icon("close") + "</button>" +
+      '<div class="carb-source">' +
+        choiceFieldsetHtml(carbsQ, p.carbs_choice, "meal", "grade-", true) +
+      "</div>";
+    /* A second source is offered only beside a light primary grade (1–2), the one place the
+       contract admits one. */
+    const offersSecond = p.carbs_choice !== null &&
+      WEIGHTS[p.carbs_choice] > 0 && WEIGHTS[p.carbs_choice] <= SECOND_SOURCE.light_grade_max;
+    if (offersSecond) {
+      html += '<div class="form-actions">' +
+        '<button type="button" class="quiet" data-t="second-src">הוספת מקור פחמימה נוסף</button></div>';
+    }
+    html += '<div class="meal-flags">' +
+      '<label data-t="flag-veg"><input type="checkbox" tabindex="-1"' + (p.vegetables ? " checked" : "") + "> כולל ירקות</label>" +
+      '<label data-t="flag-fruit"><input type="checkbox" tabindex="-1"' + (p.fruit ? " checked" : "") + "> כולל פרי</label>" +
+      carbsQ.additions.map(a =>
+        '<label data-t="flag-' + a.id + '"><input type="checkbox" tabindex="-1"' +
+        (p.additions.includes(a.id) ? " checked" : "") + "> " + esc(a.label) + "</label>").join("") +
       "</div>" +
       '<label class="meal-time" data-t="meal-time">שעת הארוחה ' +
         '<input type="time" tabindex="-1" value="' + state.mealTime + '"></label>';
@@ -777,17 +958,18 @@ function trackerHtml() {
 
   html += '<div class="form-actions">';
   if (p.carbs_choice !== null) html += '<button type="button" data-t="record">שמירת ארוחה</button>';
-  if (closable) html += '<button type="button" class="quiet" data-t="close-day">סגירת יום</button>';
+  if (closable && !state.closing) html += '<button type="button" class="quiet" data-t="close-day">סגירת יום</button>';
   html += "</div>";
-
-  html += mealListHtml(state.meals, true);
 
   if (state.closing && closable) {
     html += '<div class="close-day" data-t="close-panel">' +
-      choiceFieldsetHtml(drinkingQ, state.drinking, "day", "drink-") +
+      '<h3 class="close-day-banner">השלב האחרון בסגירת היום</h3>' +
+      choiceFieldsetHtml(drinkingQ, state.drinking, "day", "drink-", true) +
       '<button type="button" data-t="confirm"' + (state.drinking === null ? " disabled" : "") +
       ">אישור וסגירה</button></div>";
   }
+
+  html += '<div class="label-density"><button type="button" class="quiet">צמצום שמות</button></div>';
   return html + "</section>";
 }
 
@@ -885,44 +1067,75 @@ function trendHtml() {
   return html + strip + "</svg></div>";
 }
 
+/* ── HistoryTable.tsx. The recorded week fits the 7-day window whole, so no range picker
+     renders — a second range is offered only where history reaches past the first. ─────── */
 function historyTableHtml() {
   const list = days();
   const visible = list.filter(d => d.date >= daysBefore(TODAY, 6));
   return '<div class="table-wrap" data-t="table"><table><thead><tr><th>תאריך</th>' +
-    Q.questions.map(q => "<th>" + esc(questionTitle(q, "day")) + "</th>").join("") +
+    Q.questions.map(q => "<th" + (q.tooltip !== undefined ? ' title="' + esc(q.tooltip) + '"' : "") +
+      ">" + esc(questionTitle(q, "day")) + "</th>").join("") +
     "</tr></thead><tbody>" +
     visible.map(day =>
       '<tr data-t="row-' + day.date + '"><td>' + weekdayDdmm(day.date) + "</td>" +
       Q.questions.map(q => {
+        if (!(q.id in day.answers)) return "<td>—</td>";
         const value = day.answers[q.id];
-        if (value === undefined) return "<td>—</td>";
-        const classes = q.type === "points"
-          ? [isHighScore(q, value) && "high-score", "view-day"].filter(Boolean).join(" ")
-          : (isViolating(q.id, value) ? "violation" : "");
-        return "<td" + (classes ? ' class="' + classes + '"' : "") + ">" +
-          esc(valueLabel(q, value)) + (q.type === "points" ? " " + icon("openDay") : "") + "</td>";
+        const violating = isViolating(q.id, value);
+        if (q.type === "points") {
+          const classes = [violating && "heavy-day", "view-day"].filter(Boolean).join(" ");
+          return '<td class="' + classes + '"><span class="day-score">' + headedValue(q, value) +
+            "</span> " + icon("openDay") + "</td>";
+        }
+        const bound = boundChoice(q, value) !== undefined;
+        const classes = [violating && "violation",
+                         q.warn_below !== undefined && value < q.warn_below && "shortfall",
+                         bound && "bound"].filter(Boolean).join(" ");
+        return "<td" + (classes ? ' class="' + classes + '"' : "") +
+          (bound ? ' title="' + esc(headedValue(q, value)) + '"' : "") + ">" +
+          esc(headedValue(q, value)) + "</td>";
       }).join("") + "</tr>").join("") +
     "</tbody></table></div>";
 }
 
-function appHtml() {
-  const list = days();
-  const violations = activeViolations(list);
-  let html = "<header><h1>שאלון תזונה יומי</h1><span>" + EMAIL +
-    '<span class="account-actions">';
-  if (violations.length > 0) {
-    html += '<button type="button" class="alarm" data-t="alarm">' + icon("alarm") + " " + violations.length + "</button>";
+/* ── the trends section, folded to its summary line in the condensed view ─────────────── */
+function trendsSectionHtml() {
+  if (!state.trendsOpen) {
+    return '<section class="trends">' +
+      '<h2><button type="button" class="section-toggle" aria-expanded="false">מגמות</button></h2>' +
+      '<button type="button" class="quiet section-summary" data-t="trends-summary">' +
+        "גרפי מגמה 📈 ונתוני הימים האחרונים 📋</button>" +
+    "</section>";
   }
-  html += '<button type="button" class="quiet">התנתקות</button></span></span></header>';
-  if (state.alarmOpen) {
-    html += violations.map(m => '<div class="alert" data-t="alarm-msg">' + esc(m) + "</div>").join("");
-  }
+  return '<section class="trends" data-t="trends">' +
+    '<h2><button type="button" class="section-toggle" aria-expanded="true">מגמות</button></h2>' +
+    '<div class="section-fold-body"><div>' + trendHtml() + historyTableHtml() + "</div></div>" +
+  "</section>";
+}
 
+/* ── Chat.tsx with no stored turns: the sample questions and the composer ─────────────── */
+function chatSectionHtml() {
+  return '<section class="chat-section" data-t="chat">' +
+    "<h2><button type=\"button\" class=\"section-toggle\" aria-expanded=\"true\">שאלות על אבא חטוב</button></h2>" +
+    '<div class="chat">' +
+      '<div class="chat-samples">' +
+        CHAT_SAMPLES.map(label => '<button type="button" class="quiet">' + esc(label) + "</button>").join("") +
+      "</div>" +
+      '<form><div class="composer">' +
+        '<textarea rows="2" tabindex="-1" placeholder="שאלה על אבא חטוב…"></textarea>' +
+      "</div>" +
+      '<button type="submit" disabled>שליחה</button></form>' +
+    "</div></section>";
+}
+
+function appHtml() {
+  const violations = activeViolations(days());
+  let html = headerHtml(violations);
   html += "<main>";
-  html += "<div>" + (state.ok ? '<div class="ok" data-t="ok">' + esc(state.ok) + "</div>" : "") + "</div>";
-  html += state.submitted ? daySummaryHtml(2) : trackerHtml();
-  html += '<section class="history"><h2><button type="button" class="section-toggle" aria-expanded="true">היסטוריה</button></h2>' +
-    trendHtml() + historyTableHtml() + "</section>";
+  if (state.ok) html += '<div class="ok" data-t="ok">' + esc(state.ok) + "</div>";
+  html += trackerHtml();
+  html += trendsSectionHtml();
+  html += chatSectionHtml();
   return html + "</main>";
 }
 
@@ -935,104 +1148,107 @@ function render() {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
-   The script — four acts, twenty-seven beats
+   The script — five acts, thirty-one beats
    ═══════════════════════════════════════════════════════════════════════ */
 const ACTS = [
   { name: "התחברות" },
   { name: "שלוש ארוחות" },
   { name: "סגירת היום" },
-  { name: "השבוע" }
+  { name: "מגמות" },
+  { name: "מסביב ליומן" }
 ];
 
-const M1 = { id: "m1", at: TODAY + "T11:35:00+03:00", carbs_choice: "grade1", vegetables: true, fruit: false, additions: [] };
-const M2 = { id: "m2", at: TODAY + "T15:40:00+03:00", carbs_choice: "grade1", vegetables: true, fruit: false, additions: [] };
-const M3 = { id: "m3", at: TODAY + "T20:10:00+03:00", carbs_choice: "grade3", vegetables: true, fruit: false, additions: [] };
+const M1 = { at: TODAY + "T11:35:00+03:00", carbs_choice: "carb_grade_1", vegetables: true,
+             fruit: false, additions: [], small_portion: false, second_source: null };
+const M2 = { at: TODAY + "T15:40:00+03:00", carbs_choice: "carb_grade_1", vegetables: true,
+             fruit: false, additions: [], small_portion: false, second_source: null };
+const M3 = { at: TODAY + "T20:10:00+03:00", carbs_choice: "carb_grade_3", vegetables: true,
+             fruit: false, additions: [], small_portion: false, second_source: null };
+
+const freshPick = () => ({ carbs_choice: null, vegetables: false, fruit: false, additions: [] });
 
 const BEATS = [
-  { act: 0, hold: 2800, clock: "11:47",
-    cap: "מסך הפתיחה מסכם מה האפליקציה עושה, מפנה את הדרך, ומסיים בטבלת עקרונות השכפ\"צ שהמעקב בנוי סביבם.",
-    apply() { Object.assign(state, { screen: "landing" }); } },
+  /* ── Act 0: sign-in ── */
+  { act: 0, hold: 3400, clock: "11:47",
+    cap: 'מסך הפתיחה נפתח מצומצם: שלוש פסקאות שמציגות את הרעיון — בלי לספור קלוריות, ארבעה הרגלים ששמם שכפ"צ, צ\'אט ידע וגרפים — מעל כפתור התחברות אחד.',
+    apply() { Object.assign(state, { screen: "landing", landingExpanded: false }); } },
 
-  { act: 0, hold: 2400, tap: "signin", clock: "11:48",
-    cap: "ההתחברות עוברת במסך Google המתארח של Cognito. כתובת שאינה ברשימת ההיתר נדחית כבר ב־pre-signup, ומקבלת את הכתובת שאליה אפשר לפנות.",
+  { act: 0, hold: 3600, tap: "more",
+    cap: '<em>יותר</em> פורש את הסיכום המלא: מה נגזר מהיומן, סגירת יום על מים בלבד, ציון הפחמימות, מעקב המשקל והצ\'אט — וטבלת שכפ"צ עם היעדים סוגרת את העמוד.',
+    apply() { state.landingExpanded = true; } },
+
+  { act: 0, hold: 2600, tap: "signin", clock: "11:48",
+    cap: "ההתחברות עוברת במסך Google המתארח של Cognito. כתובת שאינה עוברת את מסנן ההרשמה נדחית כבר ב־pre-signup, ומקבלת את הכתובת שאליה אפשר לפנות.",
     apply() { state.screen = "app"; } },
 
-  { act: 0, hold: 3600, tap: "alarm", scroll: "top",
-    cap: "הפעמון סופר חריגות <em>פעילות</em>, והוא שורד רענון של הדף — בניגוד לבאנר שעולה רק אחרי שליחה.",
-    apply() { state.alarmOpen = true; } },
-
-  { act: 0, hold: 3600, scroll: "alarm-msg",
-    cap: "יומיים ברצף עם ציון פחמימות 11 ומעלה. הצד הלקוח הולך על אותו רצף שהשרת הולך עליו, מתוך אותו קובץ <code>rules</code>, כך שהפעמון והנקודות האדומות בגרף לא יכולים לסתור זה את זה.",
+  /* ── Act 1: three meals ── */
+  { act: 1, hold: 3400, scroll: "tracker",
+    cap: "הדף נפתח בתצוגה המצומצמת: היומן — משטח העבודה — פתוח, <em>מגמות</em> מקופלת לשורת סיכום, והצ'אט מציע את שאלותיו למטה. שורת הערכים רוכבת על כותרת היומן, וכולם עדיין אפס.",
     apply() {} },
 
-  { act: 0, hold: 1400, tap: "alarm",
-    cap: "נרשם. ממשיכים אל היום עצמו.",
-    apply() { state.alarmOpen = false; } },
+  { act: 1, hold: 2400, tap: "form-toggle", clock: "11:52",
+    cap: "שדות הארוחה הם הדבר הגבוה ביותר בכרטיס, ולכן הם מקופלים עד שיש ארוחה לדווח. פתוחים, הם מקבלים מסגרת משלהם.",
+    apply() { state.formOpen = true; state.mealTime = "11:50"; } },
 
-  /* ── Act 1 ── */
-  { act: 1, hold: 2600, scroll: "tracker",
-    cap: "יומן היום נפתח על הערכים שלו ועל הארוחות שנרשמו בו. עדיין לא נרשם דבר, ולכן כל ערך מראה אפס.",
+  { act: 1, hold: 3200, tap: "grade-carb_grade_1", scroll: "grade-carb_grade_1",
+    cap: 'הצהריים קטניות — דרגה 1, נקודה אחת. הסולם עולה עד דרגה 7, שמות הדרגות נפתחים עם הדוגמאות שלהן, ו"צמצום שמות" בתחתית הכרטיס מקצר אותם למי שכבר מכיר.',
+    apply() { state.pick.carbs_choice = "carb_grade_1"; } },
+
+  { act: 1, hold: 3600, scroll: "second-src", flash: "second-src",
+    cap: "דרגה קלה (1–2) פותחת אפשרות למקור פחמימה נוסף באותה צלחת: שני מקורות קלים נמכרים כצלחת אחת, ומקור כבד יותר נרשם רק כתוספת מופחתת — רבע או חצי מנה.",
     apply() {} },
-
-  { act: 1, hold: 2000, tap: "form-toggle", clock: "11:52",
-    cap: "שדות הארוחה הם הדבר הגבוה ביותר בכרטיס, וכדאי לקרוא אותם רק כשיש ארוחה לדווח — ולכן הם מקופלים עד שמבקשים אותם.",
-    apply() { state.formOpen = true; state.mealTime = "11:30"; } },
-
-  { act: 1, hold: 2600, tap: "grade-grade1", scroll: "grade-grade1",
-    cap: "הצהריים הם קטניות — פחמימות דרגה 1, נקודה אחת. הסולם מגיע עד דרגה 7 בשמונה נקודות, וציון היום הוא הסכום.",
-    apply() { state.pick.carbs_choice = "grade1"; } },
 
   { act: 1, hold: 2000, tap: "flag-veg",
     cap: "עם ירקות. היום סופר <em>ארוחות</em> עם ירקות, לא כמויות — שלוש מתוך שלוש היא המטרה.",
     apply() { state.pick.vegetables = true; } },
 
-  { act: 1, hold: 3000, tap: "meal-time",
-    cap: "הבורר נפתח על 11:30 — השעון מעוגל כלפי מטה ונדחף עשרים דקות אחורה, כי ארוחה נרשמת אחרי שאוכלים אותה. בפועל היא התחילה ב־11:35.",
+  { act: 1, hold: 2800, tap: "meal-time",
+    cap: "הבורר נפתח על 11:50 — השעון מעוגל לאחור לקפיצה של חמש דקות — אבל הארוחה נאכלה ב־11:35, אז מזיזים.",
     apply() { state.mealTime = "11:35"; } },
 
-  { act: 1, hold: 2400, tap: "record",
-    cap: "נרשמה. השדות מתקפלים בחזרה והערכים מתעדכנים במקום: ארוחה אחת, נקודה אחת, ארוחה אחת עם ירקות.",
-    apply() { state.meals = [M1]; state.formOpen = false; state.pick = { carbs_choice: null, vegetables: false, fruit: false, additions: [] }; } },
+  { act: 1, hold: 2600, tap: "record",
+    cap: "נרשמה. השדות מתקפלים בחזרה והערכים מתעדכנים במקום: ארוחה אחת, נקודה אחת, ירקות באחת — והשורה מסתיימת במחיר הארוחה.",
+    apply() { state.meals = [M1]; state.formOpen = false; state.pick = freshPick(); } },
 
   { act: 1, hold: 1700, tap: "form-toggle", clock: "16:05",
     cap: "אחר צהריים מאוחר, ארוחה שנייה.",
-    apply() { state.formOpen = true; state.mealTime = "15:40"; } },
+    apply() { state.formOpen = true; state.mealTime = "16:05"; } },
 
-  { act: 1, hold: 1800, tap: "grade-grade1",
+  { act: 1, hold: 1700, tap: "grade-carb_grade_1",
     cap: "שוב קטניות — עוד נקודה בודדת.",
-    apply() { state.pick.carbs_choice = "grade1"; } },
+    apply() { state.pick.carbs_choice = "carb_grade_1"; } },
 
-  { act: 1, hold: 2000, tap: "flag-veg",
-    cap: "ושוב ירקות. השעה שהוצעה נפלה הפעם בדיוק על 15:40, אז אין מה לתקן.",
-    apply() { state.pick.vegetables = true; } },
+  { act: 1, hold: 2400, tap: "flag-veg",
+    cap: "ושוב ירקות; והשעה נמשכת אחורה אל 15:40, השעה שבה הארוחה נאכלה בפועל.",
+    apply() { state.pick.vegetables = true; state.mealTime = "15:40"; } },
 
-  { act: 1, hold: 2800, tap: "record",
-    cap: "שתי ארוחות, שתי נקודות, חלון אכילה של ארבע שעות. עדיין אין כפתור סגירת יום — ארבע שעות הן יום שעוד אוכלים אותו, לא יום שנגמר.",
-    apply() { state.meals = [M1, M2]; state.formOpen = false; state.pick = { carbs_choice: null, vegetables: false, fruit: false, additions: [] }; } },
+  { act: 1, hold: 3200, tap: "record",
+    cap: "שתי ארוחות, שתי נקודות. החלון — מ־11:35 עד 15:40 — נספר בשעות שלמות כלפי מעלה: 5. עדיין אין כפתור סגירה: פחות משש שעות הוא יום שעוד אוכלים אותו.",
+    apply() { state.meals = [M1, M2]; state.formOpen = false; state.pick = freshPick(); } },
 
   { act: 1, hold: 1700, tap: "form-toggle", clock: "20:34",
     cap: "ארוחת ערב.",
-    apply() { state.formOpen = true; state.mealTime = "20:10"; } },
+    apply() { state.formOpen = true; state.mealTime = "20:30"; } },
 
-  { act: 1, hold: 2600, tap: "grade-grade3", scroll: "grade-grade3",
-    cap: "אורז מלא — דרגה 3, שלוש נקודות. כל דרגה שמעל 3 צובעת את שורת הארוחה באדום.",
-    apply() { state.pick.carbs_choice = "grade3"; } },
+  { act: 1, hold: 3000, tap: "grade-carb_grade_3", scroll: "grade-carb_grade_3",
+    cap: "אורז מלא — דרגה 3, שלוש נקודות. ארוחה נשפטת במחירה הכולל — דרגה, מקור שני, פרי שני ותוספות — ומחיר של 4 ומעלה היה צובע את הנקודות שלה באדום.",
+    apply() { state.pick.carbs_choice = "carb_grade_3"; } },
 
-  { act: 1, hold: 1700, tap: "flag-veg",
-    cap: "ירקות, שלוש מתוך שלוש.",
-    apply() { state.pick.vegetables = true; } },
+  { act: 1, hold: 2200, tap: "flag-veg",
+    cap: "ירקות, שלוש מתוך שלוש; והשעה — 20:10.",
+    apply() { state.pick.vegetables = true; state.mealTime = "20:10"; } },
 
-  { act: 1, hold: 2800, tap: "record",
-    cap: "שלוש ארוחות. ציון 5, כולן עם ירקות, והחלון משתרע עכשיו על 8.5 שעות.",
-    apply() { state.meals = [M1, M2, M3]; state.formOpen = false; state.pick = { carbs_choice: null, vegetables: false, fruit: false, additions: [] }; } },
+  { act: 1, hold: 3200, tap: "record",
+    cap: 'שלוש ארוחות, ציון 5, חלון של תשע שעות. "הוספת ארוחה" נצבע עכשיו באזהרה: ארוחה רביעית תחצה את כלל מספר הארוחות.',
+    apply() { state.meals = [M1, M2, M3]; state.formOpen = false; state.pick = freshPick(); } },
 
   { act: 1, hold: 3800, scroll: "close-day", flash: "close-day",
-    cap: "ורק <em>עכשיו</em> מופיע כפתור סגירת היום. הוא מוצע רק אחרי שהארוחות שנרשמו משתרעות על שש שעות — מתחת לזה היום עדיין נאכל, והערכים שלו היו נסגרים מוקדם מדי.",
+    cap: "ורק <em>עכשיו</em> מופיע כפתור סגירת היום — מוצע רק משעה שהארוחות שנרשמו משתרעות על שש שעות ומעלה; מתחת לזה היום עדיין נאכל, והערכים היו נסגרים מוקדם מדי.",
     apply() {} },
 
-  /* ── Act 2 ── */
-  { act: 2, hold: 3000, tap: "close-day",
-    cap: "יום שתועד ארוחה־ארוחה כבר ענה על ארבע מתוך חמש השאלות. נשארה רק השתייה.",
+  /* ── Act 2: closing the day ── */
+  { act: 2, hold: 3200, tap: "close-day",
+    cap: "יום שתועד ארוחה־ארוחה כבר ענה על ארבע מתוך חמש השאלות. נשארה השתייה בלבד, והפאנל נושא את שם הצעד: <em>השלב האחרון בסגירת היום</em>.",
     apply() { state.closing = true; } },
 
   { act: 2, hold: 2400, tap: "drink-l3_5", scroll: "close-panel",
@@ -1047,26 +1263,43 @@ const BEATS = [
       state.ok = "נשמר לתאריך " + TODAY + "! אין חריגות היום ✔";
     } },
 
-  { act: 2, hold: 4000, scroll: "top",
-    cap: "שום חוק לא הופר. כרטיס היומן פורש לערב, הבאנר הירוק מאשר את התאריך — והפעמון נעלם: ציון 5 שבר את רצף הפחמימות בן היומיים.",
+  { act: 2, hold: 4400, scroll: "top",
+    cap: "הבאנר הירוק מאשר, ושום סף לא נחצה — יום שחוצה סף מסומן באדום בטבלה ומקבל הודעת ביניים משלו. היומן נשאר על המסך לקריאה, עם כפתור אחד שפותח את חלון האכילה מחדש: מחיקת הרשומה, והיום שוב פתוח.",
     apply() {} },
 
-  /* ── Act 3 ── */
-  { act: 3, hold: 4000, scroll: "trend",
+  /* ── Act 3: the trends ── */
+  { act: 3, hold: 3200, tap: "trends-summary",
+    cap: 'בתצוגה המצומצמת <em>מגמות</em> מקופלת לשורת סיכום שמונה את תוכנה — והשורה עצמה היא הפותחן.',
+    apply() { state.trendsOpen = true; } },
+
+  { act: 3, hold: 3800, scroll: "trend",
     cap: "שבעה ימים, שלושה פאנלים שחולקים אותן עמודות יום: ציון הפחמימות למעלה, אחריו השתייה, ואחריה חלון האכילה.",
     apply() {} },
 
   { act: 3, hold: 4800, scroll: "panel-carbs", flash: "panel-carbs",
-    cap: "נקודות אדומות הן ימים שהפרו חוק: 21, 23 ו־24 באוגוסט הגיעו כולם לסף הפחמימות, 11 ומעלה. ה־19 באוגוסט הוא פער אמיתי, ולכן הקו נשבר במקום לגשר עליו — והיום סוגר את השבוע על 5.",
+    cap: "נקודות אדומות הן ימים שחצו את סף ה־12: ה־21 וה־23 באוגוסט (16 ו־18). ה־24, עם 11, כבר עובר מתחת לרף. ה־19 הוא פער אמיתי, ולכן הקו נשבר במקום לגשר עליו — והיום סוגר את השבוע על 5.",
     apply() {} },
 
-  { act: 3, hold: 4000, scroll: "table", flash: "row-" + TODAY,
+  { act: 3, hold: 3800, scroll: "table", flash: "row-" + TODAY,
     cap: "אותו שבוע כטבלה, מהחדש לישן. בטלפון היא נגללת לצדדים: עמודת התאריך עוגנת בקצה הימני, וחמש התשובות רצות ממנה שמאלה.",
     apply() {} },
 
   { act: 3, hold: 4600, scroll: "table", hscroll: "table", flash: "row-" + TODAY,
-    cap: "בקצה הרחוק יושבת עמודת הציון — 18, 16 ו־11 באדום, וה־5 של היום בשחור רגיל. נגיעה בכל אחד מהם פותחת מחדש את יומן הארוחות של אותו יום, לקריאה בלבד.",
-    apply() {} }
+    cap: "בקצה הרחוק — עמודת הציון: 18 ו־16 באדום, וה־5 של היום בירוק הרגיל. נגיעה בציון פותחת מחדש את יומן הארוחות של אותו יום, לקריאה בלבד.",
+    apply() {} },
+
+  /* ── Act 4: around the journal ── */
+  { act: 4, hold: 4400, scroll: "chat", flash: "chat",
+    cap: "מתחת למגמות — הצ'אט: שאלות על התוכנית נענות מתוך מסמכי המקור שלה, עם ציטוט המסמכים שנשענו עליהם ועם מכסה יומית לכל חשבון. שאלות לדוגמה ממלאות את התיבה בנגיעה.",
+    apply() {} },
+
+  { act: 4, hold: 3000, scroll: "top", tap: "menu",
+    cap: "תפריט החשבון: הכתובת המחוברת, השתקת ההתראות, מעבר התצוגה והתנתקות.",
+    apply() { state.menuOpen = true; } },
+
+  { act: 4, hold: 4400, tap: "view-item",
+    cap: 'הפריט קרוי על שם התצוגה שאליה הלחיצה עוברת — כאן <em>תצוגה מלאה</em> — והבחירה נשמרת בדפדפן: הכניסה הבאה תיפתח על התצוגה שנבחרה כאן.',
+    apply() { state.fullView = true; state.menuOpen = false; state.trendsOpen = true; } }
 ];
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -1119,7 +1352,7 @@ function paintReadout() {
   scriptEl.querySelectorAll("[data-r]").forEach(node => {
     const key = node.getAttribute("data-r");
     node.textContent = derived[key];
-    node.classList.toggle("hot", key === "carbs" && isHighScore(carbsQ, derived.carbs));
+    node.classList.toggle("hot", key === "carbs" && isViolating("carbs", derived.carbs));
   });
 }
 
@@ -1247,10 +1480,10 @@ async function loop() {
 
 function resetState() {
   Object.assign(state, {
-    screen: "landing", meals: [], formOpen: false,
-    pick: { carbs_choice: null, vegetables: false, fruit: false, additions: [] },
-    mealTime: "11:30", closing: false, drinking: null, submitted: false,
-    alarmOpen: false, ok: null
+    screen: "landing", landingExpanded: false, meals: [], formOpen: false,
+    pick: freshPick(),
+    mealTime: "11:50", closing: false, drinking: null, submitted: false,
+    ok: null, menuOpen: false, trendsOpen: false, fullView: false
   });
   clockEl.textContent = "11:47";
   screenEl.scrollTop = 0;
