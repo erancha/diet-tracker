@@ -14,15 +14,20 @@ function api(): Pick<Api, "getAdminActivity"> {
 }
 
 describe("AdminSection", () => {
-  it("rests folded and asks the server nothing until opened", () => {
+  it("rests folded in the condensed view and asks the server nothing until opened", () => {
     const adminApi = api();
-    render(<AdminSection api={adminApi} />);
+    render(<AdminSection api={adminApi} defaultCollapsed />);
     expect(screen.queryByRole("table")).toBeNull();
     expect(adminApi.getAdminActivity).not.toHaveBeenCalled();
   });
 
+  it("opens expanded in the full view, loading the listing at once", async () => {
+    render(<AdminSection api={api()} defaultCollapsed={false} />);
+    expect(await screen.findAllByRole("row")).toHaveLength(3);
+  });
+
   it("lists every user with the week's counts in the server's order once opened", async () => {
-    render(<AdminSection api={api()} />);
+    render(<AdminSection api={api()} defaultCollapsed />);
     await userEvent.click(screen.getByRole("button", { name: "פעילות משתמשים" }));
     const rows = await screen.findAllByRole("row");
     expect(rows).toHaveLength(3);
@@ -35,8 +40,7 @@ describe("AdminSection", () => {
 
   it("surfaces a failed load instead of an empty listing", async () => {
     const adminApi = { getAdminActivity: vi.fn().mockRejectedValue(new Error("boom")) };
-    render(<AdminSection api={adminApi} />);
-    await userEvent.click(screen.getByRole("button", { name: "פעילות משתמשים" }));
+    render(<AdminSection api={adminApi} defaultCollapsed={false} />);
     expect((await screen.findByText(/boom/)).textContent).toContain("טעינת הפעילות נכשלה");
   });
 });

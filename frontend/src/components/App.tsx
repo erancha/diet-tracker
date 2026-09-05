@@ -6,6 +6,7 @@ import type { AppConfigFile, NewMeal, WeightPayload } from "../types";
 import { beforeDailyCutoff, expandWeightSection, isoDate, yesterdayOf } from "../dates";
 import { TARGET_UNSET_NOTICE } from "../weight";
 import { isFirstVisit } from "../firstVisit";
+import { storeCondensedView, storedCondensedView } from "../viewMode";
 import { AdminSection } from "./AdminSection";
 import { Alerts, type AlertItem } from "./Alerts";
 import { Chat } from "./Chat";
@@ -24,9 +25,9 @@ import { Welcome } from "./Welcome";
 // yesterday's meal payloads, on-demand past-day payloads, the weight log) and every mutation —
 // meal recording and deletion, the day's closing through the tracker, day deletion, weight
 // recording, retargeting and deletion, and the account's reminder opt-out — plus the close →
-// alerts flow, the menu's global fold command, and the empty history panel's timed wind-down
-// fold; apart from the chat and admin
-// sections, which own their reads, the components below it hold no server state of their own.
+// alerts flow, the menu's condensed/full view command with its browser-remembered choice, and
+// the empty history panel's timed wind-down fold; apart from the chat and admin sections, which
+// own their reads, the components below it hold no server state of their own.
 //
 // The tracker is the only way a day closes, and the day it targets is decided here: today,
 // except during the small-hours grace window while yesterday's meals still leave something to
@@ -65,20 +66,25 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, onSignOu
   const historyQuery = useQuery({ queryKey: ["days"], queryFn: api.getDays });
   const weightQuery = useQuery({ queryKey: ["weight"], queryFn: api.getWeight });
 
+  // The view the account signed off with last time, seeding every state the view command
+  // governs. Read once at mount: from here on the command itself carries the current view.
+  const [openedCondensed] = useState(storedCondensedView);
+
   // The history section's fold. On an account with nothing recorded the panel is empty axes, so
   // after a short look it winds down to its title line; the first recorded day or meal disarms
   // the countdown.
   const emptyHistory = historyQuery.data !== undefined
     && historyQuery.data.days.length === 0 && historyQuery.data.today.meals.length === 0;
-  const historyFold = useWindDownFold(emptyHistory, false);
+  const historyFold = useWindDownFold(emptyHistory, openedCondensed);
 
-  // The menu's global fold command, broadcast through FoldAllContext to the sections that hold
-  // their own collapsed state; the two states held right here — history and chat — take it
-  // directly, being above the provider.
-  const [foldAll, setFoldAll] = useState<FoldAllCommand>({ gen: 0, collapsed: false });
+  // The menu's condensed/full view command, broadcast through FoldAllContext to the sections
+  // that hold their own collapsed state; the history fold, held right here above the provider,
+  // takes it directly. The day tracker and the chat section stand outside the command — the
+  // tracker is the page's working surface and the chat keeps its composer on screen, folding
+  // only its previous turns — so both keep their own hand-toggled folds.
+  const [foldAll, setFoldAll] = useState<FoldAllCommand>({ gen: 0, collapsed: openedCondensed });
   const [chatCollapsed, setChatCollapsed] = useState(false);
   useFoldAllEffect(foldAll, historyFold.set);
-  useFoldAllEffect(foldAll, setChatCollapsed);
 
   // The history row whose read-only day view is open, or null when none is.
   const [viewedDate, setViewedDate] = useState<string | null>(null);
@@ -216,10 +222,15 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, onSignOu
     <>
       <Header email={email} onSignOut={onSignOut} muted={data.muted}
               onSetMuted={(muted) => setMutedMutation.mutate(muted)}
-              onFoldAll={() => setFoldAll(advanceFoldAll)}
-              // The item names the sweep a press will run, read off the last command rather than
-              // the sections' scattered states — hand-toggling sections does not rename it.
-              nextFoldCollapses={!foldAll.collapsed}
+              onFoldAll={() => {
+                // The chosen view is what the press switches to — the reading the next sign-in
+                // opens on.
+                storeCondensedView(!foldAll.collapsed);
+                setFoldAll(advanceFoldAll);
+              }}
+              // The item names the view a press will switch to, read off the last command rather
+              // than the sections' scattered states — hand-toggling sections does not rename it.
+              nextViewCondensed={!foldAll.collapsed}
               activeViolations={activeViolations(questionnaire, data.days, todayStr, yesterdayStr)} />
       <main>
       <FoldAllContext.Provider value={foldAll}>
@@ -260,6 +271,14 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, onSignOu
         />
         <CollapsibleSection title="היסטוריה" collapsed={historyFold.collapsed}
                             onToggle={historyFold.toggle}
+                            // While folded, a summary line names what the fold holds and opens
+                            // it; open, the graphs speak for themselves and the line withdraws.
+                            summary={historyFold.collapsed && (
+                              <button type="button" className="quiet section-summary"
+                                      onClick={historyFold.toggle}>
+                                גרפי מגמה 📈 ונתוני הימים האחרונים 📋
+                              </button>
+                            )}
                             className={historyFold.waning ? "history section-waning" : "history"}>
           <div className={historyFold.folding ? "section-fold-body section-folding" : "section-fold-body"}>
           <div>
@@ -287,9 +306,10 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, onSignOu
         <CollapsibleSection className="chat-section" title="שאלות על אבא חטוב"
                             collapsed={chatCollapsed}
                             onToggle={() => setChatCollapsed((c) => !c)}>
-          <Chat api={api} sampleQuestions={configQuery.data.chat.sample_questions} />
+          <Chat api={api} sampleQuestions={configQuery.data.chat.sample_questions}
+                defaultTranscriptFolded={openedCondensed} />
         </CollapsibleSection>
-        {isAdmin && <AdminSection api={api} />}
+        {isAdmin && <AdminSection api={api} defaultCollapsed={openedCondensed} />}
       </FoldAllContext.Provider>
       </main>
     </>

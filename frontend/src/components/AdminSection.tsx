@@ -6,11 +6,13 @@ import { useGlobalFold } from "./useFoldAll";
 
 // The admin's per-user activity overview: every pool account with its trailing-week closed-day,
 // meal, and chat-question counts, in the server's most-active-first order. Rendered for the
-// admin alone (the API refuses anyone else), resting folded and asking the server only when
-// first opened — the listing costs three count queries per pool account, so a page load must
-// not spend that on a section nobody opened.
-export function AdminSection({ api }: { api: Pick<Api, "getAdminActivity"> }) {
-  const [collapsed, setCollapsed] = useState(true);
+// admin alone (the API refuses anyone else), opening with the view the page opened on and
+// asking the server only while open — the listing costs three count queries per pool account,
+// so a condensed sign-in must not spend that on a section nobody opened.
+export function AdminSection({ api, defaultCollapsed }: {
+  api: Pick<Api, "getAdminActivity">; defaultCollapsed: boolean;
+}) {
+  const [collapsed, setCollapsed] = useState(defaultCollapsed);
   useGlobalFold(setCollapsed);
   const [users, setUsers] = useState<AdminActivityUser[] | null>(null);
   const [error, setError] = useState<string | null>(null);

@@ -2,6 +2,7 @@ import { Fragment, useEffect, useState, type ReactNode } from "react";
 import { ApiError, type Api } from "../api";
 import type { ChatSampleQuestion, ChatTurn } from "../types";
 import { Icon } from "./Icon";
+import { useGlobalFold } from "./useFoldAll";
 
 // The server states the same refusal in handlers/chat.py; mirrored here because ApiError does
 // not surface the response body (the appTitle.ts precedent for cross-runtime strings).
@@ -71,9 +72,13 @@ function renderQuestion(text: string): ReactNode {
 // leaving the sent question and the thinking indicator to mark the state.
 // Configured sample questions render as one-tap links above the composer; a tap only fills the
 // input — nothing is sent, so no quota is spent before the user chooses to submit.
-export function Chat({ api, sampleQuestions }: {
+// The stored transcript sits behind a count-labeled previous-chats toggle: the menu's
+// condensed/full view command drives it, the condensed sign-in starts it folded, and sending a
+// question always reveals it — the arriving answer must never land out of sight.
+export function Chat({ api, sampleQuestions, defaultTranscriptFolded = false }: {
   api: Pick<Api, "ask" | "getChatTranscript" | "deleteChatTurn">;
   sampleQuestions: ChatSampleQuestion[];
+  defaultTranscriptFolded?: boolean;
 }) {
   const [turns, setTurns] = useState<ChatTurn[]>([]);
   // Timestamps of the turns whose answers are open.
@@ -87,6 +92,8 @@ export function Chat({ api, sampleQuestions }: {
   // The turn the next question follows up on, or null for a standalone question.
   const [replyTo, setReplyTo] = useState<ChatTurn | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [transcriptFolded, setTranscriptFolded] = useState(defaultTranscriptFolded);
+  useGlobalFold(setTranscriptFolded);
 
   useEffect(() => {
     api.getChatTranscript()
@@ -99,6 +106,7 @@ export function Chat({ api, sampleQuestions }: {
     if (!question) return;
     setDraft("");
     setError(null);
+    setTranscriptFolded(false);
     setPendingQuestion(question);
     try {
       const asked = replyTo === null ? question : composeFollowUp(replyTo, question);
@@ -188,10 +196,17 @@ export function Chat({ api, sampleQuestions }: {
       )}
       {replyTo === null && pendingQuestion === null && composer}
       {error && <div className="alert">{error}</div>}
-      {(pendingQuestion !== null || turns.length > 0) && (
+      {turns.length > 0 && (
+        <button type="button" className="quiet transcript-toggle"
+          aria-expanded={!transcriptFolded}
+          onClick={() => setTranscriptFolded((folded) => !folded)}>
+          {turns.length === 1 ? "צ'אט קודם אחד" : `${turns.length} צ'אטים קודמים`}
+        </button>
+      )}
+      {(pendingQuestion !== null || (turns.length > 0 && !transcriptFolded)) && (
         <ul className="chat-messages">
           {replyTo === null && pendingExchange}
-          {turns.map((turn) => (
+          {!transcriptFolded && turns.map((turn) => (
             <Fragment key={turn.at}>
               <li className="chat-user">
                 <button type="button" className="chat-question"

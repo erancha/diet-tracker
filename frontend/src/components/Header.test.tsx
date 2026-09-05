@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { Header } from "./Header";
 
 const props = { email: "a@b.com", muted: false, onSignOut: vi.fn(), onSetMuted: vi.fn(),
-                onFoldAll: vi.fn(), nextFoldCollapses: true, activeViolations: [] as string[] };
+                onFoldAll: vi.fn(), nextViewCondensed: true, activeViolations: [] as string[] };
 
 async function openMenu() {
   await userEvent.click(screen.getByRole("button", { name: "תפריט חשבון" }));
@@ -39,25 +39,25 @@ describe("Header", () => {
     expect(onSignOut).toHaveBeenCalledOnce();
   });
 
-  it("offers the global fold from the account menu, named for the sweep it will run", async () => {
+  it("offers the view toggle from the account menu, named for the view it will switch to", async () => {
     const onFoldAll = vi.fn();
-    render(<Header {...props} onFoldAll={onFoldAll} nextFoldCollapses />);
+    render(<Header {...props} onFoldAll={onFoldAll} nextViewCondensed />);
 
     await openMenu();
-    expect(screen.queryByRole("menuitem", { name: "הרחבה כללית" })).toBeNull();
-    await userEvent.click(screen.getByRole("menuitem", { name: "צמצום כללי" }));
+    expect(screen.queryByRole("menuitem", { name: "תצוגה מלאה" })).toBeNull();
+    await userEvent.click(screen.getByRole("menuitem", { name: "תצוגה מצומצמת" }));
 
     expect(onFoldAll).toHaveBeenCalledOnce();
     // The action fires with the menu already dismissed, like every other item.
     expect(screen.queryByRole("menuitem")).toBeNull();
   });
 
-  it("offers the opening sweep once the previous sweep folded everything", async () => {
-    render(<Header {...props} nextFoldCollapses={false} />);
+  it("offers the way back to the full view while the condensed one stands", async () => {
+    render(<Header {...props} nextViewCondensed={false} />);
 
     await openMenu();
-    expect(screen.getByRole("menuitem", { name: "הרחבה כללית" })).toBeInTheDocument();
-    expect(screen.queryByRole("menuitem", { name: "צמצום כללי" })).toBeNull();
+    expect(screen.getByRole("menuitem", { name: "תצוגה מלאה" })).toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: "תצוגה מצומצמת" })).toBeNull();
   });
 
   it("offers a subscribed account the way out of the reminders", async () => {

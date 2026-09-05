@@ -5,6 +5,7 @@ import type { Api } from "../api";
 import { isoDate, yesterdayOf } from "../dates";
 import { trackerQuestionnaire } from "../test-fixtures";
 import type { AppConfigFile, DayPayload } from "../types";
+import { STORAGE_KEY } from "../viewMode";
 import { App } from "./App";
 
 const CONFIG: AppConfigFile = {
@@ -62,7 +63,7 @@ const atClock = (hour: number, minute: number) => {
   vi.setSystemTime(new Date(2026, 7, 21, hour, minute));
 };
 
-afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
+afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); window.localStorage.clear(); });
 
 describe("App", () => {
   it("shows the admin the chat and activity panels alone, without the tracking sections", async () => {
@@ -89,20 +90,27 @@ describe("App", () => {
     expect(screen.queryByRole("button", { name: "שאלון סיכום היום" })).toBeNull();
   });
 
-  it("folds every section from the menu's global toggle and opens them all again", async () => {
+  it("condenses the weight and history sections from the menu and opens them back full", async () => {
+    // The stored full view stands in for an account that already left the condensed default.
+    window.localStorage.setItem(STORAGE_KEY, "false");
     renderApp(false);
     await screen.findByRole("button", { name: "יומן היום" });
-    const sections = ["משקל", "יומן היום", "היסטוריה", "שאלות על אבא חטוב"];
 
     fireEvent.click(screen.getByRole("button", { name: "תפריט חשבון" }));
-    fireEvent.click(screen.getByRole("menuitem", { name: "צמצום כללי" }));
-    for (const name of sections)
+    fireEvent.click(screen.getByRole("menuitem", { name: "תצוגה מצומצמת" }));
+    for (const name of ["משקל", "היסטוריה"])
       expect(screen.getByRole("button", { name })).toHaveAttribute("aria-expanded", "false");
+    // The tracker is the page's working surface and the chat keeps its composer on screen, so
+    // the condensed view leaves both sections open.
+    expect(screen.getByRole("button", { name: "יומן היום" }))
+      .toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("button", { name: "שאלות על אבא חטוב" }))
+      .toHaveAttribute("aria-expanded", "true");
 
-    // The item now names the reverse sweep, which reopens everything.
+    // The item now names the full view, which opens everything.
     fireEvent.click(screen.getByRole("button", { name: "תפריט חשבון" }));
-    fireEvent.click(screen.getByRole("menuitem", { name: "הרחבה כללית" }));
-    for (const name of sections)
+    fireEvent.click(screen.getByRole("menuitem", { name: "תצוגה מלאה" }));
+    for (const name of ["משקל", "יומן היום", "היסטוריה", "שאלות על אבא חטוב"])
       expect(screen.getByRole("button", { name })).toHaveAttribute("aria-expanded", "true");
     // The nested meal form is an editing affordance, not a display section: opening everything
     // must not open a form whose unfolding starts composing a meal.
@@ -110,21 +118,80 @@ describe("App", () => {
       .toHaveAttribute("aria-expanded", "false");
   });
 
-  it("reaches the admin panel with the same global fold command", async () => {
+  it("reaches the admin panel with the same view command", async () => {
+    window.localStorage.setItem(STORAGE_KEY, "false");
     const client = api();
     (client.getAdminActivity as ReturnType<typeof vi.fn>).mockResolvedValue({ users: [] });
     renderApp(true, client);
     const panel = await screen.findByRole("button", { name: "פעילות משתמשים" });
-    expect(panel).toHaveAttribute("aria-expanded", "false");
-
-    // The first command folds; the panel rests folded already and stays put.
-    fireEvent.click(screen.getByRole("button", { name: "תפריט חשבון" }));
-    fireEvent.click(screen.getByRole("menuitem", { name: "צמצום כללי" }));
-    expect(panel).toHaveAttribute("aria-expanded", "false");
-
-    fireEvent.click(screen.getByRole("button", { name: "תפריט חשבון" }));
-    fireEvent.click(screen.getByRole("menuitem", { name: "הרחבה כללית" }));
+    // The panel follows the full view the page opened on.
     expect(panel).toHaveAttribute("aria-expanded", "true");
+
+    fireEvent.click(screen.getByRole("button", { name: "תפריט חשבון" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "תצוגה מצומצמת" }));
+    expect(panel).toHaveAttribute("aria-expanded", "false");
+
+    fireEvent.click(screen.getByRole("button", { name: "תפריט חשבון" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "תצוגה מלאה" }));
+    expect(panel).toHaveAttribute("aria-expanded", "true");
+  });
+
+  it("opens the next sign-in on the condensed view the last press chose", async () => {
+    window.localStorage.setItem(STORAGE_KEY, "true");
+    renderApp(false);
+
+    expect(await screen.findByRole("button", { name: "היסטוריה" }))
+      .toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByRole("button", { name: "יומן היום" }))
+      .toHaveAttribute("aria-expanded", "true");
+    // The menu picks up mid-cycle, offering the way back to the full view.
+    fireEvent.click(screen.getByRole("button", { name: "תפריט חשבון" }));
+    expect(screen.getByRole("menuitem", { name: "תצוגה מלאה" })).toBeInTheDocument();
+  });
+
+  it("remembers the view a menu press chose, starting from the condensed default", async () => {
+    renderApp(false);
+    await screen.findByRole("button", { name: "יומן היום" });
+
+    // No stored choice: the page opens condensed, so the menu offers the full view first.
+    fireEvent.click(screen.getByRole("button", { name: "תפריט חשבון" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "תצוגה מלאה" }));
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBe("false");
+
+    fireEvent.click(screen.getByRole("button", { name: "תפריט חשבון" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "תצוגה מצומצמת" }));
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBe("true");
+  });
+
+  it("names the folded history's contents in a summary line that opens the section", async () => {
+    window.localStorage.setItem(STORAGE_KEY, "true");
+    renderApp(false);
+    await screen.findByRole("button", { name: "היסטוריה" });
+
+    fireEvent.click(screen.getByRole("button", { name: "גרפי מגמה 📈 ונתוני הימים האחרונים 📋" }));
+
+    expect(screen.getByRole("button", { name: "היסטוריה" }))
+      .toHaveAttribute("aria-expanded", "true");
+    // Open, the graphs speak for themselves — the summary line withdraws.
+    expect(screen.queryByRole("button", { name: "גרפי מגמה 📈 ונתוני הימים האחרונים 📋" })).toBeNull();
+  });
+
+  it("folds the chat's previous turns with the condensed view while its composer stays", async () => {
+    window.localStorage.setItem(STORAGE_KEY, "false");
+    const client = api();
+    (client.getChatTranscript as ReturnType<typeof vi.fn>).mockResolvedValue({
+      turns: [{ question: "שאלה ישנה", answer: "תשובה", sources: [], at: "2026-09-01T10:00:00" }],
+    });
+    renderApp(false, client);
+    expect(await screen.findByText("שאלה ישנה")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "תפריט חשבון" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "תצוגה מצומצמת" }));
+
+    expect(screen.queryByText("שאלה ישנה")).toBeNull();
+    expect(screen.getByRole("button", { name: "צ'אט קודם אחד" }))
+      .toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByRole("textbox", { name: "שאלה" })).toBeInTheDocument();
   });
 
   it("targets yesterday in the small hours while it holds unclosed meals", async () => {
@@ -184,6 +251,8 @@ describe("App", () => {
   });
 
   it("closes the open day view when its day is deleted from the history table", async () => {
+    // The full view keeps the history table mounted for its row controls.
+    window.localStorage.setItem(STORAGE_KEY, "false");
     atClock(1, 0);
     vi.spyOn(window, "confirm").mockReturnValue(true);
     const yesterdayStr = isoDate(yesterdayOf(new Date()));
@@ -203,6 +272,7 @@ describe("App", () => {
   it("withholds yesterday's delete control once the delete bound has passed", async () => {
     // 01:45 sits between the delete bound and the close bound: yesterday's record may still be
     // re-closed, but a deletion now could no longer be re-closed after 02:00 — so it is withheld.
+    window.localStorage.setItem(STORAGE_KEY, "false");
     atClock(1, 45);
     const yesterdayStr = isoDate(yesterdayOf(new Date()));
     const client = api({ days: [{ date: yesterdayStr, answers: { drinking: 3, carbs: 4 } }] });

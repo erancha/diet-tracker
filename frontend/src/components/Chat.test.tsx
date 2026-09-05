@@ -459,4 +459,52 @@ describe("Chat", () => {
 
     expect(chatApi.ask).not.toHaveBeenCalled();
   });
+
+  it("counts the stored turns on a toggle and keeps them folded behind it when opened condensed",
+     async () => {
+    render(<Chat api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(2) }) })}
+                 sampleQuestions={[]} defaultTranscriptFolded />);
+
+    const toggle = await screen.findByRole("button", { name: "2 צ'אטים קודמים", expanded: false });
+    expect(screen.queryByText("שאלה 1")).toBeNull();
+
+    await userEvent.click(toggle);
+    expect(screen.getByText("שאלה 1")).toBeInTheDocument();
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+
+    await userEvent.click(toggle);
+    expect(screen.queryByText("שאלה 1")).toBeNull();
+  });
+
+  it("shows the transcript open behind its toggle in the full view, singular for one turn",
+     async () => {
+    render(<Chat api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(1) }) })}
+                 sampleQuestions={[]} />);
+
+    expect(await screen.findByText("שאלה 1")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "צ'אט קודם אחד" }))
+      .toHaveAttribute("aria-expanded", "true");
+  });
+
+  it("offers no transcript toggle before any turn exists", async () => {
+    render(<Chat api={api()} sampleQuestions={[]} defaultTranscriptFolded />);
+
+    expect(await screen.findByRole("textbox")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /קודמים|קודם/ })).toBeNull();
+  });
+
+  it("reveals the folded transcript when a question is sent, so the answer is never hidden",
+     async () => {
+    const chatApi = api({
+      getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(1) }),
+      ask: vi.fn().mockResolvedValue({ answer: "תשובה חדשה", sources: [], at: "2026-09-05T10:00:00" }),
+    });
+    render(<Chat api={chatApi} sampleQuestions={[]} defaultTranscriptFolded />);
+    await screen.findByRole("button", { name: "צ'אט קודם אחד" });
+
+    await ask("שאלה חדשה");
+
+    expect(await screen.findByText("תשובה חדשה")).toBeInTheDocument();
+    expect(screen.getByText("שאלה 1")).toBeInTheDocument();
+  });
 });

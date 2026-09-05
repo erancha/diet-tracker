@@ -7,17 +7,17 @@ import { Icon } from "./Icon";
 // so the warning presence is visible without leading every visit with the full messages.
 //
 // The account menu names the signed-in address and holds the account-level actions — signing
-// out, and the reminder subscription — plus the one page-wide control, the global fold toggle.
-// The address is identification rather than chrome the page needs standing, so it appears only
-// when the menu it labels is open. Leaving is when a user decides they are done being reminded,
-// so the opt-out is offered alongside the exit; it reads as a toggle, so the same menu is also
-// the way back.
-export function Header({ email, muted, onSignOut, onSetMuted, onFoldAll, nextFoldCollapses,
+// out, and the reminder subscription — plus the one page-wide control, the condensed/full view
+// toggle. The address is identification rather than chrome the page needs standing, so it
+// appears only when the menu it labels is open. Leaving is when a user decides they are done
+// being reminded, so the opt-out is offered alongside the exit; it reads as a toggle, so the
+// same menu is also the way back.
+export function Header({ email, muted, onSignOut, onSetMuted, onFoldAll, nextViewCondensed,
                          activeViolations }: {
   email: string; muted: boolean; onSignOut: () => void; onSetMuted: (muted: boolean) => void;
   onFoldAll: () => void;
-  // Direction of the sweep onFoldAll will run, naming the fold item for what the press does.
-  nextFoldCollapses: boolean;
+  // The view a press of the item will switch to, naming the item for what the press does.
+  nextViewCondensed: boolean;
   activeViolations: string[];
 }) {
   const [alarmOpen, setAlarmOpen] = useState(false);
@@ -67,8 +67,8 @@ export function Header({ email, muted, onSignOut, onSetMuted, onFoldAll, nextFol
                   {muted ? "חידוש התראות" : "ביטול התראות"}
                 </button>
                 <button type="button" role="menuitem" onClick={choose(onFoldAll)}>
-                  <Icon name={nextFoldCollapses ? "foldAll" : "unfoldAll"} />
-                  {nextFoldCollapses ? "צמצום כללי" : "הרחבה כללית"}
+                  <Icon name={nextViewCondensed ? "foldAll" : "unfoldAll"} />
+                  {nextViewCondensed ? "תצוגה מצומצמת" : "תצוגה מלאה"}
                 </button>
                 <button type="button" role="menuitem" onClick={choose(onSignOut)}>
                   <Icon name="signOut" />התנתקות

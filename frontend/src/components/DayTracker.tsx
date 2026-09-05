@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { useGlobalFold } from "./useFoldAll";
 import { clockTimeOf, mealOverdue, parseIsoDate } from "../dates";
 import { carbsScales, deriveDay, smallPortionOffered } from "../derive";
 import { mayDiscardEdits } from "../edits";
@@ -114,10 +113,10 @@ export function DayTracker({ questionnaire, day, isToday = true, closed = false,
   const [pristineTime, setPristineTime] = useState(mealTime);
   const [editingId, setEditingId] = useState<string | undefined>(undefined);
   const [expandLabels, setExpandLabels] = useExpandedGradeLabels();
-  // The whole tracker's fold, distinct from the meal form's below: the menu's global command
-  // reaches this one, while the form — an editing affordance — answers only to its own toggles.
+  // The whole tracker's fold, distinct from the meal form's below. Neither answers to the
+  // menu's view command: the tracker is the page's working surface, so even the condensed view
+  // leaves it open, and only its own toggle folds it.
   const [sectionCollapsed, setSectionCollapsed] = useState(false);
-  useGlobalFold(setSectionCollapsed);
 
   // The day's meals always resolve against the current questionnaire, so deriveDay's throw on an
   // unknown id is a real config/data fault, not a legal state — let the error boundary show it.

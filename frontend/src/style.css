@@ -331,9 +331,16 @@ td.view-day { cursor: pointer; }
    recolors the title to the accent instead. */
 .section-toggle { --btn-bg: transparent; --btn-fg: inherit; --btn-border: transparent;
                   font: inherit; font-weight: 600; padding: 0; cursor: pointer; }
-.section-toggle::before { content: "▾ "; font-size: 0.9em; }
-.section-toggle[aria-expanded="false"]::before { content: "◂ "; }
+.section-toggle::before, .transcript-toggle::before { content: "▾ "; font-size: calc(0.9em + 1px); }
+:is(.section-toggle, .transcript-toggle)[aria-expanded="false"]::before { content: "◂ "; }
 .section-toggle:hover:not(:disabled) { --btn-fg: var(--accent); filter: none; }
+/* Two quieter openers below the section headings: a folded section's at-a-glance line, and the
+   chat transcript's previous-chats count. Frameless so they read as previews rather than as
+   more controls; the transcript one wears the sections' disclosure triangle, being a fold
+   toggle itself. */
+button.section-summary, button.transcript-toggle {
+  --btn-bg: transparent; --btn-border: transparent; font-size: 0.9rem; padding: 0 0 0.4rem;
+}
 /* An overdue meal blinks the folded add-meal toggle instead of opening the inputs uninvited:
    once a second at first, pressing to twice a second when ten seconds go unanswered, then
    settling into a slow standing reminder. The tracker's nudge phase picks the beat. */
