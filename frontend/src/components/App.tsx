@@ -70,21 +70,21 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, onSignOu
   // governs. Read once at mount: from here on the command itself carries the current view.
   const [openedCondensed] = useState(storedCondensedView);
 
-  // The history section's fold. On an account with nothing recorded the panel is empty axes, so
+  // The trends section's fold. On an account with nothing recorded the panel is empty axes, so
   // after a short look it winds down to its title line; the first recorded day or meal disarms
   // the countdown.
-  const emptyHistory = historyQuery.data !== undefined
+  const emptyTrends = historyQuery.data !== undefined
     && historyQuery.data.days.length === 0 && historyQuery.data.today.meals.length === 0;
-  const historyFold = useWindDownFold(emptyHistory, openedCondensed);
+  const trendsFold = useWindDownFold(emptyTrends, openedCondensed);
 
   // The menu's condensed/full view command, broadcast through FoldAllContext to the sections
-  // that hold their own collapsed state; the history fold, held right here above the provider,
+  // that hold their own collapsed state; the trends fold, held right here above the provider,
   // takes it directly. The day tracker and the chat section stand outside the command — the
   // tracker is the page's working surface and the chat keeps its composer on screen, folding
   // only its previous turns — so both keep their own hand-toggled folds.
   const [foldAll, setFoldAll] = useState<FoldAllCommand>({ gen: 0, collapsed: openedCondensed });
   const [chatCollapsed, setChatCollapsed] = useState(false);
-  useFoldAllEffect(foldAll, historyFold.set);
+  useFoldAllEffect(foldAll, trendsFold.set);
 
   // The history row whose read-only day view is open, or null when none is.
   const [viewedDate, setViewedDate] = useState<string | null>(null);
@@ -269,18 +269,18 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, onSignOu
             savingMeal={mealMutation.isPending || updateMealMutation.isPending}
             onCloseDay={(answers) => submitMutation.mutate({ answers, date: activeDay.date })}
         />
-        <CollapsibleSection title="היסטוריה" collapsed={historyFold.collapsed}
-                            onToggle={historyFold.toggle}
+        <CollapsibleSection title="מגמות" collapsed={trendsFold.collapsed}
+                            onToggle={trendsFold.toggle}
                             // While folded, a summary line names what the fold holds and opens
                             // it; open, the graphs speak for themselves and the line withdraws.
-                            summary={historyFold.collapsed && (
+                            summary={trendsFold.collapsed && (
                               <button type="button" className="quiet section-summary"
-                                      onClick={historyFold.toggle}>
+                                      onClick={trendsFold.toggle}>
                                 גרפי מגמה 📈 ונתוני הימים האחרונים 📋
                               </button>
                             )}
-                            className={historyFold.waning ? "history section-waning" : "history"}>
-          <div className={historyFold.folding ? "section-fold-body section-folding" : "section-fold-body"}>
+                            className={trendsFold.waning ? "trends section-waning" : "trends"}>
+          <div className={trendsFold.folding ? "section-fold-body section-folding" : "section-fold-body"}>
           <div>
           <TrendChart questionnaire={questionnaire} days={data.days} today={data.today}
                       endDate={data.days.length > 0 ? data.days[0].date : data.today.date} />

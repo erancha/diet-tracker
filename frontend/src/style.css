@@ -253,13 +253,13 @@ th { vertical-align: top; font-size: calc(var(--cell-font-size) - 1pt); }
 .section-folding > div { overflow: hidden; }
 @keyframes section-fold { to { grid-template-rows: 0fr; opacity: 0; } }
 /* Half the browser's default heading gap, so each section header sits close to the data it
-   labels — for history, together with the table's own 0.5rem top margin. */
-.history h2 { margin-bottom: 0.25em; }
-/* History follows the tracker card and would otherwise stack its heading against it. The
-   heading's own margin is what shows through — section padding would stop it collapsing and so
-   add the gap twice — hence the browser's default restated plus the extra rem. The weight section
-   opens the page and needs no such separation. */
-.history h2 { margin-top: calc(0.83em + 1rem); }
+   labels — for the trends section, together with the table's own 0.5rem top margin. */
+.trends h2 { margin-bottom: 0.25em; }
+/* The trends section follows the tracker card and would otherwise stack its heading against it.
+   The heading's own margin is what shows through — section padding would stop it collapsing and
+   so add the gap twice — hence the browser's default restated plus the extra rem. The weight
+   section opens the page and needs no such separation. */
+.trends h2 { margin-top: calc(0.83em + 1rem); }
 td.violation { background: #ffebee; color: var(--danger); }
 /* An answer under its question's warn floor: red text alone, a day-by-day nudge milder than the
    background a rule crossing earns. */
@@ -534,7 +534,7 @@ button.section-summary, button.transcript-toggle {
 /* The knowledge-base chat: the composer as the section's first row, then the whole transcript
    newest first as one question bubble per turn, the answer bubble unfolding beneath the question
    that is clicked open with its muted source table behind a more/less text toggle. The section
-   follows the history table; as with .history h2, the heading's own margin is what shows
+   follows the trends section; as with .trends h2, the heading's own margin is what shows
    through, so the extra rem of separation rides on the restated browser default. */
 .chat-section h2 { margin-top: calc(0.83em + 1rem); }
 .chat-messages { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.5rem; }

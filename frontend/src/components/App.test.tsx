@@ -74,7 +74,7 @@ describe("App", () => {
 
     expect(screen.queryByRole("button", { name: "משקל" })).toBeNull();
     expect(screen.queryByRole("button", { name: "יומן היום" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "היסטוריה" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "מגמות" })).toBeNull();
   });
 
   it("keeps a regular account on the tracking sections and shows it no admin panel", async () => {
@@ -82,7 +82,7 @@ describe("App", () => {
 
     expect(await screen.findByRole("button", { name: "יומן היום" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "משקל" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "היסטוריה" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "מגמות" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "שאלות על אבא חטוב" })).toBeInTheDocument();
 
     expect(screen.queryByRole("button", { name: "פעילות משתמשים" })).toBeNull();
@@ -90,7 +90,7 @@ describe("App", () => {
     expect(screen.queryByRole("button", { name: "שאלון סיכום היום" })).toBeNull();
   });
 
-  it("condenses the weight and history sections from the menu and opens them back full", async () => {
+  it("condenses the weight and trends sections from the menu and opens them back full", async () => {
     // The stored full view stands in for an account that already left the condensed default.
     window.localStorage.setItem(STORAGE_KEY, "false");
     renderApp(false);
@@ -98,7 +98,7 @@ describe("App", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "תפריט חשבון" }));
     fireEvent.click(screen.getByRole("menuitem", { name: "תצוגה מצומצמת" }));
-    for (const name of ["משקל", "היסטוריה"])
+    for (const name of ["משקל", "מגמות"])
       expect(screen.getByRole("button", { name })).toHaveAttribute("aria-expanded", "false");
     // The tracker is the page's working surface and the chat keeps its composer on screen, so
     // the condensed view leaves both sections open.
@@ -110,7 +110,7 @@ describe("App", () => {
     // The item now names the full view, which opens everything.
     fireEvent.click(screen.getByRole("button", { name: "תפריט חשבון" }));
     fireEvent.click(screen.getByRole("menuitem", { name: "תצוגה מלאה" }));
-    for (const name of ["משקל", "יומן היום", "היסטוריה", "שאלות על אבא חטוב"])
+    for (const name of ["משקל", "יומן היום", "מגמות", "שאלות על אבא חטוב"])
       expect(screen.getByRole("button", { name })).toHaveAttribute("aria-expanded", "true");
     // The nested meal form is an editing affordance, not a display section: opening everything
     // must not open a form whose unfolding starts composing a meal.
@@ -140,7 +140,7 @@ describe("App", () => {
     window.localStorage.setItem(STORAGE_KEY, "true");
     renderApp(false);
 
-    expect(await screen.findByRole("button", { name: "היסטוריה" }))
+    expect(await screen.findByRole("button", { name: "מגמות" }))
       .toHaveAttribute("aria-expanded", "false");
     expect(screen.getByRole("button", { name: "יומן היום" }))
       .toHaveAttribute("aria-expanded", "true");
@@ -163,14 +163,14 @@ describe("App", () => {
     expect(window.localStorage.getItem(STORAGE_KEY)).toBe("true");
   });
 
-  it("names the folded history's contents in a summary line that opens the section", async () => {
+  it("names the folded trends section's contents in a summary line that opens it", async () => {
     window.localStorage.setItem(STORAGE_KEY, "true");
     renderApp(false);
-    await screen.findByRole("button", { name: "היסטוריה" });
+    await screen.findByRole("button", { name: "מגמות" });
 
     fireEvent.click(screen.getByRole("button", { name: "גרפי מגמה 📈 ונתוני הימים האחרונים 📋" }));
 
-    expect(screen.getByRole("button", { name: "היסטוריה" }))
+    expect(screen.getByRole("button", { name: "מגמות" }))
       .toHaveAttribute("aria-expanded", "true");
     // Open, the graphs speak for themselves — the summary line withdraws.
     expect(screen.queryByRole("button", { name: "גרפי מגמה 📈 ונתוני הימים האחרונים 📋" })).toBeNull();
