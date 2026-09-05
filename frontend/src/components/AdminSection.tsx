@@ -2,18 +2,15 @@ import { useEffect, useState } from "react";
 import type { Api } from "../api";
 import type { AdminActivityUser } from "../types";
 import { CollapsibleSection } from "./CollapsibleSection";
-import { useGlobalFold } from "./useFoldAll";
 
 // The admin's per-user activity overview: every pool account with its trailing-week closed-day,
 // meal, and chat-question counts, in the server's most-active-first order. Rendered for the
-// admin alone (the API refuses anyone else), opening with the view the page opened on and
-// asking the server only while open — the listing costs three count queries per pool account,
-// so a condensed sign-in must not spend that on a section nobody opened.
-export function AdminSection({ api, defaultCollapsed }: {
-  api: Pick<Api, "getAdminActivity">; defaultCollapsed: boolean;
-}) {
-  const [collapsed, setCollapsed] = useState(defaultCollapsed);
-  useGlobalFold(setCollapsed);
+// admin alone (the API refuses anyone else), and always opening expanded: the listing is what
+// the admin screen exists to show, so it stands outside the menu's condensed/full view command
+// and only its own toggle folds it. The server is asked only while open, so a hand-folded
+// section stops re-fetching.
+export function AdminSection({ api }: { api: Pick<Api, "getAdminActivity"> }) {
+  const [collapsed, setCollapsed] = useState(false);
   const [users, setUsers] = useState<AdminActivityUser[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 

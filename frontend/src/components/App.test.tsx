@@ -41,9 +41,12 @@ function api(days: Partial<Awaited<ReturnType<Api["getDays"]>>> = {}): Api {
     }),
     getWeight: vi.fn().mockResolvedValue({ target: null, entries: [] }),
     getChatTranscript: vi.fn().mockResolvedValue({ turns: [] }),
+    // The admin listing loads on mount now that the section always opens expanded, so it is a
+    // resolving read like the others.
+    getAdminActivity: vi.fn().mockResolvedValue({ users: [] }),
     getDay: vi.fn(), submitDay: vi.fn(), deleteDay: vi.fn(), addMeal: vi.fn(),
     updateMeal: vi.fn(), deleteMeal: vi.fn(), recordWeight: vi.fn(), setWeightTarget: vi.fn(),
-    deleteWeight: vi.fn(), setMuted: vi.fn(), getAdminActivity: vi.fn(), ask: vi.fn(),
+    deleteWeight: vi.fn(), setMuted: vi.fn(), ask: vi.fn(),
     deleteChatTurn: vi.fn(),
   };
 }
@@ -118,21 +121,19 @@ describe("App", () => {
       .toHaveAttribute("aria-expanded", "false");
   });
 
-  it("reaches the admin panel with the same view command", async () => {
+  it("keeps the admin panel open regardless of the view command", async () => {
+    // The activity listing is what the admin screen exists to show, so it opens expanded and
+    // stands outside the menu's view command. The stored full view makes the condensed press
+    // the one the menu offers.
     window.localStorage.setItem(STORAGE_KEY, "false");
     const client = api();
     (client.getAdminActivity as ReturnType<typeof vi.fn>).mockResolvedValue({ users: [] });
     renderApp(true, client);
     const panel = await screen.findByRole("button", { name: "פעילות משתמשים" });
-    // The panel follows the full view the page opened on.
     expect(panel).toHaveAttribute("aria-expanded", "true");
 
     fireEvent.click(screen.getByRole("button", { name: "תפריט חשבון" }));
     fireEvent.click(screen.getByRole("menuitem", { name: "תצוגה מצומצמת" }));
-    expect(panel).toHaveAttribute("aria-expanded", "false");
-
-    fireEvent.click(screen.getByRole("button", { name: "תפריט חשבון" }));
-    fireEvent.click(screen.getByRole("menuitem", { name: "תצוגה מלאה" }));
     expect(panel).toHaveAttribute("aria-expanded", "true");
   });
 

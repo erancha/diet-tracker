@@ -309,7 +309,7 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, onSignOu
           <Chat api={api} sampleQuestions={configQuery.data.chat.sample_questions}
                 defaultTranscriptFolded={openedCondensed} />
         </CollapsibleSection>
-        {isAdmin && <AdminSection api={api} defaultCollapsed={openedCondensed} />}
+        {isAdmin && <AdminSection api={api} />}
       </FoldAllContext.Provider>
       </main>
     </>

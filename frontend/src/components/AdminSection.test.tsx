@@ -14,21 +14,13 @@ function api(): Pick<Api, "getAdminActivity"> {
 }
 
 describe("AdminSection", () => {
-  it("rests folded in the condensed view and asks the server nothing until opened", () => {
-    const adminApi = api();
-    render(<AdminSection api={adminApi} defaultCollapsed />);
-    expect(screen.queryByRole("table")).toBeNull();
-    expect(adminApi.getAdminActivity).not.toHaveBeenCalled();
-  });
-
-  it("opens expanded in the full view, loading the listing at once", async () => {
-    render(<AdminSection api={api()} defaultCollapsed={false} />);
+  it("opens expanded, loading the listing at once", async () => {
+    render(<AdminSection api={api()} />);
     expect(await screen.findAllByRole("row")).toHaveLength(3);
   });
 
-  it("lists every user with the week's counts in the server's order once opened", async () => {
-    render(<AdminSection api={api()} defaultCollapsed />);
-    await userEvent.click(screen.getByRole("button", { name: "פעילות משתמשים" }));
+  it("lists every user with the week's counts in the server's order", async () => {
+    render(<AdminSection api={api()} />);
     const rows = await screen.findAllByRole("row");
     expect(rows).toHaveLength(3);
     expect(rows[1].textContent).toContain("active@gmail.com");
@@ -38,9 +30,18 @@ describe("AdminSection", () => {
     expect(rows[2].textContent).toContain("quiet@gmail.com");
   });
 
+  it("folds behind its own toggle and asks the server nothing more", async () => {
+    const adminApi = api();
+    render(<AdminSection api={adminApi} />);
+    await screen.findAllByRole("row");
+    await userEvent.click(screen.getByRole("button", { name: "פעילות משתמשים" }));
+    expect(screen.queryByRole("table")).toBeNull();
+    expect(adminApi.getAdminActivity).toHaveBeenCalledTimes(1);
+  });
+
   it("surfaces a failed load instead of an empty listing", async () => {
     const adminApi = { getAdminActivity: vi.fn().mockRejectedValue(new Error("boom")) };
-    render(<AdminSection api={adminApi} defaultCollapsed={false} />);
+    render(<AdminSection api={adminApi} />);
     expect((await screen.findByText(/boom/)).textContent).toContain("טעינת הפעילות נכשלה");
   });
 });
