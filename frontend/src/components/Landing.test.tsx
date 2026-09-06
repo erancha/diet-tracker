@@ -9,7 +9,7 @@ describe("Landing", () => {
   it("opens condensed: three paragraphs, then the more and sign-in buttons", () => {
     const { container } = render(<Landing onSignIn={() => {}} />);
 
-    expect(screen.getByRole("heading", { name: "מעקב תזונה" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "מעקב תזונה AI" })).toBeInTheDocument();
     expect(container.querySelector("h1 img.app-icon")).toHaveAttribute("src", "favicon.svg");
     expect(container.querySelector("main")).toHaveClass("landing-brief");
     expect(container.querySelectorAll(".landing-condensed")).toHaveLength(3);

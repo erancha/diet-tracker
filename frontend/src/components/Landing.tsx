@@ -50,7 +50,7 @@ export function Landing({ onSignIn }: { onSignIn: () => void }) {
           <strong>פ</strong>תיחת חלון אכילה, <strong>צ</strong>מצום ארוחות).
         </p>
         <p className="landing-condensed">
-          יש גם עוזר חכם — צ'אט בתוך האפליקציה שעונה על שאלות על התוכנית, ישירות מתוך מסמכי
+          יש גם עוזר AI — צ'אט בתוך האפליקציה שעונה על שאלות על התוכנית, ישירות מתוך מסמכי
           המקור שלה.
         </p>
         <p className="landing-condensed">

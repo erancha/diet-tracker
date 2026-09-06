@@ -15,7 +15,7 @@ from common.log import get_logger
 logger = get_logger(__name__)
 
 # The frontend states the product name independently in frontend/src/appTitle.ts.
-APP_NAME = "מעקב תזונה"
+APP_NAME = "מעקב תזונה AI"
 
 ALERT_SUBJECT = f"התראת תזונה — {APP_NAME}"
 

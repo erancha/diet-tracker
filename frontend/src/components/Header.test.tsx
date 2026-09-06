@@ -14,7 +14,7 @@ describe("Header", () => {
   it("titles the signed-in app with the same name the landing page shows", () => {
     render(<Header {...props} />);
 
-    expect(screen.getByRole("heading", { name: "מעקב תזונה" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "מעקב תזונה AI" })).toBeInTheDocument();
   });
 
   it("names the signed-in address in the menu rather than on the page behind it", async () => {
