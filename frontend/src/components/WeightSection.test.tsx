@@ -239,16 +239,15 @@ describe("target", () => {
 });
 
 describe("today's weighing", () => {
-  it("records a weight and clears the input", () => {
+  it("records a weight and folds the section, its job for the day done", () => {
     const onRecord = vi.fn();
     show({}, { onRecord });
 
-    const input = screen.getByLabelText("המשקל היום");
-    fireEvent.change(input, { target: { value: "76.5" } });
+    fireEvent.change(screen.getByLabelText("המשקל היום"), { target: { value: "76.5" } });
     fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
 
     expect(onRecord).toHaveBeenCalledWith(76.5);
-    expect(input).toHaveValue(null);
+    expect(screen.queryByLabelText("המשקל היום")).toBeNull();
   });
 
   it("offers an update, and shows the standing value, once the day holds one", () => {

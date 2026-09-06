@@ -90,8 +90,7 @@ function TodayRow({ recorded, limits, onRecord }: {
     <p className="weight-today">
       <span>המשקל היום:</span>
       <KgInput value={draft} limits={limits} label="המשקל היום" onChange={setDraft} />
-      <button type="button" disabled={kg === null}
-              onClick={() => { onRecord(kg!); setDraft(""); }}>
+      <button type="button" disabled={kg === null} onClick={() => onRecord(kg!)}>
         {recorded === null ? "שמירה" : "עדכון"}
       </button>
       {recorded !== null && <span className="weight-recorded">נרשם: {kgLabel(recorded)} ק״ג</span>}
@@ -107,7 +106,8 @@ function TodayRow({ recorded, limits, onRecord }: {
 // it moves through the day, so the line reports and the rest opens on demand, with the target
 // settable either way. Whether that resting fold is the right one for the account is the caller's
 // reading, not this section's; a section the caller opened stands until a toggle or the menu's
-// global fold closes it.
+// global fold closes it — or until a weighing is saved, which is the errand the open section was
+// serving, so the section folds back to its reading line on its own.
 export function WeightSection({ weight, settings, now, defaultExpanded,
                                 onRecord, onSetTarget, onDelete }: {
   weight: WeightPayload;
@@ -150,7 +150,8 @@ export function WeightSection({ weight, settings, now, defaultExpanded,
       headerAside={<TargetReading summary={summary} limits={settings.limits} onSet={onSetTarget} />}
     >
       {rhythm !== null && <p className="weight-rhythm">{rhythm}</p>}
-      <TodayRow recorded={recordedToday?.kg ?? null} limits={settings.limits} onRecord={onRecord} />
+      <TodayRow recorded={recordedToday?.kg ?? null} limits={settings.limits}
+                onRecord={(kg) => { onRecord(kg); setCollapsed(true); }} />
       {weight.entries.length > 0 && (
         <WeightChart entries={plotted} target={weight.target} span={active} spans={spans}
                      onSpanChange={setSpan} />
