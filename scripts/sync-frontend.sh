@@ -28,7 +28,14 @@ if ! grep -qF "$TARGET_API_URL" frontend/public/config.js; then
   echo "frontend/public/config.js does not target ${APP}'s API ($TARGET_API_URL) — run $DEPLOY_CMD to regenerate config.js for this environment" >&2
   exit 1
 fi
-aws s3 sync frontend/dist "s3://${BUCKET}" --delete --exclude app.json
-aws s3 cp config/app.json "s3://${BUCKET}/app.json"
+# Hashed bundles are immutable by construction, so browsers may keep them forever; everything
+# else (index.html, config.js, app.json) is served under a stable name and must be revalidated
+# on every visit — without an explicit no-cache, browsers cache these heuristically and keep
+# running a stale app long after an edge invalidation.
+aws s3 sync frontend/dist/assets "s3://${BUCKET}/assets" --delete \
+  --cache-control 'public,max-age=31536000,immutable'
+aws s3 sync frontend/dist "s3://${BUCKET}" --delete --exclude 'assets/*' --exclude app.json \
+  --cache-control 'no-cache'
+aws s3 cp config/app.json "s3://${BUCKET}/app.json" --cache-control 'no-cache'
 aws cloudfront create-invalidation --distribution-id "$(stack_output DistributionId)" --paths '/*' >/dev/null
 echo "Frontend synced to $(stack_output FrontendUrl)"
