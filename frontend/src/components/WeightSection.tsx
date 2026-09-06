@@ -6,7 +6,6 @@ import { activeSpan, entriesWithin, kgLabel, offeredSpans, parseKg, rhythmReadin
 import { CollapsibleSection } from "./CollapsibleSection";
 import { Icon } from "./Icon";
 import { useGlobalFold } from "./useFoldAll";
-import { useWindDownFold } from "./useWindDownFold";
 import { WeightChart } from "./WeightChart";
 import { WeightEntries } from "./WeightEntries";
 
@@ -107,8 +106,8 @@ function TodayRow({ recorded, limits, onRecord }: {
 // the fold, which is where the section normally rests: weight moves weekly while the tracker below
 // it moves through the day, so the line reports and the rest opens on demand, with the target
 // settable either way. Whether that resting fold is the right one for the account is the caller's
-// reading, not this section's; a section the caller opened winds itself back down after a short
-// look unless typing or a toggle claims it.
+// reading, not this section's; a section the caller opened stands until a toggle or the menu's
+// global fold closes it.
 export function WeightSection({ weight, settings, now, defaultExpanded,
                                 onRecord, onSetTarget, onDelete }: {
   weight: WeightPayload;
@@ -120,10 +119,8 @@ export function WeightSection({ weight, settings, now, defaultExpanded,
   onDelete: (date: string) => void;
 }) {
   const [span, setSpan] = useState<ChartSpan>(settings.chart_months);
-  // Typing anywhere in the section — the weighing input or the target editor — claims it from
-  // the automatic fold, reported by the change events bubbling to the wrapper below.
-  const fold = useWindDownFold(defaultExpanded, !defaultExpanded);
-  useGlobalFold(fold.set);
+  const [collapsed, setCollapsed] = useState(!defaultExpanded);
+  useGlobalFold(setCollapsed);
   const todayStr = isoDate(now);
   const recordedToday = weight.entries.find((entry) => entry.date === todayStr);
   const summary = summarize(weight.entries, weight.target);
@@ -143,32 +140,22 @@ export function WeightSection({ weight, settings, now, defaultExpanded,
   const active = activeSpan(spans, span);
   const plotted = entriesWithin(weight.entries, active, now);
 
-  const classes = ["weight"];
-  if (summary.overTarget) classes.push("weight-over-target");
-  if (fold.waning) classes.push("section-waning");
-
   return (
-    <div onChange={fold.disarm}>
-      <CollapsibleSection
-        title={heading}
-        collapsed={fold.collapsed}
-        onToggle={fold.toggle}
-        label={figure === null ? "משקל" : `משקל: ${figure} ${unit}`}
-        className={classes.join(" ")}
-        headerAside={<TargetReading summary={summary} limits={settings.limits} onSet={onSetTarget} />}
-      >
-        <div className={fold.folding ? "section-fold-body section-folding" : "section-fold-body"}>
-        <div>
-        {rhythm !== null && <p className="weight-rhythm">{rhythm}</p>}
-        <TodayRow recorded={recordedToday?.kg ?? null} limits={settings.limits} onRecord={onRecord} />
-        {weight.entries.length > 0 && (
-          <WeightChart entries={plotted} target={weight.target} span={active} spans={spans}
-                       onSpanChange={setSpan} />
-        )}
-        <WeightEntries entries={plotted} target={weight.target} onDelete={onDelete} />
-        </div>
-        </div>
-      </CollapsibleSection>
-    </div>
+    <CollapsibleSection
+      title={heading}
+      collapsed={collapsed}
+      onToggle={() => setCollapsed((c) => !c)}
+      label={figure === null ? "משקל" : `משקל: ${figure} ${unit}`}
+      className={summary.overTarget ? "weight weight-over-target" : "weight"}
+      headerAside={<TargetReading summary={summary} limits={settings.limits} onSet={onSetTarget} />}
+    >
+      {rhythm !== null && <p className="weight-rhythm">{rhythm}</p>}
+      <TodayRow recorded={recordedToday?.kg ?? null} limits={settings.limits} onRecord={onRecord} />
+      {weight.entries.length > 0 && (
+        <WeightChart entries={plotted} target={weight.target} span={active} spans={spans}
+                     onSpanChange={setSpan} />
+      )}
+      <WeightEntries entries={plotted} target={weight.target} onDelete={onDelete} />
+    </CollapsibleSection>
   );
 }
