@@ -18,6 +18,7 @@ import { HistoryTable } from "./HistoryTable";
 import { TrendChart } from "./TrendChart";
 import { advanceFoldAll, FoldAllContext, useFoldAllEffect, type FoldAllCommand } from "./useFoldAll";
 import { useWindDownFold } from "./useWindDownFold";
+import { useWelcomeIntro } from "./useWelcomeIntro";
 import { WeightSection } from "./WeightSection";
 import { Welcome } from "./Welcome";
 
@@ -39,8 +40,9 @@ import { Welcome } from "./Welcome";
 // The admin account is not a dieter: its screen keeps the chat and the per-user activity panel
 // and drops the tracking sections a regular account opens on.
 //
-// It also reads whether the account has recorded anything yet, because both the greeting and the
-// weight section's opening fold answer to that one reading and must not disagree about it.
+// It also reads whether the account has recorded anything yet, because the greeting, the weight
+// section's opening fold and the first-visit intro all answer to that one reading and must not
+// disagree about it.
 export function App({ email, api, firstMealHour, mealGapHours, isAdmin, onSignOut }: {
   email: string; api: Api; firstMealHour: number; mealGapHours: number;
   isAdmin: boolean; onSignOut: () => void;
@@ -76,6 +78,13 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, onSignOu
   const emptyTrends = historyQuery.data !== undefined
     && historyQuery.data.days.length === 0 && historyQuery.data.today.meals.length === 0;
   const trendsFold = useWindDownFold(emptyTrends, openedCondensed);
+
+  // The first-visit intro: which of its stages the one-shot walk-through stands on. Runs only
+  // for an account that has recorded nothing, read here — before the data settles the page — so
+  // the reading guards itself the way emptyTrends does above.
+  const intro = useWelcomeIntro(!isAdmin
+    && historyQuery.data !== undefined && weightQuery.data !== undefined
+    && isFirstVisit(historyQuery.data, weightQuery.data));
 
   // The menu's condensed/full view command, broadcast through FoldAllContext to the sections
   // that hold their own collapsed state; the trends fold, held right here above the provider,
@@ -233,11 +242,11 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, onSignOu
               // than the sections' scattered states — hand-toggling sections does not rename it.
               nextViewCondensed={!foldAll.collapsed}
               activeViolations={activeViolations(questionnaire, data.days, todayStr, yesterdayStr)} />
-      <main>
+      <main className={intro === null || intro === "rest" ? undefined : `intro-${intro}`}>
       <FoldAllContext.Provider value={foldAll}>
         <Alerts items={alerts} onDismiss={dismissAlerts} />
         {!isAdmin && <>
-        {firstVisit && <Welcome />}
+        {firstVisit && <Welcome autoFold={intro === 3 || intro === "rest" || intro === "meal"} />}
         <WeightSection
           weight={weightQuery.data}
           settings={configQuery.data.weight}

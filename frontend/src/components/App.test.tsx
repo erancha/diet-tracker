@@ -93,6 +93,18 @@ describe("App", () => {
     expect(screen.queryByRole("button", { name: "שאלון סיכום היום" })).toBeNull();
   });
 
+  it("opens a first visit on the intro's first stage, and only then", async () => {
+    renderApp(false);
+    await screen.findByRole("button", { name: "יומן היום" });
+    expect(document.querySelector("main")).toHaveClass("intro-0");
+  });
+
+  it("leaves the intro off an account that has recorded anything", async () => {
+    renderApp(false, api({ today: trackedDay(isoDate(new Date())) }));
+    await screen.findByRole("button", { name: "יומן היום" });
+    expect(document.querySelector("main")!.className).not.toMatch(/intro/);
+  });
+
   it("condenses the weight and trends sections from the menu and opens them back full", async () => {
     // The stored full view stands in for an account that already left the condensed default.
     window.localStorage.setItem(STORAGE_KEY, "false");
