@@ -68,13 +68,17 @@ header .account-email {
 }
 /* Items read as a list: no box of their own until a pointer reaches one, and text on the reading
    edge rather than centred the way a standalone button is. */
-header .account-menu button {
+header .account-menu button, header .account-menu a {
   --btn-bg: transparent; --btn-fg: inherit; --btn-border: transparent;
   display: flex; align-items: center; gap: 0.5rem;
   font-size: 0.9rem;
   text-align: start; padding: 0.45rem var(--menu-text-inset); border-radius: 6px; white-space: nowrap;
 }
 header .account-menu button:hover:not(:disabled) { --btn-bg: #eceff1; filter: none; }
+/* The invite is a link so it can open WhatsApp in its own tab, but in the menu it reads as an
+   item like its button neighbours, not as body-copy hyperlink text. */
+header .account-menu a { color: inherit; text-decoration: none; }
+header .account-menu a:hover { background: #eceff1; }
 /* The alarm is a warning indicator, not an action, so it wears the alert palette instead of the
    accent button green. */
 header .alarm { --btn-bg: #ffebee; --btn-fg: var(--danger); --btn-border: #f3c9cc;
@@ -108,7 +112,7 @@ h1 .app-icon { width: 1em; height: 1em; vertical-align: middle; margin-inline-en
    centered, display-sized, viewport-capped to one line — while body copy stays start-aligned to
    read, as does the expanded view's title, which crowns a reading page rather than a splash. */
 .landing-brief h1 { margin-top: auto; text-align: center; font-size: min(2.6rem, 11vw); }
-.landing-brief .landing-repo { margin-top: auto; }
+.landing-brief .landing-invite { margin-top: auto; }
 .landing-intro, .landing-condensed { margin-top: 0.5em; margin-bottom: 0.6rem; }
 /* The condensed pitch is the page's whole message, so it reads a touch larger than body copy. */
 .landing-condensed { font-size: calc(1em + 2px); }
@@ -130,7 +134,10 @@ h1 .app-icon { width: 1em; height: 1em; vertical-align: middle; margin-inline-en
    by the same gap, so the table reads as its own block rather than as a tail on the summary. The
    global table rule sizes for the wide history grid, so the min-width is dropped here — two narrow
    columns would otherwise overflow a phone into horizontal scroll. */
-.landing-principles, .landing-repo { margin-top: 2.5rem; }
+/* The invite leads the footer pair, so it carries the separation from the content above and the
+   repo link tucks under it. */
+.landing-principles, .landing-invite { margin-top: 2.5rem; }
+.landing-repo { margin-top: 0.5rem; }
 /* The block is reference material below the screen's single action, so it is toned off the body
    text rather than competing with the summary above the button for the reader's first pass. */
 .landing-principles { min-width: 0; width: 100%; color: #5f5f5f; }

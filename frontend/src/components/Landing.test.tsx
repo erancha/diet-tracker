@@ -104,6 +104,20 @@ describe("Landing", () => {
     );
   });
 
+  it("offers the WhatsApp invite in both modes, speaking as an invitee rather than the developer",
+     async () => {
+    render(<Landing onSignIn={() => {}} />);
+
+    const inviteHref = () =>
+      screen.getByRole("link", { name: "הזמנת חברים ב-WhatsApp" }).getAttribute("href")!;
+    expect(inviteHref()).toContain("https://wa.me/?text=");
+    expect(inviteHref()).toContain(encodeURIComponent("קיבלתי המלצה"));
+
+    await expandLanding();
+
+    expect(inviteHref()).toContain(encodeURIComponent("קיבלתי המלצה"));
+  });
+
   it("offers פחות above the sign-in button once expanded, folding back to the condensed intro", async () => {
     const { container } = render(<Landing onSignIn={() => {}} />);
 

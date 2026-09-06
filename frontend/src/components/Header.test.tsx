@@ -3,8 +3,9 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Header } from "./Header";
 
-const props = { email: "a@b.com", muted: false, onSignOut: vi.fn(), onSetMuted: vi.fn(),
-                onFoldAll: vi.fn(), nextViewCondensed: true, activeViolations: [] as string[] };
+const props = { email: "a@b.com", muted: false, isAdmin: false, onSignOut: vi.fn(),
+                onSetMuted: vi.fn(), onFoldAll: vi.fn(), nextViewCondensed: true,
+                activeViolations: [] as string[] };
 
 async function openMenu() {
   await userEvent.click(screen.getByRole("button", { name: "תפריט חשבון" }));
@@ -80,6 +81,24 @@ describe("Header", () => {
     await userEvent.click(screen.getByRole("menuitem", { name: "חידוש התראות" }));
 
     expect(onSetMuted).toHaveBeenCalledWith(false);
+  });
+
+  it("offers a WhatsApp invite from the menu, opening in a new tab off the page", async () => {
+    render(<Header {...props} />);
+
+    await openMenu();
+    const invite = screen.getByRole("menuitem", { name: "הזמנת חברים ב-WhatsApp" });
+    expect(invite).toHaveAttribute("target", "_blank");
+    expect(invite.getAttribute("href")).toContain("https://wa.me/?text=");
+    expect(invite.getAttribute("href")).toContain(encodeURIComponent("קיבלתי המלצה"));
+  });
+
+  it("lets the admin's invite speak as the app's developer", async () => {
+    render(<Header {...props} isAdmin />);
+
+    await openMenu();
+    const invite = screen.getByRole("menuitem", { name: "הזמנת חברים ב-WhatsApp" });
+    expect(invite.getAttribute("href")).toContain(encodeURIComponent("פיתחתי"));
   });
 
   it("keeps the menu closed until the account button is pressed", () => {

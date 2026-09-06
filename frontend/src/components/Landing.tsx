@@ -14,6 +14,7 @@
  * Rendered instead of the questionnaire until sign-in completes.
  */
 import { useState } from "react";
+import { whatsAppInviteUrl } from "../invite";
 import { AppHeading } from "./AppHeading";
 
 // Ties the intro's link to the table it jumps to, so neither can drift from the other.
@@ -30,6 +31,14 @@ export function Landing({ onSignIn }: { onSignIn: () => void }) {
     <button type="button" className="more-toggle" onClick={() => setExpanded(!expanded)}>
       {expanded ? "פחות" : "יותר"}
     </button>
+  );
+  // A visitor is not the developer, so the invite always speaks as a received recommendation.
+  const inviteLink = (
+    <p className="landing-invite">
+      <a href={whatsAppInviteUrl(false)} target="_blank" rel="noreferrer">
+        הזמנת חברים ב-WhatsApp
+      </a>
+    </p>
   );
   const repoLink = (
     <p className="landing-repo">
@@ -58,6 +67,7 @@ export function Landing({ onSignIn }: { onSignIn: () => void }) {
         </p>
         {toggleButton}
         {signInButton}
+        {inviteLink}
         {repoLink}
       </main>
     );
@@ -110,6 +120,7 @@ export function Landing({ onSignIn }: { onSignIn: () => void }) {
           <tr><td><strong>צ</strong>מצום מספר ארוחות</td><td>2-3 ארוחות, בלי נשנושים ביניהן</td></tr>
         </tbody>
       </table>
+      {inviteLink}
       {repoLink}
     </main>
   );

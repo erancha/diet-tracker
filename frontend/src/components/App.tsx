@@ -230,7 +230,7 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, onSignOu
 
   return (
     <>
-      <Header email={email} onSignOut={onSignOut} muted={data.muted}
+      <Header email={email} isAdmin={isAdmin} onSignOut={onSignOut} muted={data.muted}
               onSetMuted={(muted) => setMutedMutation.mutate(muted)}
               onFoldAll={() => {
                 // The chosen view is what the press switches to — the reading the next sign-in

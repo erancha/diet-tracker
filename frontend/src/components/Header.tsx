@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { whatsAppInviteUrl } from "../invite";
 import { AppHeading } from "./AppHeading";
 import { Icon } from "./Icon";
 
@@ -7,14 +8,17 @@ import { Icon } from "./Icon";
 // so the warning presence is visible without leading every visit with the full messages.
 //
 // The account menu names the signed-in address and holds the account-level actions — signing
-// out, and the reminder subscription — plus the one page-wide control, the condensed/full view
-// toggle. The address is identification rather than chrome the page needs standing, so it
-// appears only when the menu it labels is open. Leaving is when a user decides they are done
+// out, the reminder subscription, and the WhatsApp invite — plus the one page-wide control, the
+// condensed/full view toggle. The address is identification rather than chrome the page needs
+// standing, so it appears only when the menu it labels is open. Leaving is when a user decides they are done
 // being reminded, so the opt-out is offered alongside the exit; it reads as a toggle, so the
 // same menu is also the way back.
-export function Header({ email, muted, onSignOut, onSetMuted, onFoldAll, nextViewCondensed,
-                         activeViolations }: {
-  email: string; muted: boolean; onSignOut: () => void; onSetMuted: (muted: boolean) => void;
+export function Header({ email, muted, isAdmin, onSignOut, onSetMuted, onFoldAll,
+                         nextViewCondensed, activeViolations }: {
+  email: string; muted: boolean;
+  // Picks the invite's opening voice: the admin invites as the app's developer.
+  isAdmin: boolean;
+  onSignOut: () => void; onSetMuted: (muted: boolean) => void;
   onFoldAll: () => void;
   // The view a press of the item will switch to, naming the item for what the press does.
   nextViewCondensed: boolean;
@@ -70,6 +74,10 @@ export function Header({ email, muted, onSignOut, onSetMuted, onFoldAll, nextVie
                   <Icon name={nextViewCondensed ? "foldAll" : "unfoldAll"} />
                   {nextViewCondensed ? "תצוגה מצומצמת" : "תצוגה מלאה"}
                 </button>
+                <a role="menuitem" href={whatsAppInviteUrl(isAdmin)} target="_blank"
+                   rel="noreferrer" onClick={() => setMenuOpen(false)}>
+                  <Icon name="share" />הזמנת חברים ב-WhatsApp
+                </a>
                 <button type="button" role="menuitem" onClick={choose(onSignOut)}>
                   <Icon name="signOut" />התנתקות
                 </button>

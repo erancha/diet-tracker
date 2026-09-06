@@ -25,6 +25,9 @@ const GLYPHS = {
               <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /><path d="m2 2 20 20" /></>,
   signOut: <><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="m16 17 5-5-5-5" />
              <path d="M21 12H9" /></>,
+  share: <><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" />
+           <circle cx="18" cy="19" r="3" /><path d="m8.59 13.51 6.83 3.98" />
+           <path d="m15.41 6.51-6.82 3.98" /></>,
 } satisfies Record<string, ReactElement>;
 
 export type IconName = keyof typeof GLYPHS;
