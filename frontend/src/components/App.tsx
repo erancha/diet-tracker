@@ -318,7 +318,7 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, onSignOu
           </div>
         </CollapsibleSection>
         </>}
-        <CollapsibleSection className="chat-section" title="שאלות על אבא חטוב"
+        <CollapsibleSection className="chat-section" title="שאלות על סבא חטוב 👴"
                             collapsed={chatCollapsed}
                             onToggle={() => setChatCollapsed((c) => !c)}>
           <Chat api={api} sampleQuestions={configQuery.data.chat.sample_questions}

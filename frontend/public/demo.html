@@ -1116,13 +1116,13 @@ function trendsSectionHtml() {
 /* ── Chat.tsx with no stored turns: the sample questions and the composer ─────────────── */
 function chatSectionHtml() {
   return '<section class="chat-section" data-t="chat">' +
-    "<h2><button type=\"button\" class=\"section-toggle\" aria-expanded=\"true\">שאלות על אבא חטוב</button></h2>" +
+    "<h2><button type=\"button\" class=\"section-toggle\" aria-expanded=\"true\">שאלות על סבא חטוב 👴</button></h2>" +
     '<div class="chat">' +
       '<div class="chat-samples">' +
         CHAT_SAMPLES.map(label => '<button type="button" class="quiet">' + esc(label) + "</button>").join("") +
       "</div>" +
       '<form><div class="composer">' +
-        '<textarea rows="2" tabindex="-1" placeholder="שאלה על אבא חטוב…"></textarea>' +
+        '<textarea rows="2" tabindex="-1" placeholder="שאלה על סבא חטוב 👴…"></textarea>' +
       "</div>" +
       '<button type="submit" disabled>שליחה</button></form>' +
     "</div></section>";

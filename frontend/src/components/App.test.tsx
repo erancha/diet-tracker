@@ -72,7 +72,7 @@ describe("App", () => {
   it("shows the admin the chat and activity panels alone, without the tracking sections", async () => {
     renderApp(true);
 
-    expect(await screen.findByRole("button", { name: "שאלות על אבא חטוב" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "שאלות על סבא חטוב 👴" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "פעילות משתמשים" })).toBeInTheDocument();
 
     expect(screen.queryByRole("button", { name: "משקל" })).toBeNull();
@@ -86,7 +86,7 @@ describe("App", () => {
     expect(await screen.findByRole("button", { name: "יומן היום" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "משקל" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "מגמות" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "שאלות על אבא חטוב" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "שאלות על סבא חטוב 👴" })).toBeInTheDocument();
 
     expect(screen.queryByRole("button", { name: "פעילות משתמשים" })).toBeNull();
     // The tracker is the only way a day closes — there is no day-end questionnaire section.
@@ -119,13 +119,13 @@ describe("App", () => {
     // the condensed view leaves both sections open.
     expect(screen.getByRole("button", { name: "יומן היום" }))
       .toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByRole("button", { name: "שאלות על אבא חטוב" }))
+    expect(screen.getByRole("button", { name: "שאלות על סבא חטוב 👴" }))
       .toHaveAttribute("aria-expanded", "true");
 
     // The item now names the full view, which opens everything.
     fireEvent.click(screen.getByRole("button", { name: "תפריט חשבון" }));
     fireEvent.click(screen.getByRole("menuitem", { name: "תצוגה מלאה" }));
-    for (const name of ["משקל", "יומן היום", "מגמות", "שאלות על אבא חטוב"])
+    for (const name of ["משקל", "יומן היום", "מגמות", "שאלות על סבא חטוב 👴"])
       expect(screen.getByRole("button", { name })).toHaveAttribute("aria-expanded", "true");
     // The nested meal form is an editing affordance, not a display section: opening everything
     // must not open a form whose unfolding starts composing a meal.
