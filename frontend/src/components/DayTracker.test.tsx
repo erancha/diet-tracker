@@ -406,6 +406,8 @@ describe("DayTracker", () => {
     fireEvent.click(screen.getByRole("button", { name: "עריכת ארוחה 13:30" }));
     expect(secondSourceGroup().getByLabelText("דרגה 7")).toBeChecked();
     expect(screen.getByLabelText(/גודל המנה/)).toHaveValue("small");
+    // An unrelated divergence surfaces the save button while leaving the second source untouched.
+    fireEvent.click(screen.getByLabelText("כולל ירקות"));
     fireEvent.click(screen.getByRole("button", { name: "שמירת ארוחה" }));
     expect(onUpdateMeal).toHaveBeenCalledWith("b", expect.objectContaining({
       second_source: { carbs_choice: "carb_grade_7", portion: "small" } }));
@@ -529,9 +531,11 @@ describe("DayTracker", () => {
     fireEvent.click(screen.getByRole("button", { name: "יציאה מעריכה" }));
     expect(confirmSpy).not.toHaveBeenCalled();
     expect(onUpdateMeal).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: "עדכון ארוחה" })).toBeNull();
+    // The edit is gone, not merely hidden: the inputs come back on the recording defaults.
+    fireEvent.click(screen.getByRole("button", { name: "הוספת ארוחה" }));
     expect(screen.getByLabelText("שעת הארוחה")).toHaveValue("19:05");
     expect(screen.getByLabelText("דרגה 4")).not.toBeChecked();
-    expect(screen.queryByRole("button", { name: "עדכון ארוחה" })).toBeNull();
   });
 
   it("keeps a diverged edit when its discard dialog is dismissed", () => {
@@ -564,6 +568,7 @@ describe("DayTracker", () => {
     fireEvent.click(screen.getByRole("button", { name: "ביטול שינויים" }));
     expect(confirmSpy).toHaveBeenCalledOnce();
     expect(screen.queryByRole("button", { name: "עדכון ארוחה" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "הוספת ארוחה" }));
     expect(screen.getByLabelText("שעת הארוחה")).toHaveValue("19:05");
   });
 
@@ -782,13 +787,68 @@ describe("DayTracker", () => {
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     fireEvent.click(screen.getByRole("button", { name: "עריכת ארוחה 13:30" }));
+    fireEvent.click(screen.getByLabelText("כולל ירקות"));
     fireEvent.click(screen.getByRole("button", { name: "שמירת ארוחה" }));
 
     expect(screen.getByRole("button", { name: "הוספת ארוחה" }))
       .toHaveAttribute("aria-expanded", "false");
   });
 
-  it("leaves the meal inputs open when an edit is cancelled", () => {
+  it("offers saving an edit only once it diverges from the stored meal", () => {
+    atLocalTime(19, 5);
+    render(<DayTracker maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={trackedDay}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "עריכת ארוחה 13:30" }));
+    expect(screen.queryByRole("button", { name: "שמירת ארוחה" })).toBeNull();
+    fireEvent.click(screen.getByLabelText("כולל ירקות"));
+    expect(screen.getByRole("button", { name: "שמירת ארוחה" })).toBeInTheDocument();
+    // Undoing the change puts the form back on the stored meal, and the button withdraws with it.
+    fireEvent.click(screen.getByLabelText("כולל ירקות"));
+    expect(screen.queryByRole("button", { name: "שמירת ארוחה" })).toBeNull();
+  });
+
+  it("closes an untouched recording form from its cancel button without asking", () => {
+    atLocalTime(19, 5);
+    const confirmSpy = vi.spyOn(window, "confirm");
+    render(<DayTracker maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={emptyDay}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    openMealForm();
+    // The corner icon carries the same name, so the text button is told apart by its styling.
+    const cancel = screen.getAllByRole("button", { name: "סגירת הטופס" })
+      .find((b) => !b.classList.contains("icon-only"))!;
+    fireEvent.click(cancel);
+
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "הוספת ארוחה" }))
+      .toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("discards a half-composed meal from the destructive cancel button", () => {
+    atLocalTime(19, 5);
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+    render(<DayTracker maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={emptyDay}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    openMealForm();
+    fireEvent.click(screen.getByLabelText("דרגה 4"));
+    const cancel = screen.getByRole("button", { name: "ביטול שינויים" });
+    expect(cancel).toHaveClass("destructive");
+    fireEvent.click(cancel);
+
+    expect(confirmSpy).toHaveBeenCalledOnce();
+    expect(screen.getByRole("button", { name: "הוספת ארוחה" }))
+      .toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("folds the meal inputs away when an edit is cancelled", () => {
     atLocalTime(19, 5);
     render(<DayTracker maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={trackedDay}
                        firstMealHour={NO_NUDGE_HOUR}
@@ -799,8 +859,8 @@ describe("DayTracker", () => {
     fireEvent.click(screen.getByRole("button", { name: "יציאה מעריכה" }));
 
     expect(screen.getByRole("button", { name: "הוספת ארוחה" }))
-      .toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByLabelText("שעת הארוחה")).toBeInTheDocument();
+      .toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByLabelText("שעת הארוחה")).toBeNull();
   });
 
   it("leaves an untouched edit when the meal inputs are folded away", () => {

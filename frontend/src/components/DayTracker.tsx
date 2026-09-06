@@ -188,8 +188,8 @@ export function DayTracker({ questionnaire, day, isToday = true, closed = false,
 
   // The meal inputs are the tallest thing here and are worth reading only when there is a meal to
   // report, so the tracker always opens on the day's figures and its recorded meals with the
-  // inputs folded away behind them. Recording a meal or sending a correction folds the inputs
-  // again, and opening a meal for editing unfolds them.
+  // inputs folded away behind them. Every way out of the form — saving it or abandoning it —
+  // folds the inputs again, and opening a meal for editing unfolds them.
   const [formCollapsed, setFormCollapsed] = useState(true);
 
   // A day holding its full quota of meals folds the recording inputs away: the section's place is
@@ -248,26 +248,19 @@ export function DayTracker({ questionnaire, day, isToday = true, closed = false,
     if (editing !== undefined) onUpdateMeal(editing.id, meal);
     else onAddMeal(meal);
     clearForm();
-    // Folded here rather than in clearForm, which cancelling an edit also runs: an abandoned
-    // correction leaves the inputs open for whatever the user meant to record instead.
-    setFormCollapsed(true);
   }
 
-  // The two ways out of an open form — the button beside the one that commits it, and folding the
-  // inputs away — both spend what the form holds, so both ask through the shared discard guard.
-  // Reports whether the form was released; a dismissed dialog keeps it.
-  function discardForm(): boolean {
-    if (!mayDiscardEdits(editDiverged || newMealDiverged)) return false;
+  // Both ways to abandon an open form — its cancel button and folding it away — spend what the
+  // form holds, so both ask through the shared discard guard. A dismissed dialog keeps the form
+  // open around what it refused to throw away.
+  function discardForm() {
+    if (!mayDiscardEdits(editDiverged || newMealDiverged)) return;
     clearForm();
-    return true;
   }
 
-  // Folding the inputs away puts whatever the form holds out of sight, so it empties the form
-  // first — a correction in progress and a half-composed meal alike. A dismissed discard dialog
-  // keeps the inputs open around what it refused to throw away. Unfolding loses nothing.
   function toggleForm() {
-    if (!formCollapsed && !discardForm()) return;
-    setFormCollapsed((c) => !c);
+    if (formCollapsed) setFormCollapsed(false);
+    else discardForm();
   }
 
   function formDiverged(meal: Meal): boolean {
@@ -304,6 +297,8 @@ export function DayTracker({ questionnaire, day, isToday = true, closed = false,
     setSecondSourceOpen(false);
   }
 
+  // The form is only ever cleared on the way out — a save or an abandoned form — so its contents
+  // and the open inputs go together.
   function clearForm() {
     setCarbsChoiceId(undefined);
     setVegetables(false);
@@ -315,6 +310,7 @@ export function DayTracker({ questionnaire, day, isToday = true, closed = false,
     setMealTime(opensOn);
     setPristineTime(opensOn);
     setEditingId(undefined);
+    setFormCollapsed(true);
   }
 
   // Corrections run through the recording form, so a stored meal becomes the form's contents:
@@ -447,15 +443,19 @@ export function DayTracker({ questionnaire, day, isToday = true, closed = false,
           button is disabled, and that button shows either way. */}
       {mealTimeIsFuture && <p className="notice">לא ניתן לרשום ארוחה בשעה עתידית</p>}
       <div className="form-actions">
-        {carbsChoiceId !== undefined && (
+        {carbsChoiceId !== undefined && formHoldsUnsavedMeal && (
           <button type="button" disabled={mealTimeIsFuture} onClick={submitMeal}>
             שמירת ארוחה
           </button>
         )}
-        {editing !== undefined && (
-          <button type="button" className={editDiverged ? "quiet destructive" : "quiet"}
-                  onClick={() => discardForm()}>
-            {editDiverged ? "ביטול שינויים" : "יציאה מעריכה"}
+        {/* An open form always offers a way out in the actions row, recording and correcting
+            alike: a plain close while the form holds nothing, a destructive discard once it
+            diverges. The corner icon above is the same action in icon form. */}
+        {!formCollapsed && (
+          <button type="button" className={formHoldsUnsavedMeal ? "quiet destructive" : "quiet"}
+                  onClick={discardForm}>
+            {formHoldsUnsavedMeal ? "ביטול שינויים"
+              : editing !== undefined ? "יציאה מעריכה" : "סגירת הטופס"}
           </button>
         )}
         {/* A meal still being composed would go with the closed day — the tracker goes with it —
