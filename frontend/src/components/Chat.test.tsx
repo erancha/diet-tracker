@@ -296,6 +296,15 @@ describe("Chat", () => {
     expect(screen.getByText("חושב…")).toBeInTheDocument();
   });
 
+  it("moves focus to the thinking indicator after sending", async () => {
+    const chatApi = api({ ask: vi.fn().mockReturnValue(new Promise(() => {})) });
+    render(<Chat api={chatApi} sampleQuestions={[]} />);
+
+    await ask("שאלה");
+
+    expect(screen.getByText("חושב…")).toHaveFocus();
+  });
+
   it("sends a follow-up as the labeled chain and replaces the turn in place", async () => {
     const chatApi = api({
       getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(2) }),

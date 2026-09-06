@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
 import { ApiError, type Api } from "../api";
 import type { ChatSampleQuestion, ChatTurn } from "../types";
 import { Icon } from "./Icon";
@@ -95,6 +95,13 @@ export function Chat({ api, sampleQuestions, defaultTranscriptFolded = false }: 
   const [transcriptFolded, setTranscriptFolded] = useState(defaultTranscriptFolded);
   useGlobalFold(setTranscriptFolded);
 
+  // Sending withdraws the composer out from under the user's focus, so the thinking indicator
+  // takes it: assistive tech announces the wait and the browser scrolls the indicator into view.
+  const pendingRef = useRef<HTMLParagraphElement>(null);
+  useEffect(() => {
+    if (pendingQuestion !== null) pendingRef.current?.focus();
+  }, [pendingQuestion]);
+
   useEffect(() => {
     api.getChatTranscript()
       .then((transcript) => setTurns(transcript.turns))
@@ -152,7 +159,7 @@ export function Chat({ api, sampleQuestions, defaultTranscriptFolded = false }: 
   const pendingExchange = pendingQuestion !== null && (
     <>
       <li className="chat-user"><p>{pendingQuestion}</p></li>
-      <li className="chat-assistant"><p className="chat-pending">חושב…</p></li>
+      <li className="chat-assistant"><p className="chat-pending" tabIndex={-1} ref={pendingRef}>חושב…</p></li>
     </>
   );
 
