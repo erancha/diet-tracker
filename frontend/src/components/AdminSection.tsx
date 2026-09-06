@@ -3,8 +3,9 @@ import type { Api } from "../api";
 import type { AdminActivityUser } from "../types";
 import { CollapsibleSection } from "./CollapsibleSection";
 
-// The admin's per-user activity overview: every pool account with its trailing-week closed-day,
-// meal, and chat-question counts, in the server's most-active-first order. Rendered for the
+// The admin's per-user activity overview: every pool account as a card with its trailing-week
+// closed-day, meal and chat-question counts, its all-time weighing count and a target-set check
+// (never the kilograms), in the server's most-active-first order. Rendered for the
 // admin alone (the API refuses anyone else), and always opening expanded: the listing is what
 // the admin screen exists to show, so it stands outside the menu's condensed/full view command
 // and only its own toggle folds it. The server is asked only while open, so a hand-folded
@@ -27,22 +28,23 @@ export function AdminSection({ api }: { api: Pick<Api, "getAdminActivity"> }) {
       {error !== null ? <div className="alert">{error}</div>
         : users === null ? <p>טוען…</p>
         : (
-          <table>
-            <caption>שבעת הימים האחרונים</caption>
-            <thead>
-              <tr><th>משתמש</th><th>ימים שנסגרו</th><th>ארוחות</th><th>שאלות</th></tr>
-            </thead>
-            <tbody>
+          <>
+            <p className="admin-week-note">שבעת הימים האחרונים</p>
+            <ul className="admin-users">
               {users.map((user) => (
-                <tr key={user.email}>
-                  <td>{user.email}</td>
-                  <td>{user.days}</td>
-                  <td>{user.meals}</td>
-                  <td>{user.chats}</td>
-                </tr>
+                <li key={user.email} className="admin-user-card">
+                  <h4>{user.email}</h4>
+                  <dl>
+                    <div><dt>ימים שנסגרו</dt><dd>{user.days}</dd></div>
+                    <div><dt>ארוחות</dt><dd>{user.meals}</dd></div>
+                    <div><dt>שאלות</dt><dd>{user.chats}</dd></div>
+                    <div><dt>משקל יעד</dt><dd>{user.target ? "✅" : "—"}</dd></div>
+                    <div><dt>שקילות סה״כ</dt><dd>{user.weights}</dd></div>
+                  </dl>
+                </li>
               ))}
-            </tbody>
-          </table>
+            </ul>
+          </>
         )}
     </CollapsibleSection>
   );

@@ -583,6 +583,9 @@ def test_admin_activity_counts_the_trailing_week_most_active_first(admin_env):
     store.put_day(active, days_before(today(), 7), ANSWERS, 3, "t")
     store.add_meal(active, today(), meal_body("carb_grade_3", True, False, (), "09:10:00",
                                               False, None))
+    store.put_weight(active, today(), 80, "07:00")
+    store.put_weight(active, days_before(today(), 7), 81, "07:00")
+    store.put_target(active, 70)
     chats = boto3.resource("dynamodb").Table("chat_history")
     chat_history.append(chats, active, "שאלה מהשבוע", "תשובה", [])
     chats.put_item(Item={"pk": active, "sk": f"{days_before(today(), 8)}T10:00:00+00:00",
@@ -591,8 +594,15 @@ def test_admin_activity_counts_the_trailing_week_most_active_first(admin_env):
     response = api.handler(request("GET /admin/activity", email="Admin@Gmail.com"), None)
     assert response["statusCode"] == 200
     listed = body_of(response)["users"]
-    assert listed[0] == {"email": "active@gmail.com", "days": 2, "meals": 1, "chats": 1}
-    assert {"email": "quiet@gmail.com", "days": 0, "meals": 0, "chats": 0} in listed
-    assert {"email": "admin@gmail.com", "days": 0, "meals": 0, "chats": 0} in listed
-    # Counts and the address only — an activity overview must never carry recorded content.
-    assert all(set(user) == {"email", "days", "meals", "chats"} for user in listed)
+    # Weighings count over the account's whole history — the measurement a week before today,
+    # outside the trailing window every other count honours, counts too.
+    assert listed[0] == {"email": "active@gmail.com", "days": 2, "meals": 1, "chats": 1,
+                         "weights": 2, "target": True}
+    assert {"email": "quiet@gmail.com", "days": 0, "meals": 0, "chats": 0,
+            "weights": 0, "target": False} in listed
+    assert {"email": "admin@gmail.com", "days": 0, "meals": 0, "chats": 0,
+            "weights": 0, "target": False} in listed
+    # Counts, flags and the address only — an activity overview must never carry recorded content,
+    # which is why the target arrives as a boolean and never as the kilograms themselves.
+    assert all(set(user) == {"email", "days", "meals", "chats", "weights", "target"}
+               for user in listed)

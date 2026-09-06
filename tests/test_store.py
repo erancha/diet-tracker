@@ -73,6 +73,16 @@ def test_meal_count_spans_the_inclusive_range_per_user(store):
     assert store.count_meals_range("u3", "2026-08-14", "2026-08-20") == 0
 
 
+def test_weight_count_spans_every_measurement_without_the_target(store):
+    store.put_weight("u1", "2026-08-13", 80, "07:00")
+    store.put_weight("u1", "2026-08-20", 79, "07:00")
+    store.put_target("u1", 70)
+    store.put_weight("u2", "2026-08-20", 90, "07:00")
+    assert store.count_weights("u1") == 2
+    assert store.count_weights("u2") == 1
+    assert store.count_weights("u3") == 0
+
+
 def test_meal_stored_before_the_fruit_and_addition_flags_reads_them_as_absent(store, ddb):
     ddb.Table("meals").put_item(Item={
         "pk": "u1", "sk": "2026-08-20#09:10:00-abc123",

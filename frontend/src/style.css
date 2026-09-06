@@ -660,3 +660,18 @@ button.section-summary, button.transcript-toggle {
    row, shedding the message-bubble styling its list neighbors carry. */
 .chat-messages .chat-composer { max-width: 100%; align-self: stretch; background: none; padding: 0; }
 .chat .chat-composer form { margin-bottom: 0.25rem; }
+
+/* The admin listing renders each account as its own card, every stat titled in place beside its
+   value, so an account reads whole at a glance instead of down a table's columns. The cards take
+   the tracker's hairline-card surface and tile to the column's width. */
+.admin-week-note { font-weight: 600; margin: 0 0 0.4rem; }
+.admin-users { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.75rem;
+               grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); }
+.admin-user-card { background: #fff; border: 1px solid #ddd; border-radius: 8px;
+                   padding: 0.75rem 1rem; }
+/* Addresses are the one unbreakable token in the card, so they wrap anywhere rather than force
+   the tile wider than its grid track. */
+.admin-user-card h4 { margin: 0 0 0.5rem; overflow-wrap: anywhere; }
+.admin-user-card dl { margin: 0; display: grid; gap: 0.25rem; }
+.admin-user-card dl > div { display: flex; justify-content: space-between; }
+.admin-user-card dd { margin: 0; font-variant-numeric: tabular-nums; }

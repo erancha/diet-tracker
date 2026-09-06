@@ -199,13 +199,16 @@ export interface NotificationSettings {
   muted: boolean;
 }
 
-// One pool account in the admin's activity overview: trailing-week counts only, no recorded
-// content. The server returns the list most active first.
+// One pool account in the admin's activity overview: trailing-week counts, an all-time weighing
+// count and a target-set flag only, no recorded content — the target arrives as a boolean, never
+// as the kilograms. The server returns the list most active first.
 export interface AdminActivityUser {
   email: string;
   days: number;
   meals: number;
   chats: number;
+  weights: number;
+  target: boolean;
 }
 
 export interface AdminActivity {
