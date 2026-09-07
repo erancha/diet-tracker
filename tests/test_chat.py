@@ -44,7 +44,7 @@ def body_of(response):
 def test_returns_the_upstream_answer_and_sources(env, monkeypatch):
     asked = {}
 
-    def fake_ask(api_url, key, question):
+    def fake_ask(api_url, key, question, context=None):
         asked.update(api_url=api_url, key=key, question=question)
         return {"answer": "תשובה מהמסמכים", "sources": [{"fileName": "מדריך.pdf", "score": 0.83}]}
 
@@ -57,27 +57,28 @@ def test_returns_the_upstream_answer_and_sources(env, monkeypatch):
                     "sources": [{"fileName": "מדריך.pdf", "score": 0.83}]}
     assert asked["api_url"] == "https://rag.example/prod"
     assert asked["key"] == "the-key"
-    assert asked["question"].startswith("כמה פחמימות מותר ביום?")
+    assert asked["question"] == "כמה פחמימות מותר ביום?"
 
 
-def test_the_upstream_question_carries_the_askers_tracked_data(env, ddb, monkeypatch):
+def test_the_askers_tracked_data_rides_as_context_beside_the_bare_question(env, ddb, monkeypatch):
     Store("days", "meals", "state", "weights", dynamodb=ddb).add_meal("u1", today(), {
         "at": f"{today()}T12:30:00+03:00", "carbs_choice": "carb_grade_2", "vegetables": True,
         "fruit": False, "additions": [], "portion": None, "second_source": None})
     asked = {}
-    monkeypatch.setattr(chat_handler.chat, "ask", lambda api_url, key, question:
-                        asked.update(question=question) or {"answer": "ת", "sources": []})
+    monkeypatch.setattr(chat_handler.chat, "ask", lambda api_url, key, question, context=None:
+                        asked.update(question=question, context=context)
+                        or {"answer": "ת", "sources": []})
 
     chat_handler.handler(request({"question": "מה אכלתי היום?"}), None)
 
-    assert asked["question"].startswith("מה אכלתי היום?")
-    assert "נתוני המעקב של השואל" in asked["question"]
-    assert "דרגה 2" in asked["question"]
+    assert asked["question"] == "מה אכלתי היום?"
+    assert "נתוני המעקב של השואל" in asked["context"]
+    assert "דרגה 2" in asked["context"]
 
 
 def test_the_stored_turn_keeps_the_original_question_without_the_data_block(env, monkeypatch):
     monkeypatch.setattr(chat_handler.chat, "ask",
-                        lambda api_url, key, question: {"answer": "ת", "sources": []})
+                        lambda api_url, key, question, context=None: {"answer": "ת", "sources": []})
     chat_handler.handler(request({"question": "מה אכלתי היום?"}), None)
 
     (turn,) = transcript()
@@ -92,7 +93,7 @@ def test_rejects_a_missing_or_blank_question(env):
 def test_refuses_beyond_the_daily_limit_without_asking_upstream(env, monkeypatch):
     calls = []
     monkeypatch.setattr(chat_handler.chat, "ask",
-                        lambda api_url, key, question: calls.append(question) or {"answer": "ת", "sources": []})
+                        lambda api_url, key, question, context=None: calls.append(question) or {"answer": "ת", "sources": []})
     assert chat_handler.handler(request({"question": "1"}), None)["statusCode"] == 200
     assert chat_handler.handler(request({"question": "2"}), None)["statusCode"] == 200
     refused = chat_handler.handler(request({"question": "3"}), None)
@@ -113,7 +114,7 @@ def admin_ses(monkeypatch):
 
 def test_the_first_refused_question_emails_the_admin_once(env, admin_ses, monkeypatch):
     monkeypatch.setattr(chat_handler.chat, "ask",
-                        lambda api_url, key, question: {"answer": "ת", "sources": []})
+                        lambda api_url, key, question, context=None: {"answer": "ת", "sources": []})
     assert chat_handler.handler(request({"question": "1"}), None)["statusCode"] == 200
     assert chat_handler.handler(request({"question": "2"}), None)["statusCode"] == 200
     assert admin_ses.sent == []
@@ -131,7 +132,7 @@ def test_the_first_refused_question_emails_the_admin_once(env, admin_ses, monkey
 def test_admin_notice_failure_is_logged_and_leaves_the_refusal_intact(env, admin_ses, monkeypatch,
                                                                       caplog):
     monkeypatch.setattr(chat_handler.chat, "ask",
-                        lambda api_url, key, question: {"answer": "ת", "sources": []})
+                        lambda api_url, key, question, context=None: {"answer": "ת", "sources": []})
     admin_ses.failure = RuntimeError("ses down")
     chat_handler.handler(request({"question": "1"}), None)
     chat_handler.handler(request({"question": "2"}), None)
@@ -144,7 +145,7 @@ def test_admin_notice_failure_is_logged_and_leaves_the_refusal_intact(env, admin
 def test_an_override_raises_one_users_limit_and_leaves_the_rest_on_the_default(env, monkeypatch):
     monkeypatch.setenv("CHAT_DAILY_LIMIT_OVERRIDES", '{"vip@gmail.com": 4}')
     monkeypatch.setattr(chat_handler.chat, "ask",
-                        lambda api_url, key, question: {"answer": "ת", "sources": []})
+                        lambda api_url, key, question, context=None: {"answer": "ת", "sources": []})
 
     def vip(question):
         return chat_handler.handler(request({"question": question}, sub="v1", email="VIP@gmail.com"), None)
@@ -160,14 +161,14 @@ def test_an_override_raises_one_users_limit_and_leaves_the_rest_on_the_default(e
 
 def test_a_blank_question_does_not_spend_quota(env, monkeypatch):
     monkeypatch.setattr(chat_handler.chat, "ask",
-                        lambda api_url, key, question: {"answer": "ת", "sources": []})
+                        lambda api_url, key, question, context=None: {"answer": "ת", "sources": []})
     chat_handler.handler(request({"question": "  "}), None)
     assert chat_handler.handler(request({"question": "1"}), None)["statusCode"] == 200
     assert chat_handler.handler(request({"question": "2"}), None)["statusCode"] == 200
 
 
 def test_upstream_failure_maps_to_502(env, monkeypatch):
-    def failing_ask(api_url, key, question):
+    def failing_ask(api_url, key, question, context=None):
         raise urllib.error.URLError("connection refused")
 
     monkeypatch.setattr(chat_handler.chat, "ask", failing_ask)
@@ -184,7 +185,7 @@ def transcript(sub="u1"):
 def test_a_successful_answer_is_persisted_for_its_user(env, monkeypatch):
     sources = [{"fileName": "מדריך.pdf", "score": 0.83}]
     monkeypatch.setattr(chat_handler.chat, "ask",
-                        lambda api_url, key, question: {"answer": "תשובה", "sources": sources})
+                        lambda api_url, key, question, context=None: {"answer": "תשובה", "sources": sources})
     chat_handler.handler(request({"question": "שאלה?"}), None)
 
     (turn,) = transcript()
@@ -197,7 +198,7 @@ def test_a_successful_answer_is_persisted_for_its_user(env, monkeypatch):
 
 def test_transcript_is_returned_newest_first(env, monkeypatch):
     monkeypatch.setattr(chat_handler.chat, "ask",
-                        lambda api_url, key, question: {"answer": f"ת:{question}", "sources": []})
+                        lambda api_url, key, question, context=None: {"answer": f"ת:{question}", "sources": []})
     chat_handler.handler(request({"question": "ראשונה"}), None)
     chat_handler.handler(request({"question": "שנייה"}), None)
 
@@ -205,7 +206,7 @@ def test_transcript_is_returned_newest_first(env, monkeypatch):
 
 
 def test_failed_requests_persist_no_turn(env, monkeypatch):
-    def failing_ask(api_url, key, question):
+    def failing_ask(api_url, key, question, context=None):
         raise urllib.error.URLError("connection refused")
 
     monkeypatch.setattr(chat_handler.chat, "ask", failing_ask)
@@ -218,7 +219,7 @@ def test_failed_requests_persist_no_turn(env, monkeypatch):
 def test_a_follow_up_overwrites_the_replied_to_turn_in_place(env, monkeypatch):
     answers = iter(["תשובה ראשונה", "תשובת ההמשך"])
     monkeypatch.setattr(chat_handler.chat, "ask",
-                        lambda api_url, key, question: {"answer": next(answers), "sources": []})
+                        lambda api_url, key, question, context=None: {"answer": next(answers), "sources": []})
     at = body_of(chat_handler.handler(request({"question": "שאלה מקורית"}), None))["at"]
 
     followed = chat_handler.handler(request({"question": "שרשור עם שאלת המשך", "at": at}), None)
@@ -233,7 +234,7 @@ def test_a_follow_up_overwrites_the_replied_to_turn_in_place(env, monkeypatch):
 
 def test_a_follow_up_to_a_missing_turn_is_404_and_persists_nothing(env, monkeypatch):
     monkeypatch.setattr(chat_handler.chat, "ask",
-                        lambda api_url, key, question: {"answer": "ת", "sources": []})
+                        lambda api_url, key, question, context=None: {"answer": "ת", "sources": []})
 
     response = chat_handler.handler(
         request({"question": "שאלת המשך", "at": "2026-09-01T10:00:00+00:00"}), None)
@@ -244,7 +245,7 @@ def test_a_follow_up_to_a_missing_turn_is_404_and_persists_nothing(env, monkeypa
 
 def test_a_follow_up_with_a_malformed_at_is_400_and_spends_no_quota(env, monkeypatch):
     monkeypatch.setattr(chat_handler.chat, "ask",
-                        lambda api_url, key, question: {"answer": "ת", "sources": []})
+                        lambda api_url, key, question, context=None: {"answer": "ת", "sources": []})
     assert chat_handler.handler(request({"question": "שאלה", "at": "  "}), None)["statusCode"] == 400
     assert chat_handler.handler(request({"question": "שאלה", "at": 5}), None)["statusCode"] == 400
 
@@ -262,7 +263,7 @@ def delete_request(at, sub="u1"):
 
 def test_a_turn_can_be_deleted_by_its_timestamp(env, monkeypatch):
     monkeypatch.setattr(chat_handler.chat, "ask",
-                        lambda api_url, key, question: {"answer": "ת", "sources": []})
+                        lambda api_url, key, question, context=None: {"answer": "ת", "sources": []})
     at = body_of(chat_handler.handler(request({"question": "שאלה?"}), None))["at"]
 
     response = chat_handler.handler(delete_request(at), None)
@@ -276,7 +277,7 @@ def test_deleting_a_missing_turn_is_404(env):
 
 def test_a_user_cannot_delete_another_users_turn(env, monkeypatch):
     monkeypatch.setattr(chat_handler.chat, "ask",
-                        lambda api_url, key, question: {"answer": "ת", "sources": []})
+                        lambda api_url, key, question, context=None: {"answer": "ת", "sources": []})
     at = body_of(chat_handler.handler(request({"question": "שאלה?"}), None))["at"]
 
     assert chat_handler.handler(delete_request(at, sub="other"), None)["statusCode"] == 404
@@ -310,3 +311,6 @@ def test_ask_posts_the_question_with_the_api_key(monkeypatch):
     assert captured["api_key"] == "the-key"
     assert captured["payload"] == {"question": "שאלה"}
     assert captured["timeout"] == chat_client.TIMEOUT_SECONDS
+
+    chat_client.ask("https://rag.example/prod", "the-key", "שאלה", context="נתוני המעקב")
+    assert captured["payload"] == {"question": "שאלה", "context": "נתוני המעקב"}

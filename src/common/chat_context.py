@@ -1,23 +1,24 @@
-"""Renders the asking user's recent tracked data as a JSON block riding after a chat question,
-so the external answering service can ground answers in the asker's own numbers.
+"""Renders the asking user's recent tracked data as a standalone context block, sent beside the
+chat question so the external answering service can ground answers in the asker's own numbers.
+The service embeds only the question for retrieval; this block reaches the answering LLM alone,
+so its bulk cannot drown the question's vocabulary in the similarity search.
 
 The block carries the last week's submitted day summaries plus today's and yesterday's meals
 with their derived scores, all keyed and labeled in the questionnaire's Hebrew vocabulary so
 the answering LLM reads domain terms rather than internal ids. It also names the app's full
 tracking scope, so the answering LLM can tell a subject the app has no field for from one the
-user left unrecorded. The question text stays first: the upstream service embeds the whole
-string for retrieval, and the head is what should drive the match."""
+user left unrecorded."""
 
 import json
 
-from common.chat import MAX_QUESTION_CHARS
+from common.chat import MAX_CONTEXT_CHARS
 from common.dates import days_before
 from common.derive import derive
 from common.digest import labeled_history
 
 SUMMARY_DAYS = 7
 
-_HEADER = "\n\n---\nנתוני המעקב של השואל (JSON):\n"
+_HEADER = "נתוני המעקב של השואל (JSON):\n"
 
 # Meal-entry field names, shared between the per-meal entries and the tracking-scope statement
 # so the scope always names the exact vocabulary the data uses.
@@ -30,26 +31,26 @@ _FRUIT = "פרי"
 _ADDITIONS = "תוספות"
 
 
-def with_user_context(question, store, questionnaire, sub, day) -> str:
-    """The question with the user's recent data appended, never exceeding the upstream cap.
+def user_context(store, questionnaire, sub, day) -> str | None:
+    """The user's recent data as a labeled context block, never exceeding the upstream cap;
+    None when even the last remnant does not fit, telling the caller to send no context.
 
-    When the budget is tight, detail is shed in fixed order — yesterday's detail, today's,
-    then the oldest summary days one at a time — and a question leaving no room at all goes
-    upstream bare. The tracking scope is never shed: it is what keeps absent data readable
-    as a missing field rather than an unrecorded habit. Absent data is a legal domain state
-    and still rides (empty summaries let the LLM say nothing was tracked); false meal flags
-    and empty addition lists are omitted from the block as the equally legal quiet state."""
+    When the cap is tight, detail is shed in fixed order — yesterday's detail, today's, then
+    the oldest summary days one at a time. The tracking scope is never shed: it is what keeps
+    absent data readable as a missing field rather than an unrecorded habit. Absent data is a
+    legal domain state and still rides (empty summaries let the LLM say nothing was tracked);
+    false meal flags and empty addition lists are omitted from the block as the equally legal
+    quiet state."""
     data = {
         "סיכום ימים אחרונים": _summaries(store, questionnaire, sub, day),
         "היום": _day_detail(store, questionnaire, sub, day),
         "אתמול": _day_detail(store, questionnaire, sub, days_before(day, 1)),
         "תחומי המעקב של האפליקציה": _tracking_scope(questionnaire),
     }
-    budget = MAX_QUESTION_CHARS - len(question) - len(_HEADER)
-    block = _bounded(data, budget)
+    block = _bounded(data, MAX_CONTEXT_CHARS - len(_HEADER))
     if block is None:
-        return question
-    return f"{question}{_HEADER}{block}"
+        return None
+    return f"{_HEADER}{block}"
 
 
 def _bounded(data, budget) -> str | None:

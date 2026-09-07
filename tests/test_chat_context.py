@@ -26,22 +26,21 @@ def meal(at, choice="carb_grade_2", **overrides):
     return {**base, **overrides}
 
 
-def data_of(composed, question):
-    """The JSON block of a composed upstream question, asserting the question rides first."""
-    assert composed.startswith(question)
-    prefix, header, payload = composed.partition("(JSON):\n")
-    assert header, "composed question carries no data block"
+def data_of(context):
+    """The JSON payload of a context block, asserting the labeling header leads it."""
+    header, separator, payload = context.partition("(JSON):\n")
+    assert separator, "context carries no data block"
     return json.loads(payload)
 
 
-def test_recent_day_summaries_ride_with_the_question(store, questionnaire):
+def test_recent_day_summaries_ride_in_the_context(store, questionnaire):
     answers = {"drinking": 3, "vegetables": 2, "eating_window": 10, "meals": 3, "carbs": 12}
     store.put_day("u1", "2026-08-26", answers, 12, "2026-08-26T22:00:00+03:00")
     store.put_day("u1", "2026-08-25", answers, 12, "2026-08-25T22:00:00+03:00")
 
-    composed = chat_context.with_user_context("שאלה", store, questionnaire, "u1", TODAY)
+    context = chat_context.user_context(store, questionnaire, "u1", TODAY)
 
-    summaries = data_of(composed, "שאלה")["סיכום ימים אחרונים"]
+    summaries = data_of(context)["סיכום ימים אחרונים"]
     assert "2026-08-26" in summaries
     assert "2026-08-25" not in summaries
     day = summaries["2026-08-26"]
@@ -56,8 +55,7 @@ def test_today_and_yesterday_meals_are_detailed_with_hebrew_labels(store, questi
         f"{YESTERDAY}T09:00:00+03:00", choice="carb_grade_4", portion="small",
         second_source={"carbs_choice": "carb_grade_7", "portion": "medium"}))
 
-    composed = chat_context.with_user_context("שאלה", store, questionnaire, "u1", TODAY)
-    data = data_of(composed, "שאלה")
+    data = data_of(chat_context.user_context(store, questionnaire, "u1", TODAY))
 
     today_detail = data["היום"]
     assert today_detail["ציון פחמימות"] == 6  # grade 2 + sweet addition 4
@@ -76,35 +74,32 @@ def test_today_and_yesterday_meals_are_detailed_with_hebrew_labels(store, questi
     assert entry["מקור פחמימה נוסף"] == "דרגה 7 (מנה בינונית)"
 
 
-def test_a_tight_budget_sheds_meal_detail_before_day_summaries(store, questionnaire):
+def test_a_tight_cap_sheds_meal_detail_before_day_summaries(store, questionnaire, monkeypatch):
     answers = {"drinking": 3, "vegetables": 2, "eating_window": 10, "meals": 3, "carbs": 12}
     store.put_day("u1", "2026-08-28", answers, 12, "2026-08-28T22:00:00+03:00")
     for i in range(30):
         store.add_meal("u1", TODAY, meal(f"{TODAY}T{10 + i // 6:02}:{i % 6}0:00+03:00",
                                          additions=["sweet"], vegetables=True))
-    question = "ש" * 3000
+    monkeypatch.setattr(chat_context, "MAX_CONTEXT_CHARS", 1200)
 
-    composed = chat_context.with_user_context(question, store, questionnaire, "u1", TODAY)
+    context = chat_context.user_context(store, questionnaire, "u1", TODAY)
 
-    assert len(composed) <= chat_context.MAX_QUESTION_CHARS
-    data = data_of(composed, question)
+    assert len(context) <= 1200
+    data = data_of(context)
     assert "2026-08-28" in data["סיכום ימים אחרונים"]
     assert "היום" not in data
 
 
-def test_the_composed_question_never_exceeds_the_upstream_cap(store, questionnaire):
-    store.add_meal("u1", TODAY, meal(f"{TODAY}T12:30:00+03:00"))
-    question = "ש" * 3990
+def test_a_cap_too_small_for_even_the_remnant_yields_no_context(store, questionnaire, monkeypatch):
+    monkeypatch.setattr(chat_context, "MAX_CONTEXT_CHARS", 50)
 
-    composed = chat_context.with_user_context(question, store, questionnaire, "u1", TODAY)
-
-    assert composed == question
+    assert chat_context.user_context(store, questionnaire, "u1", TODAY) is None
 
 
-def test_the_tracking_scope_of_the_app_rides_with_the_question(store, questionnaire):
-    composed = chat_context.with_user_context("שאלה", store, questionnaire, "u1", TODAY)
+def test_the_tracking_scope_of_the_app_rides_in_the_context(store, questionnaire):
+    scope = data_of(chat_context.user_context(
+        store, questionnaire, "u1", TODAY))["תחומי המעקב של האפליקציה"]
 
-    scope = data_of(composed, "שאלה")["תחומי המעקב של האפליקציה"]
     assert 'שכפ"צ - שתיה (ליטר)' in scope["במעקב היומי"]
     assert "כולל מתוק" in scope["ברישום ארוחה"]
     assert "מקור פחמימה" in scope["ברישום ארוחה"]
@@ -113,23 +108,21 @@ def test_the_tracking_scope_of_the_app_rides_with_the_question(store, questionna
                              "באפליקציה, ולכן היעדרו מהנתונים אינו מעיד שהמשתמש לא צרך אותו.")
 
 
-def test_a_tight_budget_keeps_the_tracking_scope(store, questionnaire):
+def test_a_tight_cap_keeps_the_tracking_scope(store, questionnaire, monkeypatch):
     for i in range(30):
         store.add_meal("u1", TODAY, meal(f"{TODAY}T{10 + i // 6:02}:{i % 6}0:00+03:00",
                                          additions=["sweet"], vegetables=True))
-    question = "ש" * 3000
+    monkeypatch.setattr(chat_context, "MAX_CONTEXT_CHARS", 1200)
 
-    composed = chat_context.with_user_context(question, store, questionnaire, "u1", TODAY)
+    data = data_of(chat_context.user_context(store, questionnaire, "u1", TODAY))
 
-    data = data_of(composed, question)
     assert "היום" not in data
     assert "תחומי המעקב של האפליקציה" in data
 
 
 def test_a_user_with_no_data_still_sends_the_empty_state(store, questionnaire):
-    composed = chat_context.with_user_context("שאלה", store, questionnaire, "u1", TODAY)
+    data = data_of(chat_context.user_context(store, questionnaire, "u1", TODAY))
 
-    data = data_of(composed, "שאלה")
     assert data["סיכום ימים אחרונים"] == {}
     assert data["היום"]["ארוחות"] == []
     assert data["היום"]["ציון פחמימות"] == 0
