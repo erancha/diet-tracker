@@ -34,6 +34,13 @@ export function weekdayDdmmLabel(s: string): string {
   return `${WEEKDAY_LETTERS[parseIsoDate(s).getDay()]}׳ ${ddmmLabel(s)}`;
 }
 
+// Local-clock label of a stored UTC instant, e.g. "ג׳ 01/09 14:05".
+export function instantLabel(utcIso: string): string {
+  const d = new Date(utcIso);
+  const hhmm = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  return `${weekdayDdmmLabel(isoDate(d))} ${hhmm}`;
+}
+
 const MS_PER_DAY = 86_400_000;
 
 // EventBridge Scheduler's day-of-week tokens, indexed to match Date.getDay() and WEEKDAY_LETTERS
@@ -113,12 +120,9 @@ export function beforeDailyCutoff(now: Date, cutoff: string): boolean {
 
 const MS_PER_HOUR = 3_600_000;
 
-// A meal is overdue in two ways: a day still carrying nothing by firstMealHour, and a day whose
-// most recent meal is mealGapHours or more behind the clock. The gap is measured from when the meal
-// was eaten, and stands on its own — a stale meal is overdue however early in the day it is. The
-// tracker answers an overdue meal by blinking its add-meal toggle rather than opening the inputs.
-//
-// Meals are dated, not ordered, so the latest one is found by time rather than by position.
+// A meal is overdue in two ways: a day still empty by firstMealHour, or a most recent meal
+// mealGapHours or more behind the clock — measured from when it was eaten, so a stale meal is
+// overdue however early in the day. Meals are dated, not ordered, so the latest is found by time.
 export function mealOverdue(now: Date, firstMealHour: number, mealGapHours: number,
                             meals: readonly { at: string }[]): boolean {
   if (meals.length === 0) return now.getHours() >= firstMealHour;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { beforeDailyCutoff, dayLabel, daysBefore, daysSince, ddmmLabel, mealOverdue, expandWeightSection, isWeighInDay, isoDate, last7Days, parseIsoDate, weekdayDdmmLabel, weekdayLetter } from "./dates";
+import { beforeDailyCutoff, dayLabel, daysBefore, daysSince, ddmmLabel, instantLabel, mealOverdue, expandWeightSection, isWeighInDay, isoDate, last7Days, parseIsoDate, weekdayDdmmLabel, weekdayLetter } from "./dates";
 
 describe("isoDate", () => {
   it("formats a local date as YYYY-MM-DD with zero padding", () => {
@@ -34,6 +34,14 @@ describe("weekdayDdmmLabel", () => {
 
   it("labels Saturday with ש rather than a numeral letter", () => {
     expect(weekdayDdmmLabel("2026-08-22")).toBe("ש׳ 22/08");
+  });
+});
+
+describe("instantLabel", () => {
+  it("renders a UTC instant as the local weekday, date, and clock time", () => {
+    // Built from a local wall-clock moment so the expectation holds in any runner timezone.
+    const local = new Date(2026, 8, 1, 14, 5);
+    expect(instantLabel(local.toISOString())).toBe("ג׳ 01/09 14:05");
   });
 });
 

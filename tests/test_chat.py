@@ -216,7 +216,7 @@ def test_failed_requests_persist_no_turn(env, monkeypatch):
     assert transcript() == []
 
 
-def test_a_follow_up_overwrites_the_replied_to_turn_in_place(env, monkeypatch):
+def test_a_follow_up_replaces_the_replied_to_turn_under_a_fresh_key(env, monkeypatch):
     answers = iter(["תשובה ראשונה", "תשובת ההמשך"])
     monkeypatch.setattr(chat_handler.chat, "ask",
                         lambda api_url, key, question, context=None: {"answer": next(answers), "sources": []})
@@ -225,11 +225,12 @@ def test_a_follow_up_overwrites_the_replied_to_turn_in_place(env, monkeypatch):
     followed = chat_handler.handler(request({"question": "שרשור עם שאלת המשך", "at": at}), None)
 
     assert followed["statusCode"] == 200
-    assert body_of(followed)["at"] == at
+    followed_at = body_of(followed)["at"]
+    assert followed_at > at
     (turn,) = transcript()
     assert turn["question"] == "שרשור עם שאלת המשך"
     assert turn["answer"] == "תשובת ההמשך"
-    assert turn["at"] == at
+    assert turn["at"] == followed_at
 
 
 def test_a_follow_up_to_a_missing_turn_is_404_and_persists_nothing(env, monkeypatch):

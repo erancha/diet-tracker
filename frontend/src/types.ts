@@ -10,11 +10,9 @@ export interface Choice {
   // choices name themselves completely.
   examples?: string;
   value: number;
-  // A choice phrased as an open-ended bound ("מעל 12 שעות", "פחות מ-2.5 ליטר") answers for
-  // everything past the ladder's last measured step, so its value is a sentinel one step beyond
-  // that step rather than a quantity. Its wording is the only thing that states what it means, so
-  // it survives wherever other choices reduce to their number, and it marks no position a
-  // gridline could sit on.
+  // A choice phrased as an open-ended bound ("מעל 12 שעות") answers for everything past the
+  // ladder's last measured step: its value is a sentinel one step beyond, not a quantity, so
+  // only its wording states its meaning and it marks no gridline position.
   bound?: boolean;
 }
 
@@ -265,7 +263,8 @@ export interface ChatAnswer {
   answer: string;
   // Empty when no document matched the question.
   sources: ChatSource[];
-  // UTC ISO timestamp the server stored the turn under — its identity for a later delete.
+  // UTC ISO timestamp keying the stored chat — its identity for a later delete. A follow-up's
+  // answer carries a fresh key.
   at: string;
 }
 
@@ -274,7 +273,7 @@ export interface ChatTurn {
   question: string;
   answer: string;
   sources: ChatSource[];
-  // UTC ISO timestamp the answer arrived at — the transcript's sort key.
+  // UTC ISO timestamp of the chat's latest answer — the transcript's sort key.
   at: string;
 }
 

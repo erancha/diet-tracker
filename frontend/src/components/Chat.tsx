@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
 import { ApiError, type Api } from "../api";
+import { instantLabel } from "../dates";
 import type { ChatSampleQuestion, ChatTurn } from "../types";
 import { Icon } from "./Icon";
 import { useGlobalFold } from "./useFoldAll";
@@ -26,10 +27,9 @@ function dropped(current: Set<string>, at: string): Set<string> {
   return next;
 }
 
-// A follow-up rides the same single-question API as a fresh question: the prior conversation is
-// folded into the question text itself, labeled so the original question, each answer, and the
-// new follow-up read apart. A follow-up turn's stored question already is such a chain, so
-// extending it only appends the target's answer and the new question.
+// A follow-up rides the same single-question API: the prior conversation is folded into the
+// question text as a labeled chain. An already-chained stored question only appends the
+// target's answer and the new question.
 function composeFollowUp(target: ChatTurn, question: string): string {
   const chain = target.question.startsWith(ORIGINAL_LABEL)
     ? target.question
@@ -37,10 +37,9 @@ function composeFollowUp(target: ChatTurn, question: string): string {
   return `${chain}\n${ANSWER_LABEL} ${target.answer}\n${FOLLOW_UP_LABEL} ${question}`;
 }
 
-// A chained question stays one plain string in storage; only its display dresses it up — each
-// chain label bold and preceded by a blank line, relying on the question button's pre-wrap.
-// Answers folded into the chain may span lines themselves, so only lines opening with a label
-// are treated as section starts.
+// A chained question stays one plain string in storage; display bolds each chain label after a
+// blank line (via the button's pre-wrap). Folded answers may span lines themselves, so only
+// lines opening with a label start a section.
 function renderQuestion(text: string): ReactNode {
   if (!text.startsWith(ORIGINAL_LABEL)) return text;
   return text.split("\n").map((line, index) => {
@@ -55,41 +54,37 @@ function renderQuestion(text: string): ReactNode {
   });
 }
 
-// Q&A over the diet knowledge base: the composer on top, then the user's whole stored
-// transcript newest first as one question per row, each answer folded behind its question and
-// the answer's source citations folded once more behind a more/less toggle inside the open
-// answer. GET /chat delivers every turn in full up front, so toggling a question or its sources
-// only reveals data already in memory — no request leaves the page per click. A fresh answer
-// opens expanded — the user just asked and is waiting for it — while loaded turns start
-// collapsed, which is what lets the full history render without a turn-count picker. Each turn
-// offers permanent deletion behind a confirm, keyed by the timestamp the server stored it under.
-// An open answer offers a reply control: the next question is then sent as the turn's labeled
-// chain plus the new question, and the answered follow-up replaces the turn in place — a
-// conversation stays one row whose question text carries its whole history. Choosing a reply
-// target moves the whole composer into the transcript under the answer it extends, and it
-// returns to the top once the follow-up is answered, canceled, or its turn deleted. While any
-// question awaits its answer the composer withdraws entirely — there is nothing to type at —
-// leaving the sent question and the thinking indicator to mark the state.
-// Configured sample questions render as one-tap links above the composer; a tap only fills the
-// input — nothing is sent, so no quota is spent before the user chooses to submit.
-// The stored transcript sits behind a count-labeled previous-chats toggle: the menu's
-// condensed/full view command drives it, the condensed sign-in starts it folded, and sending a
-// question always reveals it — the arriving answer must never land out of sight.
+// Q&A over the diet knowledge base: a composer on top of the user's stored transcript — newest
+// first, one row per chat, behind a count-labeled previous-chats toggle. The menu's
+// condensed/full command folds and unfolds the transcript, the condensed sign-in starts it
+// folded, and sending a question always reveals it so the arriving answer never lands out of
+// sight.
+//
+// The transcript loads once in full, so toggling a question, its sources, or the transcript
+// reveals data already in memory. A fresh answer opens expanded — the user is
+// waiting for it — while loaded chats start collapsed; each row is dated in the reader's local
+// clock and offers deletion behind a confirm.
+//
+// An open answer offers a reply control that moves the composer under it: the follow-up is
+// sent as the chat's labeled chain plus the new question, and the answered chat re-keys to the
+// top of the transcript. While a question is in flight the composer withdraws, leaving the
+// sent question and the thinking indicator. Sample-question links above the composer only fill
+// the input — no quota is spent before the user chooses to submit.
 export function Chat({ api, sampleQuestions, defaultTranscriptFolded = false }: {
   api: Pick<Api, "ask" | "getChatTranscript" | "deleteChatTurn">;
   sampleQuestions: ChatSampleQuestion[];
   defaultTranscriptFolded?: boolean;
 }) {
   const [turns, setTurns] = useState<ChatTurn[]>([]);
-  // Timestamps of the turns whose answers are open.
+  // Timestamps of the chats whose answers are open.
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
-  // Timestamps of the turns whose source citations are shown.
+  // Timestamps of the chats whose source citations are shown.
   const [sourcesShown, setSourcesShown] = useState<Set<string>>(new Set());
   const [draft, setDraft] = useState("");
   // The question awaiting its answer, or null. Doubles as the pending flag: the composer is
   // withdrawn while it is set, so at most one question is in flight.
   const [pendingQuestion, setPendingQuestion] = useState<string | null>(null);
-  // The turn the next question follows up on, or null for a standalone question.
+  // The chat the next question follows up on, or null for a standalone question.
   const [replyTo, setReplyTo] = useState<ChatTurn | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [transcriptFolded, setTranscriptFolded] = useState(defaultTranscriptFolded);
@@ -119,9 +114,8 @@ export function Chat({ api, sampleQuestions, defaultTranscriptFolded = false }: 
       const asked = replyTo === null ? question : composeFollowUp(replyTo, question);
       const reply = replyTo === null ? await api.ask(asked) : await api.ask(asked, replyTo.at);
       const answered = { question: asked, answer: reply.answer, sources: reply.sources, at: reply.at };
-      setTurns((current) => replyTo === null
-        ? [answered, ...current]
-        : current.map((turn) => (turn.at === replyTo.at ? answered : turn)));
+      // Fresh or followed-up, the answered turn leads — the order the server returns on reload.
+      setTurns((current) => [answered, ...current.filter((turn) => turn.at !== replyTo?.at)]);
       setExpanded((current) => new Set(current).add(reply.at));
       setReplyTo(null);
     } catch (thrown) {
@@ -135,7 +129,7 @@ export function Chat({ api, sampleQuestions, defaultTranscriptFolded = false }: 
   };
 
   // Deletion is permanent — no undo — so it stands behind the same confirm dialog as the
-  // history table's per-row delete. The turn leaves the view only once the server confirms.
+  // history table's per-row delete. The chat leaves the view only once the server confirms.
   const remove = async (turn: ChatTurn) => {
     if (!window.confirm("למחוק את השאלה והתשובה לצמיתות?")) return;
     setError(null);
@@ -153,9 +147,8 @@ export function Chat({ api, sampleQuestions, defaultTranscriptFolded = false }: 
   const toggle = (at: string) => setExpanded((current) => flipped(current, at));
   const toggleSources = (at: string) => setSourcesShown((current) => flipped(current, at));
 
-  // The question awaiting its answer, rendered as a normal exchange with the thinking indicator.
-  // It follows the composer wherever that sits, so a pending follow-up reads in place under the
-  // answer it extends.
+  // The question awaiting its answer, rendered as a normal exchange with the thinking
+  // indicator, following the composer so a pending follow-up reads under the answer it extends.
   const pendingExchange = pendingQuestion !== null && (
     <>
       <li className="chat-user"><p>{pendingQuestion}</p></li>
@@ -216,6 +209,7 @@ export function Chat({ api, sampleQuestions, defaultTranscriptFolded = false }: 
           {!transcriptFolded && turns.map((turn) => (
             <Fragment key={turn.at}>
               <li className="chat-user">
+                <time className="chat-turn-at" dateTime={turn.at}>{instantLabel(turn.at)}</time>
                 <button type="button" className="chat-question"
                   aria-expanded={expanded.has(turn.at)}
                   onClick={() => toggle(turn.at)}>{renderQuestion(turn.question)}</button>

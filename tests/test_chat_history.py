@@ -35,16 +35,29 @@ def test_append_returns_the_stored_sort_key(table):
     assert turn["at"] == at
 
 
-def test_append_with_an_explicit_at_overwrites_that_turn_in_place(table):
+def test_a_follow_up_replaces_the_turn_whole_under_a_fresh_key(table):
     at = chat_history.append(table, "u1", "שאלה מקורית", "תשובה ראשונה", [])
 
     returned = chat_history.append(table, "u1", "שרשור מלא", "תשובה חדשה",
                                    [{"fileName": "מדריך.pdf", "score": 0.9}], at=at)
 
-    assert returned == at
+    assert returned > at
     (turn,) = chat_history.turns(table, "u1")
     assert turn == {"question": "שרשור מלא", "answer": "תשובה חדשה",
-                    "sources": [{"fileName": "מדריך.pdf", "score": 0.9}], "at": at}
+                    "sources": [{"fileName": "מדריך.pdf", "score": 0.9}], "at": returned}
+
+
+def test_a_follow_up_moves_the_turn_to_the_top_of_the_transcript(table):
+    first = chat_history.append(table, "u1", "ראשונה", "ת1", [])
+    chat_history.append(table, "u1", "שנייה", "ת2", [])
+
+    followed = chat_history.append(table, "u1", "שרשור", "ת3", [], at=first)
+
+    turns = chat_history.turns(table, "u1")
+    assert [turn["question"] for turn in turns] == ["שרשור", "שנייה"]
+    assert turns[0]["at"] == followed
+    assert followed > first
+    assert first not in [turn["at"] for turn in turns]
 
 
 def test_append_with_an_at_that_holds_no_turn_raises(table):

@@ -1,20 +1,19 @@
-"""Chat endpoint: answers questions about the diet knowledge base by proxying to the external
-Summaries.AI RAG service, behind a per-user daily quota — chat is the only feature that spends
-money per use, so the quota is consumed before the upstream call and the request that crosses
-the limit is refused without spending anything. The first refusal of a user's day is announced
-to the admin by email.
+"""Chat endpoint: answers knowledge-base questions by proxying to the external Summaries.AI
+RAG service behind a per-user daily quota. Chat is the only feature that spends money per use,
+so the quota is consumed before the upstream call and a request crossing the limit is refused
+without spending; the day's first refusal is emailed to the admin.
 
 The caller's identity comes exclusively from the JWT claims the API Gateway authorizer
 verified — the request body never names a user. That verified identity is also what selects
 the asker's own tracked data, sent upstream as a context block beside the question
 (common.chat_context) so answers can ground in it without the data steering retrieval.
 
-Each answered turn is stored per user (common.chat_history) and served back by GET /chat, so
-the conversation survives reloads and follows the user across devices. A POST naming an
-existing turn's timestamp (`at`) is a follow-up: the answered turn replaces that turn in
-place, keeping a whole conversation as one stored turn whose question text carries the chain.
-DELETE /chat/{at} permanently removes one of the caller's own turns by its timestamp; the
-quota already spent on the deleted question is unaffected."""
+Each answered chat is stored per user (common.chat_history) and served back by GET /chat, so
+it survives reloads and follows the user across devices. A POST naming a stored chat's
+timestamp (`at`) is a follow-up: the answered chat replaces it under a fresh timestamp —
+one stored chat per conversation, risen to the top — and the response's `at` is the chat's
+new identity. DELETE /chat/{at} permanently removes one of the caller's own chats by its
+timestamp; the quota already spent on its questions is unaffected."""
 
 import json
 import os
@@ -76,7 +75,7 @@ def _ask(sub, email, body):
         return response(429, {"error": "מכסת השאלות היומית נוצלה — אפשר לשאול שוב מחר"})
 
     # The asker's tracked data goes upstream only as the request's context field; the stored
-    # turn keeps the bare question, so the transcript stays readable and a follow-up re-attaches
+    # chat keeps the bare question, so the transcript stays readable and a follow-up re-attaches
     # fresh data instead of accumulating stale copies in the chain.
     store = Store(os.environ["DAYS_TABLE"], os.environ["MEALS_TABLE"], os.environ["STATE_TABLE"],
                   os.environ["WEIGHTS_TABLE"])
@@ -111,8 +110,8 @@ def _notify_admin_quota_reached(email, limit):
 
 
 def _delete_turn(sub, at):
-    """Removes one of the caller's turns by its timestamp. The conditional delete is scoped to
-    the caller's key, so someone else's timestamp reads as a turn that does not exist."""
+    """Removes one of the caller's chats by its timestamp. The conditional delete is scoped to
+    the caller's key, so someone else's timestamp reads as a chat that does not exist."""
     try:
         chat_history.delete(_history_table(), sub, at)
     except KeyError:

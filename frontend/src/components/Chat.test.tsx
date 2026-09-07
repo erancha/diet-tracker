@@ -2,6 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { ApiError, type Api } from "../api";
+import { instantLabel } from "../dates";
 import type { ChatTurn } from "../types";
 import { Chat } from "./Chat";
 
@@ -70,6 +71,15 @@ describe("Chat", () => {
     expect(await screen.findByText("תשובה חדשה")).toBeInTheDocument();
     const texts = screen.getAllByText(/^שאלה/).map((el) => el.textContent);
     expect(texts).toEqual(["שאלה חדשה", "שאלה 1"]);
+  });
+
+  it("shows when each stored question was asked", async () => {
+    render(<Chat api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(2) }) })}
+                 sampleQuestions={[]} />);
+    await screen.findByText("שאלה 2");
+
+    // Both fixture chats fall in the same minute, so one label — but one per question row.
+    expect(screen.getAllByText(instantLabel(turn(1).at))).toHaveLength(2);
   });
 
   it("opens with every stored answer collapsed behind its question", async () => {
@@ -305,10 +315,10 @@ describe("Chat", () => {
     expect(screen.getByText("חושב…")).toHaveFocus();
   });
 
-  it("sends a follow-up as the labeled chain and replaces the turn in place", async () => {
+  it("sends a follow-up as the labeled chain and moves the conversation to the top", async () => {
     const chatApi = api({
       getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(2) }),
-      ask: vi.fn().mockResolvedValue({ answer: "תשובת המשך", sources: [], at: turn(1).at }),
+      ask: vi.fn().mockResolvedValue({ answer: "תשובת המשך", sources: [], at: "2026-09-01T12:00:00" }),
     });
     render(<Chat api={chatApi} sampleQuestions={[]} />);
     await userEvent.click(await screen.findByRole("button", { name: "שאלה 1" }));
@@ -322,9 +332,26 @@ describe("Chat", () => {
     expect(screen.queryByRole("button", { name: "שאלה 1" })).not.toBeInTheDocument();
     const questions = [...document.querySelectorAll(".chat-question")].map((el) => el.textContent);
     expect(questions).toEqual(
-      ["שאלה 2", "השאלה המקורית: שאלה 1\n\nהתשובה: תשובה 1\n\nשאלת המשך: ומה עוד?"]);
+      ["השאלה המקורית: שאלה 1\n\nהתשובה: תשובה 1\n\nשאלת המשך: ומה עוד?", "שאלה 2"]);
     const labels = [...document.querySelectorAll(".chat-question strong")].map((el) => el.textContent);
     expect(labels).toEqual(["השאלה המקורית:", "התשובה:", "שאלת המשך:"]);
+  });
+
+  it("re-dates a followed-up turn to its fresh server timestamp", async () => {
+    const chatApi = api({
+      getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(1) }),
+      ask: vi.fn().mockResolvedValue({ answer: "תשובת המשך", sources: [],
+                                       at: "2026-09-02T18:30:00" }),
+    });
+    render(<Chat api={chatApi} sampleQuestions={[]} />);
+    await userEvent.click(await screen.findByRole("button", { name: "שאלה 1" }));
+    await userEvent.click(screen.getByRole("button", { name: "שאלת המשך על שאלה 1" }));
+
+    await ask("ומה עוד?");
+
+    await screen.findByText("תשובת המשך");
+    expect(screen.getByText(instantLabel("2026-09-02T18:30:00"))).toBeInTheDocument();
+    expect(screen.queryByText(instantLabel(turn(1).at))).not.toBeInTheDocument();
   });
 
   it("extends an already-composed chain without re-wrapping it", async () => {
