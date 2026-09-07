@@ -652,12 +652,14 @@ button.section-summary, button.transcript-toggle {
 .chat .reply-chip { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.35rem;
                     font-size: 0.85rem; opacity: 0.85; }
 .chat .reply-chip span { flex: 1; }
-/* Worded rather than glyph-based: a reply arrow reads as escaping the window, not as continuing
-   the exchange, so the control names the action. Outlined like the quiet variant to read as an
-   optional next step, not the bubble's primary content. */
-.chat .reply-turn {
+/* The answer's foot pairs the reply control with a closing one, so a long chat folds from
+   where reading ends. Both worded rather than glyph-based (a reply arrow reads as escaping the
+   window, not as continuing the exchange) and outlined like the quiet variant, to read as
+   optional next steps, not the bubble's primary content. */
+.chat .answer-foot { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
+.chat .answer-foot button {
   --btn-bg: transparent; --btn-fg: var(--accent); --btn-border: #b6d0b8;
-  display: block; margin-top: 0.5rem; padding: 0.25rem 0.8rem; font-size: 0.85rem;
+  padding: 0.25rem 0.8rem; font-size: 0.85rem;
 }
 /* The pressed reply control keeps the question bubble's tint, tying the relocated composer below
    back to the control that summoned it. */

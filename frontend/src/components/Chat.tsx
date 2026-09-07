@@ -65,11 +65,13 @@ function renderQuestion(text: string): ReactNode {
 // waiting for it — while loaded chats start collapsed; each row is dated in the reader's local
 // clock and offers deletion behind a confirm.
 //
-// An open answer offers a reply control that moves the composer under it: the follow-up is
-// sent as the chat's labeled chain plus the new question, and the answered chat re-keys to the
-// top of the transcript. While a question is in flight the composer withdraws, leaving the
-// sent question and the thinking indicator. Sample-question links above the composer only fill
-// the input — no quota is spent before the user chooses to submit.
+// An open answer's foot offers a reply control beside a closing one. The reply moves the
+// composer under the answer: the follow-up is sent as the chat's labeled chain plus the new
+// question, and the answered chat re-keys to the top of the transcript. Closing folds the chat
+// from where reading ends and hands focus back to its question bubble. While a question is in
+// flight the composer withdraws, leaving the sent question and the thinking indicator.
+// Sample-question links above the composer only fill the input — no quota is spent before the
+// user chooses to submit.
 export function Chat({ api, sampleQuestions, defaultTranscriptFolded = false }: {
   api: Pick<Api, "ask" | "getChatTranscript" | "deleteChatTurn">;
   sampleQuestions: ChatSampleQuestion[];
@@ -89,6 +91,9 @@ export function Chat({ api, sampleQuestions, defaultTranscriptFolded = false }: 
   const [error, setError] = useState<string | null>(null);
   const [transcriptFolded, setTranscriptFolded] = useState(defaultTranscriptFolded);
   useGlobalFold(setTranscriptFolded);
+  // Question buttons by timestamp, for handing focus back when a chat folds from its answer's
+  // foot.
+  const questionRefs = useRef(new Map<string, HTMLButtonElement>());
 
   // Sending withdraws the composer out from under the user's focus, so the thinking indicator
   // takes it: assistive tech announces the wait and the browser scrolls the indicator into view.
@@ -146,6 +151,13 @@ export function Chat({ api, sampleQuestions, defaultTranscriptFolded = false }: 
 
   const toggle = (at: string) => setExpanded((current) => flipped(current, at));
   const toggleSources = (at: string) => setSourcesShown((current) => flipped(current, at));
+
+  // Folding from the answer's foot would leave the reader mid-transcript, so focus moves to the
+  // chat's question button — which also scrolls it back into view.
+  const collapseFromFoot = (at: string) => {
+    toggle(at);
+    questionRefs.current.get(at)!.focus();
+  };
 
   // The question awaiting its answer, rendered as a normal exchange with the thinking
   // indicator, following the composer so a pending follow-up reads under the answer it extends.
@@ -211,6 +223,10 @@ export function Chat({ api, sampleQuestions, defaultTranscriptFolded = false }: 
               <li className="chat-user">
                 <time className="chat-turn-at" dateTime={turn.at}>{instantLabel(turn.at)}</time>
                 <button type="button" className="chat-question"
+                  ref={(el) => {
+                    if (el) questionRefs.current.set(turn.at, el);
+                    else questionRefs.current.delete(turn.at);
+                  }}
                   aria-expanded={expanded.has(turn.at)}
                   onClick={() => toggle(turn.at)}>{renderQuestion(turn.question)}</button>
                 <button type="button" className="icon-only delete-turn"
@@ -225,7 +241,7 @@ export function Chat({ api, sampleQuestions, defaultTranscriptFolded = false }: 
                       <button type="button" className="more-toggle"
                         aria-expanded={sourcesShown.has(turn.at)}
                         onClick={() => toggleSources(turn.at)}>
-                        {sourcesShown.has(turn.at) ? "פחות" : "יותר"}
+                        {sourcesShown.has(turn.at) ? "פחות" : "התאמות"}
                       </button>
                       {sourcesShown.has(turn.at) && (
                         <table className="chat-sources">
@@ -244,10 +260,15 @@ export function Chat({ api, sampleQuestions, defaultTranscriptFolded = false }: 
                       )}
                     </>
                   )}
-                  <button type="button" className="reply-turn"
-                    aria-label={`שאלת המשך על ${turn.question}`}
-                    aria-pressed={replyTo?.at === turn.at}
-                    onClick={() => setReplyTo(turn)}>המשך</button>
+                  <div className="answer-foot">
+                    <button type="button" className="reply-turn"
+                      aria-label={`שאלת המשך על ${turn.question}`}
+                      aria-pressed={replyTo?.at === turn.at}
+                      onClick={() => setReplyTo(turn)}>המשך</button>
+                    <button type="button"
+                      aria-label={`סגירת התשובה על ${turn.question}`}
+                      onClick={() => collapseFromFoot(turn.at)}>סגירה</button>
+                  </div>
                 </li>
               )}
               {replyTo?.at === turn.at && (
