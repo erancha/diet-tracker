@@ -199,14 +199,20 @@ export interface NotificationSettings {
   muted: boolean;
 }
 
-// One pool account in the admin's activity overview: trailing-week counts, an all-time weighing
+// A count split into the trailing week and the account's whole history.
+export interface WeekAndTotal {
+  week: number;
+  total: number;
+}
+
+// One pool account in the admin's activity overview: week-and-total counts, an all-time weighing
 // count and a target-set flag only, no recorded content — the target arrives as a boolean, never
-// as the kilograms. The server returns the list most active first.
+// as the kilograms. The server returns the list ordered by the trailing week, most active first.
 export interface AdminActivityUser {
   email: string;
-  days: number;
-  meals: number;
-  chats: number;
+  days: WeekAndTotal;
+  meals: WeekAndTotal;
+  chats: WeekAndTotal;
   weights: number;
   target: boolean;
 }

@@ -73,6 +73,24 @@ def test_meal_count_spans_the_inclusive_range_per_user(store):
     assert store.count_meals_range("u3", "2026-08-14", "2026-08-20") == 0
 
 
+def test_all_time_day_count_spans_the_users_whole_history(store):
+    store.put_day("u1", "2026-08-13", ANSWERS, 3, "t")
+    store.put_day("u1", "2026-08-20", ANSWERS, 3, "t")
+    store.put_day("u2", "2026-08-15", ANSWERS, 3, "t")
+    assert store.count_days("u1") == 2
+    assert store.count_days("u2") == 1
+    assert store.count_days("u3") == 0
+
+
+def test_all_time_meal_count_spans_the_users_whole_history(store):
+    store.add_meal("u1", "2026-08-13", meal("2026-08-13T09:00:00+03:00", "carb_grade_3"))
+    store.add_meal("u1", "2026-08-20", meal("2026-08-20T09:00:00+03:00", "carb_grade_3"))
+    store.add_meal("u2", "2026-08-20", meal("2026-08-20T09:00:00+03:00", "carb_grade_3"))
+    assert store.count_meals("u1") == 2
+    assert store.count_meals("u2") == 1
+    assert store.count_meals("u3") == 0
+
+
 def test_weight_count_spans_every_measurement_without_the_target(store):
     store.put_weight("u1", "2026-08-13", 80, "07:00")
     store.put_weight("u1", "2026-08-20", 79, "07:00")

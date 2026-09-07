@@ -661,10 +661,10 @@ button.section-summary, button.transcript-toggle {
 .chat-messages .chat-composer { max-width: 100%; align-self: stretch; background: none; padding: 0; }
 .chat .chat-composer form { margin-bottom: 0.25rem; }
 
-/* The admin listing renders each account as its own card, every stat titled in place beside its
-   value, so an account reads whole at a glance instead of down a table's columns. The cards take
-   the tracker's hairline-card surface and tile to the column's width. */
-.admin-week-note { font-weight: 600; margin: 0 0 0.4rem; }
+/* The admin listing renders each account as its own card holding a small two-column count table
+   — the trailing week beside the account's whole history — so a stat's momentum and its
+   accumulation read side by side. The cards take the tracker's hairline-card surface and tile to
+   the column's width. */
 .admin-users { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.75rem;
                grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); }
 .admin-user-card { background: #fff; border: 1px solid #ddd; border-radius: 8px;
@@ -672,6 +672,8 @@ button.section-summary, button.transcript-toggle {
 /* Addresses are the one unbreakable token in the card, so they wrap anywhere rather than force
    the tile wider than its grid track. */
 .admin-user-card h4 { margin: 0 0 0.5rem; overflow-wrap: anywhere; }
-.admin-user-card dl { margin: 0; display: grid; gap: 0.25rem; }
-.admin-user-card dl > div { display: flex; justify-content: space-between; }
-.admin-user-card dd { margin: 0; font-variant-numeric: tabular-nums; }
+.admin-user-counts { width: 100%; border-collapse: collapse; }
+.admin-user-counts th { text-align: start; font-weight: 400; }
+.admin-user-counts thead th { font-size: 0.8rem; color: #666; font-weight: 600; }
+.admin-user-counts td { text-align: end; font-variant-numeric: tabular-nums; }
+.admin-user-target { display: flex; justify-content: space-between; margin-top: 0.25rem; }

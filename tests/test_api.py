@@ -570,12 +570,12 @@ def test_admin_activity_refuses_every_other_account(admin_env):
     assert response["statusCode"] == 403
 
 
-def test_admin_activity_counts_the_trailing_week_most_active_first(admin_env):
+def test_admin_activity_splits_week_and_total_and_orders_by_the_week_alone(admin_env):
     from common import chat_history
     from common.store import Store
     cognito, pool_id = admin_env
     active = signed_up(cognito, pool_id, "active@gmail.com")
-    signed_up(cognito, pool_id, "quiet@gmail.com")
+    quiet = signed_up(cognito, pool_id, "quiet@gmail.com")
     signed_up(cognito, pool_id, "admin@gmail.com")
     store = Store("days", "meals", "state", "weights")
     store.put_day(active, today(), ANSWERS, 3, "t")
@@ -583,6 +583,9 @@ def test_admin_activity_counts_the_trailing_week_most_active_first(admin_env):
     store.put_day(active, days_before(today(), 7), ANSWERS, 3, "t")
     store.add_meal(active, today(), meal_body("carb_grade_3", True, False, (), "09:10:00",
                                               False, None))
+    store.add_meal(active, days_before(today(), 8),
+                   meal_body("carb_grade_3", True, False, (), "09:10:00", False, None,
+                             day=days_before(today(), 8)))
     store.put_weight(active, today(), 80, "07:00")
     store.put_weight(active, days_before(today(), 7), 81, "07:00")
     store.put_target(active, 70)
@@ -590,17 +593,28 @@ def test_admin_activity_counts_the_trailing_week_most_active_first(admin_env):
     chat_history.append(chats, active, "שאלה מהשבוע", "תשובה", [])
     chats.put_item(Item={"pk": active, "sk": f"{days_before(today(), 8)}T10:00:00+00:00",
                          "question": "שאלה ישנה", "answer": "תשובה", "sources": "[]"})
+    # A pile of old days gives the quiet account the larger all-time sum, so its place below the
+    # week's active account is what proves the ordering reads the trailing week alone.
+    for offset in range(8, 16):
+        store.put_day(quiet, days_before(today(), offset), ANSWERS, 3, "t")
     # The admin claim matches case-insensitively, like the sign-up allowlist.
     response = api.handler(request("GET /admin/activity", email="Admin@Gmail.com"), None)
     assert response["statusCode"] == 200
     listed = body_of(response)["users"]
-    # Weighings count over the account's whole history — the measurement a week before today,
-    # outside the trailing window every other count honours, counts too.
-    assert listed[0] == {"email": "active@gmail.com", "days": 2, "meals": 1, "chats": 1,
+    assert listed[0] == {"email": "active@gmail.com",
+                         "days": {"week": 2, "total": 3},
+                         "meals": {"week": 1, "total": 2},
+                         "chats": {"week": 1, "total": 2},
                          "weights": 2, "target": True}
-    assert {"email": "quiet@gmail.com", "days": 0, "meals": 0, "chats": 0,
-            "weights": 0, "target": False} in listed
-    assert {"email": "admin@gmail.com", "days": 0, "meals": 0, "chats": 0,
+    assert listed[1] == {"email": "quiet@gmail.com",
+                         "days": {"week": 0, "total": 8},
+                         "meals": {"week": 0, "total": 0},
+                         "chats": {"week": 0, "total": 0},
+                         "weights": 0, "target": False}
+    assert {"email": "admin@gmail.com",
+            "days": {"week": 0, "total": 0},
+            "meals": {"week": 0, "total": 0},
+            "chats": {"week": 0, "total": 0},
             "weights": 0, "target": False} in listed
     # Counts, flags and the address only — an activity overview must never carry recorded content,
     # which is why the target arrives as a boolean and never as the kilograms themselves.

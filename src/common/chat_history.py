@@ -52,11 +52,17 @@ def count_range(table, sub, start_day, end_day) -> int:
     content never leaves the table. Sort keys are ISO timestamps, so a day string sorts before
     every timestamp of that day and the upper bound closes past the last one. A folded
     follow-up chain counts as the single turn it is stored as."""
-    return table.query(
-        Select="COUNT",
-        KeyConditionExpression=Key("pk").eq(sub) & Key("sk").between(start_day,
-                                                                     f"{end_day}\xff"),
-    )["Count"]
+    return _count(table, Key("pk").eq(sub) & Key("sk").between(start_day, f"{end_day}\xff"))
+
+
+def count(table, sub) -> int:
+    """Every stored turn of the user's transcript, counted inside DynamoDB so transcript content
+    never leaves the table. A folded follow-up chain counts as the single turn it is stored as."""
+    return _count(table, Key("pk").eq(sub))
+
+
+def _count(table, key_condition) -> int:
+    return table.query(Select="COUNT", KeyConditionExpression=key_condition)["Count"]
 
 
 def turns(table, sub):

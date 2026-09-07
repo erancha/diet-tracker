@@ -95,6 +95,16 @@ def test_count_range_covers_whole_boundary_days_for_the_asking_user_alone(table)
     assert chat_history.count_range(table, "u2", "2026-08-29", "2026-09-04") == 1
 
 
+def test_count_spans_the_users_whole_transcript(table):
+    chat_history.append(table, "u1", "שאלה מהיום", "ת", [])
+    table.put_item(Item={"pk": "u1", "sk": "2026-08-01T10:00:00+00:00",
+                         "question": "ישנה", "answer": "ת", "sources": "[]"})
+    chat_history.append(table, "u2", "של אחר", "ת", [])
+    assert chat_history.count(table, "u1") == 2
+    assert chat_history.count(table, "u2") == 1
+    assert chat_history.count(table, "u3") == 0
+
+
 def test_turns_follows_pagination_to_the_end():
     # A fake table standing in for DynamoDB's 1MB page cap, which moto cannot be made to hit
     # at reasonable test cost.

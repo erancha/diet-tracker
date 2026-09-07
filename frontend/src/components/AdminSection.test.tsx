@@ -5,8 +5,10 @@ import type { Api } from "../api";
 import { AdminSection } from "./AdminSection";
 
 const LISTING = { users: [
-  { email: "active@gmail.com", days: 5, meals: 12, chats: 7, weights: 4, target: true },
-  { email: "quiet@gmail.com", days: 0, meals: 0, chats: 0, weights: 0, target: false },
+  { email: "active@gmail.com", days: { week: 5, total: 40 }, meals: { week: 12, total: 90 },
+    chats: { week: 7, total: 31 }, weights: 4, target: true },
+  { email: "quiet@gmail.com", days: { week: 0, total: 0 }, meals: { week: 0, total: 0 },
+    chats: { week: 0, total: 0 }, weights: 0, target: false },
 ] };
 
 function api(): Pick<Api, "getAdminActivity"> {
@@ -19,14 +21,16 @@ describe("AdminSection", () => {
     expect(await screen.findAllByRole("listitem")).toHaveLength(2);
   });
 
-  it("cards every user with the week's titled counts in the server's order", async () => {
+  it("cards every user with a week and a total column in the server's order", async () => {
     render(<AdminSection api={api()} />);
     const cards = await screen.findAllByRole("listitem");
     expect(cards[0].textContent).toContain("active@gmail.com");
-    expect(cards[0].textContent).toContain("ימים שנסגרו5");
-    expect(cards[0].textContent).toContain("ארוחות12");
-    expect(cards[0].textContent).toContain("שאלות7");
-    expect(cards[0].textContent).toContain("שקילות סה״כ4");
+    expect(cards[0].textContent).toContain("7 ימים אחרונים");
+    expect(cards[0].textContent).toContain("סה״כ");
+    expect(cards[0].textContent).toContain("ימים שנסגרו540");
+    expect(cards[0].textContent).toContain("ארוחות1290");
+    expect(cards[0].textContent).toContain("שאלות731");
+    expect(cards[0].textContent).toContain("שקילות4");
     expect(cards[1].textContent).toContain("quiet@gmail.com");
   });
 

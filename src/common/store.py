@@ -145,6 +145,14 @@ class Store:
         return self._count(self._meals, Key("pk").eq(user_sub)
                            & Key("sk").between(f"{start_day}#", f"{end_day}#\xff"))
 
+    def count_days(self, user_sub) -> int:
+        """Every day the user has ever recorded, counted inside DynamoDB."""
+        return self._count(self._days, Key("pk").eq(user_sub))
+
+    def count_meals(self, user_sub) -> int:
+        """Every meal the user has ever recorded, counted inside DynamoDB."""
+        return self._count(self._meals, Key("pk").eq(user_sub))
+
     def count_weights(self, user_sub) -> int:
         """Every weight measurement the user has ever recorded, counted inside DynamoDB. Bounded
         below the target row — which sorts past every ISO date — so the target is never counted."""
