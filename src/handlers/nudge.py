@@ -78,11 +78,21 @@ def _build_env() -> NudgeEnv:
     )
 
 
-def _send(env, user, subject, text):
-    if env.telegram is not None:
-        bot_token, chat_map = env.telegram
-        notify.send_telegram(bot_token, users.chat_id_for(chat_map, user.email), text)
-    notify.send_email(env.ses, env.sender, user.email, subject, text, env.app_url)
+def _send(env, user, subject, text) -> bool:
+    """Delivers one nudge over the active channels and reports whether delivery happened.
+
+    A delivery failure is logged and absorbed here, at the single choke point every job sends
+    through, so one bad address — an unverified SES recipient, a missing Telegram binding —
+    cannot starve the rest of the pool."""
+    try:
+        if env.telegram is not None:
+            bot_token, chat_map = env.telegram
+            notify.send_telegram(bot_token, users.chat_id_for(chat_map, user.email), text)
+        notify.send_email(env.ses, env.sender, user.email, subject, text, env.app_url)
+    except Exception:
+        logger.exception("delivery to %s failed; continuing with the remaining users", user.email)
+        return False
+    return True
 
 
 def _unsubmitted(env, day) -> list:
@@ -91,8 +101,9 @@ def _unsubmitted(env, day) -> list:
 
 
 def _last_call(env):
-    """The day's one tracking reminder, sent late enough that the day it asks about is over in
-    practice — and still inside it, so what gets recorded is the day the user is living.
+    """The evening tracking reminder, fired by each of the evening schedules; the last firing is
+    late enough that the day it asks about is over in practice — and still inside it, so what
+    gets recorded is the day the user is living.
 
     It nudges every user whose day remains open, and tells one whose meals are already logged
     that the day awaits its closing rather than its meals: everything but the water is recorded,
@@ -118,8 +129,9 @@ def _rules_job(env):
         as_of = max(history)
         state = env.store.get_nudge_state(user.sub)
         violations = rules.due_alerts(env.questionnaire, history, as_of, state)
-        if violations:
-            _send(env, user, notify.ALERT_SUBJECT, notify.violation_text(violations))
+        # An alert counts as raised only once delivered; a failed send leaves it pending so the
+        # next nightly run retries instead of deduplicating it away.
+        if violations and _send(env, user, notify.ALERT_SUBJECT, notify.violation_text(violations)):
             env.store.put_nudge_state(user.sub, rules.mark_alerted(state, violations, as_of))
 
 

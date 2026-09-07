@@ -213,6 +213,39 @@ def test_the_last_call_job_is_dispatchable_by_name(env, monkeypatch):
     assert [target for _, target, _ in sent] == ["111", "a@gmail.com"]
 
 
+def test_a_failing_address_does_not_starve_the_rest_of_the_pool(env, monkeypatch, caplog):
+    e, sent = env
+
+    def rejecting_send(ses, sender, to, subject, body, app_url):
+        if to == "a@gmail.com":
+            raise RuntimeError("Email address is not verified")
+        sent.append(("mail", to, body))
+
+    monkeypatch.setattr(nudge.notify, "send_email", rejecting_send)
+    with caplog.at_level(logging.ERROR):
+        nudge._last_call(e)
+    assert [target for kind, target, _ in sent if kind == "mail"] == ["b@gmail.com"]
+    assert "a@gmail.com" in caplog.text
+
+
+def test_rules_job_keeps_the_alert_pending_when_delivery_fails(env, monkeypatch):
+    e, sent = env
+    for offset in (2, 1, 0):
+        e.store.put_day("u1", days_before(today(), offset), VIOLATING, 1, "t")
+
+    def failing_send(ses, sender, to, subject, body, app_url):
+        raise RuntimeError("Email address is not verified")
+
+    monkeypatch.setattr(nudge.notify, "send_email", failing_send)
+    nudge._rules_job(e)
+    sent.clear()
+
+    monkeypatch.setattr(nudge.notify, "send_email",
+                        lambda ses, sender, to, subject, body, app_url: sent.append(("mail", to, body)))
+    nudge._rules_job(e)
+    assert [target for kind, target, _ in sent if kind == "mail"] == ["a@gmail.com"]
+
+
 def test_muted_users_are_dropped_from_every_jobs_audience(env):
     e, _ = env
     e.store.set_muted("u1", True)
