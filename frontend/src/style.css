@@ -19,9 +19,16 @@
 body { font-family: system-ui, sans-serif; max-width: var(--column-width); margin: 0 auto; padding: var(--page-pad-top) 1rem var(--page-pad-bottom); background: #fafafa; color: #212121; }
 /* The title's own heading margins are dropped: the body's top padding already sets the page's
    edge. Below, a full rem of air parts the title row from the weight line, so the status line
-   reads as the page's first content rather than as part of the title block. */
-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 1.35rem; }
+   reads as the page's first content rather than as part of the title block. The gap is a floor
+   on the horizontal space beside the account box: space-between alone leaves none once the title
+   grows to the width available, which on a narrow phone runs it up against the alarm badge. */
+header { display: flex; justify-content: space-between; align-items: baseline; gap: 0.75rem; margin-bottom: 1.35rem; }
 header h1 { margin-bottom: 0; }
+/* The alarm badge is the one thing wide enough to crowd the title: beside the account trigger
+   alone a narrow phone still has room to spare, but at the shared 9vw the title fills what is
+   left exactly once the badge joins the row, so it sizes down only while the badge is there.
+   Reserving the gap without this shrink would move the crowding into a wrapped second line. */
+header:has(.alarm) h1 { font-size: min(2.1rem, 7.5vw); }
 /* The account box sits on the page's left edge (flex end in this RTL layout) and holds a single
    row of account buttons; align-items flex-end keeps that row on the box's left edge rather than
    right-aligned per RTL default. It is auxiliary chrome, so it reads smaller than the
@@ -85,8 +92,8 @@ header .alarm { --btn-bg: #ffebee; --btn-fg: var(--danger); --btn-border: #f3c9c
                 display: inline-flex; align-items: center; gap: 0.25rem; }
 /* The app title, on both the landing and the signed-in chrome. It reads above every section heading
    below it — including the tracker's enlarged one — so the page opens on its name rather than on
-   whichever section happens to shout loudest. The viewport term keeps it off the account box on a
-   narrow phone. */
+   whichever section happens to shout loudest. The viewport term keeps it inside a narrow phone's
+   width; the signed-in chrome tightens it further, where the account box shares the row. */
 h1 { font-size: min(2.1rem, 9vw); color: var(--accent); margin-top: 0; }
 /* The tab's icon beside the name, sized by the heading's own em so the pair scales as one line;
    middle alignment centers the emoji's square against the letters, which have no descenders to
