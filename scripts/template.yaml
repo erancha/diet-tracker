@@ -314,6 +314,9 @@ Resources:
     Properties:
       CodeUri: ../build/lambda
       Handler: handlers/chat.handler
+      Environment:
+        Variables:
+          ADMIN_EMAIL: !Ref AdminEmail
       Events:
         Chat:
           Type: HttpApi

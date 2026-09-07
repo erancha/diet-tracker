@@ -44,6 +44,20 @@ def test_send_email_closes_with_mute_footnote_and_app_link():
     assert body.endswith("https://dxyz.cloudfront.net")
 
 
+def test_send_plain_email_sends_the_body_verbatim():
+    captured = {}
+
+    class FakeSes:
+        def send_email(self, **kwargs):
+            captured.update(kwargs)
+
+    notify.send_plain_email(FakeSes(), "me@x.com", "you@x.com", "נושא", "גוף ההודעה")
+    assert captured["Source"] == "me@x.com"
+    assert captured["Destination"] == {"ToAddresses": ["you@x.com"]}
+    assert captured["Message"]["Subject"]["Data"] == "נושא"
+    assert captured["Message"]["Body"]["Text"]["Data"] == "גוף ההודעה"
+
+
 def test_send_telegram_posts_message(monkeypatch):
     captured = {}
 

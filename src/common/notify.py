@@ -2,7 +2,8 @@
 email (always on) and the optional Telegram Bot API.
 
 Telegram is called with stdlib urllib so the Lambdas carry no third-party HTTP dependency,
-keeping cold starts minimal. send_email and send_telegram raise on failure and log a
+keeping cold starts minimal. send_plain_email carries admin notices as-is; send_email is the
+user-facing variant that appends the mute footnote. All senders raise on failure and log a
 per-recipient receipt on success, so both outcomes are answerable from CloudWatch.
 telegram_config resolves whether the Telegram channel is active at all, per the bot-token SSM
 parameter."""
@@ -28,18 +29,26 @@ def violation_text(violations) -> str:
     return "התראות תזונה:\n" + "\n".join(f"• {v.message}" for v in violations)
 
 
-def send_email(ses_client, sender, recipient, subject, body, app_url) -> None:
-    """Sends one email, closing it with the mute footnote and the app's address — appending
-    here rather than at call sites is what guarantees every email carries its own way out."""
+def send_plain_email(ses_client, sender, recipient, subject, body) -> None:
+    """Sends one email with the body exactly as given — the variant for admin notices, which
+    carry no user-facing mute footnote."""
     ses_client.send_email(
         Source=sender,
         Destination={"ToAddresses": [recipient]},
         Message={
             "Subject": {"Data": subject, "Charset": "UTF-8"},
-            "Body": {"Text": {"Data": f"{body}\n\n{MUTE_FOOTNOTE}\n{app_url}", "Charset": "UTF-8"}},
+            "Body": {"Text": {"Data": body, "Charset": "UTF-8"}},
         },
     )
     logger.info("email sent to=%s subject=%s", recipient, subject)
+
+
+def send_email(ses_client, sender, recipient, subject, body, app_url) -> None:
+    """Sends one user-facing email, closing it with the mute footnote and the app's address —
+    appending here rather than at call sites is what guarantees every user-facing email carries
+    its own way out."""
+    send_plain_email(ses_client, sender, recipient, subject,
+                     f"{body}\n\n{MUTE_FOOTNOTE}\n{app_url}")
 
 
 def send_telegram(bot_token, chat_id, text) -> None:

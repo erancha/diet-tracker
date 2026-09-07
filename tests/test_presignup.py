@@ -1,25 +1,13 @@
 import logging
 
 import pytest
+from conftest import FakeSes
 
 from handlers import presignup
 
 
 def event(email):
     return {"request": {"userAttributes": {"email": email}}, "response": {}}
-
-
-class FakeSes:
-    """Records send_email calls; raises instead when primed with a failure."""
-
-    def __init__(self, failure=None):
-        self.sent = []
-        self.failure = failure
-
-    def send_email(self, **kwargs):
-        if self.failure is not None:
-            raise self.failure
-        self.sent.append(kwargs)
 
 
 @pytest.fixture

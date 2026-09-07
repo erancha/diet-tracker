@@ -53,6 +53,14 @@ def test_admin_listing_is_routed_gated_and_granted_pool_access():
     assert "AdminEmail=" in DEPLOY.read_text()
 
 
+def test_chat_function_can_address_the_admin_quota_notice():
+    # The quota notice needs the admin's address and the SES grant on the same function; a
+    # missing one surfaces only when a deployed user first crosses the limit.
+    chat_function = _load_template()["Resources"]["ChatFunction"]["Properties"]
+    assert chat_function["Environment"]["Variables"]["ADMIN_EMAIL"] == "AdminEmail"
+    assert "NotifyPolicy" in chat_function["Policies"]
+
+
 def test_weigh_in_schedule_defaults_agree_with_the_app_config():
     # deploy.sh passes config/app.json's weigh-in slot as parameter overrides, so the template's
     # own defaults never reach a deployed stack. Left to drift they would still mislead anyone

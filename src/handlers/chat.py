@@ -1,7 +1,8 @@
 """Chat endpoint: answers questions about the diet knowledge base by proxying to the external
 Summaries.AI RAG service, behind a per-user daily quota — chat is the only feature that spends
 money per use, so the quota is consumed before the upstream call and the request that crosses
-the limit is refused without spending anything.
+the limit is refused without spending anything. The first refusal of a user's day is announced
+to the admin by email.
 
 The caller's identity comes exclusively from the JWT claims the API Gateway authorizer
 verified — the request body never names a user. That verified identity is also what selects
@@ -21,7 +22,7 @@ import urllib.error
 
 import boto3
 
-from common import appconfig, chat, chat_context, chat_history, quota
+from common import appconfig, chat, chat_context, chat_history, notify, quota
 from common.dates import today
 from common.log import get_logger
 from common.store import Store
@@ -68,7 +69,10 @@ def _ask(sub, email, body):
 
     table = boto3.resource("dynamodb").Table(os.environ["CHAT_QUOTA_TABLE"])
     count = quota.consume(table, sub, today())
-    if count > _daily_limit(email):
+    limit = _daily_limit(email)
+    if count > limit:
+        if count == limit + 1:
+            _notify_admin_quota_reached(email, limit)
         return response(429, {"error": "מכסת השאלות היומית נוצלה — אפשר לשאול שוב מחר"})
 
     # Only the upstream question carries the asker's tracked data; the stored turn keeps the
@@ -91,6 +95,20 @@ def _ask(sub, email, body):
     except KeyError:
         return response(404, {"error": f"no turn stored at {at}"})
     return response(200, {"answer": answer["answer"], "sources": answer["sources"], "at": at})
+
+
+def _notify_admin_quota_reached(email, limit):
+    """Emails the admin on the day's first refused question — refused attempts keep counting, so
+    exactly one request arrives with count == limit + 1 and the notice cannot repeat within the
+    day. The notice is observability, not a gate: a send failure is logged and never changes the
+    refusal itself."""
+    try:
+        notify.send_plain_email(
+            boto3.client("ses"), os.environ["SES_SENDER"], os.environ["ADMIN_EMAIL"],
+            f"מכסת שאלות נוצלה — {notify.APP_NAME}",
+            f"המשתמש {email} ניצל את מכסת השאלות היומית ({limit}) וניסה לשאול שאלה נוספת.")
+    except Exception:
+        logger.exception("admin quota notice failed for %s", email)
 
 
 def _delete_turn(sub, at):

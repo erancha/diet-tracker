@@ -1,8 +1,9 @@
 import json
+import logging
 import urllib.error
 
 import pytest
-from conftest import APP_CONFIG, _table
+from conftest import APP_CONFIG, FakeSes, _table
 
 from common import chat as chat_client
 from common.dates import today
@@ -97,6 +98,47 @@ def test_refuses_beyond_the_daily_limit_without_asking_upstream(env, monkeypatch
     refused = chat_handler.handler(request({"question": "3"}), None)
     assert refused["statusCode"] == 429
     assert len(calls) == 2
+
+
+@pytest.fixture
+def admin_ses(monkeypatch):
+    """Fake SES capturing the admin notice. Every boto3 client resolves to the fake: besides SES
+    the handler only builds the SSM client, which the stubbed chat.api_key never touches."""
+    fake = FakeSes()
+    monkeypatch.setattr(chat_handler.boto3, "client", lambda service: fake)
+    monkeypatch.setenv("SES_SENDER", "sender@example.com")
+    monkeypatch.setenv("ADMIN_EMAIL", "admin@example.com")
+    return fake
+
+
+def test_the_first_refused_question_emails_the_admin_once(env, admin_ses, monkeypatch):
+    monkeypatch.setattr(chat_handler.chat, "ask",
+                        lambda api_url, key, question: {"answer": "ת", "sources": []})
+    assert chat_handler.handler(request({"question": "1"}), None)["statusCode"] == 200
+    assert chat_handler.handler(request({"question": "2"}), None)["statusCode"] == 200
+    assert admin_ses.sent == []
+
+    assert chat_handler.handler(request({"question": "3"}), None)["statusCode"] == 429
+    (mail,) = admin_ses.sent
+    assert mail["Source"] == "sender@example.com"
+    assert mail["Destination"] == {"ToAddresses": ["admin@example.com"]}
+    assert "a@gmail.com" in mail["Message"]["Body"]["Text"]["Data"]
+
+    assert chat_handler.handler(request({"question": "4"}), None)["statusCode"] == 429
+    assert len(admin_ses.sent) == 1
+
+
+def test_admin_notice_failure_is_logged_and_leaves_the_refusal_intact(env, admin_ses, monkeypatch,
+                                                                      caplog):
+    monkeypatch.setattr(chat_handler.chat, "ask",
+                        lambda api_url, key, question: {"answer": "ת", "sources": []})
+    admin_ses.failure = RuntimeError("ses down")
+    chat_handler.handler(request({"question": "1"}), None)
+    chat_handler.handler(request({"question": "2"}), None)
+
+    with caplog.at_level(logging.ERROR):
+        assert chat_handler.handler(request({"question": "3"}), None)["statusCode"] == 429
+    assert "a@gmail.com" in caplog.text
 
 
 def test_an_override_raises_one_users_limit_and_leaves_the_rest_on_the_default(env, monkeypatch):

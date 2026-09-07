@@ -10,6 +10,19 @@ from common.questionnaire import parse
 APP_CONFIG = Path(__file__).parent.parent / "config" / "app.json"
 
 
+class FakeSes:
+    """Records send_email calls; raises instead when primed with a failure."""
+
+    def __init__(self, failure=None):
+        self.sent = []
+        self.failure = failure
+
+    def send_email(self, **kwargs):
+        if self.failure is not None:
+            raise self.failure
+        self.sent.append(kwargs)
+
+
 def _table(ddb, name, with_sort_key=True):
     key_schema = [{"AttributeName": "pk", "KeyType": "HASH"}]
     attrs = [{"AttributeName": "pk", "AttributeType": "S"}]

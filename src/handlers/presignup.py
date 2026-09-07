@@ -26,17 +26,9 @@ def handler(event, context):
 def _notify_admin(email):
     """Emails the admin that a new user signed up. The notice is observability, not a gate: a
     send failure is logged and must never deny the sign-up itself."""
-    sender = os.environ["SES_SENDER"]
-    admin = os.environ["ADMIN_EMAIL"]
     try:
-        boto3.client("ses").send_email(
-            Source=sender,
-            Destination={"ToAddresses": [admin]},
-            Message={
-                "Subject": {"Data": f"משתמש חדש — {notify.APP_NAME}", "Charset": "UTF-8"},
-                "Body": {"Text": {"Data": f"משתמש חדש נרשם לאפליקציה: {email}", "Charset": "UTF-8"}},
-            },
-        )
-        logger.info("admin notified of new user %s", email)
+        notify.send_plain_email(boto3.client("ses"), os.environ["SES_SENDER"],
+                                os.environ["ADMIN_EMAIL"], f"משתמש חדש — {notify.APP_NAME}",
+                                f"משתמש חדש נרשם לאפליקציה: {email}")
     except Exception:
         logger.exception("admin notification failed for new user %s", email)
