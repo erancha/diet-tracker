@@ -117,6 +117,7 @@ def test_a_tight_cap_keeps_the_tracking_scope(store, questionnaire, monkeypatch)
     data = data_of(chat_context.user_context(store, questionnaire, "u1", TODAY))
 
     assert "היום" not in data
+    assert "משקל" in data
     assert "תחומי המעקב של האפליקציה" in data
 
 
@@ -126,3 +127,25 @@ def test_a_user_with_no_data_still_sends_the_empty_state(store, questionnaire):
     assert data["סיכום ימים אחרונים"] == {}
     assert data["היום"]["ארוחות"] == []
     assert data["היום"]["ציון פחמימות"] == 0
+    assert data["משקל"] == {"מדידות": {}}
+
+
+def test_last_weights_and_target_ride_dated_without_clock_times(store, questionnaire):
+    days = ["2026-07-29", "2026-08-05", "2026-08-12", "2026-08-19", "2026-08-26", "2026-08-30"]
+    for i, day in enumerate(days):
+        store.put_weight("u1", day, 85 - i * 0.5, "07:30")
+    store.put_target("u1", 78)
+
+    weight = data_of(chat_context.user_context(store, questionnaire, "u1", TODAY))["משקל"]
+
+    assert weight["מדידות"] == {"2026-08-05": 84.5, "2026-08-12": 84, "2026-08-19": 83.5,
+                                "2026-08-26": 83, "2026-08-30": 82.5}
+    assert weight["יעד"] == 78
+
+
+def test_an_unset_target_is_omitted_from_the_weight_block(store, questionnaire):
+    store.put_weight("u1", "2026-08-30", 82.5, "07:30")
+
+    weight = data_of(chat_context.user_context(store, questionnaire, "u1", TODAY))["משקל"]
+
+    assert weight == {"מדידות": {"2026-08-30": 82.5}}

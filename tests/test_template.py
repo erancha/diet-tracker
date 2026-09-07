@@ -61,6 +61,14 @@ def test_chat_function_can_address_the_admin_quota_notice():
     assert "NotifyPolicy" in chat_function["Policies"]
 
 
+def test_chat_function_reads_every_table_the_context_block_queries():
+    # The chat context block attaches the asker's days, meals and weights; a table missing from
+    # the read grants surfaces only as a 500 on a deployed stack's first chat question.
+    policies = _load_template()["Resources"]["ChatFunction"]["Properties"]["Policies"]
+    for table in ("DaysTable", "MealsTable", "WeightsTable"):
+        assert {"DynamoDBReadPolicy": {"TableName": table}} in policies
+
+
 def test_weigh_in_schedule_defaults_agree_with_the_app_config():
     # deploy.sh passes config/app.json's weigh-in slot as parameter overrides, so the template's
     # own defaults never reach a deployed stack. Left to drift they would still mislead anyone

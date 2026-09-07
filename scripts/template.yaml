@@ -346,6 +346,8 @@ Resources:
             TableName: !Ref DaysTable
         - DynamoDBReadPolicy:
             TableName: !Ref MealsTable
+        - DynamoDBReadPolicy:
+            TableName: !Ref WeightsTable
         - !Ref NotifyPolicy
 
   NudgeFunction:

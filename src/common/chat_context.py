@@ -3,11 +3,11 @@ chat question so the external answering service can ground answers in the asker'
 The service embeds only the question for retrieval; this block reaches the answering LLM alone,
 so its bulk cannot drown the question's vocabulary in the similarity search.
 
-The block carries the last week's submitted day summaries plus today's and yesterday's meals
-with their derived scores, all keyed and labeled in the questionnaire's Hebrew vocabulary so
-the answering LLM reads domain terms rather than internal ids. It also names the app's full
-tracking scope, so the answering LLM can tell a subject the app has no field for from one the
-user left unrecorded."""
+The block carries the last week's submitted day summaries, today's and yesterday's meals with
+their derived scores, and the latest weight measurements beside the target weight, all keyed
+and labeled in the questionnaire's Hebrew vocabulary so the answering LLM reads domain terms
+rather than internal ids. It also names the app's full tracking scope, so the answering LLM
+can tell a subject the app has no field for from one the user left unrecorded."""
 
 import json
 
@@ -17,6 +17,9 @@ from common.derive import derive
 from common.digest import labeled_history
 
 SUMMARY_DAYS = 7
+
+# Weigh-ins are weekly, so a trend needs the last few measurements, not the summary window's.
+WEIGHT_MEASUREMENTS = 5
 
 _HEADER = "נתוני המעקב של השואל (JSON):\n"
 
@@ -35,16 +38,17 @@ def user_context(store, questionnaire, sub, day) -> str | None:
     """The user's recent data as a labeled context block, never exceeding the upstream cap;
     None when even the last remnant does not fit, telling the caller to send no context.
 
-    When the cap is tight, detail is shed in fixed order — yesterday's detail, today's, then
-    the oldest summary days one at a time. The tracking scope is never shed: it is what keeps
-    absent data readable as a missing field rather than an unrecorded habit. Absent data is a
-    legal domain state and still rides (empty summaries let the LLM say nothing was tracked);
-    false meal flags and empty addition lists are omitted from the block as the equally legal
-    quiet state."""
+    When the cap is tight, whole sections are dropped in _bounded's fixed order of decreasing
+    bulk, the weight block last because it is small.
+    The tracking scope is never dropped: it is what keeps absent data readable as a missing field
+    rather than an unrecorded habit. Absent data is a legal domain state and still rides (empty
+    summaries let the LLM say nothing was tracked); false meal flags, empty addition lists and
+    an unset target weight are omitted from the block as the equally legal quiet state."""
     data = {
         "סיכום ימים אחרונים": _summaries(store, questionnaire, sub, day),
         "היום": _day_detail(store, questionnaire, sub, day),
         "אתמול": _day_detail(store, questionnaire, sub, days_before(day, 1)),
+        "משקל": _weight(store, sub),
         "תחומי המעקב של האפליקציה": _tracking_scope(questionnaire),
     }
     block = _bounded(data, MAX_CONTEXT_CHARS - len(_HEADER))
@@ -54,11 +58,15 @@ def user_context(store, questionnaire, sub, day) -> str | None:
 
 
 def _bounded(data, budget) -> str | None:
-    """The data serialized within the budget, shedding detail in fixed order until it fits;
-    None when even the last remnant does not."""
+    """The data as JSON text at most budget characters long — the room the upstream context cap
+    leaves after the labeling header. While the text is too long, one section is removed and the
+    rest re-serialized, in fixed order — yesterday's meals, today's, the oldest summary days one
+    at a time, then the weight block. None when the text is still too long once only the empty
+    summaries and the tracking scope remain."""
     summaries = data["סיכום ימים אחרונים"]
     sheds = [lambda: data.pop("אתמול"), lambda: data.pop("היום")]
     sheds += [lambda d=date: summaries.pop(d) for date in sorted(summaries)]
+    sheds.append(lambda: data.pop("משקל"))
     while True:
         text = json.dumps(data, ensure_ascii=False)
         if len(text) <= budget:
@@ -81,6 +89,18 @@ def _tracking_scope(questionnaire) -> dict:
         "הערה": "אלה כל שדות ההזנה באפליקציה. נושא שאינו ברשימה אין לו שדה באפליקציה, "
                 "ולכן היעדרו מהנתונים אינו מעיד שהמשתמש לא צרך אותו.",
     }
+
+
+def _weight(store, sub) -> dict:
+    """The user's latest weight measurements as bare day-to-kg pairs, beside the target weight
+    when one is set."""
+    weights = store.get_weights(sub)
+    block = {"מדידות": {day: weights[day]["kg"]
+                        for day in sorted(weights)[-WEIGHT_MEASUREMENTS:]}}
+    target = store.get_target(sub)
+    if target is not None:
+        block["יעד"] = target
+    return block
 
 
 def _summaries(store, questionnaire, sub, day) -> dict:
