@@ -1,7 +1,8 @@
 """HTTP API handler: day submission with meal-derived floors, history with per-day read-only
 lookups, day deletion, intraday meal reporting with whole-meal corrections, the weight log —
 measurements and the target the chart reads them against — the account's own opt-out from
-being notified at all, and the admin's per-user activity overview.
+being notified at all, the dismissal of a message SES refused to deliver, and the admin's
+per-user activity overview.
 
 Submission reports the day's tripped rules in the reply for the UI alone; outbound alerting
 belongs exclusively to the nightly rules job, so a violating day raises at most one message,
@@ -17,7 +18,7 @@ from datetime import date, datetime
 
 import boto3
 
-from common import appconfig, chat_history, rules, users, weight
+from common import appconfig, chat_history, rules, undelivered, users, weight
 from common.dates import clock_time, days_before, now_iso, today
 from common.derive import derive
 from common.log import get_logger
@@ -58,6 +59,8 @@ def handler(event, context):
         return _delete_weight(sub, event["pathParameters"]["date"])
     if route == "PUT /notifications":
         return _set_muted(sub, json.loads(event["body"]))
+    if route == "DELETE /undelivered/{at}":
+        return _dismiss_undelivered(sub, event["pathParameters"]["at"])
     if route == "GET /admin/activity":
         return _admin_activity(claims["email"])
     raise ValueError(f"unhandled route {route!r}")
@@ -74,6 +77,10 @@ def _questionnaire():
 def _store():
     return Store(os.environ["DAYS_TABLE"], os.environ["MEALS_TABLE"], os.environ["STATE_TABLE"],
                  os.environ["WEIGHTS_TABLE"])
+
+
+def _undelivered_table():
+    return boto3.resource("dynamodb").Table(os.environ["UNDELIVERED_TABLE"])
 
 
 def _reject_malformed_date(chosen):
@@ -173,6 +180,9 @@ def _history(sub):
         # targets it: its meals and floors are what that view records and closes against.
         "yesterday": _day_payload(store, questionnaire, sub, yesterday),
         "muted": store.get_nudge_state(sub)["muted"],
+        # Rides along with muted rather than costing its own request: both answer the header
+        # alone, which the app has already loaded this payload to draw.
+        "undelivered": undelivered.messages(_undelivered_table(), sub),
     })
 
 
@@ -406,6 +416,17 @@ def _admin_activity(email):
     listed.sort(key=lambda user: user["days"]["week"] + user["meals"]["week"]
                 + user["chats"]["week"], reverse=True)
     return _response(200, {"users": listed})
+
+
+def _dismiss_undelivered(sub, at):
+    """Drops one message the user has read in the app, by the timestamp it was refused at. The
+    conditional delete is scoped to the caller's key, so someone else's timestamp reads as a
+    message that does not exist."""
+    try:
+        undelivered.dismiss(_undelivered_table(), sub, at)
+    except KeyError:
+        return _response(404, {"error": f"no undelivered message at {at}"})
+    return _response(200, {"at": at})
 
 
 def _set_muted(sub, body):

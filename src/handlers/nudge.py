@@ -11,7 +11,7 @@ from dataclasses import dataclass
 
 import boto3
 
-from common import appconfig, chat, digest, notify, rules, users, weight
+from common import appconfig, chat, digest, notify, rules, undelivered, users, weight
 from common.dates import days_before, today
 from common.log import get_logger
 from common.rules import LOOKBACK_DAYS
@@ -37,6 +37,7 @@ class NudgeEnv:
     users: list  # already narrowed to the pool members who accept notifications
     telegram: tuple | None  # (bot_token, chat_map) when the Telegram channel is active, else None
     ses: object
+    undelivered: object  # table the messages SES refuses are kept in, for the app to show
     sender: str
     app_url: str  # the deployed frontend, cited in every email's mute footnote
     rag_url: str
@@ -71,6 +72,7 @@ def _build_env() -> NudgeEnv:
                                                   os.environ["USER_POOL_ID"])),
         telegram=notify.telegram_config(ssm, os.environ["BOT_TOKEN_PARAM"], os.environ["CHAT_MAP_PARAM"]),
         ses=boto3.client("ses"),
+        undelivered=boto3.resource("dynamodb").Table(os.environ["UNDELIVERED_TABLE"]),
         sender=os.environ["SES_SENDER"],
         app_url=os.environ["APP_URL"],
         rag_url=os.environ["RAG_API_URL"],
@@ -82,13 +84,22 @@ def _send(env, user, subject, text) -> bool:
     """Delivers one nudge over the active channels and reports whether delivery happened.
 
     A delivery failure is logged and absorbed here, at the single choke point every job sends
-    through, so one bad address — an unverified SES recipient, a missing Telegram binding —
-    cannot starve the rest of the pool."""
+    through, so one unreachable user — a missing Telegram binding, an SES call that fails —
+    cannot starve the rest of the pool.
+
+    SES refusing the message outright is the one failure retrying cannot mend, so the message is
+    kept for the recipient to read in the app instead of ending in the logs alone. The body is
+    kept as the job wrote it, before send_email closes it with the mute footnote and the app's
+    address — in the app, both are already at hand."""
     try:
         if env.telegram is not None:
             bot_token, chat_map = env.telegram
             notify.send_telegram(bot_token, users.chat_id_for(chat_map, user.email), text)
         notify.send_email(env.ses, env.sender, user.email, subject, text, env.app_url)
+    except env.ses.exceptions.MessageRejected:
+        logger.exception("SES refused the message to %s; keeping it for the app", user.email)
+        undelivered.record(env.undelivered, user.sub, subject, text)
+        return False
     except Exception:
         logger.exception("delivery to %s failed; continuing with the remaining users", user.email)
         return False

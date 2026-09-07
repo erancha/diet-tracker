@@ -2,10 +2,20 @@ import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Header } from "./Header";
+import type { UndeliveredMessage } from "../types";
+import { instantLabel } from "../dates";
 
 const props = { email: "a@b.com", muted: false, isAdmin: false, onSignOut: vi.fn(),
                 onSetMuted: vi.fn(), onFoldAll: vi.fn(), nextViewCondensed: true,
-                activeViolations: [] as string[] };
+                activeViolations: [] as string[],
+                undelivered: [] as UndeliveredMessage[],
+                onDismissUndelivered: vi.fn() };
+
+const UNDELIVERED: UndeliveredMessage = {
+  at: "2026-09-01T17:00:00+00:00",
+  subject: "תזכורת — רישום ארוחות",
+  body: "עדיין לא רשמת ארוחות היום",
+};
 
 async function openMenu() {
   await userEvent.click(screen.getByRole("button", { name: "תפריט חשבון" }));
@@ -142,17 +152,17 @@ describe("Header", () => {
     expect(screen.queryByRole("menuitem")).toBeNull();
   });
 
-  it("shows no alarm when there are no active violations", () => {
+  it("shows no alarm when nothing is waiting", () => {
     render(<Header {...props} />);
 
-    expect(screen.queryByRole("button", { name: "חריגות פעילות" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "התראות ממתינות" })).toBeNull();
   });
 
   it("badges the alarm with the violation count and toggles the messages open and closed", async () => {
     const messages = ["ציון פחמימות 11 ומעלה 3 ימים ברצף", "פחות מ-2.5 ליטר שתיה 2 ימים ברצף"];
     render(<Header {...props} activeViolations={messages} />);
 
-    const alarm = screen.getByRole("button", { name: "חריגות פעילות" });
+    const alarm = screen.getByRole("button", { name: "התראות ממתינות" });
     expect(alarm.textContent).toContain("2");
     expect(screen.queryByText(messages[0])).toBeNull();
 
@@ -162,5 +172,71 @@ describe("Header", () => {
 
     await userEvent.click(alarm);
     expect(screen.queryByText(messages[0])).toBeNull();
+  });
+
+  it("raises the alarm for an undelivered message even on a clean record", async () => {
+    render(<Header {...props} undelivered={[UNDELIVERED]} />);
+
+    const alarm = screen.getByRole("button", { name: "התראות ממתינות" });
+    expect(alarm.textContent).toContain("1");
+
+    await userEvent.click(alarm);
+    expect(screen.getByText(UNDELIVERED.subject)).toBeInTheDocument();
+    expect(screen.getByText(UNDELIVERED.body)).toBeInTheDocument();
+    // Says why an email's text is being read here rather than in an inbox.
+    expect(screen.getByText("הודעות שנשלחו אליכם ולא הגיעו לדוא״ל:")).toBeInTheDocument();
+  });
+
+  it("names the verification request as the way to start receiving the mail", async () => {
+    render(<Header {...props} undelivered={[UNDELIVERED]} />);
+
+    await userEvent.click(screen.getByRole("button", { name: "התראות ממתינות" }));
+    const hint = screen.getByText(/בקשת אימות הכתובת/);
+    // The sender is what makes the request findable, and spam is where it usually sits.
+    expect(hint).toHaveTextContent("Amazon Web Services");
+    expect(hint).toHaveTextContent("ספאם");
+  });
+
+  it("keeps both framing lines out of the way while nothing went undelivered", async () => {
+    render(<Header {...props} activeViolations={["חריגה"]} />);
+
+    await userEvent.click(screen.getByRole("button", { name: "התראות ממתינות" }));
+    expect(screen.queryByText(/בקשת אימות הכתובת/)).toBeNull();
+    expect(screen.queryByText(/ולא הגיעו לדוא/)).toBeNull();
+  });
+
+  it("counts violations and undelivered messages together in the one badge", async () => {
+    render(<Header {...props} activeViolations={["חריגה"]} undelivered={[UNDELIVERED]} />);
+
+    expect(screen.getByRole("button", { name: "התראות ממתינות" }).textContent).toContain("2");
+  });
+
+  it("dates an undelivered message by when it was refused", async () => {
+    render(<Header {...props} undelivered={[UNDELIVERED]} />);
+
+    await userEvent.click(screen.getByRole("button", { name: "התראות ממתינות" }));
+    expect(screen.getByText(instantLabel(UNDELIVERED.at))).toBeInTheDocument();
+  });
+
+  it("dismisses an undelivered message by the timestamp it is stored under", async () => {
+    const onDismissUndelivered = vi.fn();
+    render(<Header {...props} undelivered={[UNDELIVERED]}
+                   onDismissUndelivered={onDismissUndelivered} />);
+
+    await userEvent.click(screen.getByRole("button", { name: "התראות ממתינות" }));
+    await userEvent.click(screen.getByRole("button",
+      { name: `סגירת ההודעה ${UNDELIVERED.subject}` }));
+
+    expect(onDismissUndelivered).toHaveBeenCalledWith(UNDELIVERED.at);
+  });
+
+  it("keeps a violation and an undelivered message visually apart", async () => {
+    render(<Header {...props} activeViolations={["חריגה"]} undelivered={[UNDELIVERED]} />);
+
+    await userEvent.click(screen.getByRole("button", { name: "התראות ממתינות" }));
+    // The violation keeps the alarm red; the message that never arrived is not the user's
+    // failing and reads as a plain notice.
+    expect(screen.getByText("חריגה")).toHaveClass("alert");
+    expect(screen.getByText(UNDELIVERED.subject).closest("div")).toHaveClass("notice");
   });
 });

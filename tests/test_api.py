@@ -6,7 +6,7 @@ import boto3
 import pytest
 from conftest import APP_CONFIG
 
-from common import appconfig
+from common import appconfig, undelivered
 from common.dates import days_before, today
 from handlers import api
 
@@ -24,6 +24,7 @@ def env(monkeypatch, ddb):
     monkeypatch.setenv("MEALS_TABLE", "meals")
     monkeypatch.setenv("STATE_TABLE", "state")
     monkeypatch.setenv("WEIGHTS_TABLE", "weights")
+    monkeypatch.setenv("UNDELIVERED_TABLE", "undelivered")
     monkeypatch.setenv("APP_CONFIG_PATH", str(APP_CONFIG))
     monkeypatch.setattr(api, "clock_time", lambda: WEIGH_IN_AT)
 
@@ -570,6 +571,35 @@ def test_notifications_route_rejects_a_non_boolean(env):
     assert response["statusCode"] == 400
 
 
+def test_history_carries_the_messages_that_never_reached_the_user(env, ddb):
+    at = undelivered.record(ddb.Table("undelivered"), "u1", "תזכורת", "עדיין לא רשמת ארוחות היום")
+    assert body_of(api.handler(request("GET /days"), None))["undelivered"] == [
+        {"at": at, "subject": "תזכורת", "body": "עדיין לא רשמת ארוחות היום"}]
+
+
+def test_history_carries_no_undelivered_messages_for_a_user_holding_none(env):
+    assert body_of(api.handler(request("GET /days"), None))["undelivered"] == []
+
+
+def test_dismissing_an_undelivered_message_drops_it_from_the_history(env, ddb):
+    at = undelivered.record(ddb.Table("undelivered"), "u1", "תזכורת", "גוף")
+    assert body_of(api.handler(request("DELETE /undelivered/{at}",
+                                       path_params={"at": at}), None)) == {"at": at}
+    assert body_of(api.handler(request("GET /days"), None))["undelivered"] == []
+
+
+def test_dismissing_an_unknown_undelivered_message_is_a_404(env):
+    response = api.handler(request("DELETE /undelivered/{at}",
+                                   path_params={"at": "2026-09-07T10:00:00+00:00"}), None)
+    assert response["statusCode"] == 404
+
+
+def test_another_users_undelivered_message_cannot_be_dismissed(env, ddb):
+    table = ddb.Table("undelivered")
+    at = undelivered.record(table, "u2", "תזכורת", "גוף")
+    response = api.handler(request("DELETE /undelivered/{at}", path_params={"at": at}), None)
+    assert response["statusCode"] == 404
+    assert [m["at"] for m in undelivered.messages(table, "u2")] == [at]
 
 
 @pytest.fixture

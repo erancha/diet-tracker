@@ -1,11 +1,29 @@
 import { useEffect, useRef, useState } from "react";
+import { instantLabel } from "../dates";
 import { whatsAppInviteUrl } from "../invite";
+import type { UndeliveredMessage } from "../types";
 import { AppHeading } from "./AppHeading";
 import { Icon } from "./Icon";
 
-// App chrome: the title, the account menu, and — while rule violations are still active — an
+// Says why an email's text is being read in the app: without it the bell would show a bare
+// reminder with nothing to explain how it got there.
+const UNDELIVERED_LEAD = "הודעות שנשלחו אליכם ולא הגיעו לדוא״ל:";
+
+// The way out of the situation, named where the user meets it. Delivery is refused until the
+// address is confirmed from the request AWS sends it, and that request is itself a mail the
+// recipient never asked for from a sender they do not know — so it commonly lands in spam, and
+// the sender is named here because that is what makes it findable.
+const UNDELIVERED_VERIFY_HINT =
+  "כדי לקבל אותן במייל יש לאשר את בקשת אימות הכתובת מ-Amazon Web Services — חפשו אותה גם בתיקיית הספאם.";
+
+// App chrome: the title, the account menu, and — while anything is still awaiting the user — an
 // alarm that survives reloads, unlike the transient post-submit banner. The alarm starts closed
-// so the warning presence is visible without leading every visit with the full messages.
+// so the presence of notices is visible without leading every visit with their full texts.
+//
+// It holds two kinds at once, counted together but never styled alike: rule violations, which
+// are alarming and read red, and messages the app failed to email, which are only what the inbox
+// should have carried and read as plain notes, each dated by the attempt that failed and
+// dismissable once read.
 //
 // The account menu names the signed-in address and holds the account-level actions — signing
 // out, the reminder subscription, and the WhatsApp invite — plus the one page-wide control, the
@@ -14,7 +32,8 @@ import { Icon } from "./Icon";
 // being reminded, so the opt-out is offered alongside the exit; it reads as a toggle, so the
 // same menu is also the way back.
 export function Header({ email, muted, isAdmin, onSignOut, onSetMuted, onFoldAll,
-                         nextViewCondensed, activeViolations }: {
+                         nextViewCondensed, activeViolations, undelivered,
+                         onDismissUndelivered }: {
   email: string; muted: boolean;
   // Picks the invite's opening voice: the admin invites as the app's developer.
   isAdmin: boolean;
@@ -23,6 +42,8 @@ export function Header({ email, muted, isAdmin, onSignOut, onSetMuted, onFoldAll
   // The view a press of the item will switch to, naming the item for what the press does.
   nextViewCondensed: boolean;
   activeViolations: string[];
+  undelivered: UndeliveredMessage[];
+  onDismissUndelivered: (at: string) => void;
 }) {
   const [alarmOpen, setAlarmOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -44,16 +65,17 @@ export function Header({ email, muted, isAdmin, onSignOut, onSetMuted, onFoldAll
   }, [menuOpen]);
 
   const choose = (action: () => void) => () => { setMenuOpen(false); action(); };
+  const noticeCount = activeViolations.length + undelivered.length;
   return (
     <>
       <header>
         <AppHeading />
         <span className="account" ref={account}>
           <span className="account-actions">
-            {activeViolations.length > 0 && (
-              <button type="button" className="alarm" aria-label="חריגות פעילות"
+            {noticeCount > 0 && (
+              <button type="button" className="alarm" aria-label="התראות ממתינות"
                       onClick={() => setAlarmOpen((open) => !open)}>
-                <Icon name="alarm" /> {activeViolations.length}
+                <Icon name="alarm" /> {noticeCount}
               </button>
             )}
             <button type="button" className="icon-only account-trigger" aria-haspopup="menu"
@@ -86,9 +108,33 @@ export function Header({ email, muted, isAdmin, onSignOut, onSetMuted, onFoldAll
           )}
         </span>
       </header>
-      {alarmOpen && activeViolations.map((message) => (
-        <div key={message} className="alert">{message}</div>
-      ))}
+      {alarmOpen && (
+        <>
+          {activeViolations.map((message) => (
+            <div key={message} className="alert">{message}</div>
+          ))}
+          {undelivered.length > 0 && (
+            <p className="undelivered-aside">{UNDELIVERED_LEAD}</p>
+          )}
+          {undelivered.map((message) => (
+            <div key={message.at} className="notice undelivered">
+              <span className="undelivered-head">
+                <time dateTime={message.at}>{instantLabel(message.at)}</time>
+                <button type="button" className="icon-only"
+                        aria-label={`סגירת ההודעה ${message.subject}`}
+                        onClick={() => onDismissUndelivered(message.at)}>
+                  <Icon name="remove" />
+                </button>
+              </span>
+              <strong>{message.subject}</strong>
+              <p>{message.body}</p>
+            </div>
+          ))}
+          {undelivered.length > 0 && (
+            <p className="undelivered-aside trailing">{UNDELIVERED_VERIFY_HINT}</p>
+          )}
+        </>
+      )}
     </>
   );
 }

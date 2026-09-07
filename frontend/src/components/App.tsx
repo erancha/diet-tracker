@@ -194,6 +194,12 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, onSignOu
     onError: errorAlert("עדכון ההתראות נכשל"),
   });
 
+  const dismissUndeliveredMutation = useMutation({
+    mutationFn: api.dismissUndelivered,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["days"] }),
+    onError: errorAlert("סגירת ההודעה נכשלה"),
+  });
+
   if (configQuery.isPending || historyQuery.isPending || weightQuery.isPending) {
     return <main>טוען…</main>;
   }
@@ -241,7 +247,9 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, onSignOu
               // The item names the view a press will switch to, read off the last command rather
               // than the sections' scattered states — hand-toggling sections does not rename it.
               nextViewCondensed={!foldAll.collapsed}
-              activeViolations={activeViolations(questionnaire, data.days, todayStr, yesterdayStr)} />
+              activeViolations={activeViolations(questionnaire, data.days, todayStr, yesterdayStr)}
+              undelivered={data.undelivered}
+              onDismissUndelivered={(at) => dismissUndeliveredMutation.mutate(at)} />
       <main className={intro === null || intro === "rest" ? undefined : `intro-${intro}`}>
       <FoldAllContext.Provider value={foldAll}>
         <Alerts items={alerts} onDismiss={dismissAlerts} />

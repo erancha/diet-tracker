@@ -117,6 +117,18 @@ describe("createApi", () => {
     expect(JSON.parse(init.body)).toEqual({ muted: true });
   });
 
+  it("dismisses an undelivered message under a percent-encoded timestamp", async () => {
+    const at = "2026-09-01T17:00:00+00:00";
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ at })));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await createApi(cfg, tokens).dismissUndelivered(at);
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe(`https://api.example.com/undelivered/${encodeURIComponent(at)}`);
+    expect(init.method).toBe("DELETE");
+  });
+
   it("reads the admin activity listing from its own path", async () => {
     const listing = { users: [{ email: "a@gmail.com", days: { week: 2, total: 9 },
                                meals: { week: 5, total: 20 }, chats: { week: 3, total: 7 } }] };

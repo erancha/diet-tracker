@@ -2,11 +2,12 @@ import dataclasses
 import logging
 import urllib.error
 
+import boto3
 import pytest
 
 from conftest import APP_CONFIG
 
-from common import appconfig
+from common import appconfig, undelivered
 from common.dates import days_before, today
 from common.store import Store
 from common.users import User
@@ -33,7 +34,11 @@ def env(monkeypatch, ddb):
         questionnaire=appconfig.load(APP_CONFIG).questionnaire,
         users=[User("u1", "a@gmail.com"), User("u2", "b@gmail.com")],
         telegram=("TOKEN", {"a@gmail.com": "111", "b@gmail.com": "222"}),
-        ses=None, sender="me@x.com", app_url="https://app.example",
+        # A real (mocked) SES client, not a stub: _send classifies a refusal by the client's own
+        # MessageRejected exception class, so the tests must raise the genuine one.
+        ses=boto3.client("ses", region_name="eu-central-1"),
+        undelivered=ddb.Table("undelivered"),
+        sender="me@x.com", app_url="https://app.example",
         rag_url="https://rag.example", rag_key="K",
     )
     return e, sent
@@ -213,12 +218,20 @@ def test_the_last_call_job_is_dispatchable_by_name(env, monkeypatch):
     assert [target for _, target, _ in sent] == ["111", "a@gmail.com"]
 
 
+def _message_rejected(ses):
+    """The error SES raises when it refuses a send outright — what an address the sending account
+    may not write to earns while the account sits in the sandbox."""
+    return ses.exceptions.MessageRejected(
+        {"Error": {"Code": "MessageRejected", "Message": "Email address is not verified"}},
+        "SendEmail")
+
+
 def test_a_failing_address_does_not_starve_the_rest_of_the_pool(env, monkeypatch, caplog):
     e, sent = env
 
     def rejecting_send(ses, sender, to, subject, body, app_url):
         if to == "a@gmail.com":
-            raise RuntimeError("Email address is not verified")
+            raise RuntimeError("connection reset")
         sent.append(("mail", to, body))
 
     monkeypatch.setattr(nudge.notify, "send_email", rejecting_send)
@@ -228,13 +241,46 @@ def test_a_failing_address_does_not_starve_the_rest_of_the_pool(env, monkeypatch
     assert "a@gmail.com" in caplog.text
 
 
+def test_a_refused_message_is_kept_for_its_recipient_to_read_in_the_app(env, monkeypatch):
+    e, sent = env
+
+    def rejecting_send(ses, sender, to, subject, body, app_url):
+        if to == "a@gmail.com":
+            raise _message_rejected(ses)
+        sent.append(("mail", to, body))
+
+    monkeypatch.setattr(nudge.notify, "send_email", rejecting_send)
+    nudge._last_call(e)
+
+    kept = undelivered.messages(e.undelivered, "u1")
+    assert [(m["subject"], m["body"]) for m in kept] == [
+        (nudge.REMINDER_SUBJECT, nudge.REMINDER_TEXT)]
+    # The refusal is one recipient's; the rest of the pool is delivered to as usual and keeps
+    # nothing.
+    assert [target for kind, target, _ in sent if kind == "mail"] == ["b@gmail.com"]
+    assert undelivered.messages(e.undelivered, "u2") == []
+
+
+def test_a_transient_failure_keeps_no_message(env, monkeypatch):
+    """Only SES refusing the message outright is worth surfacing: a failure the next run may well
+    get through is left to the logs, so the bell does not fill with messages that did arrive."""
+    e, _ = env
+
+    def failing_send(ses, sender, to, subject, body, app_url):
+        raise RuntimeError("connection reset")
+
+    monkeypatch.setattr(nudge.notify, "send_email", failing_send)
+    nudge._last_call(e)
+    assert undelivered.messages(e.undelivered, "u1") == []
+
+
 def test_rules_job_keeps_the_alert_pending_when_delivery_fails(env, monkeypatch):
     e, sent = env
     for offset in (2, 1, 0):
         e.store.put_day("u1", days_before(today(), offset), VIOLATING, 1, "t")
 
     def failing_send(ses, sender, to, subject, body, app_url):
-        raise RuntimeError("Email address is not verified")
+        raise RuntimeError("connection reset")
 
     monkeypatch.setattr(nudge.notify, "send_email", failing_send)
     nudge._rules_job(e)

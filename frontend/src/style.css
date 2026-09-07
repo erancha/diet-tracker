@@ -207,6 +207,19 @@ button:disabled { --btn-bg: #e4e4e4; --btn-fg: #9a9a9a; --btn-border: #d8d8d8; c
 .ok { background: #e8f5e9; color: var(--accent); border-radius: 8px; padding: 0.6rem 1rem; margin-bottom: 0.5rem; }
 /* Informational, not a failure: amber sits between the alert red and the ok green. */
 .notice { background: #fff8e1; color: #795500; border-radius: 8px; padding: 0.6rem 1rem; margin-bottom: 0.5rem; }
+/* A message the app could not email is the inbox's content shown here instead — nothing the user
+   did wrong — so it takes the amber notice ground rather than the alarm red the rule violations
+   above it carry, and adds only the inner layout for its date row, subject and body. The aside
+   lines frame the group: what these messages are, above them, and how to stop missing them,
+   below. */
+.undelivered-aside { margin: 0 0 0.4rem; font-size: 0.85rem; opacity: 0.75; }
+/* Closes the panel as well as opening it: the bottom margin parts the hint from the page content
+   the panel drops in front of, which otherwise starts immediately under this line. */
+.undelivered-aside.trailing { margin: 0.5rem 0 1rem; }
+.undelivered-head { display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; opacity: 0.7; font-variant-numeric: tabular-nums; }
+.undelivered strong { display: block; margin-top: 0.15rem; }
+/* pre-line for the same reason .alert carries it: the email bodies are written with newlines. */
+.undelivered p { margin: 0.2rem 0 0; white-space: pre-line; }
 /* The welcome panel is a notice with a heading and a list inside it, so all it adds is the inner
    spacing: both would otherwise carry their default block margins into the box. */
 .welcome h2 { margin: 0 0 0.4rem; font-size: 1.05rem; }

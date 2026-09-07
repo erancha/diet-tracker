@@ -1,8 +1,9 @@
 #!/bin/bash
-# Resets one user to a first-time sign-in: deletes their Cognito account and every row they own
-# across the four app tables. Cognito mints a new sub for the recreated account, so the rows must
-# go with it — left behind they are orphans no sign-in can ever reach again. The email must still
-# match the ALLOWED_EMAILS regex for the presignup gate to let the account back in.
+# Resets one user to a first-time sign-in: deletes their Cognito account and the rows they own in
+# the day, meal, weight, undelivered-message and nudge-state tables. Cognito mints a new sub for
+# the recreated account, so the rows must go with it — left behind they are orphans no sign-in can
+# ever reach again. The email must still match the ALLOWED_EMAILS regex for the presignup gate to
+# let the account back in.
 #
 # Usage:
 #   scripts/reset-user.sh <email> [--keep-account] [--yes] [--env <suffix>]
@@ -53,7 +54,7 @@ SUB=$(aws cognito-idp admin-get-user --user-pool-id "$POOL" --username "$USERNAM
   --query "UserAttributes[?Name=='sub'].Value" --output text)
 
 # The tables holding the user's rows under pk/sk, and the pk-only table beside them.
-ROW_TABLES="DaysTable MealsTable WeightsTable"
+ROW_TABLES="DaysTable MealsTable WeightsTable UndeliveredTable"
 STATE_TABLE="NudgeStateTable"
 
 table() {

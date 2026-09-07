@@ -92,6 +92,7 @@ Globals:
         USER_POOL_ID: !Ref UserPoolId
         CHAT_QUOTA_TABLE: !Ref ChatQuotaTable
         CHAT_HISTORY_TABLE: !Ref ChatHistoryTable
+        UNDELIVERED_TABLE: !Ref UndeliveredTable
         CHAT_DAILY_LIMIT: !Ref ChatDailyLimit
         CHAT_DAILY_LIMIT_OVERRIDES: !Ref ChatDailyLimitOverrides
         RAG_API_URL: !Ref RagApiUrl
@@ -158,6 +159,24 @@ Resources:
   # One item per answered chat turn, keyed by user sub with the answer's UTC timestamp as the
   # sort key. No TTL: the transcript is deliberately kept indefinitely.
   ChatHistoryTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: pk
+          KeyType: HASH
+        - AttributeName: sk
+          KeyType: RANGE
+      AttributeDefinitions:
+        - AttributeName: pk
+          AttributeType: S
+        - AttributeName: sk
+          AttributeType: S
+
+  # One item per message SES refused to deliver, keyed by the recipient's sub with the UTC
+  # timestamp of the refusal as the sort key. No TTL: an item lives until its recipient dismisses
+  # it, so nothing drops a message the recipient has not accounted for.
+  UndeliveredTable:
     Type: AWS::DynamoDB::Table
     Properties:
       BillingMode: PAY_PER_REQUEST
@@ -295,6 +314,12 @@ Resources:
             ApiId: !Ref Api
             Method: GET
             Path: /admin/activity
+        DismissUndelivered:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref Api
+            Method: DELETE
+            Path: /undelivered/{at}
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref DaysTable
@@ -304,6 +329,10 @@ Resources:
             TableName: !Ref NudgeStateTable
         - DynamoDBCrudPolicy:
             TableName: !Ref WeightsTable
+        # The app reads the refused messages and dismisses them; recording one belongs to the
+        # nudge job alone, and no managed policy spans read and delete without write.
+        - DynamoDBCrudPolicy:
+            TableName: !Ref UndeliveredTable
         # Read-only: the admin activity listing only counts stored chat turns.
         - DynamoDBReadPolicy:
             TableName: !Ref ChatHistoryTable
@@ -367,6 +396,9 @@ Resources:
             TableName: !Ref NudgeStateTable
         - DynamoDBCrudPolicy:
             TableName: !Ref WeightsTable
+        # Write-only: the job keeps a message SES refused, and never reads one back.
+        - DynamoDBWritePolicy:
+            TableName: !Ref UndeliveredTable
         - !Ref NotifyPolicy
         - !Ref ListUsersPolicy
 

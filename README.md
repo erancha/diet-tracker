@@ -32,7 +32,10 @@ closed from the tracker, and the week's trend over recorded history.
   day still unclosed, a weekly weigh-in reminder that skips anyone who already weighed in that
   day, an alert when a principle or the carb score stays past its limit several days running, and
   a weekly summary of averages. Inside the app, a 7-day trend chart shows after each closed day.
-  The account menu turns all reminders off and back on.
+  The account menu turns all reminders off and back on. A reminder SES refuses to deliver — the
+  address is not one the sending account may write to — is kept and shown behind the header's
+  alarm bell instead, dated, until it is dismissed there, so a message addressed to someone still
+  reaches them rather than ending in a log line.
 - Questions about the diet's principles are answered inside the app: a chat section sends each
   question to the knowledge base of the diet's source documents, hosted on
   [Summaries.AI](https://github.com/erancha/Summaries.AI-public), and shows the answer with the
@@ -47,7 +50,7 @@ closed from the tracker, and the week's trend over recorded history.
 
 ## Tech stack
 
-- **Backend** — Python 3.13 Lambdas behind an HTTP API, six DynamoDB tables, EventBridge
+- **Backend** — Python 3.13 Lambdas behind an HTTP API, seven DynamoDB tables, EventBridge
   Scheduler (Asia/Jerusalem)
 - **Frontend** — React (TypeScript + Vite) RTL app on S3 + CloudFront, Recharts, TanStack Query
 - **Auth** — Cognito Google sign-in gated by an allowlist regex (".*" opens sign-up to
@@ -73,10 +76,12 @@ graph LR
     API --> APIL[api Lambda]
     API --> CHATL[chat Lambda]
     APIL --> DB[(DynamoDB<br/>days · meals · nudge state · weights)]
+    APIL --> UND[(DynamoDB<br/>undelivered)]
     CHATL --> CDB[(DynamoDB<br/>chat quota · chat history)]
     CHATL --> RAG[Summaries.AI<br/>RAG API]
     SCH[EventBridge Scheduler<br/>Asia/Jerusalem] --> NUDGE[nudge Lambda]
     NUDGE --> DB
+    NUDGE --> UND
     NUDGE --> SES[SES email]
     NUDGE -.optional.-> TG[Telegram bot]
 ```

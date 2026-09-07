@@ -37,7 +37,7 @@ function api(days: Partial<Awaited<ReturnType<Api["getDays"]>>> = {}): Api {
   return {
     getDays: vi.fn().mockResolvedValue({
       days: [], today: emptyDay(isoDate(now)), yesterday: emptyDay(isoDate(yesterdayOf(now))),
-      muted: false, ...days,
+      muted: false, undelivered: [], ...days,
     }),
     getWeight: vi.fn().mockResolvedValue({ target: null, entries: [] }),
     getChatTranscript: vi.fn().mockResolvedValue({ turns: [] }),
@@ -47,7 +47,7 @@ function api(days: Partial<Awaited<ReturnType<Api["getDays"]>>> = {}): Api {
     getDay: vi.fn(), submitDay: vi.fn(), deleteDay: vi.fn(), addMeal: vi.fn(),
     updateMeal: vi.fn(), deleteMeal: vi.fn(), recordWeight: vi.fn(), setWeightTarget: vi.fn(),
     deleteWeight: vi.fn(), setMuted: vi.fn(), ask: vi.fn(),
-    deleteChatTurn: vi.fn(),
+    deleteChatTurn: vi.fn(), dismissUndelivered: vi.fn(),
   };
 }
 

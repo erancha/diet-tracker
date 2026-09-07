@@ -196,6 +196,16 @@ export interface Day {
   answers: Record<string, AnswerValue>;
 }
 
+// One message the app addressed to the user that SES refused to deliver, kept so the header can
+// show what never reached their inbox. The body is the text as the sending job wrote it, without
+// the mute footnote and app link an email closes with.
+export interface UndeliveredMessage {
+  // UTC ISO timestamp of the refusal — the message's identity for a dismissal.
+  at: string;
+  subject: string;
+  body: string;
+}
+
 export interface HistoryResponse {
   // Sorted newest first, so days[0] is the most recent recorded day.
   days: Day[];
@@ -204,6 +214,8 @@ export interface HistoryResponse {
   // Whether the account has opted out of the reminders, alerts and digests it would otherwise be
   // sent. The app itself is unaffected — a muted account still sees its own violations here.
   muted: boolean;
+  // Newest first. Rides along with muted because both feed the header alone.
+  undelivered: UndeliveredMessage[];
 }
 
 export interface NotificationSettings {

@@ -12,6 +12,8 @@ from datetime import datetime, timezone
 
 from boto3.dynamodb.conditions import Key
 
+from common.paging import query_all
+
 
 def append(table, sub, question, answer, sources, at=None):
     """Stores one answered chat for the user, stamped now (UTC), and returns that stamp — the
@@ -72,18 +74,11 @@ def _count(table, key_condition) -> int:
 
 
 def turns(table, sub):
-    """The user's full transcript, newest first. Reads every page: a silently truncated history
-    would read as deleted conversation once a transcript outgrows one query page."""
-    query = {"KeyConditionExpression": Key("pk").eq(sub), "ScanIndexForward": False}
-    collected = []
-    while True:
-        page = table.query(**query)
-        collected.extend({
-            "question": item["question"],
-            "answer": item["answer"],
-            "sources": json.loads(item["sources"]),
-            "at": item["sk"],
-        } for item in page["Items"])
-        if "LastEvaluatedKey" not in page:
-            return collected
-        query["ExclusiveStartKey"] = page["LastEvaluatedKey"]
+    """The user's full transcript, newest first."""
+    return [{
+        "question": item["question"],
+        "answer": item["answer"],
+        "sources": json.loads(item["sources"]),
+        "at": item["sk"],
+    } for item in query_all(table, KeyConditionExpression=Key("pk").eq(sub),
+                            ScanIndexForward=False)]
