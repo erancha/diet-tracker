@@ -1,6 +1,6 @@
 {
   "questionnaire": {
-    "version": 14,
+    "version": 15,
     "questions": [
       {
         "id": "drinking",
@@ -145,24 +145,49 @@
           {
             "id": "sweet",
             "label": "כולל מתוק",
-            "value": 4
+            "value": 3
           },
           {
             "id": "alcohol",
             "label": "כולל אלכוהול לא יבש",
-            "value": 4
-          },
-          {
-            "id": "nuts",
-            "label": "כולל הרבה אגוזים או שקדים",
             "value": 3
           },
           {
+            "id": "nuts",
+            "label": "כולל אגוזים או שקדים",
+            "value": 2
+          },
+          {
             "id": "fat",
-            "label": "כולל הרבה שומן (אבוקדו, טחינה, גבינה שמנה, טיגון, 2+ נקניקיות)",
+            "label": "כולל שומן (אבוקדו, טחינה, גבינה שמנה, טיגון, 2+ נקניקיות)",
             "value": 2
           }
         ],
+        "amounts": {
+          "default": "regular",
+          "options": [
+            {
+              "id": "little",
+              "label": "מעט",
+              "percent": 50
+            },
+            {
+              "id": "regular",
+              "label": "רגיל",
+              "percent": 100
+            },
+            {
+              "id": "much",
+              "label": "הרבה",
+              "percent": 150
+            },
+            {
+              "id": "very_much",
+              "label": "הרבה מאוד",
+              "percent": 200
+            }
+          ]
+        },
         "choices": [
           {
             "id": "no_carbs",

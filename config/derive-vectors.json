@@ -10,10 +10,35 @@
     "carb_grade_7": 7
   },
   "addition_values": {
-    "sweet": 4,
-    "alcohol": 4,
-    "nuts": 3,
+    "sweet": 3,
+    "alcohol": 3,
+    "nuts": 2,
     "fat": 2
+  },
+  "amounts": {
+    "default": "regular",
+    "options": [
+      {
+        "id": "little",
+        "label": "מעט",
+        "percent": 50
+      },
+      {
+        "id": "regular",
+        "label": "רגיל",
+        "percent": 100
+      },
+      {
+        "id": "much",
+        "label": "הרבה",
+        "percent": 150
+      },
+      {
+        "id": "very_much",
+        "label": "הרבה מאוד",
+        "percent": 200
+      }
+    ]
   },
   "portions": {
     "from_value": 4,
@@ -105,14 +130,17 @@
           "vegetables": false,
           "fruit": false,
           "additions": [
-            "alcohol"
+            {
+              "id": "alcohol",
+              "amount": "regular"
+            }
           ],
           "portion": null,
           "second_source": null
         }
       ],
       "derived": {
-        "carbs": 16,
+        "carbs": 15,
         "meals": 4,
         "vegetables": 2,
         "eating_window": 13
@@ -127,7 +155,10 @@
           "vegetables": true,
           "fruit": false,
           "additions": [
-            "fat"
+            {
+              "id": "fat",
+              "amount": "regular"
+            }
           ],
           "portion": null,
           "second_source": null
@@ -149,7 +180,10 @@
           "vegetables": true,
           "fruit": false,
           "additions": [
-            "fat"
+            {
+              "id": "fat",
+              "amount": "regular"
+            }
           ],
           "portion": null,
           "second_source": null
@@ -180,14 +214,17 @@
           "vegetables": false,
           "fruit": false,
           "additions": [
-            "nuts"
+            {
+              "id": "nuts",
+              "amount": "regular"
+            }
           ],
           "portion": null,
           "second_source": null
         }
       ],
       "derived": {
-        "carbs": 6,
+        "carbs": 5,
         "meals": 2,
         "vegetables": 0,
         "eating_window": 0
@@ -463,14 +500,17 @@
           "vegetables": true,
           "fruit": false,
           "additions": [
-            "sweet"
+            {
+              "id": "sweet",
+              "amount": "regular"
+            }
           ],
           "portion": null,
           "second_source": null
         }
       ],
       "derived": {
-        "carbs": 6,
+        "carbs": 5,
         "meals": 1,
         "vegetables": 1,
         "eating_window": 0
@@ -485,14 +525,17 @@
           "vegetables": false,
           "fruit": false,
           "additions": [
-            "sweet"
+            {
+              "id": "sweet",
+              "amount": "regular"
+            }
           ],
           "portion": null,
           "second_source": null
         }
       ],
       "derived": {
-        "carbs": 11,
+        "carbs": 10,
         "meals": 1,
         "vegetables": 0,
         "eating_window": 0
@@ -516,14 +559,17 @@
           "vegetables": false,
           "fruit": true,
           "additions": [
-            "sweet"
+            {
+              "id": "sweet",
+              "amount": "regular"
+            }
           ],
           "portion": null,
           "second_source": null
         }
       ],
       "derived": {
-        "carbs": 10,
+        "carbs": 9,
         "meals": 2,
         "vegetables": 0,
         "eating_window": 4
@@ -538,15 +584,21 @@
           "vegetables": true,
           "fruit": false,
           "additions": [
-            "alcohol",
-            "sweet"
+            {
+              "id": "alcohol",
+              "amount": "regular"
+            },
+            {
+              "id": "sweet",
+              "amount": "regular"
+            }
           ],
           "portion": null,
           "second_source": null
         }
       ],
       "derived": {
-        "carbs": 10,
+        "carbs": 8,
         "meals": 1,
         "vegetables": 1,
         "eating_window": 0
@@ -630,14 +682,17 @@
           "vegetables": false,
           "fruit": false,
           "additions": [
-            "sweet"
+            {
+              "id": "sweet",
+              "amount": "regular"
+            }
           ],
           "portion": "small",
           "second_source": null
         }
       ],
       "derived": {
-        "carbs": 8.2,
+        "carbs": 7.2,
         "meals": 1,
         "vegetables": 0,
         "eating_window": 0
@@ -788,7 +843,10 @@
           "vegetables": false,
           "fruit": false,
           "additions": [
-            "sweet"
+            {
+              "id": "sweet",
+              "amount": "regular"
+            }
           ],
           "portion": null,
           "second_source": {
@@ -798,7 +856,7 @@
         }
       ],
       "derived": {
-        "carbs": 11.6,
+        "carbs": 10.6,
         "meals": 1,
         "vegetables": 0,
         "eating_window": 0
@@ -884,6 +942,110 @@
         "carbs": 9,
         "meals": 1,
         "vegetables": 1,
+        "eating_window": 0
+      }
+    },
+    {
+      "name": "an addition recorded before the amount scale costs the whole surcharge",
+      "meals": [
+        {
+          "at": "2026-08-20T13:00:00+03:00",
+          "carbs_choice": "no_carbs",
+          "vegetables": false,
+          "fruit": false,
+          "additions": [
+            {
+              "id": "sweet",
+              "amount": null
+            }
+          ],
+          "portion": null,
+          "second_source": null
+        }
+      ],
+      "derived": {
+        "carbs": 3,
+        "meals": 1,
+        "vegetables": 0,
+        "eating_window": 0
+      }
+    },
+    {
+      "name": "a small amount of an addition costs half its surcharge",
+      "meals": [
+        {
+          "at": "2026-08-20T13:00:00+03:00",
+          "carbs_choice": "no_carbs",
+          "vegetables": false,
+          "fruit": false,
+          "additions": [
+            {
+              "id": "sweet",
+              "amount": "little"
+            }
+          ],
+          "portion": null,
+          "second_source": null
+        }
+      ],
+      "derived": {
+        "carbs": 1.5,
+        "meals": 1,
+        "vegetables": 0,
+        "eating_window": 0
+      }
+    },
+    {
+      "name": "a heaped amount of an addition costs double its surcharge",
+      "meals": [
+        {
+          "at": "2026-08-20T13:00:00+03:00",
+          "carbs_choice": "no_carbs",
+          "vegetables": false,
+          "fruit": false,
+          "additions": [
+            {
+              "id": "nuts",
+              "amount": "very_much"
+            }
+          ],
+          "portion": null,
+          "second_source": null
+        }
+      ],
+      "derived": {
+        "carbs": 4.0,
+        "meals": 1,
+        "vegetables": 0,
+        "eating_window": 0
+      }
+    },
+    {
+      "name": "each addition on a meal carries its own amount",
+      "meals": [
+        {
+          "at": "2026-08-20T13:00:00+03:00",
+          "carbs_choice": "no_carbs",
+          "vegetables": false,
+          "fruit": false,
+          "additions": [
+            {
+              "id": "sweet",
+              "amount": "little"
+            },
+            {
+              "id": "fat",
+              "amount": "much"
+            }
+          ],
+          "portion": null,
+          "second_source": null
+        }
+      ],
+      "derived": {
+        "carbs": 4.5,
+        "meals": 1,
+        "vegetables": 0,
         "eating_window": 0
       }
     }

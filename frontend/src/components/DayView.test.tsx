@@ -51,7 +51,9 @@ describe("DayView", () => {
   it("prices a light grade beside its additions, not the grade alone", () => {
     // Grade 0 with a sweet and a fat costs 6 — dearer than the grade 4 plate that reads heavier.
     const day = { ...trackedDay, meals: [
-      { ...trackedDay.meals[0], additions: ["sweet", "fat"] }, trackedDay.meals[1]] };
+      { ...trackedDay.meals[0],
+        additions: [{ id: "sweet", amount: "regular" }, { id: "fat", amount: "regular" }] },
+      trackedDay.meals[1]] };
     render(<DayView questionnaire={trackerQuestionnaire} day={day} onClose={vi.fn()} />);
     const points = Array.from(document.querySelectorAll(".meal-points"));
     const laden = points.find((el) => el.textContent?.includes("6"))!;

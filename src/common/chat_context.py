@@ -32,6 +32,7 @@ _PORTION = "גודל המנה"
 _VEGETABLES = "ירקות"
 _FRUIT = "פרי"
 _ADDITIONS = "תוספות"
+_AMOUNT = "כמות"
 
 
 def user_context(store, questionnaire, sub, day) -> str | None:
@@ -82,8 +83,10 @@ def _tracking_scope(questionnaire) -> dict:
     reading an untracked subject as an unrecorded one."""
     carbs = questionnaire.question("carbs")
     return {
-        "ברישום ארוחה": [_TIME, _CARB_SOURCE, _SECOND_SOURCE, _PORTION, _VEGETABLES,
-                         _FRUIT] + [addition.label for addition in carbs.additions],
+        # Each addition names the amount scale it is recorded on, so a quantified addition in
+        # the meals above reads as the one field it is.
+        "ברישום ארוחה": [_TIME, _CARB_SOURCE, _SECOND_SOURCE, _PORTION, _VEGETABLES, _FRUIT]
+        + [f"{addition.label} ({_AMOUNT})" for addition in carbs.additions],
         "במעקב היומי": [question.day_title for question in questionnaire.questions],
         "בנוסף": ["משקל"],
         "הערה": "אלה כל שדות ההזנה באפליקציה. נושא שאינו ברשימה אין לו שדה באפליקציה, "
@@ -113,37 +116,41 @@ def _day_detail(store, questionnaire, sub, day) -> dict:
     """One day's meals in Hebrew vocabulary, beside the carb score they derive to."""
     meals = store.get_meals(sub, day)
     derived = derive(meals, questionnaire.carb_weights(), questionnaire.addition_values(),
-                     questionnaire.portions(), questionnaire.second_source())
+                     questionnaire.amounts(), questionnaire.portions(),
+                     questionnaire.second_source())
     carbs = questionnaire.question("carbs")
     grade_labels = {choice.id: choice.label for choice in carbs.choices}
     addition_labels = {addition.id: addition.label for addition in carbs.additions}
-    portion_labels = {portion.id: portion.label
-                      for portion in questionnaire.portions().options}
+    portion_labels = {option.id: option.label for option in questionnaire.portions().options}
+    amount_labels = {option.id: option.label for option in questionnaire.amounts().options}
     return {"ציון פחמימות": derived.carbs,
-            "ארוחות": [_meal_entry(meal, grade_labels, addition_labels, portion_labels)
+            "ארוחות": [_meal_entry(meal, grade_labels, addition_labels, portion_labels,
+                                   amount_labels)
                        for meal in meals]}
 
 
-def _grade_label(labels, choice, portion, portion_labels) -> str:
-    if portion is not None:
-        return f"{labels[choice]} ({portion_labels[portion]})"
-    return labels[choice]
+def _quantified_label(labels, key, quantity, quantity_labels) -> str:
+    """One recorded thing named with the quantity it was recorded at — a carb grade with its
+    helping, an addition with its amount. A thing carrying no quantity names itself alone."""
+    if quantity is not None:
+        return f"{labels[key]} ({quantity_labels[quantity]})"
+    return labels[key]
 
 
-def _meal_entry(meal, grade_labels, addition_labels, portion_labels) -> dict:
+def _meal_entry(meal, grade_labels, addition_labels, portion_labels, amount_labels) -> dict:
     entry = {_TIME: meal["at"][11:16],
-             _CARB_SOURCE: _grade_label(grade_labels, meal["carbs_choice"],
-                                        meal["portion"], portion_labels)}
+             _CARB_SOURCE: _quantified_label(grade_labels, meal["carbs_choice"],
+                                             meal["portion"], portion_labels)}
     second = meal["second_source"]
     if second is not None:
-        label = grade_labels[second["carbs_choice"]]
-        if second["portion"] is not None:
-            label = f"{label} ({portion_labels[second['portion']]})"
-        entry[_SECOND_SOURCE] = label
+        entry[_SECOND_SOURCE] = _quantified_label(grade_labels, second["carbs_choice"],
+                                                  second["portion"], portion_labels)
     if meal["vegetables"]:
         entry[_VEGETABLES] = True
     if meal["fruit"]:
         entry[_FRUIT] = True
     if meal["additions"]:
-        entry[_ADDITIONS] = [addition_labels[addition] for addition in meal["additions"]]
+        entry[_ADDITIONS] = [_quantified_label(addition_labels, addition["id"],
+                                               addition["amount"], amount_labels)
+                             for addition in meal["additions"]]
     return entry

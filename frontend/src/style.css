@@ -453,6 +453,8 @@ button.section-summary, button.transcript-toggle {
 /* Config-driven checkboxes must wrap on narrow phones instead of spilling off-screen. */
 .meal-flags { display: flex; flex-wrap: wrap; gap: 0.25rem 1.5rem; }
 .meal-flags label { display: inline-flex; align-items: center; gap: 0.3rem; }
+/* Sized down to read as the trailing detail of the addition label it sits inside. */
+.addition-amount { font-size: 0.85em; padding: 0 0.2rem; }
 /* The meal-time picker takes its own line so the checkbox row above keeps its wrap layout. */
 .meal-time { display: block; margin-top: 0.75rem; }
 /* The row a form closes with: the filled control that commits beside the quiet ones that leave,

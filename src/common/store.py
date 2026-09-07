@@ -46,13 +46,25 @@ MEAL_ATTRIBUTES = ("at", "carbs_choice", "vegetables", "fruit", "additions", "po
 TARGET_KEY = "target"
 
 
+def _addition_entries(additions) -> list:
+    """Recorded additions in the shape the app reads them: each an id beside the amount it was
+    eaten at. An addition stored as a bare id predates the amount scale and reads as carrying
+    none, which the derivation prices as the whole surcharge."""
+    return [{"id": addition, "amount": None} if isinstance(addition, str)
+            else {"id": addition["id"], "amount": addition["amount"]}
+            for addition in additions]
+
+
 def _current_grade(choice, additions) -> tuple:
     """One recorded grade as the current questionnaire expresses it, with the addition making up
-    the difference — where the retirement declares one — folded into the meal's additions."""
+    the difference — where the retirement declares one — folded into the meal's additions at the
+    whole surcharge the retired grade priced."""
     if choice not in _RETIRED_GRADES:
         return choice, additions
     choice, addition = _RETIRED_GRADES[choice]
-    return choice, additions if addition is None else [*additions, addition]
+    if addition is None:
+        return choice, additions
+    return choice, [*additions, {"id": addition, "amount": None}]
 
 
 def _meal_from_item(item) -> dict:
@@ -65,6 +77,9 @@ def _meal_from_item(item) -> dict:
     current equivalent — either of its sources — so nothing downstream is handed an id the config
     no longer knows.
 
+    Additions predate their amount scale, so one recorded as a bare id reads as carrying no
+    amount — the whole surcharge, which is what a bare flag meant.
+
     Quantity predates the shared helping scale twice over. A meal recorded under the boolean
     small-portion flag reads as the scale's smallest helping when flagged and as no helping at
     all otherwise. A second source recorded before helpings carried that flag too: a light
@@ -72,7 +87,8 @@ def _meal_from_item(item) -> dict:
     helping was a reduced serving, and medium is the nearest the current scale still speaks.
     Portion ids from the scale the helpings first shipped under read as their current
     rank-order equivalents."""
-    additions = item.get("additions", ["sweet"] if item.get("sweet", False) else [])
+    additions = _addition_entries(
+        item.get("additions", ["sweet"] if item.get("sweet", False) else []))
     carbs_choice, additions = _current_grade(item["carbs_choice"], additions)
     second = item.get("second_source")
     if second is not None:

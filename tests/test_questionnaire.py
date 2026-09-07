@@ -22,7 +22,7 @@ def minimal(**overrides):
 
 def test_repo_config_loads_with_numeric_choices_and_threshold_rules():
     q = appconfig.load(APP_CONFIG).questionnaire
-    assert q.version == 14
+    assert q.version == 15
     carbs = q.question("carbs")
     assert carbs.type == "points" and carbs.max == 35
     # One bound defines a heavy meal, another a heavy day; the day bound lives on its rule.
@@ -45,7 +45,11 @@ def test_repo_config_loads_with_numeric_choices_and_threshold_rules():
     # it only from the threshold grade up.
     assert [p.percent for p in q.portions().options] == [60, 80, 100]
     assert q.portions().from_value == 4
-    assert q.addition_values() == {"sweet": 4, "alcohol": 4, "nuts": 3, "fat": 2}
+    assert q.addition_values() == {"sweet": 3, "alcohol": 3, "nuts": 2, "fat": 2}
+    # An addition's surcharge prices a routine amount, so its scale reaches past 100% and opens
+    # on the step that charges the surcharge whole.
+    assert [a.percent for a in q.amounts().options] == [50, 100, 150, 200]
+    assert q.amounts().percent(q.amounts().default) == 100
     # Additions are accompaniments, never grades — they must not leak into the grade picker.
     assert not set(q.addition_values()) & set(q.carb_weights())
     assert {r.id for r in q.rules} == {
@@ -70,6 +74,22 @@ def test_addition_without_numeric_value_is_rejected():
     raw = minimal()
     raw["questions"][0]["additions"] = [{"id": "sweet", "label": "sweet", "value": "4"}]
     with pytest.raises(ValueError, match="sweet"):
+        parse(raw)
+
+
+def test_amounts_missing_from_config_raises():
+    q = parse(minimal())
+    with pytest.raises(ValueError, match="amounts"):
+        q.amounts()
+
+
+def test_an_amount_scale_defaulting_to_an_undeclared_step_is_rejected():
+    # The default is the step the meal form opens a newly checked addition on; an id the scale
+    # does not declare would leave the form recording an amount nothing can price.
+    raw = minimal()
+    raw["questions"][0]["amounts"] = {
+        "default": "nope", "options": [{"id": "regular", "label": "regular", "percent": 100}]}
+    with pytest.raises(ValueError, match="nope"):
         parse(raw)
 
 

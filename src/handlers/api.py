@@ -109,6 +109,7 @@ def _day_payload(store, questionnaire, sub, day) -> dict:
     return {"date": day, "meals": meals,
             "derived": asdict(derive(meals, questionnaire.carb_weights(),
                                      questionnaire.addition_values(),
+                                     questionnaire.amounts(),
                                      questionnaire.portions(),
                                      questionnaire.second_source()))}
 
@@ -124,8 +125,8 @@ def _submit(sub, body):
         return rejection
     store = _store()
     floors = derive(store.get_meals(sub, chosen), questionnaire.carb_weights(),
-                    questionnaire.addition_values(), questionnaire.portions(),
-                    questionnaire.second_source())
+                    questionnaire.addition_values(), questionnaire.amounts(),
+                    questionnaire.portions(), questionnaire.second_source())
     try:
         questionnaire.validate_answers(answers, floors=asdict(floors))
     except ValueError as error:
@@ -216,6 +217,24 @@ def _second_source_rejection(body, questionnaire):
     return None
 
 
+def _additions_rejection(additions, questionnaire):
+    """The 400 a meal's additions earn, or None when they are storable. Each names one declared
+    accompaniment and the amount of it that was eaten, from the declared amount scale."""
+    if not isinstance(additions, list):
+        return _response(400, {"error": "additions must be a list"})
+    values = questionnaire.addition_values()
+    amounts = questionnaire.amounts()
+    for addition in additions:
+        if not isinstance(addition, dict) or set(addition) != {"id", "amount"}:
+            return _response(400, {
+                "error": "each addition must carry exactly an id and an amount"})
+        if addition["id"] not in values:
+            return _response(400, {"error": f"unknown addition {addition['id']!r}"})
+        if all(option.id != addition["amount"] for option in amounts.options):
+            return _response(400, {"error": f"unknown amount {addition['amount']!r}"})
+    return None
+
+
 def _meal_rejection(body, allowed, questionnaire):
     """The 400 response a meal body earns when a field cannot be stored, or None when the whole
     body is legal. Recording and correcting a meal take identical bodies, so they share it. The
@@ -243,11 +262,9 @@ def _meal_rejection(body, allowed, questionnaire):
         if not rule.offered_for(questionnaire.carb_weights()[body["carbs_choice"]]):
             return _response(400, {
                 "error": "a portion is offered only from the threshold grade up"})
-    if not isinstance(body["additions"], list):
-        return _response(400, {"error": "additions must be a list"})
-    unknown = [a for a in body["additions"] if a not in questionnaire.addition_values()]
-    if unknown:
-        return _response(400, {"error": f"unknown additions {unknown!r}"})
+    additions = _additions_rejection(body["additions"], questionnaire)
+    if additions is not None:
+        return additions
     if body["second_source"] is not None:
         return _second_source_rejection(body, questionnaire)
     return None

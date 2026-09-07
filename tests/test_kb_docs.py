@@ -21,6 +21,15 @@ def _doc_line(fragment) -> str:
     return lines[0]
 
 
+def _doc_row(first_cell) -> str:
+    """The single table row whose first cell is the given value. Anchored at the row's start
+    because a bare number reads as a cell anywhere in the guide's tables — a grade, an amount's
+    cost, a streak length — and only the leading cell names the row."""
+    rows = [line for line in DOC.splitlines() if line.startswith(f"| {first_cell} | ")]
+    assert len(rows) == 1, f"expected exactly one doc row starting with {first_cell!r}, got {rows}"
+    return rows[0]
+
+
 def test_questionnaire_version_stamp():
     assert f"גרסת שאלון {CONFIG['questionnaire']['version']}" in DOC
 
@@ -33,7 +42,7 @@ def test_grade_scale_span_and_rows():
     values = [choice["value"] for choice in CARBS["choices"]]
     assert f"בסולם של {min(values)} עד {max(values)}" in DOC
     for choice in CARBS["choices"]:
-        row = _doc_line(f"| {choice['value']} | ")
+        row = _doc_row(choice["value"])
         for example in choice["examples"].split(", "):
             assert example in row, f"grade {choice['value']} row is missing {example!r}"
 
@@ -42,6 +51,20 @@ def test_addition_points():
     for addition in CARBS["additions"]:
         label = addition["label"].split(" (")[0]
         assert f"| +{addition['value']} |" in _doc_line(f"| {label} |")
+
+
+def test_addition_amount_scale():
+    # The guide spells out what each addition costs at each amount, so the arithmetic it quotes
+    # is pinned to the surcharges and percents the app actually prices with.
+    amounts = CARBS["amounts"]
+    default = next(o for o in amounts["options"] if o["id"] == amounts["default"])
+    assert f"ברירת המחדל היא **{default['label']}**" in DOC
+    for option in amounts["options"]:
+        row = _doc_row(option["label"])
+        assert f"| {option['percent']}% |" in row
+        for addition in CARBS["additions"]:
+            cost = addition["value"] * option["percent"] / 100
+            assert f"| {cost:g} |" in row, f"{option['id']} row is missing {cost:g}"
 
 
 def test_portion_choices():

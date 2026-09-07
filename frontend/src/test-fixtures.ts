@@ -50,10 +50,11 @@ export const fixtureQuestionnaire: Questionnaire = {
 
 // Questionnaire as the tracker components consume it: a per-meal carbs points question (two
 // choices sharing a numeric value, to catch id/value mix-ups; one grade either side of the
-// portion threshold) with the surcharge additions and the shared helping scale, plus a drinking
-// question for day close. The at_least carbs rule keeps the violation/heavy-day styling
-// interplay under test in the history table, and heavy_meal is the per-meal bound: grade 4
-// reaches it on its own, and a lighter grade reaches it once additions are priced in. The
+// portion threshold) with the surcharge additions, their amount scale and the shared helping
+// scale, plus a drinking question for day close. The at_least carbs rule keeps the
+// violation/heavy-day styling interplay under test in the history table, and heavy_meal is the
+// per-meal bound: grade 4 reaches it on its own, and a lighter grade reaches it once additions
+// are priced in. The
 // meals rule sets the ceiling the tracker's add-meal warning reads: with one meal fewer than
 // its at_least already recorded, adding another would violate it.
 export const trackerQuestionnaire: Questionnaire = {
@@ -64,8 +65,12 @@ export const trackerQuestionnaire: Questionnaire = {
     { id: "carbs", type: "points", text: "פחמימות", max: 30, heavy_meal: 4,
       additions: [{ id: "sweet", label: "כולל מתוק", value: 4 },
                   { id: "alcohol", label: "כולל אלכוהול לא יבש", value: 4 },
-                  { id: "nuts", label: "כולל הרבה אגוזים או שקדים", value: 3 },
-                  { id: "fat", label: "כולל הרבה שומן", value: 2 }],
+                  { id: "nuts", label: "כולל אגוזים או שקדים", value: 3 },
+                  { id: "fat", label: "כולל שומן", value: 2 }],
+      amounts: { default: "regular",
+                 options: [{ id: "little", label: "מעט", percent: 75 },
+                           { id: "regular", label: "רגיל", percent: 100 },
+                           { id: "much", label: "הרבה", percent: 125 }] },
       tooltip: "המטרה היא ציון נמוך", day_qualifier: "סיכום ציון", meal_qualifier: "דרגת הארוחה",
       portions: { from_value: 5,
                   options: [{ id: "small", label: "מנה קטנה", percent: 60 },

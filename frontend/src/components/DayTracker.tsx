@@ -4,7 +4,8 @@ import { carbsScales, deriveDay, portionOffered } from "../derive";
 import { mayDiscardEdits } from "../edits";
 import { isViolating } from "../violations";
 import { useExpandedGradeLabels } from "../gradeLabels";
-import type { CarbSource, DayPayload, Meal, NewMeal, Question, Questionnaire } from "../types";
+import type { CarbSource, DayPayload, Meal, MealAddition, NewMeal, Question,
+              Questionnaire } from "../types";
 import { ChoiceFieldset } from "./ChoiceFieldset";
 import { CollapsibleSection } from "./CollapsibleSection";
 import { DayDashboard } from "./DayDashboard";
@@ -85,16 +86,20 @@ export function DayTracker({ questionnaire, day, isToday = true, closed = false,
 }) {
   const carbsQuestion = questionnaire.questions.find((q) => q.id === "carbs")!;
   const drinkingQuestion = questionnaire.questions.find((q) => q.id === "drinking")!;
-  const { weights, additionValues, portions: portionRule, secondSource: secondRule } =
-    carbsScales(carbsQuestion);
+  const { weights, additionValues, amounts: amountRule, portions: portionRule,
+          secondSource: secondRule } = carbsScales(carbsQuestion);
   // The fullest helping the scale offers — the default either portion picker opens on, so an
   // unconsidered save never under-prices the plate.
   const defaultPortionId =
     portionRule.options.reduce((a, b) => (b.percent > a.percent ? b : a)).id;
+  // A recorded addition's amount as the form holds it: one carrying none opens on the routine
+  // step its surcharge prices.
+  const recordedAmount = (addition: MealAddition) => addition.amount ?? amountRule.default;
   const [carbsChoiceId, setCarbsChoiceId] = useState<string | undefined>(undefined);
   const [vegetables, setVegetables] = useState(false);
   const [fruit, setFruit] = useState(false);
-  const [pickedAdditions, setPickedAdditions] = useState<Set<string>>(new Set());
+  // The additions checked for the meal being recorded, each with the amount it was eaten at.
+  const [pickedAdditions, setPickedAdditions] = useState<Map<string, string>>(new Map());
   const [portionId, setPortionId] = useState(defaultPortionId);
   const [secondChoiceId, setSecondChoiceId] = useState<string | undefined>(undefined);
   const [secondPortionId, setSecondPortionId] = useState(defaultPortionId);
@@ -120,7 +125,8 @@ export function DayTracker({ questionnaire, day, isToday = true, closed = false,
 
   // The day's meals always resolve against the current questionnaire, so deriveDay's throw on an
   // unknown id is a real config/data fault, not a legal state — let the error boundary show it.
-  const derived = deriveDay(day.meals, weights, additionValues, portionRule, secondRule);
+  const derived = deriveDay(day.meals, weights, additionValues, amountRule, portionRule,
+                            secondRule);
   // Once recording one more meal would cross the meals rule's bound — from the third recorded
   // meal under the production config — every add-meal control carries the warning styling, so
   // the caution lands before that meal is recorded rather than through the history row after.
@@ -242,7 +248,8 @@ export function DayTracker({ questionnaire, day, isToday = true, closed = false,
     const meal: NewMeal = { at: localIso(atClockTime(parseIsoDate(day.date), mealTime)),
                             carbs_choice: carbsChoiceId!, vegetables, fruit,
                             additions: carbsQuestion.additions!
-                              .filter((a) => pickedAdditions.has(a.id)).map((a) => a.id),
+                              .filter((a) => pickedAdditions.has(a.id))
+                              .map((a) => ({ id: a.id, amount: pickedAdditions.get(a.id)! })),
                             portion: offersPortion ? portionId : null,
                             second_source: secondSource };
     if (editing !== undefined) onUpdateMeal(editing.id, meal);
@@ -271,7 +278,7 @@ export function DayTracker({ questionnaire, day, isToday = true, closed = false,
         || (offersPortion ? portionId : null) !== meal.portion
         || sourcesDiffer(secondSource, meal.second_source)
         || pickedAdditions.size !== meal.additions.length
-        || meal.additions.some((id) => !pickedAdditions.has(id));
+        || meal.additions.some((a) => pickedAdditions.get(a.id) !== recordedAmount(a));
   }
 
   // Both carb sources ask the same helping question off the same scale, so one control renders
@@ -303,7 +310,7 @@ export function DayTracker({ questionnaire, day, isToday = true, closed = false,
     setCarbsChoiceId(undefined);
     setVegetables(false);
     setFruit(false);
-    setPickedAdditions(new Set());
+    setPickedAdditions(new Map());
     setPortionId(defaultPortionId);
     clearSecondSource();
     const opensOn = defaultMealTime(new Date());
@@ -319,7 +326,7 @@ export function DayTracker({ questionnaire, day, isToday = true, closed = false,
     setCarbsChoiceId(meal.carbs_choice);
     setVegetables(meal.vegetables);
     setFruit(meal.fruit);
-    setPickedAdditions(new Set(meal.additions));
+    setPickedAdditions(new Map(meal.additions.map((a) => [a.id, recordedAmount(a)])));
     setPortionId(meal.portion === null ? defaultPortionId : meal.portion);
     setSecondChoiceId(meal.second_source === null ? undefined : meal.second_source.carbs_choice);
     setSecondPortionId(meal.second_source === null || meal.second_source.portion === null
@@ -423,12 +430,24 @@ export function DayTracker({ questionnaire, day, isToday = true, closed = false,
             <label key={addition.id}>
               <input type="checkbox" checked={pickedAdditions.has(addition.id)}
                      onChange={(e) => setPickedAdditions((prev) => {
-                       const next = new Set(prev);
-                       if (e.target.checked) next.add(addition.id);
+                       const next = new Map(prev);
+                       if (e.target.checked) next.set(addition.id, amountRule.default);
                        else next.delete(addition.id);
                        return next;
                      })} />
               {" "}{addition.label}
+              {/* The amount rides inside the addition's own label, so it reads as part of that
+                  one accompaniment and appears only once there is something to quantify. */}
+              {pickedAdditions.has(addition.id) && (
+                <select className="addition-amount" aria-label={`כמות — ${addition.label}`}
+                        value={pickedAdditions.get(addition.id)}
+                        onChange={(e) => setPickedAdditions((prev) =>
+                          new Map(prev).set(addition.id, e.target.value))}>
+                  {amountRule.options.map((amount) => (
+                    <option key={amount.id} value={amount.id}>{amount.label}</option>
+                  ))}
+                </select>
+              )}
             </label>
           ))}
         </div>

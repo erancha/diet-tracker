@@ -30,11 +30,11 @@ export function MealList({ questionnaire, meals, expandLabels, onEdit, onDelete,
   // A history day may reference a choice or addition id retired by a later questionnaire
   // version, making its weights unknowable here; per-meal points render only when the whole day
   // still resolves.
-  const { weights, additionValues, portions, secondSource } = carbsScales(carbsQuestion);
+  const { weights, additionValues, amounts, portions, secondSource } = carbsScales(carbsQuestion);
   const points = meals.every((m) => weights[m.carbs_choice] !== undefined
       && (m.second_source === null || weights[m.second_source.carbs_choice] !== undefined)
-      && m.additions.every((a) => additionValues[a] !== undefined))
-    ? mealWeights(meals, weights, additionValues, portions, secondSource)
+      && m.additions.every((a) => additionValues[a.id] !== undefined))
+    ? mealWeights(meals, weights, additionValues, amounts, portions, secondSource)
     : undefined;
 
   return (
@@ -61,7 +61,7 @@ export function MealList({ questionnaire, meals, expandLabels, onEdit, onDelete,
               )}
               {meal.vegetables && " · 🥗"}
               {meal.fruit && " · 🍎"}
-              {meal.additions.map((id) => ` · ${ADDITION_MARKERS[id] ?? id}`).join("")}
+              {meal.additions.map((a) => ` · ${ADDITION_MARKERS[a.id] ?? a.id}`).join("")}
             </span>
             {/* A bare number reads as nothing in particular; the carbs tooltip is what says it is
                 this meal's contribution to the day's score. The heavy mark rides this figure and

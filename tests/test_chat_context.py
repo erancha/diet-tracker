@@ -50,7 +50,8 @@ def test_recent_day_summaries_ride_in_the_context(store, questionnaire):
 
 def test_today_and_yesterday_meals_are_detailed_with_hebrew_labels(store, questionnaire):
     store.add_meal("u1", TODAY, meal(f"{TODAY}T12:30:00+03:00", choice="carb_grade_2",
-                                     additions=["sweet"], vegetables=True))
+                                     additions=[{"id": "sweet", "amount": "little"}],
+                                     vegetables=True))
     store.add_meal("u1", YESTERDAY, meal(
         f"{YESTERDAY}T09:00:00+03:00", choice="carb_grade_4", portion="small",
         second_source={"carbs_choice": "carb_grade_7", "portion": "medium"}))
@@ -58,11 +59,11 @@ def test_today_and_yesterday_meals_are_detailed_with_hebrew_labels(store, questi
     data = data_of(chat_context.user_context(store, questionnaire, "u1", TODAY))
 
     today_detail = data["היום"]
-    assert today_detail["ציון פחמימות"] == 6  # grade 2 + sweet addition 4
+    assert today_detail["ציון פחמימות"] == 3.5  # grade 2 + a small sweet, 3 at 50%
     (entry,) = today_detail["ארוחות"]
     assert entry["שעה"] == "12:30"
     assert entry["מקור פחמימה"] == "דרגה 2"
-    assert entry["תוספות"] == ["כולל מתוק"]
+    assert entry["תוספות"] == ["כולל מתוק (מעט)"]
     assert entry["ירקות"] is True
     assert "פרי" not in entry
 
@@ -79,7 +80,8 @@ def test_a_tight_cap_sheds_meal_detail_before_day_summaries(store, questionnaire
     store.put_day("u1", "2026-08-28", answers, 12, "2026-08-28T22:00:00+03:00")
     for i in range(30):
         store.add_meal("u1", TODAY, meal(f"{TODAY}T{10 + i // 6:02}:{i % 6}0:00+03:00",
-                                         additions=["sweet"], vegetables=True))
+                                         additions=[{"id": "sweet", "amount": "little"}],
+                                     vegetables=True))
     monkeypatch.setattr(chat_context, "MAX_CONTEXT_CHARS", 1200)
 
     context = chat_context.user_context(store, questionnaire, "u1", TODAY)
@@ -101,7 +103,7 @@ def test_the_tracking_scope_of_the_app_rides_in_the_context(store, questionnaire
         store, questionnaire, "u1", TODAY))["תחומי המעקב של האפליקציה"]
 
     assert 'שכפ"צ - שתיה (ליטר)' in scope["במעקב היומי"]
-    assert "כולל מתוק" in scope["ברישום ארוחה"]
+    assert "כולל מתוק (כמות)" in scope["ברישום ארוחה"]
     assert "מקור פחמימה" in scope["ברישום ארוחה"]
     assert "משקל" in scope["בנוסף"]
     assert scope["הערה"] == ("אלה כל שדות ההזנה באפליקציה. נושא שאינו ברשימה אין לו שדה "
@@ -111,7 +113,8 @@ def test_the_tracking_scope_of_the_app_rides_in_the_context(store, questionnaire
 def test_a_tight_cap_keeps_the_tracking_scope(store, questionnaire, monkeypatch):
     for i in range(30):
         store.add_meal("u1", TODAY, meal(f"{TODAY}T{10 + i // 6:02}:{i % 6}0:00+03:00",
-                                         additions=["sweet"], vegetables=True))
+                                         additions=[{"id": "sweet", "amount": "little"}],
+                                     vegetables=True))
     monkeypatch.setattr(chat_context, "MAX_CONTEXT_CHARS", 1200)
 
     data = data_of(chat_context.user_context(store, questionnaire, "u1", TODAY))

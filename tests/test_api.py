@@ -224,8 +224,19 @@ def test_correcting_a_meal_stays_open_at_the_daily_cap(env):
 
 
 def test_meal_additions_add_their_costs_on_top_of_its_grade(env):
-    payload = body_of(add_meal("carb_grade_2", additions=["sweet", "alcohol"]))
-    assert payload["derived"]["carbs"] == 10
+    payload = body_of(add_meal("carb_grade_2", additions=[
+        {"id": "sweet", "amount": "regular"}, {"id": "alcohol", "amount": "regular"}]))
+    assert payload["derived"]["carbs"] == 8
+
+
+def test_an_additions_recorded_amount_scales_its_cost(env):
+    # The surcharge prices the routine amount, so a taste costs less and a heaped one more.
+    little = body_of(add_meal("no_carbs", additions=[{"id": "sweet", "amount": "little"}]))
+    assert little["derived"]["carbs"] == 1.5
+    payload = body_of(update_meal(little["meals"][0]["id"], "no_carbs",
+                                  additions=[{"id": "sweet", "amount": "very_much"}]))
+    assert payload["derived"]["carbs"] == 6
+    assert payload["meals"][0]["additions"] == [{"id": "sweet", "amount": "very_much"}]
 
 
 def test_a_heavy_second_source_is_priced_at_its_helping_beside_the_meals_own_grade(env):
@@ -336,9 +347,24 @@ def test_add_meal_rejects_a_second_source_that_is_not_a_grade_and_a_helping(env)
 
 
 def test_add_meal_rejects_an_unknown_addition(env):
-    response = add_meal("carb_grade_2", additions=["nope"])
+    response = add_meal("carb_grade_2", additions=[{"id": "nope", "amount": "regular"}])
     assert response["statusCode"] == 400
     assert "nope" in body_of(response)["error"]
+
+
+def test_add_meal_rejects_an_unknown_addition_amount(env):
+    response = add_meal("carb_grade_2", additions=[{"id": "sweet", "amount": "crumb"}])
+    assert response["statusCode"] == 400
+    assert "crumb" in body_of(response)["error"]
+
+
+def test_add_meal_rejects_an_addition_that_is_not_an_id_beside_an_amount(env):
+    # A bare id predates the amount scale: legal to read back, never legal to record.
+    assert add_meal("carb_grade_2", additions=["sweet"])["statusCode"] == 400
+    assert add_meal("carb_grade_2", additions=[{"id": "sweet"}])["statusCode"] == 400
+    stray = add_meal("carb_grade_2",
+                     additions=[{"id": "sweet", "amount": "regular", "fruit": True}])
+    assert stray["statusCode"] == 400
 
 
 def test_add_meal_rejects_non_list_additions(env):
@@ -377,12 +403,13 @@ def test_add_meal_rejects_other_dates_unknown_choices_and_submitted_days(env):
 def test_update_meal_rewrites_every_recorded_field_and_recomputes_the_day(env):
     meal_id = body_of(add_meal("carb_grade_3"))["meals"][0]["id"]
     payload = body_of(update_meal(meal_id, "no_carbs", vegetables=False, fruit=True,
-                                  additions=["sweet"], at_time="13:30:00"))
+                                  additions=[{"id": "sweet", "amount": "regular"}],
+                                  at_time="13:30:00"))
     assert len(payload["meals"]) == 1
     meal = payload["meals"][0]
     assert meal["at"] == f"{today()}T13:30:00+03:00"
     assert (meal["carbs_choice"], meal["vegetables"], meal["fruit"], meal["additions"]) \
-        == ("no_carbs", False, True, ["sweet"])
+        == ("no_carbs", False, True, [{"id": "sweet", "amount": "regular"}])
     assert payload["derived"]["vegetables"] == 0
 
 

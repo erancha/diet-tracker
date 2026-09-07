@@ -34,7 +34,16 @@ def _source_weight(choice, portion_id, weights, portions) -> float:
     return weight
 
 
-def derive(meals: list, weights: dict, addition_values: dict, portions,
+def _addition_weight(addition, addition_values, amounts) -> float:
+    """What one recorded addition costs: its configured surcharge at the amount it was recorded
+    at, or the surcharge whole when the record carries no amount."""
+    value = addition_values[addition["id"]]
+    if addition["amount"] is None:
+        return value
+    return amounts.weigh(value, addition["amount"])
+
+
+def derive(meals: list, weights: dict, addition_values: dict, amounts, portions,
            second_source) -> Derived:
     if not meals:
         return Derived(carbs=0, meals=0, vegetables=0, eating_window=0)
@@ -61,10 +70,10 @@ def derive(meals: list, weights: dict, addition_values: dict, portions,
             fruits += 1
             if fruits > 1:
                 weight = max(weight, weights[FRUIT_ESCALATION_CHOICE])
-        # Additions (a sweet, alcohol, too many nuts) cost on top of the meal's sources (escalated
-        # or not), so an excellent meal with a cookie stays cheaper than a heavy meal with one.
+        # Additions (a sweet, alcohol, nuts) cost on top of the meal's sources (escalated or not),
+        # so an excellent meal with a cookie stays cheaper than a heavy meal with one.
         for addition in meal["additions"]:
-            weight += addition_values[addition]
+            weight += _addition_weight(addition, addition_values, amounts)
         carbs += weight
     window = (datetime.fromisoformat(ordered[-1]["at"])
               - datetime.fromisoformat(ordered[0]["at"]))

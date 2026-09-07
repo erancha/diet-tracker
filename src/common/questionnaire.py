@@ -21,35 +21,52 @@ QUESTION_TYPES = {"single", "points"}
 
 
 @dataclass(frozen=True)
-class Portion:
-    """One helping size a carb source may be recorded at, weighed at `percent` of its grade."""
+class ScaleOption:
+    """One step of a quantity scale, pricing what it is recorded on at `percent` of its value."""
     id: str
     label: str
     percent: float
 
 
 @dataclass(frozen=True)
-class Portions:
+class Scale:
+    """A quantity axis the point tables do not carry: how much of a priced thing was eaten,
+    recorded as one of `options` and charged at that step's percentage of the thing's value."""
+    options: tuple[ScaleOption, ...]
+
+    def percent(self, option_id: str) -> float:
+        for option in self.options:
+            if option.id == option_id:
+                return option.percent
+        raise KeyError(option_id)
+
+    def weigh(self, value: float, option_id: str) -> float:
+        return value * self.percent(option_id) / 100
+
+
+@dataclass(frozen=True)
+class Portions(Scale):
     """The helping-size scale shared by both of a plate's carb sources.
 
-    The grade ladder ranks a meal by its carb source alone, so quantity is recorded separately as
-    one of `options`. The primary source offers the choice only from `from_value` up, where a
-    lighter helping is a distinction worth drawing; a heavy second source always names its
-    helping, whatever its grade."""
+    The grade ladder ranks a meal by its carb source alone, so the helping is recorded separately.
+    The primary source offers the choice only from `from_value` up, where a lighter helping is a
+    distinction worth drawing; a heavy second source always names its helping, whatever its
+    grade."""
     from_value: float
-    options: tuple[Portion, ...]
 
     def offered_for(self, weight: float) -> bool:
         return weight >= self.from_value
 
-    def percent(self, portion_id: str) -> float:
-        for portion in self.options:
-            if portion.id == portion_id:
-                return portion.percent
-        raise KeyError(portion_id)
 
-    def weigh(self, weight: float, portion_id: str) -> float:
-        return weight * self.percent(portion_id) / 100
+@dataclass(frozen=True)
+class Amounts(Scale):
+    """The scale an addition's quantity is recorded on, reaching past 100%: an addition's
+    configured surcharge prices a routine amount of the accompaniment, so a taste of it costs
+    less and a heaped one more.
+
+    `default` names the step a newly recorded addition carries — the routine amount the surcharge
+    is written for."""
+    default: str
 
 
 @dataclass(frozen=True)
@@ -93,11 +110,13 @@ class Question:
     # from the other. Mirrors heavy_meal in frontend/src/types.ts.
     heavy_meal: float | None
     # Present only on the carbs question: the accompaniments a meal may carry (a sweet, alcohol,
-    # too many nuts), each with the point cost it adds on top of the meal's grade. Not choices,
-    # so they never appear in the grade picker or carb_weights().
+    # nuts), each with the point cost a routine amount of it adds on top of the meal's grade. Not
+    # choices, so they never appear in the grade picker or carb_weights().
     additions: tuple[Choice, ...] | None
     # Present only on the carbs question: the quantity axis the grade ladder does not carry.
     portions: "Portions | None"
+    # Present only on the carbs question: the quantity scale an addition's surcharge is priced on.
+    amounts: "Amounts | None"
     # Present only on the carbs question: the contract for a plate's second carb source.
     second_source: "SecondSource | None"
 
@@ -172,8 +191,8 @@ class Questionnaire:
         return {choice.id: choice.value for choice in self.question("carbs").choices}
 
     def addition_values(self) -> dict:
-        """Point cost per addition id — the surcharge table for meal derivation; the config must
-        declare the additions."""
+        """Point cost per addition id, at the routine amount — the surcharge table for meal
+        derivation; the config must declare the additions."""
         additions = self.question("carbs").additions
         if additions is None:
             raise ValueError("carbs question must declare additions")
@@ -184,6 +203,13 @@ class Questionnaire:
         declared = self.question("carbs").portions
         if declared is None:
             raise ValueError("carbs question must declare portions")
+        return declared
+
+    def amounts(self) -> Amounts:
+        """The carbs question's addition-amount scale; the config must declare it."""
+        declared = self.question("carbs").amounts
+        if declared is None:
+            raise ValueError("carbs question must declare amounts")
         return declared
 
     def second_source(self) -> SecondSource:
@@ -227,6 +253,10 @@ class Questionnaire:
                     f"({question.max})")
 
 
+def _scale_options(raw: list) -> tuple:
+    return tuple(ScaleOption(id=o["id"], label=o["label"], percent=o["percent"]) for o in raw)
+
+
 def parse(raw: dict) -> Questionnaire:
     questions = []
     for q in raw["questions"]:
@@ -241,6 +271,10 @@ def parse(raw: dict) -> Questionnaire:
         for a in q.get("additions", ()):
             if isinstance(a.get("value"), bool) or not isinstance(a.get("value"), Number):
                 raise ValueError(f"addition {a['id']!r} of question {q['id']!r} needs a numeric value")
+        if "amounts" in q and all(o["id"] != q["amounts"]["default"]
+                                  for o in q["amounts"]["options"]):
+            raise ValueError(f"question {q['id']!r} defaults to undeclared amount "
+                             f"{q['amounts']['default']!r}")
         questions.append(Question(
             id=q["id"], type=q["type"], text=q["text"],
             choices=tuple(Choice(id=c["id"], label=c["label"], value=c["value"],
@@ -250,11 +284,12 @@ def parse(raw: dict) -> Questionnaire:
             heavy_meal=q.get("heavy_meal"),
             additions=tuple(Choice(id=a["id"], label=a["label"], value=a["value"])
                             for a in q["additions"]) if "additions" in q else None,
-            portions=Portions(
-                from_value=q["portions"]["from_value"],
-                options=tuple(Portion(id=p["id"], label=p["label"], percent=p["percent"])
-                              for p in q["portions"]["options"]))
+            portions=Portions(from_value=q["portions"]["from_value"],
+                              options=_scale_options(q["portions"]["options"]))
             if "portions" in q else None,
+            amounts=Amounts(default=q["amounts"]["default"],
+                            options=_scale_options(q["amounts"]["options"]))
+            if "amounts" in q else None,
             second_source=SecondSource(light_grade_max=q["second_source"]["light_grade_max"])
             if "second_source" in q else None,
         ))

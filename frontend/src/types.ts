@@ -32,13 +32,17 @@ export interface Question {
   // question's rule threshold, so each scope states its bound once, priced the same way.
   heavy_meal?: number;
   // Present only on the carbs question: the accompaniments a meal may carry (a sweet, alcohol,
-  // too many nuts), each with the point cost it adds on top of the meal's grade. Not choices,
-  // so they never appear in the grade picker.
+  // nuts), each with the point cost a routine amount of it adds on top of the meal's grade. Not
+  // choices, so they never appear in the grade picker.
   additions?: Choice[];
+  // Present only on the carbs question: the scale an addition's amount is recorded on, reaching
+  // past 100% — the surcharge prices a routine amount, so a taste costs less and a heaped one
+  // more. `default` names the step a newly checked addition carries.
+  amounts?: { default: string; options: ScaleOption[] };
   // Present only on the carbs question: the quantity axis the grade ladder does not carry — the
   // helping-size scale shared by both of a plate's carb sources. The primary source offers the
   // choice only from `from_value` up, where a lighter helping is a distinction worth drawing.
-  portions?: { from_value: number; options: PortionOption[] };
+  portions?: { from_value: number; options: ScaleOption[] };
   // Present only on the carbs question: the second-carb-source contract. A plate earns a second
   // source only around a light primary grade — one weighing in (0, light_grade_max]. A second
   // source that is itself light merges into the plate, the higher grade speaking for both; a
@@ -131,8 +135,9 @@ export interface AppConfigFile {
 // A single question's stored answer — always a number (points, counts, hours, liters).
 export type AnswerValue = number;
 
-/** One helping size a carb source may be recorded at, weighed at `percent` of its grade. */
-export interface PortionOption {
+/** One step of a quantity scale — a carb source's helping, an addition's amount — pricing what
+ * it is recorded on at `percent` of its value. */
+export interface ScaleOption {
   id: string;
   label: string;
   percent: number;
@@ -146,15 +151,23 @@ export interface CarbSource {
   portion: string | null;
 }
 
+/** One addition on a plate: which accompaniment, and how much of it — an amount id from the
+ * carbs question's amounts scale, or null on a meal recorded before the scale existed, which
+ * prices as the whole surcharge. */
+export interface MealAddition {
+  id: string;
+  amount: string | null;
+}
+
 export interface Meal {
   id: string;
   at: string;
   carbs_choice: string;
   vegetables: boolean;
   fruit: boolean;
-  // Addition ids from the carbs question's additions (e.g. "sweet"); the server normalizes
-  // legacy sweet-flag records into this shape.
-  additions: string[];
+  // The meal's additions, each with its amount; the server normalizes legacy sweet-flag and
+  // bare-id records into this shape.
+  additions: MealAddition[];
   // The helping the meal's own grade was eaten as — one of the configured portion ids, or null
   // when no helping is recorded: a grade below the scale's threshold, or a meal the server read
   // from before the scale existed.
@@ -224,7 +237,7 @@ export interface NewMeal {
   carbs_choice: string;
   vegetables: boolean;
   fruit: boolean;
-  additions: string[];
+  additions: MealAddition[];
   portion: string | null;
   second_source: CarbSource | null;
 }
