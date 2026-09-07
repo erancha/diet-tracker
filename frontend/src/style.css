@@ -375,6 +375,14 @@ td.view-day { cursor: pointer; }
                   font: inherit; font-weight: 600; padding: 0; cursor: pointer; }
 .section-toggle::before, .transcript-toggle::before { content: "▾ "; font-size: calc(0.9em + 1px); }
 :is(.section-toggle, .transcript-toggle)[aria-expanded="false"]::before { content: "◂ "; }
+/* Collapsed, the underline joins the triangle in saying the heading itself is pressable — with
+   its content folded away, the heading otherwise reads like a plain title. The triangle stays
+   clear of the line, as does the weight header's unit — a measure's unit is not a word to press;
+   the figure alone carries the affordance. An inline-block boundary stops the underline's spread,
+   and pre keeps each fragment's space beside the glyph from collapsing at the block's edge. */
+.section-toggle[aria-expanded="false"] { text-decoration: underline; text-underline-offset: 0.15em; }
+.section-toggle[aria-expanded="false"]::before,
+.section-toggle[aria-expanded="false"] .weight-unit { display: inline-block; white-space: pre; }
 .section-toggle:hover:not(:disabled) { --btn-fg: var(--accent); filter: none; }
 /* Two quieter openers below the section headings: a folded section's at-a-glance line, and the
    chat transcript's previous-chats count. Frameless so they read as previews rather than as

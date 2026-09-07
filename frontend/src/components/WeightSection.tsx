@@ -127,11 +127,13 @@ export function WeightSection({ weight, settings, now, defaultExpanded,
   // Nothing weighed yet leaves no value to head the section with, so it falls back to its name.
   const figure = summary.latest === null ? null : kgLabel(summary.latest);
   const unit = "ק״ג";
-  // The figure is held apart from its unit so that over target the colour lands on the number
-  // alone, as it does on the distance beside it; the accessible name needs the two as one string.
+  // The figure is held apart from its unit so that over target the colour — and, folded, the
+  // pressable underline — land on the number alone, as the colour does on the distance beside
+  // it; the accessible name needs the two as one string. The unit's span carries the gap
+  // between them, keeping the underline from trailing past the figure.
   const heading = figure === null
     ? "משקל"
-    : <><span className="weight-latest">{figure}</span> {unit}</>;
+    : <><span className="weight-latest">{figure}</span><span className="weight-unit"> {unit}</span></>;
   // The rhythm reads inside the fold rather than on the header line: the phone-width line already
   // carries the weight and the target, and the one morning the reading is urgent is the morning
   // the caller opens the section anyway.
