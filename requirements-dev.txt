@@ -1,3 +1,7 @@
-boto3
-pytest
-moto[dynamodb,ssm,ses,cognitoidp]
+# Test and CI dependencies, pinned so that a new upstream release cannot change what the suite runs
+# against without a repo change — moto rewrites service behavior across minor versions. Raising a
+# version is a deliberate edit, proven by the suite; the frontend pins the same way through its
+# committed package-lock.json.
+boto3==1.43.89
+pytest==9.1.1
+moto[dynamodb,ssm,ses,cognitoidp]==5.2.3
