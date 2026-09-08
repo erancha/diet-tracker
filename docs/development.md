@@ -1,5 +1,20 @@
 # Development & deployment
 
+## Working copy location
+
+Keep the checkout on the WSL ext4 filesystem (`~/projects/diet-tracker`) rather than under
+`/mnt/c`. WSL reaches Windows drives through a file-sharing protocol that makes every file open a
+round trip to the Windows side, and the development loop is built from the operations that open
+the most files: interpreter startup, test collection, bundling. Importing boto3 from a virtualenv
+costs 5.0s under `/mnt/c` against 0.30s on ext4, and collecting the 309-test suite 14.5s against
+0.9s.
+
+Reading the files from Windows through `\\wsl$\` pays the same penalty in the other direction, so
+a Windows-side editor relocates the cost rather than removing it.
+
+`.venv` and `frontend/node_modules` record absolute paths in their scripts and metadata, so each
+checkout builds its own instead of receiving a copy.
+
 ## Frontend
 
 ```sh
