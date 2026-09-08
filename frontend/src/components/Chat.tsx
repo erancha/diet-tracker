@@ -117,6 +117,17 @@ export function Chat({ api, sampleQuestions, defaultTranscriptFolded = false }: 
     if (summarizingAt !== null) summarizingRef.current?.focus();
   }, [summarizingAt]);
 
+  // The toggle sits at the foot of the screen more often than not, so a transcript it opens
+  // lands below the fold: the list walks into view. Only the toggle asks for this — a sent
+  // question scrolls to its own indicator, and the page-wide unfold must not jump here.
+  const transcript = useRef<HTMLUListElement>(null);
+  const scrollTranscriptOnOpen = useRef(false);
+  useEffect(() => {
+    if (transcriptFolded || !scrollTranscriptOnOpen.current) return;
+    scrollTranscriptOnOpen.current = false;
+    transcript.current!.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [transcriptFolded]);
+
   useEffect(() => {
     api.getChatTranscript()
       .then((transcript) => setTurns(transcript.turns))
@@ -249,12 +260,15 @@ export function Chat({ api, sampleQuestions, defaultTranscriptFolded = false }: 
       {turns.length > 0 && (
         <button type="button" className="disclosure transcript-toggle"
           aria-expanded={!transcriptFolded}
-          onClick={() => setTranscriptFolded((folded) => !folded)}>
+          onClick={() => {
+            scrollTranscriptOnOpen.current = transcriptFolded;
+            setTranscriptFolded((folded) => !folded);
+          }}>
           {turns.length === 1 ? "צ'אט קודם אחד" : `${turns.length} צ'אטים קודמים`}
         </button>
       )}
       {(pendingQuestion !== null || (turns.length > 0 && !transcriptFolded)) && (
-        <ul className="chat-messages">
+        <ul className="chat-messages" ref={transcript}>
           {replyTo === null && pendingExchange}
           {!transcriptFolded && turns.map((turn) => (
             <Fragment key={turn.at}>

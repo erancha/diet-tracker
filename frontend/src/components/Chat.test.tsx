@@ -537,6 +537,22 @@ describe("Chat", () => {
     expect(screen.queryByText("שאלה 1")).toBeNull();
   });
 
+  it("walks the transcript into view when its toggle opens it, and only then", async () => {
+    const scrollIntoView = vi.spyOn(Element.prototype, "scrollIntoView")
+      .mockImplementation(() => {});
+    render(<Chat api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(2) }) })}
+                 sampleQuestions={[]} defaultTranscriptFolded />);
+    const toggle = await screen.findByRole("button", { name: "2 צ'אטים קודמים" });
+    expect(scrollIntoView).not.toHaveBeenCalled();
+
+    await userEvent.click(toggle);
+    expect(scrollIntoView).toHaveBeenCalledOnce();
+
+    await userEvent.click(toggle);
+    expect(scrollIntoView).toHaveBeenCalledOnce();
+    scrollIntoView.mockRestore();
+  });
+
   it("shows the transcript open behind its toggle in the full view, singular for one turn",
      async () => {
     render(<Chat api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(1) }) })}
