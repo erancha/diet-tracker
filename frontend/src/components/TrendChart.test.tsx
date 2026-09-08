@@ -78,7 +78,7 @@ describe("TrendChart", () => {
   it("charts the carb-score panel first even when it is configured last", () => {
     const { container } = render(<TrendChart questionnaire={withCarbsPanel} days={days} today={emptyToday} endDate="2026-08-18" treatDay={TREAT_DAY} loadedInMs={0} />);
     const titles = [...container.querySelectorAll(".trend-panel-title")].map((el) => el.textContent);
-    expect(titles).toEqual(["פחמימות (ציון)(חריגה: מעל 12)קמחים וסוכר",
+    expect(titles).toEqual(["פחמימות (ציון)(חריגה: מעל 12)קמחים וסוכרים",
                             "שתיה (ליטרים)(חריגה: פחות מ-2.5)", "חלון אכילה (שעות)"]);
   });
 

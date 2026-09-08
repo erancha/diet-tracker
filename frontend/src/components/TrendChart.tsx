@@ -11,7 +11,7 @@ const MARGIN_RIGHT = 14;
 
 // What the second line names in the panel heading and the tooltip: the flour grades and sugar the
 // program's six non-treat days exclude, which is what the subtotal sums.
-const EXCLUDED_LABEL = "קמחים וסוכר";
+const EXCLUDED_LABEL = "קמחים וסוכרים";
 
 // What the framed column names: the weekday the program aims its treat meal at.
 const TREAT_DAY_LABEL = "יום פינוק";
