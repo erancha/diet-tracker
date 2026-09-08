@@ -87,6 +87,24 @@ class SecondSource:
 
 
 @dataclass(frozen=True)
+class Excluded:
+    """What the program excludes from its six non-treat days, as the score decomposition reads
+    it: every carb source graded `grade` or heavier, and the additions named in `additions`.
+
+    The bound is a grade value rather than a list of grades so a regraded ladder keeps meaning
+    it, and the additions are named individually because only some of them are excluded — a
+    sweet is, nuts are not."""
+    grade: float
+    additions: tuple[str, ...]
+
+    def counts_source(self, weight: float) -> bool:
+        return weight >= self.grade
+
+    def counts_addition(self, addition_id: str) -> bool:
+        return addition_id in self.additions
+
+
+@dataclass(frozen=True)
 class Question:
     id: str
     type: str
@@ -119,6 +137,9 @@ class Question:
     amounts: "Amounts | None"
     # Present only on the carbs question: the contract for a plate's second carb source.
     second_source: "SecondSource | None"
+    # Present only on the carbs question: what the program's six non-treat days exclude,
+    # composed from the question's excluded_grade and excluded_additions.
+    excluded: "Excluded | None"
 
     @property
     def day_title(self) -> str:
@@ -219,6 +240,14 @@ class Questionnaire:
             raise ValueError("carbs question must declare second_source")
         return declared
 
+    def excluded(self) -> Excluded:
+        """What the program excludes from the carbs question's six non-treat days; the config
+        must declare it."""
+        declared = self.question("carbs").excluded
+        if declared is None:
+            raise ValueError("carbs question must declare excluded_grade and excluded_additions")
+        return declared
+
     def validate_answers(self, answers: dict, floors: dict | None = None) -> None:
         """Rejects answers outside each question's domain: a single question accepts only its
         choice values, a points question its 0..max range. A value equal to its entry in floors
@@ -262,9 +291,17 @@ def parse(raw: dict) -> Questionnaire:
     for q in raw["questions"]:
         if q.get("type") not in QUESTION_TYPES:
             raise ValueError(f"question {q['id']!r} has missing or unknown type {q.get('type')!r}")
-        if q["type"] == "points" and (isinstance(q.get("heavy_meal"), bool)
-                                      or not isinstance(q.get("heavy_meal"), Number)):
-            raise ValueError(f"points question {q['id']!r} needs a numeric heavy_meal bound")
+        if q["type"] == "points":
+            if isinstance(q.get("heavy_meal"), bool) or not isinstance(q.get("heavy_meal"), Number):
+                raise ValueError(f"points question {q['id']!r} needs a numeric heavy_meal bound")
+            if (isinstance(q.get("excluded_grade"), bool)
+                    or not isinstance(q.get("excluded_grade"), Number)):
+                raise ValueError(f"points question {q['id']!r} needs a numeric excluded_grade")
+            declared = {a["id"] for a in q.get("additions", ())}
+            excluded = q.get("excluded_additions")
+            if not isinstance(excluded, list) or any(a not in declared for a in excluded):
+                raise ValueError(f"points question {q['id']!r} needs excluded_additions naming "
+                                 f"its own additions, got {excluded!r} of {sorted(declared)}")
         for c in q["choices"]:
             if isinstance(c.get("value"), bool) or not isinstance(c.get("value"), Number):
                 raise ValueError(f"choice {c['id']!r} of question {q['id']!r} needs a numeric value")
@@ -292,6 +329,9 @@ def parse(raw: dict) -> Questionnaire:
             if "amounts" in q else None,
             second_source=SecondSource(light_grade_max=q["second_source"]["light_grade_max"])
             if "second_source" in q else None,
+            excluded=Excluded(grade=q["excluded_grade"],
+                              additions=tuple(q["excluded_additions"]))
+            if "excluded_grade" in q else None,
         ))
     questions = tuple(questions)
     rules = []

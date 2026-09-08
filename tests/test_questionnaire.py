@@ -10,6 +10,7 @@ def minimal(**overrides):
         "version": 1,
         "questions": [{
             "id": "carbs", "type": "points", "text": "carbs", "max": 30, "heavy_meal": 4,
+            "excluded_grade": 6, "excluded_additions": [],
             "choices": [{"id": "no_carbs", "label": "none", "value": 0},
                         {"id": "grade3", "label": "g3", "value": 3}],
         }],
@@ -105,6 +106,57 @@ def test_non_numeric_heavy_meal_is_rejected():
     raw["questions"][0]["heavy_meal"] = "4"
     with pytest.raises(ValueError, match="heavy_meal"):
         parse(raw)
+
+
+def test_points_question_without_the_excluded_bounds_is_rejected():
+    # The trend chart plots the excluded part of every day score beside the score itself; a
+    # question that declares neither bound leaves that line reading as a clean day.
+    raw = minimal()
+    del raw["questions"][0]["excluded_grade"]
+    with pytest.raises(ValueError, match="excluded_grade"):
+        parse(raw)
+    raw = minimal()
+    del raw["questions"][0]["excluded_additions"]
+    with pytest.raises(ValueError, match="excluded"):
+        parse(raw)
+
+
+def test_non_numeric_excluded_grade_is_rejected():
+    raw = minimal()
+    raw["questions"][0]["excluded_grade"] = "6"
+    with pytest.raises(ValueError, match="excluded_grade"):
+        parse(raw)
+
+
+def test_excluding_an_addition_the_question_does_not_declare_is_rejected():
+    # The excluded set names additions by id, so an id no addition carries would silently price
+    # nothing into the excluded part.
+    raw = minimal()
+    raw["questions"][0]["additions"] = [{"id": "sweet", "label": "sweet", "value": 3}]
+    raw["questions"][0]["excluded_additions"] = ["sugar"]
+    with pytest.raises(ValueError, match="sugar"):
+        parse(raw)
+
+
+def test_repo_config_excludes_the_flour_grades_and_the_sweet_addition():
+    # Grades 6 and 7 are the flours and sugar the program's six non-treat days exclude
+    # absolutely, while grades 4 and 5 — white rice, sweet potato, fruit — are permitted within
+    # them: a bound one grade lower would lift the excluded line on most days.
+    excluded = appconfig.load(APP_CONFIG).questionnaire.excluded()
+    assert excluded.grade == 6
+    assert excluded.additions == ("sweet",)
+    assert not excluded.counts_source(5) and excluded.counts_source(6)
+    assert excluded.counts_addition("sweet") and not excluded.counts_addition("nuts")
+
+
+def test_excluded_missing_from_config_raises():
+    raw = minimal()
+    raw["questions"][0]["type"] = "single"
+    del raw["questions"][0]["excluded_grade"]
+    del raw["questions"][0]["excluded_additions"]
+    raw["rules"] = []
+    with pytest.raises(ValueError, match="excluded"):
+        parse(raw).excluded()
 
 
 def test_points_question_without_an_over_rule_is_rejected():

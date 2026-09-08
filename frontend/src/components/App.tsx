@@ -306,6 +306,7 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, o
                                 </button>
                                 <TrendChart questionnaire={questionnaire} days={data.days}
                                             today={data.today} headlineOnly endDate={trendEndDate}
+                                            treatDay={configQuery.data.treat_day}
                                             loadedInMs={loadedInMs} />
                               </>
                             )}
@@ -313,7 +314,8 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, o
           <div className={trendsFold.folding ? "section-fold-body section-folding" : "section-fold-body"}>
           <div>
           <TrendChart questionnaire={questionnaire} days={data.days} today={data.today}
-                      endDate={trendEndDate} loadedInMs={loadedInMs} />
+                      endDate={trendEndDate} treatDay={configQuery.data.treat_day}
+                      loadedInMs={loadedInMs} />
           {viewedDate !== null && (
             viewedDayQuery.isPending ? <p>טוען…</p>
             : viewedDayQuery.isError ? <div className="alert">{alertMessage("טעינת היום נכשלה", viewedDayQuery.error)}</div>

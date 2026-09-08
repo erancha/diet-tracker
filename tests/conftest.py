@@ -58,6 +58,7 @@ def numeric_questionnaire():
         "questions": [
             {
                 "id": "carbs", "type": "points", "text": "carbs", "max": 30, "heavy_meal": 4,
+                "excluded_grade": 6, "excluded_additions": [],
                 "choices": [
                     {"id": "no_carbs", "label": "no carbs", "value": 0},
                     {"id": "grade3", "label": "grade3", "value": 3},

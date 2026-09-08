@@ -33,7 +33,9 @@ closed from the tracker, and the week's trend over recorded history.
 - Reminders go out by email, and by Telegram where a bot token is configured: a last call for a
   day still unclosed, a weekly weigh-in reminder that skips anyone who already weighed in that
   day, an alert when a principle or the carb score stays past its limit several days running, and
-  a weekly summary of averages. Inside the app, a 7-day trend chart shows after each closed day.
+  a weekly summary of averages. Inside the app, a 7-day trend chart shows after each closed day;
+  its carb panel plots the part of each day's score that came from flours and sugar beside the
+  score itself, and frames the weekday the program's treat meal is aimed at.
   The account menu turns all reminders off and back on. A reminder SES refuses to deliver — the
   address is not one the sending account may write to — is kept and shown behind the header's
   alarm bell instead, dated, until it is dismissed there, so a message addressed to someone still
@@ -94,7 +96,8 @@ feedback — and both must satisfy the shared vectors in `config/derive-vectors.
 questionnaire element holds the questions, their numeric choice values, and the threshold alert
 rules; the day_close element holds the small-hours bounds up to which yesterday may still be
 closed or deleted; the weight element holds the weigh-in schedule, the chart's opening span, and
-the kilogram bounds the API and the input both constrain to.
+the kilogram bounds the API and the input both constrain to; the treat_day element names the
+weekday the trend chart frames.
 
 ## Details
 

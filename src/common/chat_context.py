@@ -117,7 +117,7 @@ def _day_detail(store, questionnaire, sub, day) -> dict:
     meals = store.get_meals(sub, day)
     derived = derive(meals, questionnaire.carb_weights(), questionnaire.addition_values(),
                      questionnaire.amounts(), questionnaire.portions(),
-                     questionnaire.second_source())
+                     questionnaire.second_source(), questionnaire.excluded())
     carbs = questionnaire.question("carbs")
     grade_labels = {choice.id: choice.label for choice in carbs.choices}
     addition_labels = {addition.id: addition.label for addition in carbs.additions}

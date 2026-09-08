@@ -24,14 +24,22 @@ export interface SecondSourceRule {
   light_grade_max: number;
 }
 
-// The carbs question's choices, additions, quantity scales and second-source contract as the
-// lookups the derivation functions consume.
+/** What the program excludes from its six non-treat days, as the score decomposition reads it:
+ * every carb source graded `grade` or heavier, and the additions `additions` names. */
+export interface Excluded {
+  grade: number;
+  additions: string[];
+}
+
+// The carbs question's choices, additions, quantity scales, second-source contract and excluded
+// set as the lookups the derivation functions consume.
 export function carbsScales(question: Question): {
   weights: Record<string, number>;
   additionValues: Record<string, number>;
   amounts: Amounts;
   portions: Portions;
   secondSource: SecondSourceRule;
+  excluded: Excluded;
 } {
   return {
     weights: Object.fromEntries(question.choices.map((c) => [c.id, c.value])),
@@ -39,6 +47,7 @@ export function carbsScales(question: Question): {
     amounts: question.amounts!,
     portions: question.portions!,
     secondSource: question.second_source!,
+    excluded: { grade: question.excluded_grade!, additions: question.excluded_additions! },
   };
 }
 
@@ -74,19 +83,31 @@ function sourceWeight(choice: string, portionId: string | null, weights: Record<
 // never lowered when the meal's own grade is already heavier.
 const FRUIT_ESCALATION_CHOICE = "carb_grade_5";
 
+/** One meal's carb contribution: what it added to the day score, and how much of that came from
+ * what the program excludes on its six non-treat days. Every term of `excluded` is also a term of
+ * `total`, so the excluded part never exceeds the meal's own weight — the fruit escalation and
+ * every permitted grade lift the total alone. */
+export interface MealWeight {
+  total: number;
+  excluded: number;
+}
+
 // Each meal's effective carb contribution — its grade weight after fruit escalation, plus its
-// additions' surcharges — aligned with the input order so callers can label the meals they
-// passed in. The returned weights sum to the day's carb score.
-export function mealWeights(meals: Pick<Meal, "at" | "carbs_choice" | "fruit" | "additions" | "portion" | "second_source">[], weights: Record<string, number>, additionValues: Record<string, number>, amounts: Amounts, portions: Portions, secondSource: SecondSourceRule): number[] {
+// additions' surcharges — beside the excluded part of it, aligned with the input order so callers
+// can label the meals they passed in. The totals sum to the day's carb score and the excluded
+// parts to what excludedPoints reports, both weighed in this one walk so the two cannot disagree.
+export function mealWeights(meals: Pick<Meal, "at" | "carbs_choice" | "fruit" | "additions" | "portion" | "second_source">[], weights: Record<string, number>, additionValues: Record<string, number>, amounts: Amounts, portions: Portions, secondSource: SecondSourceRule, excluded: Excluded): MealWeight[] {
   const chronological = meals.map((meal, index) => ({ meal, index }))
     .sort((a, b) => new Date(a.meal.at).getTime() - new Date(b.meal.at).getTime());
-  const result = new Array<number>(meals.length);
+  const result = new Array<MealWeight>(meals.length);
+  const excludesSource = (weight: number) => weight >= excluded.grade;
   let fruits = 0;
   for (const { meal, index } of chronological) {
     // Quantity applies before the fruit escalation floors the plate's weight: the escalation
     // prices a second fruit, not the helping of whatever else was on the plate, so a reduced
     // helping must not discount it.
     let weight = sourceWeight(meal.carbs_choice, meal.portion, weights, portions);
+    let part = excludesSource(weights[meal.carbs_choice]) ? weight : 0;
     // A plate drawing on two light carb sources is one method-approved plate, so the higher grade
     // speaks for both. A heavier second source — a slice of white bread beside a grade 2 bowl —
     // always carries a helping from the shared scale, adding its grade at that percentage.
@@ -97,8 +118,11 @@ export function mealWeights(meals: Pick<Meal, "at" | "carbs_choice" | "fruit" | 
       }
       if (secondWeight <= secondSource.light_grade_max) {
         weight = Math.max(weight, secondWeight);
+        if (excludesSource(secondWeight)) part = Math.max(part, secondWeight);
       } else {
-        weight += (secondWeight * scalePercent(portions.options, meal.second_source.portion!, "portion")) / 100;
+        const added = (secondWeight * scalePercent(portions.options, meal.second_source.portion!, "portion")) / 100;
+        weight += added;
+        if (excludesSource(secondWeight)) part += added;
       }
     }
     if (meal.fruit) {
@@ -115,21 +139,31 @@ export function mealWeights(meals: Pick<Meal, "at" | "carbs_choice" | "fruit" | 
     for (const addition of meal.additions) {
       const value = additionValues[addition.id];
       if (value === undefined) throw new Error(`unknown addition ${addition.id}`);
-      weight += addition.amount === null
+      const surcharge = addition.amount === null
         ? value
         : (value * scalePercent(amounts.options, addition.amount, "amount")) / 100;
+      weight += surcharge;
+      if (excluded.additions.includes(addition.id)) part += surcharge;
     }
-    result[index] = weight;
+    result[index] = { total: weight, excluded: part };
   }
   return result;
 }
 
-export function deriveDay(meals: Pick<Meal, "at" | "carbs_choice" | "vegetables" | "fruit" | "additions" | "portion" | "second_source">[], weights: Record<string, number>, additionValues: Record<string, number>, amounts: Amounts, portions: Portions, secondSource: SecondSourceRule): Derived {
+// The part of the day's carb score that came from what the program excludes on its six non-treat
+// days. Charted beside the score, it separates a day that stayed within the program from one that
+// spent the same points on sugar and flour.
+export function excludedPoints(meals: Pick<Meal, "at" | "carbs_choice" | "fruit" | "additions" | "portion" | "second_source">[], weights: Record<string, number>, additionValues: Record<string, number>, amounts: Amounts, portions: Portions, secondSource: SecondSourceRule, excluded: Excluded): number {
+  return mealWeights(meals, weights, additionValues, amounts, portions, secondSource, excluded)
+    .reduce((sum, w) => sum + w.excluded, 0);
+}
+
+export function deriveDay(meals: Pick<Meal, "at" | "carbs_choice" | "vegetables" | "fruit" | "additions" | "portion" | "second_source">[], weights: Record<string, number>, additionValues: Record<string, number>, amounts: Amounts, portions: Portions, secondSource: SecondSourceRule, excluded: Excluded): Derived {
   if (meals.length === 0) return { carbs: 0, meals: 0, vegetables: 0, eating_window: 0 };
   const ordered = [...meals].sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime());
   const window = new Date(ordered[ordered.length - 1].at).getTime() - new Date(ordered[0].at).getTime();
   return {
-    carbs: mealWeights(meals, weights, additionValues, amounts, portions, secondSource).reduce((sum, w) => sum + w, 0),
+    carbs: mealWeights(meals, weights, additionValues, amounts, portions, secondSource, excluded).reduce((sum, w) => sum + w.total, 0),
     meals: meals.length,
     vegetables: meals.filter((m) => m.vegetables).length,
     // Whole hours, rounded up like the server: the window never understates itself, so the

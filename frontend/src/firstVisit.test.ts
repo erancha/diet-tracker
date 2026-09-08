@@ -28,7 +28,7 @@ describe("isFirstVisit", () => {
   });
 
   it("fails on a submitted day", () => {
-    const history = { ...EMPTY_HISTORY, days: [{ date: "2026-08-20", answers: {} }] };
+    const history = { ...EMPTY_HISTORY, days: [{ date: "2026-08-20", answers: {}, excluded: 0 }] };
     expect(isFirstVisit(history, EMPTY_WEIGHT)).toBe(false);
   });
 

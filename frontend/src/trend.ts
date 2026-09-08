@@ -1,17 +1,36 @@
-// Y-axis gridline and bound selection for the trend panels, plus the in-progress day's
-// stand-in point.
+// Y-axis gridline and bound selection for the trend panels, the in-progress day's stand-in
+// point, and the treat day's column.
 
+import { carbsScales, excludedPoints } from "./derive";
+import { parseIsoDate, weekdayIndexOf } from "./dates";
 import type { Day, DayPayload, Question, Questionnaire } from "./types";
 import { questionRule } from "./violations";
 
 // Today's stand-in for the trend before the day is closed: once a meal is recorded, the running
 // carb score charts on the points panel so a heavy day surfaces while it can still be corrected.
 // Only the carb score is meaningful mid-day (it just sums recorded meals), so the stand-in
-// carries that single answer and every other panel charts today as a gap. A submitted today is
-// already a recorded day and needs no stand-in.
-export function liveTrendDay(today: DayPayload, days: Day[]): Day | null {
+// carries that single answer and every other panel charts today as a gap. Its excluded part is
+// derived here from the same meals, the server sending it only for the days it has stored. A
+// submitted today is already a recorded day and needs no stand-in.
+export function liveTrendDay(questionnaire: Questionnaire, today: DayPayload, days: Day[]): Day | null {
   if (today.meals.length === 0 || days.some((d) => d.date === today.date)) return null;
-  return { date: today.date, answers: { carbs: today.derived.carbs } };
+  const carbs = questionnaire.questions.find((q) => q.id === "carbs")!;
+  const scales = carbsScales(carbs);
+  return {
+    date: today.date,
+    answers: { carbs: today.derived.carbs },
+    excluded: excludedPoints(today.meals, scales.weights, scales.additionValues, scales.amounts,
+                             scales.portions, scales.secondSource, scales.excluded),
+  };
+}
+
+// Which of the charted columns falls on the treat day's weekday. The charted span is a full week,
+// so exactly one column ever matches; a span that holds none is a caller fault, not a day the
+// chart may quietly leave unframed.
+export function treatDayColumn(dayStrs: string[], weekday: string): number {
+  const index = dayStrs.findIndex((d) => parseIsoDate(d).getDay() === weekdayIndexOf(weekday));
+  if (index === -1) throw new Error(`no ${weekday} among the charted days ${dayStrs.join(", ")}`);
+  return index;
 }
 
 // A points panel grids at its rule's heavy-day limit and the two multiples above it, so each

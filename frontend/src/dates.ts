@@ -48,7 +48,7 @@ const MS_PER_DAY = 86_400_000;
 // naming none of them.
 const WEEKDAY_TOKENS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
 
-function weekdayIndexOf(weekday: string): number {
+export function weekdayIndexOf(weekday: string): number {
   const index = WEEKDAY_TOKENS.indexOf(weekday);
   if (index === -1) {
     throw new Error(`unknown weekday ${weekday}; expected one of ${WEEKDAY_TOKENS.join(", ")}`);

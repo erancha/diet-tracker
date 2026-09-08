@@ -125,6 +125,23 @@ Both implementations
 must satisfy the shared test vectors in `config/derive-vectors.json`, keeping the two runtimes in
 lockstep.
 
+- **Excluded points** — the same meal walk also decomposes the day's carb score: per meal, the
+  weighed contribution of any carb source graded at or above the carbs question's
+  `excluded_grade`, plus the weighed surcharge of every addition its `excluded_additions` names.
+  That is what the program excludes from its six non-treat days — the flour grades and sugar,
+  and a sweet — while the grades below the bound stay permitted within them. Both figures come
+  out of one weighing of each meal, so the part can never disagree with the whole: every term of
+  the subtotal is also a term of the score, and the fruit escalation, which belongs to no carb
+  source, lifts the score alone. The history payload carries the subtotal per day, read from the
+  stored meals rather than written with the day, so every recorded day carries it with nothing
+  to backfill;
+  the trend chart plots it beside the score, where the gap between the two lines is the part of
+  the day that stayed within the program.
+- **The treat day** — `treat_day` in the config names the weekday the program's treat meal is
+  aimed at, and the trend chart frames that column. Nothing marks a stored day as a treat day and
+  no rule reads the weekday: the app prices whatever is recorded, and the frame is a target drawn
+  on a chart.
+
 ## Weight
 
 The weight log runs beside the day tracker rather than inside it. A weight is measured, not
@@ -171,7 +188,8 @@ values alone. Its `day_close` element holds the closing rules: the minimum eatin
 yesterday may still be closed and its meals written, and the never-later `delete_until`, up to
 which its record may still be deleted. Its `weight` element holds the
 weigh-in weekday and hour, the chart's opening span, and the kilogram bounds both the API and the
-frontend input constrain to.
+frontend input constrain to. Its `treat_day` element names the weekday the trend chart frames;
+like `chat`, no Lambda reads it, so it rides along as a frontend-only section.
 
 Both runtimes read the same file: the Lambda package carries it, and the frontend fetches it from
 its own origin. The weigh-in weekday and hour are the one part `scripts/deploy.sh` also lifts out

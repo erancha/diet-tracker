@@ -13,6 +13,7 @@ const CONFIG: AppConfigFile = {
   weight: { weigh_in: { weekday: "SUN", hour: 8 }, chart_months: 3, limits: { min_kg: 40, max_kg: 200 } },
   meals: { max_per_day: 4 },
   day_close: { close_until: "02:00", delete_until: "01:30", min_window_hours: 6 },
+  treat_day: { weekday: "FRI" },
   chat: { sample_questions: [] },
 };
 
@@ -260,7 +261,7 @@ describe("App", () => {
 
   it("keeps the tracker on screen once today is closed, reduced to the add-meal toggle", async () => {
     const todayStr = isoDate(new Date());
-    renderApp(false, api({ days: [{ date: todayStr, answers: { drinking: 3, carbs: 4 } }] }));
+    renderApp(false, api({ days: [{ date: todayStr, answers: { drinking: 3, carbs: 4 }, excluded: 0 }] }));
 
     expect(await screen.findByRole("button", { name: "יומן היום" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "הוספת ארוחה" })).toBeInTheDocument();
@@ -271,7 +272,7 @@ describe("App", () => {
     const yesterdayStr = isoDate(yesterdayOf(new Date()));
     renderApp(false, api({
       yesterday: trackedDay(yesterdayStr),
-      days: [{ date: yesterdayStr, answers: { drinking: 3, carbs: 4 } }],
+      days: [{ date: yesterdayStr, answers: { drinking: 3, carbs: 4 }, excluded: 0 }],
     }));
 
     expect(await screen.findByRole("button", { name: "יומן אתמול" })).toBeInTheDocument();
@@ -283,7 +284,7 @@ describe("App", () => {
     const yesterdayStr = isoDate(yesterdayOf(new Date()));
     renderApp(false, api({
       yesterday: trackedDay(yesterdayStr),
-      days: [{ date: yesterdayStr, answers: { drinking: 3, carbs: 4 } }],
+      days: [{ date: yesterdayStr, answers: { drinking: 3, carbs: 4 }, excluded: 0 }],
     }));
 
     expect(await screen.findByRole("button", { name: "יומן היום" })).toBeInTheDocument();
@@ -296,7 +297,7 @@ describe("App", () => {
     atClock(1, 0);
     vi.spyOn(window, "confirm").mockReturnValue(true);
     const yesterdayStr = isoDate(yesterdayOf(new Date()));
-    const client = api({ days: [{ date: yesterdayStr, answers: { drinking: 3, carbs: 4 } }] });
+    const client = api({ days: [{ date: yesterdayStr, answers: { drinking: 3, carbs: 4 }, excluded: 0 }] });
     (client.getDay as ReturnType<typeof vi.fn>).mockResolvedValue(emptyDay(yesterdayStr));
     (client.deleteDay as ReturnType<typeof vi.fn>).mockResolvedValue({ date: yesterdayStr });
     renderApp(false, client);
@@ -315,7 +316,7 @@ describe("App", () => {
     window.localStorage.setItem(STORAGE_KEY, "false");
     atClock(1, 45);
     const yesterdayStr = isoDate(yesterdayOf(new Date()));
-    const client = api({ days: [{ date: yesterdayStr, answers: { drinking: 3, carbs: 4 } }] });
+    const client = api({ days: [{ date: yesterdayStr, answers: { drinking: 3, carbs: 4 }, excluded: 0 }] });
     (client.getDay as ReturnType<typeof vi.fn>).mockResolvedValue(emptyDay(yesterdayStr));
     renderApp(false, client);
 

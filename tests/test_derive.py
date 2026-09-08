@@ -6,8 +6,8 @@ import pytest
 from conftest import APP_CONFIG
 
 from common import appconfig
-from common.derive import Derived, derive
-from common.questionnaire import Amounts, Portions, ScaleOption, SecondSource
+from common.derive import Derived, derive, excluded_points
+from common.questionnaire import Amounts, Excluded, Portions, ScaleOption, SecondSource
 FIXTURE = json.loads(
     (Path(__file__).parent.parent / "config" / "derive-vectors.json").read_text(encoding="utf-8"))
 PORTIONS = Portions(
@@ -16,10 +16,18 @@ PORTIONS = Portions(
 AMOUNTS = Amounts(default=FIXTURE["amounts"]["default"],
                   options=tuple(ScaleOption(**o) for o in FIXTURE["amounts"]["options"]))
 SECOND = SecondSource(light_grade_max=FIXTURE["second_source"]["light_grade_max"])
+EXCLUDED = Excluded(grade=FIXTURE["excluded"]["grade"],
+                    additions=tuple(FIXTURE["excluded"]["additions"]))
 
 
 def _derive(meals):
-    return derive(meals, FIXTURE["weights"], FIXTURE["addition_values"], AMOUNTS, PORTIONS, SECOND)
+    return derive(meals, FIXTURE["weights"], FIXTURE["addition_values"], AMOUNTS, PORTIONS, SECOND,
+                  EXCLUDED)
+
+
+def _excluded(meals):
+    return excluded_points(meals, FIXTURE["weights"], FIXTURE["addition_values"], AMOUNTS,
+                           PORTIONS, SECOND, EXCLUDED)
 
 
 def test_vector_scoring_tables_are_the_repo_configs():
@@ -32,11 +40,24 @@ def test_vector_scoring_tables_are_the_repo_configs():
     assert PORTIONS == questionnaire.portions()
     assert AMOUNTS == questionnaire.amounts()
     assert SECOND == questionnaire.second_source()
+    assert EXCLUDED == questionnaire.excluded()
 
 
 @pytest.mark.parametrize("vector", FIXTURE["vectors"], ids=lambda v: v["name"])
 def test_derivation_vectors(vector):
     assert _derive(vector["meals"]) == Derived(**vector["derived"])
+
+
+@pytest.mark.parametrize("vector", FIXTURE["vectors"], ids=lambda v: v["name"])
+def test_excluded_vectors(vector):
+    assert _excluded(vector["meals"]) == vector["excluded"]
+
+
+@pytest.mark.parametrize("vector", FIXTURE["vectors"], ids=lambda v: v["name"])
+def test_the_excluded_part_is_a_part_of_the_day_score(vector):
+    # Every term of the excluded subtotal is also a term of the score, so the chart's second line
+    # can never rise above the first.
+    assert _excluded(vector["meals"]) <= _derive(vector["meals"]).carbs
 
 
 def test_unknown_carbs_choice_raises():

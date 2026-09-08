@@ -1,5 +1,5 @@
 import { useState, type KeyboardEvent } from "react";
-import type { Day, Questionnaire } from "../types";
+import type { AnsweredDay, Questionnaire } from "../types";
 import { daysBefore, weekdayDdmmLabel } from "../dates";
 import { headedValue, isBoundValue, isViolating, questionTitle } from "../violations";
 import { Icon } from "./Icon";
@@ -11,7 +11,7 @@ type Range = (typeof RANGES)[number];
 
 interface Props {
   questionnaire: Questionnaire;
-  days: Day[];
+  days: AnsweredDay[];
   // Anchors the visible window: rows are kept from this date back over the chosen range. It is
   // today rather than the newest recorded date, so a stretch with nothing recorded reads as the
   // gap it is instead of scrolling older days up into the week.
@@ -39,13 +39,13 @@ function DeleteDayButton({ date, onDelete }: { date: string; onDelete: (date: st
   );
 }
 
-function daysWithin(days: Day[], today: string, range: Range): Day[] {
+function daysWithin(days: AnsweredDay[], today: string, range: Range): AnsweredDay[] {
   return days.filter((day) => day.date >= daysBefore(today, range - 1));
 }
 
 // A wider range is offered only where the history reaches past every range already on offer: one
 // that would redraw the same rows is a control that appears to do nothing.
-function offeredRanges(days: Day[], today: string): Range[] {
+function offeredRanges(days: AnsweredDay[], today: string): Range[] {
   const [shortest, ...wider] = RANGES;
   const offered: Range[] = [shortest];
   let widest = daysWithin(days, today, shortest).length;

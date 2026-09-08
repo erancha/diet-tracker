@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { activeViolations, crossesThreshold, headedValue, isHeavyMeal, isViolating, panelTitle, questionTitle, ruleBoundLabel, trendPanels, valueLabel, violates } from "./violations";
-import type { Day, Question, Questionnaire, Rule } from "./types";
+import type { AnsweredDay, Question, Questionnaire, Rule } from "./types";
 
 const carbs: Question = {
   id: "carbs", type: "points", text: "פחמימות", max: 30, heavy_meal: 4, panel_title: "ציון פחמימות",
@@ -85,7 +85,7 @@ describe("activeViolations", () => {
   const today = "2026-08-23";
   const yesterday = "2026-08-22";
   // Newest first, matching the API's day ordering.
-  const history = (entries: Array<[string, Record<string, number>]>): Day[] =>
+  const history = (entries: Array<[string, Record<string, number>]>): AnsweredDay[] =>
     entries.map(([date, answers]) => ({ date, answers }));
 
   it("reports every rule whose violating streak at the newest day reaches its required length", () => {

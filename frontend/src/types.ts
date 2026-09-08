@@ -48,6 +48,11 @@ export interface Question {
   // source that is itself light merges into the plate, the higher grade speaking for both; a
   // heavier one always carries one of the shared helpings, adding its grade at that percentage.
   second_source?: { light_grade_max: number };
+  // Present only on the carbs question: what the program excludes from its six non-treat days —
+  // every carb source graded excluded_grade or heavier, and the additions excluded_additions
+  // names. The trend chart plots the part of each day score they account for beside the score.
+  excluded_grade?: number;
+  excluded_additions?: string[];
   // Display floor: history answers below it redden on their own, day by day — unlike a rule's
   // bound, which alarms only after its consecutive-days streak.
   warn_below?: number;
@@ -123,12 +128,21 @@ export interface DayCloseSettings {
   min_window_hours: number;
 }
 
+// Frontend-only section of config/app.json, like ChatSettings: the weekday the program's treat
+// meal is aimed at, as one of the EventBridge Scheduler tokens WEEKDAY_TOKENS in dates.ts
+// mirrors. The trend chart frames that column; no rule reads it, and no stored day is marked by
+// it — it is a target drawn on a chart, not something the app records.
+export interface TreatDaySettings {
+  weekday: string;
+}
+
 // config/app.json as the frontend fetches it from its own origin.
 export interface AppConfigFile {
   questionnaire: Questionnaire;
   weight: WeightSettings;
   meals: MealsSettings;
   day_close: DayCloseSettings;
+  treat_day: TreatDaySettings;
   chat: ChatSettings;
 }
 
@@ -194,7 +208,16 @@ export interface DayPayload {
 export interface Day {
   date: string;
   answers: Record<string, AnswerValue>;
+  // The part of the day's carb score that came from what the program excludes on its six
+  // non-treat days, derived from the day's recorded meals. Never above the carb answer itself,
+  // since every point it counts is also counted there.
+  excluded: number;
 }
+
+// A recorded day narrowed to the values it answers, for reads that judge a day by those alone.
+// The excluded part of its carb score is charted rather than answered, so it is no part of this
+// shape.
+export type AnsweredDay = Pick<Day, "date" | "answers">;
 
 // One message the app addressed to the user that SES refused to deliver, kept so the header can
 // show what never reached their inbox. The body is the text as the sending job wrote it, without

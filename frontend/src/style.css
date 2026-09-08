@@ -6,6 +6,9 @@
   --viz-series-2: #1baf7a;
   --viz-series-3: #4a3aa7;
   --viz-critical: #d03b3b;
+  /* The excluded part of a carb score — the flour grades and sugar. Warm, so it reads apart from
+     the cool series colors without borrowing the red that marks a rule crossing. */
+  --viz-excluded: #b3701c;
   --viz-grid: #e1e0d9;
   --viz-baseline: #c3c2b7;
   --viz-muted: #898781;
@@ -383,6 +386,13 @@ td.view-day { cursor: pointer; }
 .trend-panel-title { display: flex; align-items: center; gap: 0.35rem; font-size: 12px; font-weight: 700; margin: 0 0 0.15rem; }
 .trend-chip { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
 .trend-panel-limit { color: var(--viz-critical); font-weight: 400; }
+.trend-panel-excluded { display: flex; align-items: center; gap: 0.3rem; color: var(--viz-excluded); font-weight: 400; }
+/* The two verticals bounding the column the treat meal is aimed at. They sit behind the plotted
+   lines and never take the pointer, so the day between them tooltips like any other. Solid and a
+   shade darker than the gridlines they cross, so the column is bounded rather than boxed. */
+.trend-treat-day { pointer-events: none; }
+.trend-treat-day line { stroke: var(--viz-muted); stroke-width: 1.5; }
+.trend-treat-day text { font-size: 9px; fill: var(--viz-muted); }
 .trend-legend { display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; margin-bottom: 0.5rem; }
 .trend-legend-timing { margin-inline-start: auto; color: var(--viz-muted); }
 .trend-legend-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--viz-critical); display: inline-block; }

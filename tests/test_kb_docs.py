@@ -30,6 +30,17 @@ def _doc_row(first_cell) -> str:
     return rows[0]
 
 
+def _doc_section(title) -> str:
+    """The guide's text under one section heading, as one whitespace-normalized string: a prose
+    claim wraps across lines, so unlike the table rows above it cannot be pinned line by line."""
+    lines = DOC.splitlines()
+    heads = [i for i, line in enumerate(lines) if line.startswith("## ") and line.endswith(title)]
+    assert len(heads) == 1, f"expected exactly one {title!r} section, got {len(heads)}"
+    end = next((i for i in range(heads[0] + 1, len(lines)) if lines[i].startswith("## ")),
+               len(lines))
+    return " ".join(" ".join(lines[heads[0]:end]).split())
+
+
 def test_questionnaire_version_stamp():
     assert f"גרסת שאלון {CONFIG['questionnaire']['version']}" in DOC
 
@@ -95,6 +106,27 @@ def test_alert_thresholds_and_cadences():
     }
     for rule_id, fragment in rows.items():
         assert f"| {RULES[rule_id]['consecutive_days']} |" in _doc_line(fragment)
+
+
+# Hebrew day names for the scheduler weekday tokens the config declares, so a retargeted treat
+# day fails here rather than leaving the guide naming the wrong day.
+WEEKDAY_NAMES = {"SUN": "ראשון", "MON": "שני", "TUE": "שלישי", "WED": "רביעי", "THU": "חמישי",
+                 "FRI": "שישי", "SAT": "שבת"}
+
+
+def test_trend_chart_excluded_line():
+    # The guide spells out what the chart's second line sums, so a config that excludes another
+    # grade or another addition must reach the sentence.
+    section = _doc_section("גרף המגמה")
+    assert f"בדרגה {CARBS['excluded_grade']} ומעלה" in section
+    labels = {addition["id"]: addition["label"] for addition in CARBS["additions"]}
+    for addition in CARBS["excluded_additions"]:
+        assert f'"{labels[addition]}"' in section
+
+
+def test_trend_chart_treat_day():
+    weekday = WEEKDAY_NAMES[CONFIG["treat_day"]["weekday"]]
+    assert f"יום {weekday}" in _doc_section("גרף המגמה")
 
 
 def test_day_close_bounds():

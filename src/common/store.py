@@ -196,6 +196,17 @@ class Store:
             KeyConditionExpression=Key("pk").eq(user_sub) & Key("sk").begins_with(f"{day}#"))
         return [_meal_from_item(item) for item in response["Items"]]
 
+    def get_meals_range(self, user_sub, start_day, end_day) -> dict:
+        """The meals of each day in the inclusive range that recorded any, keyed by day; a day
+        with none is absent rather than empty. Spans the same sort keys count_meals_range counts."""
+        response = self._meals.query(
+            KeyConditionExpression=Key("pk").eq(user_sub)
+            & Key("sk").between(f"{start_day}#", f"{end_day}#\xff"))
+        by_day = {}
+        for item in response["Items"]:
+            by_day.setdefault(item["sk"].split("#", 1)[0], []).append(_meal_from_item(item))
+        return by_day
+
     def replace_meal(self, user_sub, day, meal_id, meal) -> str:
         """Rewrites one meal wholesale, returning its new id; raises KeyError when no such meal
         exists. The id carries the meal's time to keep the sort key chronological, so a corrected

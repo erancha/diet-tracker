@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { domainFor, liveTrendDay, ticksFor } from "./trend";
-import { fixtureQuestionnaire, trackedDay } from "./test-fixtures";
+import { domainFor, liveTrendDay, ticksFor, treatDayColumn } from "./trend";
+import { fixtureQuestionnaire, trackedDay, trackerQuestionnaire } from "./test-fixtures";
 import type { Question, Questionnaire } from "./types";
 
 const drinking = fixtureQuestionnaire.questions[0];
@@ -42,19 +42,49 @@ describe("ticksFor points questions", () => {
 
 describe("liveTrendDay", () => {
   it("stands in for an unsubmitted day with recorded meals, carrying only the carb score", () => {
-    const days = [{ date: "2026-08-19", answers: { carbs: 6 } }];
-    expect(liveTrendDay(trackedDay, days)).toEqual({ date: "2026-08-20", answers: { carbs: 4 } });
+    const days = [{ date: "2026-08-19", answers: { carbs: 6 }, excluded: 0 }];
+    expect(liveTrendDay(trackerQuestionnaire, trackedDay, days))
+      .toEqual({ date: "2026-08-20", answers: { carbs: 4 }, excluded: 0 });
+  });
+
+  it("derives the running day's excluded part from the meals recorded so far", () => {
+    // The server sends the subtotal for the days it has stored; the day still being tracked is
+    // decomposed in the browser, from the meals the app already holds.
+    const day = { ...trackedDay, meals: [
+      { ...trackedDay.meals[0], carbs_choice: "carb_grade_7",
+        additions: [{ id: "sweet", amount: "regular" }] }] };
+    expect(liveTrendDay(trackerQuestionnaire, day, [])!.excluded).toBe(11);
   });
 
   it("returns null before the first meal", () => {
     const noMeals = { ...trackedDay, meals: [],
                       derived: { carbs: 0, meals: 0, vegetables: 0, eating_window: 0 } };
-    expect(liveTrendDay(noMeals, [])).toBeNull();
+    expect(liveTrendDay(trackerQuestionnaire, noMeals, [])).toBeNull();
   });
 
   it("returns null once today is already a submitted day", () => {
-    const days = [{ date: trackedDay.date, answers: { carbs: 4, drinking: 3 } }];
-    expect(liveTrendDay(trackedDay, days)).toBeNull();
+    const days = [{ date: trackedDay.date, answers: { carbs: 4, drinking: 3 }, excluded: 0 }];
+    expect(liveTrendDay(trackerQuestionnaire, trackedDay, days)).toBeNull();
+  });
+});
+
+describe("treatDayColumn", () => {
+  // 2026-08-14 is a Friday, so a week ending on the Thursday after it holds exactly one.
+  const week = ["2026-08-13", "2026-08-14", "2026-08-15", "2026-08-16", "2026-08-17",
+                "2026-08-18", "2026-08-19"];
+
+  it("finds the single column falling on the treat day's weekday", () => {
+    expect(treatDayColumn(week, "FRI")).toBe(1);
+    expect(treatDayColumn(week, "THU")).toBe(0);
+    expect(treatDayColumn(week, "WED")).toBe(6);
+  });
+
+  it("rejects a weekday no scheduler token names", () => {
+    expect(() => treatDayColumn(week, "FRIDAY")).toThrow(/FRIDAY/);
+  });
+
+  it("rejects a span holding no such day rather than leaving the column unframed", () => {
+    expect(() => treatDayColumn(week.slice(0, 3), "MON")).toThrow(/MON/);
   });
 });
 

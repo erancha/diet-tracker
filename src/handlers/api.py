@@ -20,7 +20,7 @@ import boto3
 
 from common import appconfig, chat_history, rules, undelivered, users, weight
 from common.dates import clock_time, days_before, now_iso, today
-from common.derive import derive
+from common.derive import derive, excluded_points
 from common.log import get_logger
 from common.rules import LOOKBACK_DAYS
 from common.store import Store
@@ -118,7 +118,8 @@ def _day_payload(store, questionnaire, sub, day) -> dict:
                                      questionnaire.addition_values(),
                                      questionnaire.amounts(),
                                      questionnaire.portions(),
-                                     questionnaire.second_source()))}
+                                     questionnaire.second_source(),
+                                     questionnaire.excluded()))}
 
 
 def _submit(sub, body):
@@ -133,7 +134,8 @@ def _submit(sub, body):
     store = _store()
     floors = derive(store.get_meals(sub, chosen), questionnaire.carb_weights(),
                     questionnaire.addition_values(), questionnaire.amounts(),
-                    questionnaire.portions(), questionnaire.second_source())
+                    questionnaire.portions(), questionnaire.second_source(),
+                    questionnaire.excluded())
     try:
         questionnaire.validate_answers(answers, floors=asdict(floors))
     except ValueError as error:
@@ -167,14 +169,29 @@ def _delete_day(sub, chosen):
     return _response(200, {"date": chosen})
 
 
+def _excluded_by_day(questionnaire, meals_by_day) -> dict:
+    """The excluded part of each day's carb score, keyed by day, over the meals of a range."""
+    return {day: excluded_points(meals, questionnaire.carb_weights(),
+                                 questionnaire.addition_values(), questionnaire.amounts(),
+                                 questionnaire.portions(), questionnaire.second_source(),
+                                 questionnaire.excluded())
+            for day, meals in meals_by_day.items()}
+
+
 def _history(sub):
     store = _store()
     questionnaire = _questionnaire()
     day = today()
     yesterday = days_before(day, 1)
-    history = store.get_days_range(sub, days_before(day, LOOKBACK_DAYS), day)
+    start = days_before(day, LOOKBACK_DAYS)
+    history = store.get_days_range(sub, start, day)
+    # Derived on read rather than written with the day: every recorded day charts its subtotal
+    # without a stored one to backfill.
+    excluded = _excluded_by_day(questionnaire, store.get_meals_range(sub, start, day))
     return _response(200, {
-        "days": [{"date": d, "answers": a} for d, a in sorted(history.items(), reverse=True)],
+        # A day recorded with no meals — one closed before the meal log — excludes nothing.
+        "days": [{"date": d, "answers": a, "excluded": excluded.get(d, 0)}
+                 for d, a in sorted(history.items(), reverse=True)],
         "today": _day_payload(store, questionnaire, sub, day),
         # Yesterday rides along for the small-hours grace window, in which the tracker still
         # targets it: its meals and floors are what that view records and closes against.

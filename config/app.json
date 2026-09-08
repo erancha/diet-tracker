@@ -141,6 +141,10 @@
         "panel_title": "סכום ציוני ארוחות",
         "max": 35,
         "heavy_meal": 4,
+        "excluded_grade": 6,
+        "excluded_additions": [
+          "sweet"
+        ],
         "additions": [
           {
             "id": "sweet",
@@ -308,6 +312,9 @@
     "close_until": "02:00",
     "delete_until": "01:30",
     "min_window_hours": 6
+  },
+  "treat_day": {
+    "weekday": "FRI"
   },
   "weight": {
     "weigh_in": {

@@ -63,6 +63,12 @@
   "second_source": {
     "light_grade_max": 2
   },
+  "excluded": {
+    "grade": 6,
+    "additions": [
+      "sweet"
+    ]
+  },
   "vectors": [
     {
       "name": "empty day",
@@ -72,7 +78,8 @@
         "meals": 0,
         "vegetables": 0,
         "eating_window": 0
-      }
+      },
+      "excluded": 0
     },
     {
       "name": "single meal has zero window",
@@ -92,7 +99,8 @@
         "meals": 1,
         "vegetables": 1,
         "eating_window": 0
-      }
+      },
+      "excluded": 0
     },
     {
       "name": "full day with an alcohol addition",
@@ -144,7 +152,8 @@
         "meals": 4,
         "vegetables": 2,
         "eating_window": 13
-      }
+      },
+      "excluded": 7
     },
     {
       "name": "a fat addition scores a meal that carries no carb source at all",
@@ -169,7 +178,8 @@
         "meals": 1,
         "vegetables": 1,
         "eating_window": 0
-      }
+      },
+      "excluded": 0
     },
     {
       "name": "a fat addition prices the same on a meal that does carry a carb grade",
@@ -194,7 +204,8 @@
         "meals": 1,
         "vegetables": 1,
         "eating_window": 0
-      }
+      },
+      "excluded": 0
     },
     {
       "name": "same-minute meals",
@@ -228,7 +239,8 @@
         "meals": 2,
         "vegetables": 0,
         "eating_window": 0
-      }
+      },
+      "excluded": 0
     },
     {
       "name": "out-of-order input still spans first to last",
@@ -257,7 +269,8 @@
         "meals": 2,
         "vegetables": 1,
         "eating_window": 12
-      }
+      },
+      "excluded": 6
     },
     {
       "name": "a quarter hour past twelve rounds up to thirteen whole hours",
@@ -286,7 +299,8 @@
         "meals": 2,
         "vegetables": 0,
         "eating_window": 13
-      }
+      },
+      "excluded": 0
     },
     {
       "name": "three quarters past twelve rounds up the same",
@@ -315,7 +329,8 @@
         "meals": 2,
         "vegetables": 0,
         "eating_window": 13
-      }
+      },
+      "excluded": 0
     },
     {
       "name": "twenty minutes past ten hours rounds up to eleven",
@@ -344,7 +359,8 @@
         "meals": 2,
         "vegetables": 0,
         "eating_window": 11
-      }
+      },
+      "excluded": 0
     },
     {
       "name": "the day's single fruit rides free with its grade",
@@ -364,7 +380,8 @@
         "meals": 1,
         "vegetables": 0,
         "eating_window": 0
-      }
+      },
+      "excluded": 0
     },
     {
       "name": "second fruit escalates its meal to grade 5",
@@ -393,7 +410,8 @@
         "meals": 2,
         "vegetables": 0,
         "eating_window": 4
-      }
+      },
+      "excluded": 0
     },
     {
       "name": "third fruit escalates again",
@@ -431,7 +449,8 @@
         "meals": 3,
         "vegetables": 0,
         "eating_window": 10
-      }
+      },
+      "excluded": 0
     },
     {
       "name": "a meal already heavier than grade 5 keeps its own weight",
@@ -460,7 +479,8 @@
         "meals": 2,
         "vegetables": 0,
         "eating_window": 4
-      }
+      },
+      "excluded": 7
     },
     {
       "name": "the free fruit is the chronologically first, not the first listed",
@@ -489,7 +509,8 @@
         "meals": 2,
         "vegetables": 0,
         "eating_window": 12
-      }
+      },
+      "excluded": 0
     },
     {
       "name": "a sweet addition adds its cost on top of the meal's grade",
@@ -514,7 +535,8 @@
         "meals": 1,
         "vegetables": 1,
         "eating_window": 0
-      }
+      },
+      "excluded": 3
     },
     {
       "name": "an addition on an already heavy meal still adds, never replaces",
@@ -539,7 +561,8 @@
         "meals": 1,
         "vegetables": 0,
         "eating_window": 0
-      }
+      },
+      "excluded": 10
     },
     {
       "name": "an addition composes with second-fruit escalation",
@@ -573,7 +596,8 @@
         "meals": 2,
         "vegetables": 0,
         "eating_window": 4
-      }
+      },
+      "excluded": 3
     },
     {
       "name": "multiple additions stack on one meal",
@@ -602,7 +626,8 @@
         "meals": 1,
         "vegetables": 1,
         "eating_window": 0
-      }
+      },
+      "excluded": 3
     },
     {
       "name": "a small portion counts its grade at the configured percentage",
@@ -622,7 +647,8 @@
         "meals": 1,
         "vegetables": 0,
         "eating_window": 0
-      }
+      },
+      "excluded": 4.2
     },
     {
       "name": "a small portion below the offered grade leaves the weight alone",
@@ -642,7 +668,8 @@
         "meals": 1,
         "vegetables": 0,
         "eating_window": 0
-      }
+      },
+      "excluded": 0
     },
     {
       "name": "a small portion does not discount the second fruit's escalation",
@@ -671,7 +698,8 @@
         "meals": 2,
         "vegetables": 0,
         "eating_window": 4
-      }
+      },
+      "excluded": 4.2
     },
     {
       "name": "an addition costs the same on a small portion as on a full one",
@@ -696,7 +724,8 @@
         "meals": 1,
         "vegetables": 0,
         "eating_window": 0
-      }
+      },
+      "excluded": 7.2
     },
     {
       "name": "a heavy second source adds its grade at the medium helping",
@@ -719,7 +748,8 @@
         "meals": 1,
         "vegetables": 1,
         "eating_window": 0
-      }
+      },
+      "excluded": 5.6
     },
     {
       "name": "a heavy second source adds its grade at the small helping",
@@ -742,7 +772,8 @@
         "meals": 1,
         "vegetables": 1,
         "eating_window": 0
-      }
+      },
+      "excluded": 4.2
     },
     {
       "name": "a light second source merges into the higher grade",
@@ -765,7 +796,8 @@
         "meals": 1,
         "vegetables": 0,
         "eating_window": 0
-      }
+      },
+      "excluded": 0
     },
     {
       "name": "the merge keeps the heavier of two light grades",
@@ -788,7 +820,8 @@
         "meals": 1,
         "vegetables": 0,
         "eating_window": 0
-      }
+      },
+      "excluded": 0
     },
     {
       "name": "the fruit escalation weighs both sources against its floor",
@@ -832,7 +865,8 @@
         "meals": 3,
         "vegetables": 0,
         "eating_window": 6
-      }
+      },
+      "excluded": 0
     },
     {
       "name": "additions cost on top of both sources",
@@ -860,7 +894,8 @@
         "meals": 1,
         "vegetables": 0,
         "eating_window": 0
-      }
+      },
+      "excluded": 8.6
     },
     {
       "name": "the lowest offered grade discounts at a small portion",
@@ -880,7 +915,8 @@
         "meals": 1,
         "vegetables": 1,
         "eating_window": 0
-      }
+      },
+      "excluded": 0
     },
     {
       "name": "a medium portion counts its grade at its percentage",
@@ -900,7 +936,8 @@
         "meals": 1,
         "vegetables": 0,
         "eating_window": 0
-      }
+      },
+      "excluded": 0
     },
     {
       "name": "a full portion leaves the grade whole",
@@ -920,7 +957,8 @@
         "meals": 1,
         "vegetables": 0,
         "eating_window": 0
-      }
+      },
+      "excluded": 6
     },
     {
       "name": "a heavy second source may ride at the full helping",
@@ -943,7 +981,8 @@
         "meals": 1,
         "vegetables": 1,
         "eating_window": 0
-      }
+      },
+      "excluded": 7
     },
     {
       "name": "an addition recorded before the amount scale costs the whole surcharge",
@@ -968,7 +1007,8 @@
         "meals": 1,
         "vegetables": 0,
         "eating_window": 0
-      }
+      },
+      "excluded": 3
     },
     {
       "name": "a small amount of an addition costs half its surcharge",
@@ -993,7 +1033,8 @@
         "meals": 1,
         "vegetables": 0,
         "eating_window": 0
-      }
+      },
+      "excluded": 1.5
     },
     {
       "name": "a heaped amount of an addition costs double its surcharge",
@@ -1018,7 +1059,8 @@
         "meals": 1,
         "vegetables": 0,
         "eating_window": 0
-      }
+      },
+      "excluded": 0
     },
     {
       "name": "each addition on a meal carries its own amount",
@@ -1047,7 +1089,68 @@
         "meals": 1,
         "vegetables": 0,
         "eating_window": 0
-      }
+      },
+      "excluded": 1.5
+    },
+    {
+      "name": "a no-carb meal escalated by a second fruit excludes nothing",
+      "meals": [
+        {
+          "at": "2026-08-20T09:00:00+03:00",
+          "carbs_choice": "no_carbs",
+          "vegetables": false,
+          "fruit": true,
+          "additions": [],
+          "portion": null,
+          "second_source": null
+        },
+        {
+          "at": "2026-08-20T13:00:00+03:00",
+          "carbs_choice": "no_carbs",
+          "vegetables": false,
+          "fruit": true,
+          "additions": [],
+          "portion": null,
+          "second_source": null
+        }
+      ],
+      "derived": {
+        "carbs": 5,
+        "meals": 2,
+        "vegetables": 0,
+        "eating_window": 4
+      },
+      "excluded": 0
+    },
+    {
+      "name": "a small helping escalated by a second fruit excludes only the helping",
+      "meals": [
+        {
+          "at": "2026-08-20T09:00:00+03:00",
+          "carbs_choice": "no_carbs",
+          "vegetables": false,
+          "fruit": true,
+          "additions": [],
+          "portion": null,
+          "second_source": null
+        },
+        {
+          "at": "2026-08-20T13:00:00+03:00",
+          "carbs_choice": "carb_grade_6",
+          "vegetables": false,
+          "fruit": true,
+          "additions": [],
+          "portion": "small",
+          "second_source": null
+        }
+      ],
+      "derived": {
+        "carbs": 5,
+        "meals": 2,
+        "vegetables": 0,
+        "eating_window": 4
+      },
+      "excluded": 3.6
     }
   ]
 }

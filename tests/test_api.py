@@ -77,7 +77,9 @@ def test_submit_stores_numeric_answers_and_reports_no_violations(env):
     payload = body_of(response)
     assert payload["date"] == today() and payload["violations"] == []
     history = body_of(api.handler(request("GET /days"), None))
-    assert history["days"][0] == {"date": today(), "answers": ANSWERS}
+    # A day closed with nothing recorded excludes nothing: the chart's second line rests on the
+    # baseline while the score line plots the answers.
+    assert history["days"][0] == {"date": today(), "answers": ANSWERS, "excluded": 0}
 
 
 def test_submit_reports_violations_but_leaves_alerting_to_the_nightly_job(env):
@@ -122,6 +124,38 @@ def test_get_days_returns_today_and_yesterday_payloads(env):
     assert payload["today"]["derived"] == {"carbs": 3, "meals": 1, "vegetables": 1, "eating_window": 0}
     assert payload["yesterday"]["date"] == days_before(today(), 1)
     assert payload["yesterday"]["meals"] == []
+
+
+def test_get_days_reports_each_day_score_beside_its_excluded_part(env):
+    from common.store import Store
+    store = Store("days", "meals", "state", "weights")
+    older = days_before(today(), 3)
+    for day, choice, additions in ((older, "carb_grade_7", []),
+                                   (days_before(today(), 2), "carb_grade_3",
+                                    [{"id": "nuts", "amount": "regular"}])):
+        store.add_meal("u1", day, meal_body(choice, True, False, additions, "09:10:00", None, None,
+                                            day=day))
+        store.put_day("u1", day, ANSWERS, 3, "t")
+    payload = body_of(api.handler(request("GET /days"), None))
+    # White flour is excluded from the six non-treat days; a grade 3 plate with nuts is not, so
+    # its whole score stayed within the program.
+    assert {d["date"]: d["excluded"] for d in payload["days"]} == {
+        older: 7, days_before(today(), 2): 0}
+
+
+def test_get_days_derives_the_excluded_part_from_meals_recorded_before_it_existed(env):
+    # The subtotal is read from the stored meals rather than written with the day, so a day
+    # closed before the chart drew this line is still decomposed.
+    from common.store import Store
+    store = Store("days", "meals", "state", "weights")
+    day = days_before(today(), 4)
+    store.add_meal("u1", day, meal_body("carb_grade_6", True, False,
+                                        [{"id": "sweet", "amount": "much"}], "09:10:00", None,
+                                        None, day=day))
+    store.put_day("u1", day, ANSWERS, 3, "t")
+    payload = body_of(api.handler(request("GET /days"), None))
+    # Whole wheat at grade 6 plus a generous sweet: 6 + 3 × 150%.
+    assert payload["days"][0]["excluded"] == 10.5
 
 
 def test_get_days_keeps_yesterday_floors_once_submitted(env):

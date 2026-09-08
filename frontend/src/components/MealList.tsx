@@ -30,11 +30,11 @@ export function MealList({ questionnaire, meals, expandLabels, onEdit, onDelete,
   // A history day may reference a choice or addition id retired by a later questionnaire
   // version, making its weights unknowable here; per-meal points render only when the whole day
   // still resolves.
-  const { weights, additionValues, amounts, portions, secondSource } = carbsScales(carbsQuestion);
+  const { weights, additionValues, amounts, portions, secondSource, excluded } = carbsScales(carbsQuestion);
   const points = meals.every((m) => weights[m.carbs_choice] !== undefined
       && (m.second_source === null || weights[m.second_source.carbs_choice] !== undefined)
       && m.additions.every((a) => additionValues[a.id] !== undefined))
-    ? mealWeights(meals, weights, additionValues, amounts, portions, secondSource)
+    ? mealWeights(meals, weights, additionValues, amounts, portions, secondSource, excluded)
     : undefined;
 
   return (
@@ -70,10 +70,10 @@ export function MealList({ questionnaire, meals, expandLabels, onEdit, onDelete,
                 and the additions, so a light grade with a drink and fat outprices a steep grade
                 eaten small. */}
             {points !== undefined && (
-              <span className={isHeavyMeal(carbsQuestion, points[index])
+              <span className={isHeavyMeal(carbsQuestion, points[index].total)
                       ? "meal-points score heavy-meal" : "meal-points score"}
                     title={carbsQuestion.tooltip}>
-                {" · "}{points[index]}
+                {" · "}{points[index].total}
               </span>
             )}
             {/* Grouped into one cell so the pencil and bin travel together as the row's controls. */}

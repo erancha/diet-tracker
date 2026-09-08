@@ -54,6 +54,20 @@ def test_meals_roundtrip_chronological_and_per_day(store):
     assert meals[1]["additions"] == [{"id": "sweet", "amount": "regular"}]
 
 
+def test_meals_range_groups_each_day_and_closes_over_the_last_days_ids(store):
+    store.add_meal("u1", "2026-08-19", meal("2026-08-19T09:00:00+03:00", "carb_grade_3"))
+    store.add_meal("u1", "2026-08-20", meal("2026-08-20T09:10:00+03:00", "no_carbs"))
+    store.add_meal("u1", "2026-08-20", meal("2026-08-20T13:30:00+03:00", "carb_grade_4"))
+    store.add_meal("u1", "2026-08-21", meal("2026-08-21T09:00:00+03:00", "carb_grade_7"))
+    store.add_meal("u2", "2026-08-20", meal("2026-08-20T09:00:00+03:00", "carb_grade_7"))
+    by_day = store.get_meals_range("u1", "2026-08-19", "2026-08-20")
+    assert sorted(by_day) == ["2026-08-19", "2026-08-20"]
+    assert [m["carbs_choice"] for m in by_day["2026-08-20"]] == ["no_carbs", "carb_grade_4"]
+    # A day with nothing recorded is absent rather than empty, and one meal's shape is the same
+    # the single-day read returns.
+    assert by_day["2026-08-19"] == store.get_meals("u1", "2026-08-19")
+
+
 def test_day_count_spans_the_inclusive_range_per_user(store):
     store.put_day("u1", "2026-08-13", ANSWERS, 3, "t")
     store.put_day("u1", "2026-08-14", ANSWERS, 3, "t")

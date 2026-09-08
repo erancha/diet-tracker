@@ -2,7 +2,7 @@
 // questionnaire config. All functions take the questionnaire explicitly so they stay pure and
 // independently testable.
 
-import type { AnswerValue, Choice, Day, Question, Questionnaire, Rule } from "./types";
+import type { AnsweredDay, AnswerValue, Choice, Question, Questionnaire, Rule } from "./types";
 import { isoDate, parseIsoDate, yesterdayOf } from "./dates";
 
 export function violates(rule: Rule, value: number): boolean {
@@ -17,7 +17,7 @@ export function violates(rule: Rule, value: number): boolean {
 // counted over consecutive calendar days ending at the newest submitted day; a gap day or a day
 // predating the rule's question ends it. A newest day older than yesterday is stale, not a
 // reminder: the streak may have already been broken by the unsubmitted days, so nothing reports.
-export function activeViolations(questionnaire: Questionnaire, days: Day[],
+export function activeViolations(questionnaire: Questionnaire, days: AnsweredDay[],
                                  todayStr: string, yesterdayStr: string): string[] {
   const newest = days[0];
   if (newest === undefined || (newest.date !== todayStr && newest.date !== yesterdayStr)) return [];

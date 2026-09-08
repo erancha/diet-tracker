@@ -87,7 +87,7 @@ export function DayTracker({ questionnaire, day, isToday = true, closed = false,
   const carbsQuestion = questionnaire.questions.find((q) => q.id === "carbs")!;
   const drinkingQuestion = questionnaire.questions.find((q) => q.id === "drinking")!;
   const { weights, additionValues, amounts: amountRule, portions: portionRule,
-          secondSource: secondRule } = carbsScales(carbsQuestion);
+          secondSource: secondRule, excluded: excludedRule } = carbsScales(carbsQuestion);
   // The fullest helping the scale offers — the default either portion picker opens on, so an
   // unconsidered save never under-prices the plate.
   const defaultPortionId =
@@ -126,7 +126,7 @@ export function DayTracker({ questionnaire, day, isToday = true, closed = false,
   // The day's meals always resolve against the current questionnaire, so deriveDay's throw on an
   // unknown id is a real config/data fault, not a legal state — let the error boundary show it.
   const derived = deriveDay(day.meals, weights, additionValues, amountRule, portionRule,
-                            secondRule);
+                            secondRule, excludedRule);
   // Once recording one more meal would cross the meals rule's bound — from the third recorded
   // meal under the production config — every add-meal control carries the warning styling, so
   // the caution lands before that meal is recorded rather than through the history row after.
