@@ -64,8 +64,11 @@ export interface Question {
   unit?: string;
   // Hover explanation shown wherever the question text is a heading (form legend, history header).
   tooltip?: string;
-  // Parenthesized qualifiers appended to the text per heading scope (see questionTitle): text
-  // alone names the subject; a day heading shows a summed score, a tracker meal a single grade.
+  // Day-scope heading (see questionTitle). day_title is a full standalone heading, for a day
+  // value that is not the question's subject — the carbs question's day value is the whole
+  // day's score, additions included, so a heading built on the carbs text would misname it.
+  // day_qualifier is a suffix to text, as meal_qualifier is for a tracker meal's single grade.
+  day_title?: string;
   day_qualifier?: string;
   meal_qualifier?: string;
 }

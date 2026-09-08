@@ -123,8 +123,10 @@ export function headedValue(question: Question, value: number): string {
 // its meaning (a day heading shows a summed score, a tracker meal a single grade, a trend panel
 // a charted score) declares a qualifier, appended here in parentheses. A day heading with no
 // qualifier of its own names the unit instead, which is what lets the values beneath it drop it.
-// The same day-scope composition exists server-side as Question.day_title for digest emails.
+// A standalone day_title replaces the composition, as panel_title does for panelTitle. The same
+// day-scope heading exists server-side as Question.day_heading for digest emails and the chat.
 export function questionTitle(question: Question, scope: "day" | "meal" | "panel"): string {
+  if (scope === "day" && question.day_title !== undefined) return question.day_title;
   const qualifier = scope === "day" ? question.day_qualifier ?? question.unit
     : scope === "meal" ? question.meal_qualifier
     : question.panel_qualifier;

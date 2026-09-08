@@ -74,7 +74,7 @@ def weekly_text(questionnaire, history: dict) -> str:
 def labeled_history(questionnaire, history: dict) -> dict:
     """The submitted answers keyed by date, each value under its question's Hebrew day-scope
     heading — the vocabulary the answering LLM reads instead of internal question ids."""
-    return {date: {questionnaire.question(question_id).day_title: value
+    return {date: {questionnaire.question(question_id).day_heading: value
                    for question_id, value in answers.items()}
             for date, answers in history.items()}
 

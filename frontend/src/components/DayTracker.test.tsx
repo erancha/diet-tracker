@@ -155,7 +155,7 @@ describe("DayTracker", () => {
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     openMealForm();
     expect(screen.getByText("פחמימות (דרגת הארוחה)")).toBeInTheDocument();
-    expect(screen.queryByText("פחמימות (סיכום ציון)")).toBeNull();
+    expect(screen.queryByText("ציון יומי")).toBeNull();
   });
 
   it("records a meal with the picked grade, vegetables, fruit and additions", () => {

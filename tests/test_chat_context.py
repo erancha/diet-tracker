@@ -45,7 +45,7 @@ def test_recent_day_summaries_ride_in_the_context(store, questionnaire):
     assert "2026-08-25" not in summaries
     day = summaries["2026-08-26"]
     assert day['שכפ"צ - שתיה (ליטר)'] == 3
-    assert day["פחמימות / קמחים / סוכרים (סיכום ציון)"] == 12
+    assert day["ציון יומי"] == 12
 
 
 def test_today_and_yesterday_meals_are_detailed_with_hebrew_labels(store, questionnaire):
@@ -59,7 +59,7 @@ def test_today_and_yesterday_meals_are_detailed_with_hebrew_labels(store, questi
     data = data_of(chat_context.user_context(store, questionnaire, "u1", TODAY))
 
     today_detail = data["היום"]
-    assert today_detail["ציון פחמימות"] == 3.5  # grade 2 + a small sweet, 3 at 50%
+    assert today_detail["ציון יומי"] == 3.5  # grade 2 + a small sweet, 3 at 50%
     (entry,) = today_detail["ארוחות"]
     assert entry["שעה"] == "12:30"
     assert entry["מקור פחמימה"] == "דרגה 2"
@@ -69,7 +69,7 @@ def test_today_and_yesterday_meals_are_detailed_with_hebrew_labels(store, questi
 
     yesterday_detail = data["אתמול"]
     # grade 4 at the small helping + grade 7 at the medium helping: 2.4 + 5.6
-    assert yesterday_detail["ציון פחמימות"] == 8
+    assert yesterday_detail["ציון יומי"] == 8
     (entry,) = yesterday_detail["ארוחות"]
     assert entry["מקור פחמימה"] == "דרגה 4 (מנה קטנה)"
     assert entry["מקור פחמימה נוסף"] == "דרגה 7 (מנה בינונית)"
@@ -129,7 +129,7 @@ def test_a_user_with_no_data_still_sends_the_empty_state(store, questionnaire):
 
     assert data["סיכום ימים אחרונים"] == {}
     assert data["היום"]["ארוחות"] == []
-    assert data["היום"]["ציון פחמימות"] == 0
+    assert data["היום"]["ציון יומי"] == 0
     assert data["משקל"] == {"מדידות": {}}
 
 

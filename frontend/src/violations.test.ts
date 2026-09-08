@@ -204,6 +204,12 @@ describe("questionTitle", () => {
     expect(questionTitle(meals, "day")).toBe("ארוחות");
     expect(questionTitle(meals, "meal")).toBe("ארוחות");
   });
+
+  it("uses a standalone day_title verbatim for the day scope only", () => {
+    const scored: Question = { ...carbs, day_title: "ציון יומי" };
+    expect(questionTitle(scored, "day")).toBe("ציון יומי");
+    expect(questionTitle(scored, "meal")).toBe("פחמימות (דרגת הארוחה)");
+  });
 });
 
 describe("trendPanels", () => {

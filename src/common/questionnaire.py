@@ -110,11 +110,14 @@ class Question:
     type: str
     text: str
     choices: tuple[Choice, ...]
-    # Parenthesized qualifier appended to the text in day-scope headings (see day_title). The
+    # Standalone day-scope heading (see day_heading), for a day value that is not the question's
+    # subject: the carbs question's day value is the whole day's score, additions included.
+    day_title: str | None
+    # Parenthesized qualifier appended to the text in day-scope headings (see day_heading). The
     # config also carries a meal_qualifier for the frontend's per-meal picker; the backend never
     # renders a meal-scope heading, so it is not modeled here.
     day_qualifier: str | None
-    # What the question measures, named in the day-scope heading — see day_title. Mirrors the
+    # What the question measures, named in the day-scope heading — see day_heading. Mirrors the
     # unit field frontend/src/types.ts declares.
     unit: str | None
     # Present only on questions charted as a trend panel.
@@ -142,10 +145,12 @@ class Question:
     excluded: "Excluded | None"
 
     @property
-    def day_title(self) -> str:
-        """The question's day-scope heading — the base text plus the day qualifier when one is
-        declared, else the unit it measures in. Mirrors questionTitle(question, "day") in
-        frontend/src/violations.ts."""
+    def day_heading(self) -> str:
+        """The question's day-scope heading — day_title verbatim when declared, else the base
+        text plus the day qualifier when one is declared, else the unit it measures in. Mirrors
+        questionTitle(question, "day") in frontend/src/violations.ts."""
+        if self.day_title is not None:
+            return self.day_title
         qualifier = self.day_qualifier if self.day_qualifier is not None else self.unit
         if qualifier is None:
             return self.text
@@ -316,7 +321,8 @@ def parse(raw: dict) -> Questionnaire:
             id=q["id"], type=q["type"], text=q["text"],
             choices=tuple(Choice(id=c["id"], label=c["label"], value=c["value"],
                                  bound=c.get("bound", False)) for c in q["choices"]),
-            day_qualifier=q.get("day_qualifier"), unit=q.get("unit"),
+            day_title=q.get("day_title"), day_qualifier=q.get("day_qualifier"),
+            unit=q.get("unit"),
             panel_title=q.get("panel_title"), max=q.get("max"),
             heavy_meal=q.get("heavy_meal"),
             additions=tuple(Choice(id=a["id"], label=a["label"], value=a["value"])

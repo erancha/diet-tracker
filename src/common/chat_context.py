@@ -86,7 +86,7 @@ def _tracking_scope(questionnaire) -> dict:
         # the meals above reads as the one field it is.
         "ברישום ארוחה": [_TIME, _CARB_SOURCE, _SECOND_SOURCE, _PORTION, _VEGETABLES, _FRUIT]
         + [f"{addition.label} ({_AMOUNT})" for addition in carbs.additions],
-        "במעקב היומי": [question.day_title for question in questionnaire.questions],
+        "במעקב היומי": [question.day_heading for question in questionnaire.questions],
         "בנוסף": [weight.LABEL],
         "הערה": "אלה כל שדות ההזנה באפליקציה. נושא שאינו ברשימה אין לו שדה באפליקציה, "
                 "ולכן היעדרו מהנתונים אינו מעיד שהמשתמש לא צרך אותו.",
@@ -110,7 +110,7 @@ def _day_detail(store, questionnaire, sub, day) -> dict:
     addition_labels = {addition.id: addition.label for addition in carbs.additions}
     portion_labels = {option.id: option.label for option in questionnaire.portions().options}
     amount_labels = {option.id: option.label for option in questionnaire.amounts().options}
-    return {"ציון פחמימות": derived.carbs,
+    return {carbs.day_heading: derived.carbs,
             "ארוחות": [_meal_entry(meal, grade_labels, addition_labels, portion_labels,
                                    amount_labels)
                        for meal in meals]}

@@ -28,10 +28,11 @@ def test_repo_config_loads_with_numeric_choices_and_threshold_rules():
     assert carbs.type == "points" and carbs.max == 35
     # One bound defines a heavy meal, another a heavy day; the day bound lives on its rule.
     assert carbs.heavy_meal == 4
-    assert carbs.day_title == f"{carbs.text} ({carbs.day_qualifier})"
+    # The day value is the whole day's score, not a carbs quantity, so its heading stands alone.
+    assert carbs.day_heading == carbs.day_title == "ציון יומי"
     # A question with no day qualifier names the unit it measures in instead, which is what lets
     # the values under that heading read as bare quantities.
-    assert q.question("drinking").day_title == f'{q.question("drinking").text} (ליטר)'
+    assert q.question("drinking").day_heading == f'{q.question("drinking").text} (ליטר)'
     # The grade ladder ranks a meal by its carb source alone: one row per grade, weighted by the
     # grade itself, with no rung standing for a portion of another.
     assert [w for g, w in q.carb_weights().items() if g != "no_carbs"] == [1, 2, 3, 4, 5, 6, 7]

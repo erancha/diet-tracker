@@ -71,7 +71,7 @@ export const trackerQuestionnaire: Questionnaire = {
                  options: [{ id: "little", label: "מעט", percent: 75 },
                            { id: "regular", label: "רגיל", percent: 100 },
                            { id: "much", label: "הרבה", percent: 125 }] },
-      tooltip: "המטרה היא ציון נמוך", day_qualifier: "סיכום ציון", meal_qualifier: "דרגת הארוחה",
+      tooltip: "המטרה היא ציון נמוך", day_title: "ציון יומי", meal_qualifier: "דרגת הארוחה",
       portions: { from_value: 5,
                   options: [{ id: "small", label: "מנה קטנה", percent: 60 },
                             { id: "medium", label: "מנה בינונית", percent: 80 },
