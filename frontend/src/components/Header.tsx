@@ -129,7 +129,11 @@ export function Header({ email, muted, isAdmin, onSignOut, onSetMuted, onFoldAll
                 </button>
               </span>
               <strong>{message.subject}</strong>
-              <p>{message.body}</p>
+              {/* The mail's own HTML, in a frame that may do nothing but draw it: no scripts, no
+                  same-origin access, no navigation. The body it renders is escaped server-side,
+                  so this is defence in depth rather than the only guard. */}
+              <iframe className="undelivered-body" title={message.subject} sandbox=""
+                      srcDoc={message.html} />
             </div>
           ))}
           {undelivered.length > 0 && (

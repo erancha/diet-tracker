@@ -15,6 +15,7 @@ const UNDELIVERED: UndeliveredMessage = {
   at: "2026-09-01T17:00:00+00:00",
   subject: "תזכורת — רישום ארוחות",
   body: "עדיין לא רשמת ארוחות היום",
+  html: '<div dir="rtl">עדיין לא רשמת ארוחות היום</div>',
 };
 
 async function openMenu() {
@@ -182,7 +183,7 @@ describe("Header", () => {
 
     await userEvent.click(alarm);
     expect(screen.getByText(UNDELIVERED.subject)).toBeInTheDocument();
-    expect(screen.getByText(UNDELIVERED.body)).toBeInTheDocument();
+    expect(screen.getByTitle(UNDELIVERED.subject)).toBeInTheDocument();
     // Says why an email's text is being read here rather than in an inbox.
     expect(screen.getByText("הודעות שנשלחו אליכם ולא הגיעו לדוא״ל:")).toBeInTheDocument();
   });
@@ -228,6 +229,17 @@ describe("Header", () => {
       { name: `סגירת ההודעה ${UNDELIVERED.subject}` }));
 
     expect(onDismissUndelivered).toHaveBeenCalledWith(UNDELIVERED.at);
+  });
+
+  it("shows a refused message as the mail it was, in a frame that may only draw it", async () => {
+    // The bell presents the email itself, so the server's HTML rides into a sandboxed frame
+    // rather than being re-typeset from the plain body.
+    render(<Header {...props} undelivered={[UNDELIVERED]} />);
+
+    await userEvent.click(screen.getByRole("button", { name: "התראות ממתינות" }));
+    const frame = screen.getByTitle(UNDELIVERED.subject) as HTMLIFrameElement;
+    expect(frame.getAttribute("srcdoc")).toBe(UNDELIVERED.html);
+    expect(frame.getAttribute("sandbox")).toBe("");
   });
 
   it("keeps a violation and an undelivered message visually apart", async () => {

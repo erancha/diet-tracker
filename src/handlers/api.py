@@ -18,7 +18,7 @@ from datetime import date, datetime
 
 import boto3
 
-from common import appconfig, chat_history, rules, undelivered, users, weight
+from common import appconfig, chat_history, notify, rules, undelivered, users, weight
 from common.dates import clock_time, days_before, now_iso, today
 from common.derive import derive, excluded_points
 from common.log import get_logger
@@ -199,7 +199,7 @@ def _history(sub):
         "muted": store.get_nudge_state(sub)["muted"],
         # Rides along with muted rather than costing its own request: both answer the header
         # alone, which the app has already loaded this payload to draw.
-        "undelivered": undelivered.messages(_undelivered_table(), sub),
+        "undelivered": _undelivered_messages(sub),
     })
 
 
@@ -433,6 +433,14 @@ def _admin_activity(email):
     listed.sort(key=lambda user: user["days"]["week"] + user["meals"]["week"]
                 + user["chats"]["week"], reverse=True)
     return _response(200, {"users": listed})
+
+
+def _undelivered_messages(sub) -> list:
+    """The caller's refused messages, each carrying the right-to-left HTML its email would have
+    shown. Rendering it here from the stored body, rather than keeping a copy beside it, is what
+    keeps the message the app shows identical to the one SES was handed."""
+    return [{**message, "html": notify.rtl_html(message["body"])}
+            for message in undelivered.messages(_undelivered_table(), sub)]
 
 
 def _dismiss_undelivered(sub, at):

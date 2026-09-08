@@ -245,8 +245,10 @@ button:disabled { cursor: not-allowed; }
 .undelivered-aside.trailing { margin: 0.5rem 0 1rem; }
 .undelivered-head { display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; opacity: 0.7; font-variant-numeric: tabular-nums; }
 .undelivered strong { display: block; margin-top: 0.15rem; }
-/* pre-line for the same reason .alert carries it: the email bodies are written with newlines. */
-.undelivered p { margin: 0.2rem 0 0; white-space: pre-line; }
+/* The frame carries the mail's own direction and type, so it needs no border of its own; the
+   height holds a weekly recap without scrolling and lets a longer one scroll inside the frame. */
+.undelivered-body { display: block; width: 100%; height: 11rem; margin: 0.2rem 0 0; border: 0;
+                    background: #fff; border-radius: 4px; }
 /* The welcome panel is a notice with a heading and a list inside it, so all it adds is the inner
    spacing: both would otherwise carry their default block margins into the box. */
 .welcome h2 { margin: 0 0 0.4rem; font-size: 1.05rem; }

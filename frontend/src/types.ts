@@ -227,6 +227,10 @@ export interface UndeliveredMessage {
   at: string;
   subject: string;
   body: string;
+  // The right-to-left HTML the email carried, rendered by the server from the same body. Shown
+  // as the message itself, so the bell presents the mail that never arrived rather than a
+  // re-typeset copy of it.
+  html: string;
 }
 
 export interface HistoryResponse {

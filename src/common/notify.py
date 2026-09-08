@@ -1,5 +1,6 @@
 """Outbound notification: what the app says in a message, and the channels that carry it — SES
-email (always on) and the optional Telegram Bot API.
+email (always on, carrying every body as right-to-left HTML beside its plain text) and the
+optional Telegram Bot API.
 
 Telegram is called with stdlib urllib so the Lambdas carry no third-party HTTP dependency,
 keeping cold starts minimal. send_plain_email carries admin notices as-is; send_email is the
@@ -8,7 +9,9 @@ per-recipient receipt on success, so both outcomes are answerable from CloudWatc
 telegram_config resolves whether the Telegram channel is active at all, per the bot-token SSM
 parameter."""
 
+import html
 import json
+import re
 import urllib.request
 
 from common.log import get_logger
@@ -29,15 +32,49 @@ def violation_text(violations) -> str:
     return "התראות תזונה:\n" + "\n".join(f"• {v.message}" for v in violations)
 
 
+# A bullet's opening label, up to and including its colon — "דורש תשומת לב:" and its kin. Bounded
+# so a colon deeper in the sentence, or one inside a clock time, cannot swallow the whole line.
+_BULLET_LABEL = re.compile(r"^(• [^:]{1,30}:)(.*)$")
+
+
+def _line_html(line, first) -> str:
+    """One body line as HTML, with the reader's two landmarks in bold: the opening line, which
+    every message this app sends leads with, and the label a recap bullet opens with. Escaping
+    first means a line can only ever contribute text, never markup of its own."""
+    escaped = html.escape(line)
+    if first:
+        return f"<strong>{escaped}</strong>"
+    label = _BULLET_LABEL.match(escaped)
+    if label is None:
+        return escaped
+    return f"<strong>{label.group(1)}</strong>{label.group(2)}"
+
+
+def rtl_html(body) -> str:
+    """One message body as the right-to-left HTML its email carries.
+
+    Every message this app sends is Hebrew. A text-only email leaves direction to the reader's
+    mail client, which guesses per line and strands a trailing colon or a Latin number on the
+    wrong edge; declaring the direction once is what makes a bullet list read as written."""
+    lines = body.split("\n")
+    rendered = "<br>".join(_line_html(line, first=index == 0)
+                           for index, line in enumerate(lines))
+    return (f'<div dir="rtl" style="font-family: Arial, sans-serif; font-size: 15px; '
+            f'line-height: 1.6; white-space: normal">{rendered}</div>')
+
+
 def send_plain_email(ses_client, sender, recipient, subject, body) -> None:
     """Sends one email with the body exactly as given — the variant for admin notices, which
-    carry no user-facing mute footnote."""
+    carry no user-facing mute footnote. The same body rides twice, as text and as the
+    right-to-left HTML most clients show, so a reader whose client refuses HTML loses only the
+    direction."""
     ses_client.send_email(
         Source=sender,
         Destination={"ToAddresses": [recipient]},
         Message={
             "Subject": {"Data": subject, "Charset": "UTF-8"},
-            "Body": {"Text": {"Data": body, "Charset": "UTF-8"}},
+            "Body": {"Text": {"Data": body, "Charset": "UTF-8"},
+                     "Html": {"Data": rtl_html(body), "Charset": "UTF-8"}},
         },
     )
     logger.info("email sent to=%s subject=%s", recipient, subject)

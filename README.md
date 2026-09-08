@@ -33,13 +33,16 @@ closed from the tracker, and the week's trend over recorded history.
 - Reminders go out by email, and by Telegram where a bot token is configured: a last call for a
   day still unclosed, a weekly weigh-in reminder that skips anyone who already weighed in that
   day, an alert when a principle or the carb score stays past its limit several days running, and
-  a weekly summary of averages. Inside the app, a 7-day trend chart shows after each closed day;
+  a weekly summary of averages. Every message is sent as right-to-left HTML beside its plain
+  text, so Hebrew reads as written rather than as the recipient's mail client guesses. Inside the
+  app, a 7-day trend chart shows after each closed day;
   its carb panel plots the part of each day's score that came from flours and sugar beside the
   score itself, and frames the weekday the program's treat meal is aimed at.
   The account menu turns all reminders off and back on. A reminder SES refuses to deliver — the
   address is not one the sending account may write to — is kept and shown behind the header's
   alarm bell instead, dated, until it is dismissed there, so a message addressed to someone still
-  reaches them rather than ending in a log line.
+  reaches them rather than ending in a log line. The bell shows the mail itself: the same HTML the
+  email carried, drawn in a frame that may do nothing but draw it.
 - Questions about the diet's principles are answered inside the app: a chat section sends each
   question to the knowledge base of the diet's source documents, hosted on
   [Summaries.AI](https://github.com/erancha/Summaries.AI-public), and shows the answer with the

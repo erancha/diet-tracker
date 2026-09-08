@@ -6,7 +6,7 @@ import boto3
 import pytest
 from conftest import APP_CONFIG
 
-from common import appconfig, undelivered
+from common import appconfig, notify, undelivered
 from common.dates import days_before, today
 from handlers import api
 
@@ -608,7 +608,17 @@ def test_notifications_route_rejects_a_non_boolean(env):
 def test_history_carries_the_messages_that_never_reached_the_user(env, ddb):
     at = undelivered.record(ddb.Table("undelivered"), "u1", "תזכורת", "עדיין לא רשמת ארוחות היום")
     assert body_of(api.handler(request("GET /days"), None))["undelivered"] == [
-        {"at": at, "subject": "תזכורת", "body": "עדיין לא רשמת ארוחות היום"}]
+        {"at": at, "subject": "תזכורת", "body": "עדיין לא רשמת ארוחות היום",
+         "html": notify.rtl_html("עדיין לא רשמת ארוחות היום")}]
+
+
+def test_a_refused_message_carries_the_html_its_email_would_have_shown(env, ddb):
+    # The app shows the mail itself, so the HTML is rendered from the stored body on every read
+    # rather than kept beside it, where the two could drift apart.
+    undelivered.record(ddb.Table("undelivered"), "u1", "נושא", "שורה\nשורה שנייה")
+    message = body_of(api.handler(request("GET /days"), None))["undelivered"][0]
+    assert 'dir="rtl"' in message["html"]
+    assert "<strong>שורה</strong><br>שורה שנייה" in message["html"]
 
 
 def test_history_carries_no_undelivered_messages_for_a_user_holding_none(env):

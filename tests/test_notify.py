@@ -58,6 +58,47 @@ def test_send_plain_email_sends_the_body_verbatim():
     assert captured["Message"]["Body"]["Text"]["Data"] == "גוף ההודעה"
 
 
+def test_every_email_carries_a_right_to_left_html_body_beside_its_text():
+    # Hebrew read as a text-only mail leaves direction to the client, which guesses per line and
+    # strands a trailing colon on the wrong edge. Both parts ride, so a client refusing HTML still
+    # gets the message.
+    captured = {}
+
+    class FakeSes:
+        def send_email(self, **kwargs):
+            captured.update(kwargs)
+
+    notify.send_plain_email(FakeSes(), "me@x.com", "you@x.com", "נושא", "שורה\nשורה שנייה")
+    html = captured["Message"]["Body"]["Html"]["Data"]
+    assert 'dir="rtl"' in html
+    assert "<strong>שורה</strong><br>שורה שנייה" in html
+    assert captured["Message"]["Body"]["Text"]["Data"] == "שורה\nשורה שנייה"
+
+
+def test_html_body_sets_the_opening_line_and_each_bullet_label_in_bold():
+    # The two things a reader should catch first: what the week came to, and what each bullet is
+    # about. The plain-text part carries neither mark, so Telegram is unaffected.
+    body = "סיכום שבועי — 5 מהם עם חריגה\n\n• מגמה: שתייה טובה\n• דורש תשומת לב: 4 ימים"
+    html = notify.rtl_html(body)
+    assert "<strong>סיכום שבועי — 5 מהם עם חריגה</strong>" in html
+    assert "<strong>• מגמה:</strong> שתייה טובה" in html
+    assert "<strong>• דורש תשומת לב:</strong> 4 ימים" in html
+
+
+def test_a_bullet_without_a_label_is_left_unbolded():
+    # The label is bounded, so a colon deep in a sentence — or a clock time — cannot bold a line
+    # that was never labelled.
+    html = notify.rtl_html("שורה ראשונה\n• משפט ארוך בלי תווית שמסתיים כאן ואז מופיע 07:20 בתוכו")
+    assert html.count("<strong>") == 1
+
+
+def test_html_body_escapes_the_text_it_renders():
+    # The body carries answering-service prose; a stray angle bracket must draw as itself rather
+    # than open a tag, in the mail and in the app that shows a refused one.
+    assert "&lt;b&gt;" in notify.rtl_html("<b>")
+    assert "<b>" not in notify.rtl_html("<b>")
+
+
 def test_send_telegram_posts_message(monkeypatch):
     captured = {}
 
