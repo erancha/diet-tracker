@@ -173,7 +173,7 @@ export function Chat({ api, sampleQuestions, defaultTranscriptFolded = false }: 
       {replyTo && (
         <div className="reply-chip">
           <span>שאלת המשך</span>
-          <button type="button" className="icon-only" aria-label="ביטול שאלת ההמשך"
+          <button type="button" className="glyph" aria-label="ביטול שאלת ההמשך"
             onClick={() => setReplyTo(null)}><Icon name="close" /></button>
         </div>
       )}
@@ -187,11 +187,11 @@ export function Chat({ api, sampleQuestions, defaultTranscriptFolded = false }: 
             aria-label="שאלה"
           />
           {draft !== "" && (
-            <button type="button" className="icon-only clear-draft" aria-label="ניקוי השאלה"
+            <button type="button" className="glyph clear-draft" aria-label="ניקוי השאלה"
               onClick={() => setDraft("")}><Icon name="close" /></button>
           )}
         </div>
-        <button type="submit" disabled={draft.trim() === ""}>שליחה</button>
+        <button type="submit" className="primary" disabled={draft.trim() === ""}>שליחה</button>
       </form>
     </>
   );
@@ -201,7 +201,7 @@ export function Chat({ api, sampleQuestions, defaultTranscriptFolded = false }: 
       {sampleQuestions.length > 0 && (
         <div className="chat-samples">
           {sampleQuestions.map((sample) => (
-            <button key={sample.label} type="button" className="quiet"
+            <button key={sample.label} type="button" className="secondary compact"
               onClick={() => setDraft(sample.question)}>{sample.label}</button>
           ))}
         </div>
@@ -209,7 +209,7 @@ export function Chat({ api, sampleQuestions, defaultTranscriptFolded = false }: 
       {replyTo === null && pendingQuestion === null && composer}
       {error && <div className="alert">{error}</div>}
       {turns.length > 0 && (
-        <button type="button" className="quiet transcript-toggle"
+        <button type="button" className="disclosure transcript-toggle"
           aria-expanded={!transcriptFolded}
           onClick={() => setTranscriptFolded((folded) => !folded)}>
           {turns.length === 1 ? "צ'אט קודם אחד" : `${turns.length} צ'אטים קודמים`}
@@ -222,14 +222,14 @@ export function Chat({ api, sampleQuestions, defaultTranscriptFolded = false }: 
             <Fragment key={turn.at}>
               <li className="chat-user">
                 <time className="chat-turn-at" dateTime={turn.at}>{instantLabel(turn.at)}</time>
-                <button type="button" className="chat-question"
+                <button type="button" className="disclosure chat-question"
                   ref={(el) => {
                     if (el) questionRefs.current.set(turn.at, el);
                     else questionRefs.current.delete(turn.at);
                   }}
                   aria-expanded={expanded.has(turn.at)}
                   onClick={() => toggle(turn.at)}>{renderQuestion(turn.question)}</button>
-                <button type="button" className="icon-only delete-turn"
+                <button type="button" className="glyph delete-turn"
                   aria-label={`מחיקת השאלה ${turn.question}`}
                   onClick={() => void remove(turn)}><Icon name="remove" /></button>
               </li>
@@ -238,7 +238,7 @@ export function Chat({ api, sampleQuestions, defaultTranscriptFolded = false }: 
                   <p>{turn.answer}</p>
                   {turn.sources.length > 0 && (
                     <>
-                      <button type="button" className="more-toggle"
+                      <button type="button" className="disclosure more-toggle"
                         aria-expanded={sourcesShown.has(turn.at)}
                         onClick={() => toggleSources(turn.at)}>
                         {sourcesShown.has(turn.at) ? "פחות" : "התאמות"}
@@ -261,11 +261,11 @@ export function Chat({ api, sampleQuestions, defaultTranscriptFolded = false }: 
                     </>
                   )}
                   <div className="answer-foot">
-                    <button type="button" className="reply-turn"
+                    <button type="button" className="secondary compact reply-turn"
                       aria-label={`שאלת המשך על ${turn.question}`}
                       aria-pressed={replyTo?.at === turn.at}
                       onClick={() => setReplyTo(turn)}>המשך</button>
-                    <button type="button"
+                    <button type="button" className="secondary compact"
                       aria-label={`סגירת התשובה על ${turn.question}`}
                       onClick={() => collapseFromFoot(turn.at)}>סגירה</button>
                   </div>

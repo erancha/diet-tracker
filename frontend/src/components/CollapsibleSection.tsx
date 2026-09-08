@@ -38,7 +38,7 @@ export function CollapsibleSection(props: SelfManaged | CallerManaged) {
 
   const heading = (
     <Heading>
-      <button type="button" className="section-toggle" aria-expanded={!collapsed}
+      <button type="button" className="disclosure section-toggle" aria-expanded={!collapsed}
               aria-label={label} onClick={toggle}>
         {title}
       </button>

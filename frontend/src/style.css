@@ -32,25 +32,24 @@ header:has(.alarm) h1 { font-size: min(2.1rem, 7.5vw); }
 /* The account box sits on the page's left edge (flex end in this RTL layout) and holds a single
    row of account buttons; align-items flex-end keeps that row on the box's left edge rather than
    right-aligned per RTL default. It is auxiliary chrome, so it reads smaller than the
-   tracker controls and its buttons drop the global button's wide padding. */
+   tracker controls — and the controls inside it inherit that size rather than restating it. */
 header > span { display: flex; flex-direction: column; align-items: flex-end; font-size: 0.8rem; }
-header span button { font-size: inherit; padding: 0.3rem 0.9rem; }
 /* Sign-out and the alarm share one row so the alarm reads as part of the account box rather than
    as a stray control below it. */
 header .account-actions { display: flex; align-items: center; gap: 0.4rem; }
 /* The account box anchors the menu that drops out of it, so the menu can leave the flow rather
    than push the page down for as long as it is open. */
 header .account { position: relative; }
-/* The trigger is chrome reached by thumb, not a compact row control, so unlike its icon-only
+/* The trigger is chrome reached by thumb, not a compact row control, so unlike its glyph-role
    siblings it holds the 44px minimum touch target: a 22px glyph plus enough padding, both in
    absolute units so the account box's reduced font size cannot shrink them. */
-header button.account-trigger { padding: 0.7rem; }
+header .account-trigger { padding: 0.7rem; }
 header .account-trigger .icon { width: 1.375rem; height: 1.375rem; }
 /* While its menu is open the trigger holds a pressed state, in the accent the app acts in and on
    a firmer wash than hover paints, so the control reads as the held-open source of the card
    hanging off it rather than as one the pointer happens to be over. Outscoring the hover rule is
    what keeps it from lightening back to the hover grey under the pointer that opened it. */
-header button.account-trigger[aria-expanded="true"]:not(:disabled) {
+header .account-trigger[aria-expanded="true"]:not(:disabled) {
   --btn-bg: #dfe4e6; --btn-fg: var(--accent);
 }
 /* A floating card rather than a stack of buttons: the menu carries the surface — border, radius,
@@ -73,21 +72,22 @@ header .account-email {
   padding: 0.3rem calc(var(--menu-text-inset) + var(--menu-pad)) 0.45rem;
   font-size: 0.85em; color: #8a8a84; border-block-end: 1px solid #e0e0da;
 }
-/* Items read as a list: no box of their own until a pointer reaches one, and text on the reading
-   edge rather than centred the way a standalone button is. */
-header .account-menu button, header .account-menu a {
-  --btn-bg: transparent; --btn-fg: inherit; --btn-border: transparent;
+/* Menu items are a pattern of the card holding them rather than one of the control roles: the
+   card carries the surface, so they read as a list — no box of their own until a pointer reaches
+   one, and text on the reading edge rather than centred the way a standalone button is. */
+.menu-item {
   display: flex; align-items: center; gap: 0.5rem;
   font-size: 0.9rem;
   text-align: start; padding: 0.45rem var(--menu-text-inset); border-radius: 6px; white-space: nowrap;
 }
-header .account-menu button:hover:not(:disabled) { --btn-bg: #eceff1; filter: none; }
+.menu-item:hover:not(:disabled) { --btn-bg: #eceff1; }
 /* The invite is a link so it can open WhatsApp in its own tab, but in the menu it reads as an
    item like its button neighbours, not as body-copy hyperlink text. */
-header .account-menu a { color: inherit; text-decoration: none; }
-header .account-menu a:hover { background: #eceff1; }
-/* The alarm is a warning indicator, not an action, so it wears the alert palette instead of the
-   accent button green. */
+header .account-menu a.menu-item { color: inherit; text-decoration: none; }
+header .account-menu a.menu-item:hover { background: #eceff1; }
+/* The alarm folds the notice list open, but it is first a count that has to read as a warning, so
+   it keeps the boxed secondary treatment and swaps in the alert palette rather than taking the
+   frameless disclosure look. Its aria-expanded carries the fold that its face does not. */
 header .alarm { --btn-bg: #ffebee; --btn-fg: var(--danger); --btn-border: #f3c9cc;
                 display: inline-flex; align-items: center; gap: 0.25rem; }
 /* The app title, on both the landing and the signed-in chrome. It reads above every section heading
@@ -125,7 +125,7 @@ h1 .app-icon { width: 1em; height: 1em; vertical-align: middle; margin-inline-en
 .landing-condensed { font-size: calc(1em + 2px); }
 /* In both views the toggle sits between the content and the sign-in button, a rem off each, so
    the screen's single action doesn't read as part of the toggle's line. */
-.landing .more-toggle { margin-block: 1rem; font-size: calc(var(--more-toggle-font-size) + 1px); }
+.landing .more-toggle { margin-block: 1rem; font-size: 0.9rem; }
 /* On a phone the bullets wrap several times, so the marker column is trimmed well below the browser
    default to widen the text measure. From tablet width up the line has room either way, and the
    default indent returns. */
@@ -168,39 +168,63 @@ label { display: block; padding: 0.35rem 0; cursor: pointer; }
 /* Radio groups run to eight options and the meal's flag checkboxes to six, so their rows close to
    half the standalone label rhythm to keep the whole form near one phone screen. */
 fieldset > label, .meal-flags label { padding: 0.175rem 0; }
-/* Filled accent marks the action that writes; the variants exist so a control standing beside one
-   cannot be mistaken for it. A variant sets only the palette triple, which the shared interaction
-   states below read — so hover, focus and disabled are painted once for every variant there is. */
+/* Every control names one of four roles — primary, secondary, disclosure, glyph — and a role sets
+   only the palette triple plus its own geometry. The shared interaction states below read those
+   variables, so hover, focus and disabled are painted once for every role there is.
+
+   The element itself carries no role: a button naming none renders as transparent inherited text,
+   so a missing class shows rather than silently painting a filled primary. Type is inherited too,
+   which is what lets one role serve a 1.6rem section heading and a 0.85rem citations expander
+   without a size rule for either — the block a control sits in sizes it. */
 button {
-  --btn-bg: var(--accent);
-  --btn-fg: #fff;
-  --btn-border: var(--accent);
+  --btn-bg: transparent; --btn-fg: inherit; --btn-border: transparent;
   background: var(--btn-bg); color: var(--btn-fg); border: 1px solid var(--btn-border);
-  border-radius: 8px; padding: 0.6rem 2.5rem; font-size: 1rem; cursor: pointer;
+  border-radius: 8px; padding: 0; font: inherit; cursor: pointer;
 }
+/* Filled accent marks the action that writes. */
+.primary { --btn-bg: var(--accent); --btn-fg: #fff; --btn-border: var(--accent); }
 /* Outlined: a control that leaves or reveals rather than commits — cancelling a correction,
    opening the close-day panel, signing out. Cancel shares a form's action row with the filled
    submit, and the two must not read alike. */
-button.quiet { --btn-bg: #fff; --btn-fg: var(--accent); --btn-border: var(--accent-border); }
-/* The escape hatch once it has something to destroy, since one button serves both that and the
+.secondary { --btn-bg: #fff; --btn-fg: var(--accent); --btn-border: var(--accent-border); }
+/* The escape hatch once it has something to destroy, since one control serves both that and the
    exit that costs nothing. */
-button.quiet.destructive { --btn-fg: var(--danger); --btn-border: #e6b3b3; }
+.secondary.destructive { --btn-fg: var(--danger); --btn-border: #e6b3b3; }
+/* The two boxed roles share one box, so a filled and an outlined control standing in the same row
+   differ in colour alone. */
+:is(.primary, .secondary) { padding: 0.6rem 2.5rem; }
+/* Folds content open or closed: a triangle leading text that keeps the type of whatever it sits
+   in. It points along the reading direction when collapsed — its right side in RTL, where a
+   native details marker sits — so direction alone says which way the fold stands. */
+.disclosure::before { content: "▾ "; font-size: calc(0.9em + 1px); }
+.disclosure[aria-expanded="false"]::before { content: "◂ "; }
+/* A marker needs a leading position to be one. Where the fold is seated inside running text —
+   the word יעד in the weight summary, which a bound Hebrew prefix (ה, ב, מעל ה) joins into one
+   word — a leading triangle would split that word, so the affordance goes under the text. This
+   is the only place an underline does not mean a link. */
+.disclosure.in-text::before { content: none; }
+.disclosure.in-text { text-decoration: underline; text-underline-offset: 0.2em; }
 /* Glyph-only row and chrome controls: no box until a pointer or the keyboard reaches them, so a
    list of meals reads as data rather than as a column of buttons. */
-button.icon-only {
-  --btn-bg: transparent; --btn-fg: inherit; --btn-border: transparent;
-  display: inline-flex; padding: 0.3rem; border-radius: 50%;
-}
-/* Darkening whatever the variant painted keeps one hover rule for every filled or outlined
-   button. The transparent variant has no fill to darken and takes a wash instead. */
-button:hover:not(:disabled) { filter: brightness(0.93); }
-button.icon-only:hover:not(:disabled) { --btn-bg: #eceff1; filter: none; }
+.glyph { display: inline-flex; padding: 0.35rem; border-radius: 50%; }
+/* Rows too narrow for the full box trade padding for their labels — the chat samples, the label
+   density setting, an answer's foot. The inline figure is what lets the ten sample questions hold
+   two rows on a phone; widen it and they take three. Padding alone: type is the block's to set. */
+.compact { padding: 0.25rem 0.6rem; }
+.glyph.compact { padding: 0.15rem; }
+/* Darkening whatever the role painted keeps one hover rule for both boxed roles. The frameless
+   roles have no fill to darken: a glyph takes a wash, and a disclosure — transparent under dark
+   text, where a wash would not show — recolours to the accent. */
+:is(.primary, .secondary):hover:not(:disabled) { filter: brightness(0.93); }
+.glyph:hover:not(:disabled) { --btn-bg: #eceff1; }
+.disclosure:hover:not(:disabled) { --btn-fg: var(--accent); }
 button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-/* The meal submit renders disabled whenever the picked time is still ahead of the clock, so the
-   block shows on the control itself, alongside the notice that gives its reason. */
-button:disabled { --btn-bg: #e4e4e4; --btn-fg: #9a9a9a; --btn-border: #d8d8d8; cursor: not-allowed; }
+/* Only the boxed roles are ever disabled — a submit whose form is incomplete, the meal submit
+   while the picked time is still ahead of the clock — and the grey replaces their fill. */
+:is(.primary, .secondary):disabled { --btn-bg: #e4e4e4; --btn-fg: #9a9a9a; --btn-border: #d8d8d8; }
+button:disabled { cursor: not-allowed; }
 /* The negative vertical-align seats a glyph on the text baseline where one sits inline, as in the
-   history score cell; inside the flex icon buttons it has no effect. */
+   history score cell; inside the flex glyph controls it has no effect. */
 .icon { width: 1.1em; height: 1.1em; vertical-align: -0.18em; }
 /* pre-line keeps newlines in alert messages (e.g. the sign-in rejection's contact note). */
 .alert { background: #ffebee; color: var(--danger); border-radius: 8px; padding: 0.6rem 1rem; margin-bottom: 0.5rem; white-space: pre-line; }
@@ -336,8 +360,8 @@ td.heavy-day, .tracker-dashboard .heavy-day .score, .meal-list .heavy-meal { col
    Out of flow it contributes no width, so the cell reserves its footprint as padding instead: the
    glyph, the button's padding either side, its inset off the cell edge, and a gap off the score. */
 td.has-delete { position: relative; padding-inline-end: calc(1.1em + 3 * var(--delete-pad) + 0.3rem); }
-button.delete-day { position: absolute; inset-inline-end: var(--delete-pad); top: 50%;
-                    transform: translateY(-50%); padding: var(--delete-pad); }
+.delete-day { position: absolute; inset-inline-end: var(--delete-pad); top: 50%;
+              transform: translateY(-50%); padding: var(--delete-pad); }
 /* The score leads a cell that also carries the open-day glyph and, on a deletable row, the bin.
    Sized for the widest score the carb scale reaches, so a one-digit day does not slide those along
    and leave the column's glyphs ragged down the table. */
@@ -386,31 +410,15 @@ td.view-day { cursor: pointer; }
    scale with the viewport instead of wrapping — the slope the fieldset legends use, keeping a few
    percent of clearance down to 320px-wide screens once the body and card paddings are taken out. */
 .day-tracker .section-header h2, .day-tracker .section-header h3 { font-size: min(1.6rem, 7vw - 6px); }
-/* Section header doubles as the collapse toggle. The disclosure triangle leads the title —
-   its right side in RTL, where native <details> puts it — so an expandable heading is told
-   apart from a plain one at a glance; collapsed it points along the reading direction. The
-   shared brightness hover is invisible on a transparent background over dark text, so hover
-   recolors the title to the accent instead. */
-.section-toggle { --btn-bg: transparent; --btn-fg: inherit; --btn-border: transparent;
-                  font: inherit; font-weight: 600; padding: 0; cursor: pointer; }
-.section-toggle::before, .transcript-toggle::before { content: "▾ "; font-size: calc(0.9em + 1px); }
-:is(.section-toggle, .transcript-toggle)[aria-expanded="false"]::before { content: "◂ "; }
-/* Collapsed, the underline joins the triangle in saying the heading itself is pressable — with
-   its content folded away, the heading otherwise reads like a plain title. The triangle stays
-   clear of the line, as does the weight header's unit — a measure's unit is not a word to press;
-   the figure alone carries the affordance. An inline-block boundary stops the underline's spread,
-   and pre keeps each fragment's space beside the glyph from collapsing at the block's edge. */
-.section-toggle[aria-expanded="false"] { text-decoration: underline; text-underline-offset: 0.15em; }
-.section-toggle[aria-expanded="false"]::before,
-.section-toggle[aria-expanded="false"] .weight-unit { display: inline-block; white-space: pre; }
-.section-toggle:hover:not(:disabled) { --btn-fg: var(--accent); filter: none; }
-/* Two quieter openers below the section headings: a folded section's at-a-glance line, and the
-   chat transcript's previous-chats count. Frameless so they read as previews rather than as
-   more controls; the transcript one wears the sections' disclosure triangle, being a fold
-   toggle itself. */
-button.section-summary, button.transcript-toggle {
-  --btn-bg: transparent; --btn-border: transparent; font-size: 0.9rem; padding: 0 0 0.4rem;
-}
+/* A section header doubles as its fold's disclosure, taking its size from the heading it sits in.
+   Semibold rather than the heading's full bold, so a pressable title reads a shade lighter than
+   one that is only a title. */
+:is(h2, h3) > .section-toggle { font-weight: 600; }
+/* Three quieter openers that preview rather than head: a folded section's at-a-glance line, the
+   chat transcript's previous-chats count, and an answer's citations expander. Sized together and
+   under the text around them, since no block of their own sets their type. */
+:is(.section-summary, .transcript-toggle, .more-toggle) { font-size: 0.85rem; }
+:is(.section-summary, .transcript-toggle) { padding-bottom: 0.4rem; }
 /* An overdue meal blinks the folded add-meal toggle instead of opening the inputs uninvited:
    once a second at first, pressing to twice a second when ten seconds go unanswered, then
    settling into a slow standing reminder. The tracker's nudge phase picks the beat. */
@@ -448,7 +456,7 @@ button.section-summary, button.transcript-toggle {
    once one more meal would cross the meals bound: the same red the history paints after the
    fact, shown while the choice can still go differently. */
 .meal-add-warn { color: var(--danger); font-weight: 700; }
-/* Open, the form gains its own frame in the quiet buttons' accent tint, so the editing surface
+/* Open, the form gains its own frame in the secondary controls' accent tint, so the editing surface
    reads as one bounded unit against the tracker card and its hairline fieldsets. The box takes
    over the heading's 1rem gap above, and the heading sits on the frame's padding instead. */
 .meal-form-open { position: relative; border: 1px solid var(--accent-border); border-radius: 8px;
@@ -462,8 +470,8 @@ button.section-summary, button.transcript-toggle {
 .form-actions:empty, .meal-list:empty { display: none; }
 /* Ends the tracker card on a line of its own, pushed to the row's far end so it reads as a
    quiet setting under the day's contents rather than as one of their controls. */
-.label-density { display: flex; justify-content: flex-end; margin-top: 0.75rem; }
-.label-density button { padding: 0.15rem 0.6rem; font-size: 0.8rem; white-space: nowrap; }
+.label-density { display: flex; justify-content: flex-end; margin-top: 0.75rem; font-size: 0.8rem; }
+.label-density button { white-space: nowrap; }
 /* A carb source is its grade group plus the helping that qualifies it, so the two travel as one
    block: the fieldset gives up its own bottom margin and the block carries the gap instead,
    leaving the helping box tucked under the grade it belongs to. */
@@ -477,7 +485,7 @@ button.section-summary, button.transcript-toggle {
 .addition-amount { font-size: 0.85em; padding: 0 0.2rem; }
 /* The meal-time picker takes its own line so the checkbox row above keeps its wrap layout. */
 .meal-time { display: block; margin-top: 0.75rem; }
-/* The row a form closes with: the filled control that commits beside the quiet ones that leave,
+/* The row a form closes with: the primary control that commits beside the secondary ones that leave,
    reveal or discard. The top margin holds it off the inputs above, which would otherwise read as
    attached to the buttons. */
 .form-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 0.75rem; }
@@ -535,8 +543,8 @@ button.section-summary, button.transcript-toggle {
 .meal-list .meal-actions { display: flex; align-items: center; }
 /* A tap target comfortable on a phone stands taller than the row's text. The negative block margin
    keeps it out of the line box, leaving the row's height set by that text — which is what the
-   top-pinned time above measures itself against. */
-.meal-list .meal-actions button { padding: 0.35rem; margin-block: -0.35rem; }
+   top-pinned time above measures itself against. The weight list's rows are built the same way. */
+:is(.meal-list .meal-actions, .weight-entries) .glyph { margin-block: -0.35rem; }
 /* The closing panel opens between the action row and the meal list; its own lead keeps the framed
    fieldset from sitting tight against the buttons while staying anchored to the opener among them. */
 .close-day { margin-top: 1rem; }
@@ -550,22 +558,13 @@ button.section-summary, button.transcript-toggle {
    block at half that. */
 .weight-today { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin: 0.5rem 0; }
 .weight-today button { padding: 0.5rem 1.5rem; }
-/* The word יעד inside the summary line is the control that opens the target for editing, so the
-   line reads as a sentence and the section spends no row on a value revised a few times a year.
-   Underlined rather than boxed: a button's padding here would spend the width this arrangement is
-   meant to save. Follows the section toggle in recolouring on hover, since a transparent
-   background has no fill for the shared brightness hover to darken. */
-.weight-target-toggle { --btn-bg: transparent; --btn-fg: inherit; --btn-border: transparent;
-                        font: inherit; padding: 0; cursor: pointer;
-                        text-decoration: underline; text-underline-offset: 0.2em; }
-.weight-target-toggle:hover:not(:disabled) { --btn-fg: var(--accent); filter: none; }
 /* A target nobody has set yet is an absence, not a figure, so it reads as chrome rather than
    taking the accent the value carries. */
 .weight-target-unset { color: #5f5f5f; }
 /* Commits the target from inside the summary line. A worded button would push the line onto a
    second row on a phone, which is the whole thing this arrangement avoids, so the confirmation is
    a glyph seated on the text baseline. */
-.weight-target-commit { --btn-fg: var(--accent); padding: 0.15rem; margin-block: -0.15rem; }
+.weight-target-commit { --btn-fg: var(--accent); margin-block: -0.15rem; }
 .weight-today input { width: 6rem; padding: 0.5rem; font-size: 1rem;
                       border: 1px solid #ccc; border-radius: 8px; }
 /* The target's input sits in running text rather than in a control row, so it is sized to the
@@ -617,7 +616,6 @@ button.section-summary, button.transcript-toggle {
 .weight-entries .weight-entry-at { opacity: 0.7; font-variant-numeric: tabular-nums; }
 .weight-entries .weight-entry-kg { font-weight: 600; }
 .weight-entries .far-over { font-weight: 800; }
-.weight-entries button { padding: 0.35rem; margin-block: -0.35rem; }
 
 /* The knowledge-base chat: composer first, then one question bubble per chat, its answer and
    muted source table unfolding beneath. As with .trends h2, the heading's own margin provides
@@ -633,10 +631,7 @@ button.section-summary, button.transcript-toggle {
 .chat-turn-at { flex-basis: 100%; font-size: 0.75rem; opacity: 0.7; font-variant-numeric: tabular-nums; }
 /* The question doubles as its answer's toggle: a text-styled button, so the bubble keeps reading
    as conversation while the whole row stays keyboard-reachable. */
-.chat-question {
-  --btn-bg: transparent; --btn-fg: inherit; --btn-border: transparent;
-  flex: 1; padding: 0; border-radius: 0; font-size: inherit; text-align: start; white-space: pre-wrap;
-}
+.chat-question { flex: 1; border-radius: 0; text-align: start; white-space: pre-wrap; }
 /* A followed-up chat's question carries its whole chain, so a closed row clamps to a scannable
    height; opening the answer reveals the question in full. */
 .chat-question[aria-expanded="false"] {
@@ -644,23 +639,15 @@ button.section-summary, button.transcript-toggle {
   line-clamp: 3; overflow: hidden;
 }
 .chat-assistant { align-self: flex-end; background: #fff; border: 1px solid #e0e0da; }
-/* The shared more/less expander (chat citations, landing condensed view): underlined link text
-   rather than a full control. The underline carries the clickability — accent green alone also
-   colors non-interactive text. */
-.more-toggle {
-  --btn-bg: transparent; --btn-fg: var(--accent); --btn-border: transparent;
-  --more-toggle-font-size: 0.8rem;
-  display: block; padding: 0; margin-top: 0.35rem; border-radius: 0;
-  font-size: var(--more-toggle-font-size);
-  text-decoration: underline;
-}
+/* The shared more/less expander (chat citations, landing condensed view). A line of its own under
+   the block it expands is the only thing the disclosure role does not already give it. */
+.more-toggle { display: block; margin-top: 0.35rem; }
 /* The citations table sizes to its two short columns: the global table min-width serves the wide
    history grid and would stretch this past its answer bubble, so it is dropped here. */
 .chat-sources { margin-top: 0.35rem; min-width: 0; opacity: 0.7; }
 .chat-sources :is(th, td) { --cell-font-size: 0.8rem; padding: 0.2rem 0.5rem; }
 .chat-pending { opacity: 0.7; }
-.chat-samples { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.5rem; }
-.chat-samples button { font-size: 0.85rem; padding: 0.25rem 0.6rem; }
+.chat-samples { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.5rem; font-size: 0.85rem; }
 .chat form { display: flex; gap: 0.5rem; margin-bottom: 0.875rem; }
 .chat .composer { flex: 1; position: relative; display: flex; }
 /* End padding reserves the strip the clear icon overlays, so long questions slide under it
@@ -676,13 +663,9 @@ button.section-summary, button.transcript-toggle {
 .chat .reply-chip span { flex: 1; }
 /* The answer's foot pairs the reply control with a closing one, so a long chat folds from
    where reading ends. Both worded rather than glyph-based (a reply arrow reads as escaping the
-   window, not as continuing the exchange) and outlined like the quiet variant, to read as
-   optional next steps, not the bubble's primary content. */
-.chat .answer-foot { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
-.chat .answer-foot button {
-  --btn-bg: transparent; --btn-fg: var(--accent); --btn-border: #b6d0b8;
-  padding: 0.25rem 0.8rem; font-size: 0.85rem;
-}
+   window, not as continuing the exchange) and outlined, to read as optional next steps rather
+   than the bubble's primary content. The row sets their type; they inherit it. */
+.chat .answer-foot { display: flex; gap: 0.5rem; margin-top: 0.5rem; font-size: 0.85rem; }
 /* The pressed reply control keeps the question bubble's tint, tying the relocated composer below
    back to the control that summoned it. */
 .chat .reply-turn[aria-pressed="true"] { --btn-bg: #e8f0e9; --btn-border: currentColor; }

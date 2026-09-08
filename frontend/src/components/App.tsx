@@ -294,8 +294,8 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, onSignOu
                             // the graphs speak for themselves and both withdraw.
                             summary={trendsFold.collapsed && (
                               <>
-                                <button type="button" className="quiet section-summary"
-                                        onClick={trendsFold.toggle}>
+                                <button type="button" className="disclosure section-summary"
+                                        aria-expanded={false} onClick={trendsFold.toggle}>
                                   גרפי מגמה 📈 ונתוני הימים האחרונים 📋
                                 </button>
                                 <TrendChart questionnaire={questionnaire} days={data.days}

@@ -19,7 +19,7 @@ export function DayView({ questionnaire, day, onClose }: {
     <section className="day-view">
       <header>
         <h3>יומן {weekdayDdmmLabel(day.date)}</h3>
-        <button type="button" className="icon-only" aria-label="סגירת התצוגה" onClick={onClose}>
+        <button type="button" className="glyph" aria-label="סגירת התצוגה" onClick={onClose}>
           <Icon name="close" />
         </button>
       </header>

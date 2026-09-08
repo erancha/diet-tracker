@@ -33,7 +33,7 @@ export function WeightEntries({ entries, target, onDelete }: {
               {kgLabel(entry.kg)}
             </span> ק״ג
           </span>
-          <button type="button" className="icon-only"
+          <button type="button" className="glyph"
                   aria-label={`מחיקת השקילה של ${entry.date}`}
                   onClick={() => { if (window.confirm(deleteWeightPrompt(entry))) onDelete(entry.date); }}>
             <Icon name="remove" />

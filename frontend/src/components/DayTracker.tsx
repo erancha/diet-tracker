@@ -348,7 +348,7 @@ export function DayTracker({ questionnaire, day, isToday = true, closed = false,
         <>
           <div className="form-actions">
             <button type="button"
-                    className={"quiet reopen-toggle" + (addMealWarns ? " meal-add-warn" : "")}
+                    className={"secondary reopen-toggle" + (addMealWarns ? " meal-add-warn" : "")}
                     onClick={() => {
               if (!window.confirm(REOPEN_PROMPT)) return;
               // Pre-opened here: the same instance stays mounted through the deletion's round
@@ -383,7 +383,7 @@ export function DayTracker({ questionnaire, day, isToday = true, closed = false,
         {/* Sits in the frame's far corner via the style sheet rather than in the heading row:
             an aside there would restructure the header between open and folded, recreating the
             toggle mid-interaction and dropping keyboard focus with it. */}
-        <button type="button" className="icon-only meal-form-close" aria-label="סגירת הטופס"
+        <button type="button" className="glyph meal-form-close" aria-label="סגירת הטופס"
                 onClick={toggleForm}>
           <Icon name="close" />
         </button>
@@ -409,7 +409,7 @@ export function DayTracker({ questionnaire, day, isToday = true, closed = false,
             admits one. An open group outlives a repick only through the remove control here. */}
         {(offersSecondSource || secondSourceOpen) && (
           <div className="form-actions">
-            <button type="button" className="quiet"
+            <button type="button" className="secondary"
                     onClick={() => (secondSourceOpen ? clearSecondSource() : setSecondSourceOpen(true))}>
               {secondSourceOpen ? SECOND_SOURCE_REMOVE : SECOND_SOURCE_ADD}
             </button>
@@ -463,7 +463,7 @@ export function DayTracker({ questionnaire, day, isToday = true, closed = false,
       {mealTimeIsFuture && <p className="notice">לא ניתן לרשום ארוחה בשעה עתידית</p>}
       <div className="form-actions">
         {carbsChoiceId !== undefined && formHoldsUnsavedMeal && (
-          <button type="button" disabled={mealTimeIsFuture} onClick={submitMeal}>
+          <button type="button" className="primary" disabled={mealTimeIsFuture} onClick={submitMeal}>
             שמירת ארוחה
           </button>
         )}
@@ -471,7 +471,7 @@ export function DayTracker({ questionnaire, day, isToday = true, closed = false,
             alike: a plain close while the form holds nothing, a destructive discard once it
             diverges. The corner icon above is the same action in icon form. */}
         {!formCollapsed && (
-          <button type="button" className={formHoldsUnsavedMeal ? "quiet destructive" : "quiet"}
+          <button type="button" className={formHoldsUnsavedMeal ? "secondary destructive" : "secondary"}
                   onClick={discardForm}>
             {formHoldsUnsavedMeal ? "ביטול שינויים"
               : editing !== undefined ? "יציאה מעריכה" : "סגירת הטופס"}
@@ -483,7 +483,7 @@ export function DayTracker({ questionnaire, day, isToday = true, closed = false,
             holds the button, with the notice below saying why. Once the panel is open the button
             leaves: the flow runs forward to the confirmation, not back through a toggle. */}
         {closable && !closing && (
-          <button type="button" className="quiet"
+          <button type="button" className="secondary"
                   disabled={formHoldsUnsavedMeal && !mealSaveable}
                   onClick={() => {
                     if (formHoldsUnsavedMeal) submitMeal();
@@ -508,7 +508,7 @@ export function DayTracker({ questionnaire, day, isToday = true, closed = false,
           {/* The opening button cannot cover a meal whose composing began after this panel was
               already open, so the confirm holds the same line — and it also waits out a saved
               meal's round trip, or the figures below would close without it. */}
-          <button type="button"
+          <button type="button" className="primary"
                   disabled={drinkingChoiceId === undefined || formHoldsUnsavedMeal || savingMeal}
                   onClick={() => onCloseDay({ ...derived,
                     drinking: drinkingQuestion.choices.find((c) => c.id === drinkingChoiceId)!.value })}>
@@ -522,7 +522,7 @@ export function DayTracker({ questionnaire, day, isToday = true, closed = false,
           day's read-only rows included — sitting outside either branch. It closes the card as a
           quiet setting rather than leading it as if it were the day's first control. */}
       <div className="label-density">
-        <button type="button" className="quiet" onClick={() => setExpandLabels(!expandLabels)}>
+        <button type="button" className="secondary compact" onClick={() => setExpandLabels(!expandLabels)}>
           {expandLabels ? COLLAPSE_LABELS : EXPAND_LABELS}
         </button>
       </div>

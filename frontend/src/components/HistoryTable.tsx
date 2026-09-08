@@ -30,7 +30,7 @@ interface Props {
 // activation must stop at the button instead of also opening the day it deletes.
 function DeleteDayButton({ date, onDelete }: { date: string; onDelete: (date: string) => void }) {
   return (
-    <button type="button" className="icon-only delete-day" aria-label={`מחיקת הרשומה של ${date}`}
+    <button type="button" className="glyph delete-day" aria-label={`מחיקת הרשומה של ${date}`}
       onKeyDown={(e) => e.stopPropagation()}
       onClick={(e) => {
         e.stopPropagation();

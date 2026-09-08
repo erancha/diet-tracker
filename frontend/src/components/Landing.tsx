@@ -25,10 +25,11 @@ const CARB_GRADES_PATH = "carb-grades.html";
 export function Landing({ onSignIn }: { onSignIn: () => void }) {
   const [expanded, setExpanded] = useState(false);
   const signInButton = (
-    <button type="button" onClick={onSignIn}>התחברות עם Google</button>
+    <button type="button" className="primary" onClick={onSignIn}>התחברות עם Google</button>
   );
   const toggleButton = (
-    <button type="button" className="more-toggle" onClick={() => setExpanded(!expanded)}>
+    <button type="button" className="disclosure more-toggle" aria-expanded={expanded}
+            onClick={() => setExpanded(!expanded)}>
       {expanded ? "פחות" : "יותר"}
     </button>
   );

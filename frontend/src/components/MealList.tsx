@@ -79,14 +79,14 @@ export function MealList({ questionnaire, meals, expandLabels, onEdit, onDelete,
             {/* Grouped into one cell so the pencil and bin travel together as the row's controls. */}
             <span className="meal-actions">
               {onEdit && (
-                <button type="button" className="icon-only"
+                <button type="button" className="glyph"
                         aria-label={`עריכת ארוחה ${clockTimeOf(meal.at)}`}
                         onClick={() => onEdit(meal)}>
                   <Icon name="edit" />
                 </button>
               )}
               {onDelete && (
-                <button type="button" className="icon-only"
+                <button type="button" className="glyph"
                         aria-label={`מחיקת ארוחה ${clockTimeOf(meal.at)}`}
                         disabled={meal.id === deletingId}
                         onClick={() => { if (window.confirm("למחוק את הארוחה?")) onDelete(meal.id); }}>

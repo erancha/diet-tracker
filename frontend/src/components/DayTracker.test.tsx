@@ -880,7 +880,7 @@ describe("DayTracker", () => {
     openMealForm();
     // The corner icon carries the same name, so the text button is told apart by its styling.
     const cancel = screen.getAllByRole("button", { name: "סגירת הטופס" })
-      .find((b) => !b.classList.contains("icon-only"))!;
+      .find((b) => !b.classList.contains("glyph"))!;
     fireEvent.click(cancel);
 
     expect(confirmSpy).not.toHaveBeenCalled();
@@ -1221,14 +1221,14 @@ describe("DayTracker", () => {
       .toHaveTextContent("דרגה 4 · 🍪 · 🍷 · 🥜 · 🥑 · 17");
   });
 
-  it("marks each meal's row controls with the compact icon-only style", () => {
+  it("marks each meal's row controls with the glyph role", () => {
     render(<DayTracker maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={trackedDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     for (const button of screen.getAllByRole("button", { name: /מחיקת ארוחה|עריכת ארוחה/ })) {
-      expect(button).toHaveClass("icon-only");
+      expect(button).toHaveClass("glyph");
     }
   });
 

@@ -73,12 +73,13 @@ export function Header({ email, muted, isAdmin, onSignOut, onSetMuted, onFoldAll
         <span className="account" ref={account}>
           <span className="account-actions">
             {noticeCount > 0 && (
-              <button type="button" className="alarm" aria-label="התראות ממתינות"
+              <button type="button" className="secondary compact alarm" aria-label="התראות ממתינות"
+                      aria-expanded={alarmOpen}
                       onClick={() => setAlarmOpen((open) => !open)}>
                 <Icon name="alarm" /> {noticeCount}
               </button>
             )}
-            <button type="button" className="icon-only account-trigger" aria-haspopup="menu"
+            <button type="button" className="glyph account-trigger" aria-haspopup="menu"
                     aria-expanded={menuOpen} aria-label="תפריט חשבון"
                     onClick={() => setMenuOpen((open) => !open)}>
               <Icon name={menuOpen ? "close" : "menu"} />
@@ -88,19 +89,20 @@ export function Header({ email, muted, isAdmin, onSignOut, onSetMuted, onFoldAll
             <span className="account-menu">
               <span className="account-email">{email}</span>
               <span role="menu">
-                <button type="button" role="menuitem" onClick={choose(() => onSetMuted(!muted))}>
+                <button type="button" role="menuitem" className="menu-item"
+                        onClick={choose(() => onSetMuted(!muted))}>
                   <Icon name={muted ? "alarm" : "alarmOff"} />
                   {muted ? "חידוש התראות" : "ביטול התראות"}
                 </button>
-                <button type="button" role="menuitem" onClick={choose(onFoldAll)}>
+                <button type="button" role="menuitem" className="menu-item" onClick={choose(onFoldAll)}>
                   <Icon name={nextViewCondensed ? "foldAll" : "unfoldAll"} />
                   {nextViewCondensed ? "תצוגה מצומצמת" : "תצוגה מלאה"}
                 </button>
-                <a role="menuitem" href={whatsAppInviteUrl(isAdmin)} target="_blank"
+                <a role="menuitem" className="menu-item" href={whatsAppInviteUrl(isAdmin)} target="_blank"
                    rel="noreferrer" onClick={() => setMenuOpen(false)}>
                   <Icon name="share" />הזמנת חברים ב-WhatsApp
                 </a>
-                <button type="button" role="menuitem" onClick={choose(onSignOut)}>
+                <button type="button" role="menuitem" className="menu-item" onClick={choose(onSignOut)}>
                   <Icon name="signOut" />התנתקות
                 </button>
               </span>
@@ -120,7 +122,7 @@ export function Header({ email, muted, isAdmin, onSignOut, onSetMuted, onFoldAll
             <div key={message.at} className="notice undelivered">
               <span className="undelivered-head">
                 <time dateTime={message.at}>{instantLabel(message.at)}</time>
-                <button type="button" className="icon-only"
+                <button type="button" className="glyph"
                         aria-label={`סגירת ההודעה ${message.subject}`}
                         onClick={() => onDismissUndelivered(message.at)}>
                   <Icon name="remove" />

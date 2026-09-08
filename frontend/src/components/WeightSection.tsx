@@ -64,12 +64,12 @@ function TargetReading({ summary, limits, onSet }: {
       {summary.latest !== null && <>· </>}
       {summary.gapKg !== null && <><span className="value weight-gap">{kgLabel(summary.gapKg)}</span>{" "}</>}
       {summary.prefix}
-      <button type="button" className="weight-target-toggle" aria-expanded={editing}
+      <button type="button" className="disclosure in-text" aria-expanded={editing}
               aria-label="עריכת יעד" onClick={toggle}>יעד</button>:{" "}
       {editing ? (
         <>
           <KgInput value={draft} limits={limits} label="משקל יעד" onChange={setDraft} />
-          <button type="button" className="icon-only weight-target-commit" aria-label="אישור"
+          <button type="button" className="glyph compact weight-target-commit" aria-label="אישור"
                   disabled={kg === null} onClick={commit}><Icon name="check" /></button>
         </>
       ) : summary.target === null ? (
@@ -90,7 +90,7 @@ function TodayRow({ recorded, limits, onRecord }: {
     <p className="weight-today">
       <span>המשקל היום:</span>
       <KgInput value={draft} limits={limits} label="המשקל היום" onChange={setDraft} />
-      <button type="button" disabled={kg === null} onClick={() => onRecord(kg!)}>
+      <button type="button" className="primary" disabled={kg === null} onClick={() => onRecord(kg!)}>
         {recorded === null ? "שמירה" : "עדכון"}
       </button>
       {recorded !== null && <span className="weight-recorded">נרשם: {kgLabel(recorded)} ק״ג</span>}
@@ -127,13 +127,11 @@ export function WeightSection({ weight, settings, now, defaultExpanded,
   // Nothing weighed yet leaves no value to head the section with, so it falls back to its name.
   const figure = summary.latest === null ? null : kgLabel(summary.latest);
   const unit = "ק״ג";
-  // The figure is held apart from its unit so that over target the colour — and, folded, the
-  // pressable underline — land on the number alone, as the colour does on the distance beside
-  // it; the accessible name needs the two as one string. The unit's span carries the gap
-  // between them, keeping the underline from trailing past the figure.
+  // The figure is held apart from its unit so that over target the colour lands on the number
+  // alone, as it does on the distance beside it; the accessible name needs the two as one string.
   const heading = figure === null
     ? "משקל"
-    : <><span className="weight-latest">{figure}</span><span className="weight-unit"> {unit}</span></>;
+    : <><span className="weight-latest">{figure}</span> {unit}</>;
   // The rhythm reads inside the fold rather than on the header line: the phone-width line already
   // carries the weight and the target, and the one morning the reading is urgent is the morning
   // the caller opens the section anyway.
