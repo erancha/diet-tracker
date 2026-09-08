@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Api } from "../api";
@@ -7,6 +7,7 @@ import { trackerQuestionnaire } from "../test-fixtures";
 import type { AppConfigFile, DayPayload } from "../types";
 import { STORAGE_KEY } from "../viewMode";
 import { App } from "./App";
+import { TARGET_FLASH_DELAY_MS } from "./useTargetUnsetFlash";
 
 const CONFIG: AppConfigFile = {
   questionnaire: trackerQuestionnaire,
@@ -50,6 +51,15 @@ function api(days: Partial<Awaited<ReturnType<Api["getDays"]>>> = {}): Api {
     deleteWeight: vi.fn(), setMuted: vi.fn(), ask: vi.fn(),
     deleteChatTurn: vi.fn(), summarizeChatTurn: vi.fn(), dismissUndelivered: vi.fn(),
   };
+}
+
+// An account past its first visit by one weighing, with the target as given.
+function weighed(target: number | null): Api {
+  const client = api();
+  client.getWeight = vi.fn().mockResolvedValue({
+    target, entries: [{ date: "2026-08-20", kg: 77, at: "07:30" }],
+  });
+  return client;
 }
 
 function renderApp(isAdmin: boolean, client: Api = api(), isDev = false,
@@ -131,6 +141,24 @@ describe("App", () => {
     renderApp(false, api({ today: trackedDay(isoDate(new Date())) }));
     await screen.findByRole("button", { name: "יומן היום" });
     expect(document.querySelector("main")!.className).not.toMatch(/intro/);
+  });
+
+  it("flashes the target line on an account with weighings but no target, outside the intro", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    renderApp(false, weighed(null));
+    await screen.findByRole("button", { name: "יומן היום" });
+    expect(document.querySelector("main")!.className).not.toMatch(/target-flash|intro/);
+    act(() => vi.advanceTimersByTime(TARGET_FLASH_DELAY_MS));
+    expect(document.querySelector("main")).toHaveClass("target-flash");
+    expect(document.querySelector("main")!.className).not.toMatch(/intro/);
+  });
+
+  it("flashes nothing once a target is set", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    renderApp(false, weighed(72));
+    await screen.findByRole("button", { name: "יומן היום" });
+    act(() => vi.advanceTimersByTime(TARGET_FLASH_DELAY_MS));
+    expect(document.querySelector("main")!.className).not.toMatch(/target-flash/);
   });
 
   it("condenses the weight and trends sections from the menu and opens them back full", async () => {

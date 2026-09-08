@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { TARGET_FLASH_MS } from "./useTargetUnsetFlash";
 
 // The banner's three sentences in turn, the target-weight line, a quiet rest, and then the
 // standing add-meal invitation; "meal" is terminal.
@@ -6,9 +7,9 @@ export type IntroStage = 0 | 1 | 2 | 3 | "rest" | "meal";
 
 // How long each flashed stage holds. The opening sentence and the closing target flash press
 // longer than the middle sentences' beats: the first sentence names the very action the target
-// flash lands on, and the style sheet's intro-3 run fills exactly the closing stretch.
+// flash lands on, and the closing stretch is the same target flash every unset account gets.
 export const INTRO_STAGE_MS: Record<0 | 1 | 2 | 3, number> = {
-  0: 3_000, 1: 2_000, 2: 2_000, 3: 3_000,
+  0: 3_000, 1: 2_000, 2: 2_000, 3: TARGET_FLASH_MS,
 };
 
 // When, measured from the page opening, the add-meal toggle starts inviting — well clear of the

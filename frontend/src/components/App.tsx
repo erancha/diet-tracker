@@ -18,6 +18,7 @@ import { HistoryTable } from "./HistoryTable";
 import { TrendChart } from "./TrendChart";
 import { advanceFoldAll, FoldAllContext, useFoldAllEffect, type FoldAllCommand } from "./useFoldAll";
 import { useWindDownFold } from "./useWindDownFold";
+import { useTargetUnsetFlash } from "./useTargetUnsetFlash";
 import { useWelcomeIntro } from "./useWelcomeIntro";
 import { WeightSection } from "./WeightSection";
 import { Welcome } from "./Welcome";
@@ -88,6 +89,11 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, o
   const intro = useWelcomeIntro(!isAdmin
     && historyQuery.data !== undefined && weightQuery.data !== undefined
     && isFirstVisit(historyQuery.data, weightQuery.data));
+  // The target-weight nag for an account that has started but never set a target: the intro's
+  // closing stage flashes the same line for a first visit, so the nag yields to it.
+  const targetFlash = useTargetUnsetFlash(!isAdmin && intro === null
+    && historyQuery.data !== undefined && weightQuery.data !== undefined
+    && weightQuery.data.target === null);
 
   // The menu's condensed/full view command, broadcast through FoldAllContext to the sections
   // that hold their own collapsed state; the trends fold, held right here above the provider,
@@ -256,7 +262,8 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, o
               activeViolations={activeViolations(questionnaire, data.days, todayStr, yesterdayStr)}
               undelivered={data.undelivered}
               onDismissUndelivered={(at) => dismissUndeliveredMutation.mutate(at)} />
-      <main className={intro === null || intro === "rest" ? undefined : `intro-${intro}`}>
+      <main className={targetFlash ? "target-flash"
+        : intro === null || intro === "rest" ? undefined : `intro-${intro}`}>
       <FoldAllContext.Provider value={foldAll}>
         <Alerts items={alerts} onDismiss={dismissAlerts} />
         {!isAdmin && <>

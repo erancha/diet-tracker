@@ -268,10 +268,12 @@ button:disabled { cursor: not-allowed; }
   .intro-2 .welcome li:nth-child(3) {
     animation: nudge-blink 0.5s ease-in-out infinite;
   }
-  /* The closing flash keeps the sentences' half-second beat, its iterations filling exactly
-     useWelcomeIntro's target stretch. */
-  .intro-3 .weight .weight-summary {
-    animation: nudge-blink 0.5s ease-in-out 6;
+  /* The target line's flash keeps the sentences' half-second beat, its iterations filling
+     exactly the TARGET_FLASH_MS stretch — the intro's closing stage on a first visit, or the
+     target-flash class App stamps on <main> for a later account that still has no target. */
+  .intro-3 .weight .weight-summary,
+  .target-flash .weight .weight-summary {
+    animation: nudge-blink 0.5s ease-in-out 14;
   }
   /* Half a minute into a first visit, the add-meal toggle starts inviting — only while the
      form is folded, since an opened form is the invitation answered. */
