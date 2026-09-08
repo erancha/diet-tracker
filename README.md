@@ -33,9 +33,13 @@ closed from the tracker, and the week's trend over recorded history.
 - Reminders go out by email, and by Telegram where a bot token is configured: a last call for a
   day still unclosed, a weekly weigh-in reminder that skips anyone who already weighed in that
   day, an alert when a principle or the carb score stays past its limit several days running, and
-  a weekly summary of averages. Every message is sent as right-to-left HTML beside its plain
-  text, so Hebrew reads as written rather than as the recipient's mail client guesses. Inside the
-  app, a 7-day trend chart shows after each closed day;
+  a weekly recap of the week that just ended — one line counting its closed days and the ones
+  that broke a rule, under it three to four bullets saying what went well, how many days ask for
+  attention and why, and what to try next, written from those days and the latest weigh-ins
+  beside the target weight. That recap is also stored as an answered chat, so it appears in the
+  chat list and can be followed up there like any other. Every message is sent as right-to-left
+  HTML beside its plain text, so Hebrew reads as written rather than as the recipient's mail
+  client guesses. Inside the app, a 7-day trend chart shows after each closed day;
   its carb panel plots the part of each day's score that came from flours and sugar beside the
   score itself, and frames the weekday the program's treat meal is aimed at.
   The account menu turns all reminders off and back on. A reminder SES refuses to deliver — the

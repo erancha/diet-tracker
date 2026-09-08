@@ -11,15 +11,13 @@ can tell a subject the app has no field for from one the user left unrecorded.""
 
 import json
 
+from common import weight
 from common.chat import MAX_CONTEXT_CHARS
 from common.dates import days_before
 from common.derive import derive
 from common.digest import labeled_history
 
 SUMMARY_DAYS = 7
-
-# Weigh-ins are weekly, so a trend needs the last few measurements, not the summary window's.
-WEIGHT_MEASUREMENTS = 5
 
 _HEADER = "נתוני המעקב של השואל (JSON):\n"
 
@@ -49,7 +47,8 @@ def user_context(store, questionnaire, sub, day) -> str | None:
         "סיכום ימים אחרונים": _summaries(store, questionnaire, sub, day),
         "היום": _day_detail(store, questionnaire, sub, day),
         "אתמול": _day_detail(store, questionnaire, sub, days_before(day, 1)),
-        "משקל": _weight(store, sub),
+        weight.LABEL: weight.measurements_block(store.get_weights(sub),
+                                                store.get_target(sub)),
         "תחומי המעקב של האפליקציה": _tracking_scope(questionnaire),
     }
     block = _bounded(data, MAX_CONTEXT_CHARS - len(_HEADER))
@@ -67,7 +66,7 @@ def _bounded(data, budget) -> str | None:
     summaries = data["סיכום ימים אחרונים"]
     sheds = [lambda: data.pop("אתמול"), lambda: data.pop("היום")]
     sheds += [lambda d=date: summaries.pop(d) for date in sorted(summaries)]
-    sheds.append(lambda: data.pop("משקל"))
+    sheds.append(lambda: data.pop(weight.LABEL))
     while True:
         text = json.dumps(data, ensure_ascii=False)
         if len(text) <= budget:
@@ -88,22 +87,10 @@ def _tracking_scope(questionnaire) -> dict:
         "ברישום ארוחה": [_TIME, _CARB_SOURCE, _SECOND_SOURCE, _PORTION, _VEGETABLES, _FRUIT]
         + [f"{addition.label} ({_AMOUNT})" for addition in carbs.additions],
         "במעקב היומי": [question.day_title for question in questionnaire.questions],
-        "בנוסף": ["משקל"],
+        "בנוסף": [weight.LABEL],
         "הערה": "אלה כל שדות ההזנה באפליקציה. נושא שאינו ברשימה אין לו שדה באפליקציה, "
                 "ולכן היעדרו מהנתונים אינו מעיד שהמשתמש לא צרך אותו.",
     }
-
-
-def _weight(store, sub) -> dict:
-    """The user's latest weight measurements as bare day-to-kg pairs, beside the target weight
-    when one is set."""
-    weights = store.get_weights(sub)
-    block = {"מדידות": {day: weights[day]["kg"]
-                        for day in sorted(weights)[-WEIGHT_MEASUREMENTS:]}}
-    target = store.get_target(sub)
-    if target is not None:
-        block["יעד"] = target
-    return block
 
 
 def _summaries(store, questionnaire, sub, day) -> dict:

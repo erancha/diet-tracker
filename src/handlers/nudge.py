@@ -11,7 +11,8 @@ from dataclasses import dataclass
 
 import boto3
 
-from common import appconfig, chat, digest, notify, rules, undelivered, users, weight
+from common import (appconfig, chat, chat_history, digest, notify, rules, undelivered, users,
+                    weight)
 from common.dates import days_before, today
 from common.log import get_logger
 from common.rules import LOOKBACK_DAYS
@@ -27,7 +28,11 @@ REMINDER_TEXT = "עדיין לא רשמת ארוחות היום 🌙"
 OPEN_DAY_SUBJECT = "תזכורת — היום עדיין פתוח"
 OPEN_DAY_TEXT = "רשמת היום ארוחות ולא סגרת את היום 🌙 אפשר לסגור אותו עכשיו ביומן"
 
-SUMMARY_HEADING = "תובנות והמלצות לשבוע הבא:"
+# How long the weekly recap waits for its answer: just under the 60s the answering service's API
+# Gateway and the Lambda behind it both allow. Composing the bullets runs to about half a minute
+# and varies widely. No browser waits on this job; the budget it spends is the NudgeFunction
+# timeout, across the whole pool.
+RECAP_TIMEOUT_SECONDS = 55
 
 
 @dataclass(frozen=True)
@@ -38,6 +43,7 @@ class NudgeEnv:
     telegram: tuple | None  # (bot_token, chat_map) when the Telegram channel is active, else None
     ses: object
     undelivered: object  # table the messages SES refuses are kept in, for the app to show
+    chat_history: object  # transcript table the weekly recap is stored in, as an answered chat
     sender: str
     app_url: str  # the deployed frontend, cited in every email's mute footnote
     rag_url: str
@@ -63,6 +69,7 @@ def _notifiable(store, pool) -> list:
 
 def _build_env() -> NudgeEnv:
     ssm = boto3.client("ssm")
+    dynamodb = boto3.resource("dynamodb")
     store = Store(os.environ["DAYS_TABLE"], os.environ["MEALS_TABLE"], os.environ["STATE_TABLE"],
                   os.environ["WEIGHTS_TABLE"])
     return NudgeEnv(
@@ -72,7 +79,8 @@ def _build_env() -> NudgeEnv:
                                                   os.environ["USER_POOL_ID"])),
         telegram=notify.telegram_config(ssm, os.environ["BOT_TOKEN_PARAM"], os.environ["CHAT_MAP_PARAM"]),
         ses=boto3.client("ses"),
-        undelivered=boto3.resource("dynamodb").Table(os.environ["UNDELIVERED_TABLE"]),
+        undelivered=dynamodb.Table(os.environ["UNDELIVERED_TABLE"]),
+        chat_history=dynamodb.Table(os.environ["CHAT_HISTORY_TABLE"]),
         sender=os.environ["SES_SENDER"],
         app_url=os.environ["APP_URL"],
         rag_url=os.environ["RAG_API_URL"],
@@ -147,28 +155,43 @@ def _rules_job(env):
 
 
 def _weekly(env):
+    """The week that just ended, Sunday through Saturday.
+
+    The schedule fires in the small hours of Sunday, past the hour a day may still be closed in,
+    so the window ends yesterday: today has barely begun and counting it would report a week of
+    six closed days out of seven however diligent the user was."""
     day = today()
+    week_start = days_before(day, 7)
     for user in env.users:
-        history = env.store.get_days_range(user.sub, days_before(day, 6), day)
-        _send(env, user, f"סיכום שבועי — {notify.APP_NAME}", _weekly_body(env, history))
+        history = env.store.get_days_range(user.sub, week_start, days_before(day, 1))
+        _send(env, user, f"{digest.RECAP_TITLE} — {notify.APP_NAME}",
+              _weekly_body(env, user, history, week_start))
 
 
-def _weekly_body(env, history) -> str:
+def _weekly_body(env, user, history, week_start) -> str:
     """The numeric digest, followed for a submitted week by an LLM-written recap and tips.
 
-    The recap paragraph is an optional garnish: when the RAG service is unreachable or slow the
+    The recap is an optional garnish: when the RAG service is unreachable or slow the
     plain digest still goes out, because losing the whole weekly send over it would be worse.
-    An empty week has nothing to recap, so the service is not asked."""
+    An empty week has nothing to recap, so the service is not asked.
+
+    An answered recap is also stored as a chat of the user's, under the recap's short title rather
+    than the instruction the service was asked with — the shape the chat endpoint stores, so the
+    recap lists and follows up like any answered chat, its data re-attached fresh on follow-up."""
     text = digest.weekly_text(env.questionnaire, history)
     if not history:
         return text
+    question = digest.weekly_summary_question(env.questionnaire, history,
+                                              env.store.get_weights(user.sub),
+                                              env.store.get_target(user.sub))
     try:
-        answer = chat.ask(env.rag_url, env.rag_key,
-                          digest.weekly_summary_question(env.questionnaire, history))["answer"]
+        answer = chat.ask(env.rag_url, env.rag_key, question, timeout=RECAP_TIMEOUT_SECONDS)
     except (urllib.error.URLError, TimeoutError):
         logger.warning("weekly summary generation failed; sending the plain digest", exc_info=True)
         return text
-    return f"{text}\n\n{SUMMARY_HEADING}\n{answer}"
+    chat_history.append(env.chat_history, user.sub, digest.recap_chat_title(week_start),
+                        answer["answer"], answer["sources"])
+    return f"{text}\n\n{answer['answer']}"
 
 
 def _weigh_in(env):

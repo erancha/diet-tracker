@@ -15,9 +15,9 @@ import urllib.request
 MAX_QUESTION_CHARS = 4000
 MAX_CONTEXT_CHARS = 8000
 
-# Below the Lambda's 30s timeout, so a hung service surfaces as an error the caller can map to
-# a clean 502 — URLError while connecting, TimeoutError once reading — instead of the Lambda
-# dying mid-request.
+# The default wait: below the 30s budget of the request-serving Lambdas, so a hung service
+# surfaces as an error they can map to a clean 502 — URLError while connecting, TimeoutError once
+# reading — instead of the Lambda dying mid-request. A caller with a longer budget passes its own.
 TIMEOUT_SECONDS = 25
 
 
@@ -25,9 +25,12 @@ def api_key(ssm_client, key_param) -> str:
     return ssm_client.get_parameter(Name=key_param, WithDecryption=True)["Parameter"]["Value"]
 
 
-def ask(api_url, key, question, context=None) -> dict:
+def ask(api_url, key, question, context=None, timeout=TIMEOUT_SECONDS) -> dict:
     """Returns the service's {'answer': str, 'sources': [{'fileName', 'score'}]} for a question,
-    grounded also in the context block when one is given."""
+    grounded also in the context block when one is given.
+
+    The timeout is the caller's own budget for the wait: whatever room its Lambda has left after
+    the rest of its work, never longer."""
     payload = {"question": question}
     if context is not None:
         payload["context"] = context
@@ -36,5 +39,5 @@ def ask(api_url, key, question, context=None) -> dict:
         data=json.dumps(payload, ensure_ascii=False).encode(),
         headers={"Content-Type": "application/json", "x-api-key": key},
     )
-    with urllib.request.urlopen(request, timeout=TIMEOUT_SECONDS) as response:
+    with urllib.request.urlopen(request, timeout=timeout) as response:
         return json.loads(response.read())

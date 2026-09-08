@@ -390,8 +390,9 @@ Resources:
     Properties:
       CodeUri: ../build/lambda
       Handler: handlers/nudge.handler
-      # The weekly job asks the RAG service for a per-user recap, and each call may run up to the
-      # client's 25s ceiling — the global 30s budget cannot cover a loop over the user pool.
+      # The weekly job asks the answering service for a per-user recap, and each call may run up
+      # to RECAP_TIMEOUT_SECONDS in handlers/nudge.py — the global 30s budget cannot cover a loop
+      # over the user pool, and this holds that ceiling several times over.
       Timeout: 300
       Policies:
         - DynamoDBCrudPolicy:
@@ -402,9 +403,12 @@ Resources:
             TableName: !Ref NudgeStateTable
         - DynamoDBCrudPolicy:
             TableName: !Ref WeightsTable
-        # Write-only: the job keeps a message SES refused, and never reads one back.
+        # Write-only: the job keeps a message SES refused, and stores the weekly recap as a
+        # chat, and reads neither back.
         - DynamoDBWritePolicy:
             TableName: !Ref UndeliveredTable
+        - DynamoDBWritePolicy:
+            TableName: !Ref ChatHistoryTable
         - !Ref NotifyPolicy
         - !Ref ListUsersPolicy
 
@@ -503,10 +507,13 @@ Resources:
         RoleArn: !GetAtt SchedulerRole.Arn
         Input: '{"job": "rules"}'
 
+  # Fires past day_close.close_until (02:00) so every day of the week it reports has already had
+  # its last chance to be closed; the job reads the seven days ending yesterday, which is the
+  # Sunday-to-Saturday week that just ended.
   WeeklySchedule:
     Type: AWS::Scheduler::Schedule
     Properties:
-      ScheduleExpression: 'cron(0 8 ? * SUN *)'
+      ScheduleExpression: 'cron(15 2 ? * SUN *)'
       ScheduleExpressionTimezone: Asia/Jerusalem
       FlexibleTimeWindow:
         Mode: 'OFF'

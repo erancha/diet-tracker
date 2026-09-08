@@ -207,7 +207,26 @@ Scheduled jobs (EventBridge Scheduler, Asia/Jerusalem) run alongside the tracker
 - **Threshold alerts** — fire over consecutive days violating the configured thresholds, by email
   plus Telegram when a bot token is configured (see
   [Development & deployment](development.md#telegram-optional)).
-- **Weekly digest** — a weekly averages summary.
+- **Weekly recap** — reports the week that just ended, Sunday through Saturday. It fires in the
+  small hours of Sunday, past `day_close.close_until`, so every day it counts has already had its
+  last chance to be closed; a run inside its own day would report six closed days out of seven
+  however diligent the user was.
+
+  The email opens with one line — how many of the seven days were closed, and how many of those
+  broke a rule, since the breaches are what asks to be acted on. Under it come three to four
+  one-sentence bullets from the answering service: what went well, how many days ask for
+  attention and why, and a suggestion for the week ahead. Dates, single days' values and every
+  weekly average stay in the app, a tap away, rather than spending the email's few lines. Each
+  bullet opens with a short label, which the HTML rendering sets in bold along with the opening
+  line, so the two things worth reading first are the two that stand out. The question carries
+  the week's closed days and the latest weigh-ins beside the target weight, the same weight block
+  a chat question attaches; when it outgrows the length the service accepts, the oldest days go
+  first and the weight block last.
+
+  The answered recap is stored as one of the user's chats, titled with the recap's name and the
+  Sunday its week opened on, so a transcript accumulating one a week is not a column of identical
+  rows. It lists and follows up like any answered chat. An unreachable answering service costs
+  only the bullets: the opening line still goes out, and no chat is stored.
 - **Weigh-in reminder** — a weekly prompt to step on the scale, skipped for anyone who already
   recorded a weight on the weigh-in day itself, on the same channels as the alerts above.
 - **Trend chart** — a 7-day trend chart after each closed day.
