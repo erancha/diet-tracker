@@ -98,7 +98,7 @@ def test_score_bounds():
 
 def test_alert_thresholds_and_cadences():
     rows = {
-        "heavy_day": "ציון פחמימות יומי גבוה",
+        "heavy_day": "ציון יומי גבוה",
         "low_drinking": f"פחות מ־{RULES['low_drinking']['below']} ליטר",
         "no_vegetables": "אף ארוחה עם ירקות",
         "long_eating_window": f"מעל {RULES['long_eating_window']['above']} שעות",
