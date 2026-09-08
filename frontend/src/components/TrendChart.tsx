@@ -93,8 +93,12 @@ function TrendPanel({ questionnaire, question, dayStrs, dayByDate, index, showXA
 
 // 7-day trend: one line panel per chartable question. Ends at today once today has recorded
 // meals — its running carb score charts live — else at the latest submitted date.
-export function TrendChart({ questionnaire, days, today, endDate, headlineOnly = false }: {
+export function TrendChart({ questionnaire, days, today, endDate, loadedInMs, headlineOnly = false }: {
   questionnaire: Questionnaire; days: Day[]; today: DayPayload; endDate: string;
+  // How long the history request took, shown in the legend: the chart's data is what that
+  // request carries, so the wait belongs on the chart it delayed. Null for every account but the
+  // developer's, which sees no timing at all.
+  loadedInMs: number | null;
   // Condensed rendering for the folded trends section: the legend and the headline panel alone —
   // trendPanels orders the summed carb score first, so that is the panel that stays on screen.
   headlineOnly?: boolean;
@@ -110,7 +114,11 @@ export function TrendChart({ questionnaire, days, today, endDate, headlineOnly =
     <div className="trend" dir="ltr">
       {/* The chart container is LTR for the axes; the legend flips back so it leads from the
           right like the panel headings. */}
-      <div className="trend-legend" dir="rtl"><span className="trend-legend-dot" /> חריגה</div>
+      <div className="trend-legend" dir="rtl">
+        <span className="trend-legend-dot" /><span>חריגה</span>
+        {loadedInMs !== null
+          && <span className="trend-legend-timing">טעינה: {loadedInMs}ms</span>}
+      </div>
       {panels.map((question, index) => (
         <TrendPanel
           key={question.id}

@@ -7,6 +7,9 @@ export ALLOWED_EMAILS=".*"
 export SES_SENDER="erancha@gmail.com"
 # Notified about each new user, and shown to rejected sign-ins as the access contact.
 export ADMIN_EMAIL="webcharm.tech@gmail.com"
+# The developer's own account: diagnostic readings the app takes of itself are shown to it
+# alone. Leave empty to show them to nobody.
+export DEV_EMAIL=""
 # Base URL of the Summaries.AI REST API the chat proxies to (its RestApiUrl stack output).
 # The API key itself is not a deploy parameter — store it in SSM: aws ssm put-parameter \
 #   --name /diet-tracker/rag/api-key --type SecureString --value <key>

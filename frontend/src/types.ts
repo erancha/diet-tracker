@@ -218,6 +218,13 @@ export interface HistoryResponse {
   undelivered: UndeliveredMessage[];
 }
 
+// The history payload carrying how long its own request took. The number is measured in the
+// browser by api.ts, not sent by the server: it covers the network, token verification, Lambda
+// start and the reads together — the whole wait the trend chart sits behind.
+export interface LoadedHistory extends HistoryResponse {
+  loadedInMs: number;
+}
+
 export interface NotificationSettings {
   muted: boolean;
 }

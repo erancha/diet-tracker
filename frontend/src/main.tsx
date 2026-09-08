@@ -41,6 +41,7 @@ try {
             <App email={email} api={api}
                  firstMealHour={cfg.firstMealHour} mealGapHours={cfg.mealGapHours}
                  isAdmin={email.toLowerCase() === cfg.rootEmail.toLowerCase()}
+                 isDev={cfg.devEmail !== "" && email.toLowerCase() === cfg.devEmail.toLowerCase()}
                  onSignOut={() => signOut(cfg)} />
           </QueryClientProvider>
         </ErrorBoundary>

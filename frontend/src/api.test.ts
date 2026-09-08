@@ -9,6 +9,7 @@ const cfg: AppConfig = {
   apiUrl: "https://api.example.com",
   redirectUri: "https://app.example.com/",
   rootEmail: "root@example.com",
+  devEmail: "dev@example.com",
   firstMealHour: 11,
   mealGapHours: 4,
 };
@@ -16,7 +17,10 @@ const cfg: AppConfig = {
 const tokens: Tokens = { id_token: "token", expires_at: 0 };
 
 describe("createApi", () => {
-  afterEach(() => vi.unstubAllGlobals());
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
 
   it("triggers re-authentication and never settles on a 401 under an expired token", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("Unauthorized", { status: 401 })));
@@ -169,6 +173,26 @@ describe("createApi", () => {
     expect((err as ApiError).message).toBe(
       'POST /days → 409: {"error": "2026-08-22 is already submitted"}',
     );
+  });
+
+  it("reports how long the history request took, the wait the first chart sits behind", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response('{"days": []}')));
+    vi.spyOn(performance, "now").mockReturnValueOnce(1_000).mockReturnValueOnce(1_150);
+    const reported = vi.spyOn(console, "info").mockImplementation(() => {});
+
+    const history = await createApi(cfg, tokens).getDays();
+
+    expect(reported).toHaveBeenCalledWith("GET /days 150 ms");
+    expect(history).toEqual({ days: [], loadedInMs: 150 });
+  });
+
+  it("reports nothing for a history request that failed, so the timing only ever describes a completed load", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("boom", { status: 500 })));
+    const reported = vi.spyOn(console, "info").mockImplementation(() => {});
+
+    await expect(createApi(cfg, tokens).getDays()).rejects.toBeInstanceOf(ApiError);
+
+    expect(reported).not.toHaveBeenCalled();
   });
 });
 

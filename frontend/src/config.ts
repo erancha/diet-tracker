@@ -9,6 +9,10 @@ export interface AppConfig {
   redirectUri: string;
   // App owner's address, shown to rejected sign-ins as the contact for requesting access.
   rootEmail: string;
+  // The developer's own account. Diagnostic readings the app takes of itself — how long the
+  // history request took, shown on the trend chart — are for this address alone; every other
+  // signed-in account sees none of them. Empty names nobody.
+  devEmail: string;
   // Local hour by which the day's first meal is expected; from then on a day with nothing recorded
   // blinks the tracker's add-meal toggle.
   firstMealHour: number;

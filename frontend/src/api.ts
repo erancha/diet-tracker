@@ -4,7 +4,7 @@
 import { isUnexpired, reauthenticate, type Tokens } from "./auth";
 import type { AppConfig } from "./config";
 import type { AdminActivity, AnswerValue, ChatAnswer, ChatTranscript, ChatTurn, DayPayload,
-  HistoryResponse, NewMeal, NotificationSettings, SubmitResult, WeightPayload } from "./types";
+  HistoryResponse, LoadedHistory, NewMeal, NotificationSettings, SubmitResult, WeightPayload } from "./types";
 
 /** Backend request rejected; the message keeps the method, path, status, and body for diagnosis. */
 export class ApiError extends Error {
@@ -31,7 +31,7 @@ export interface SubmitPayload {
 }
 
 export interface Api {
-  getDays(): Promise<HistoryResponse>;
+  getDays(): Promise<LoadedHistory>;
   getDay(date: string): Promise<DayPayload>;
   submitDay(payload: SubmitPayload): Promise<SubmitResult>;
   deleteDay(date: string): Promise<{ date: string }>;
@@ -84,7 +84,16 @@ export function createApi(
     return response.json();
   }
   return {
-    getDays: () => request("GET", "/days"),
+    // Timed end to end — network, token verification, Lambda start and the reads together — as
+    // the wait the trend chart sits behind and labels itself with. A failed request reports
+    // nothing: the figure only ever describes a completed load.
+    getDays: async () => {
+      const started = performance.now();
+      const history = await request<HistoryResponse>("GET", "/days");
+      const loadedInMs = Math.round(performance.now() - started);
+      console.info(`GET /days ${loadedInMs} ms`);
+      return { ...history, loadedInMs };
+    },
     getDay: (date) => request("GET", `/days/${date}`),
     submitDay: (payload) => request("POST", "/days", payload),
     deleteDay: (date) => request("DELETE", `/days/${date}`),

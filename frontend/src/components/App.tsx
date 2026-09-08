@@ -43,9 +43,12 @@ import { Welcome } from "./Welcome";
 // It also reads whether the account has recorded anything yet, because the greeting, the weight
 // section's opening fold and the first-visit intro all answer to that one reading and must not
 // disagree about it.
-export function App({ email, api, firstMealHour, mealGapHours, isAdmin, onSignOut }: {
+export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, onSignOut }: {
   email: string; api: Api; firstMealHour: number; mealGapHours: number;
-  isAdmin: boolean; onSignOut: () => void;
+  isAdmin: boolean;
+  // Whether the signed-in account is the developer's, which is what the app's readings of itself
+  // are shown to; see devEmail in config.ts.
+  isDev: boolean; onSignOut: () => void;
 }) {
   const queryClient = useQueryClient();
   const [now] = useState(() => new Date());
@@ -211,6 +214,9 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, onSignOu
   const questionnaire = configQuery.data.questionnaire;
   const dayClose = configQuery.data.day_close;
   const data = historyQuery.data;
+  // How long the history request took is a reading of the app taken for its developer, so every
+  // other account is passed none.
+  const loadedInMs = isDev ? data.loadedInMs : null;
   const firstVisit = isFirstVisit(data, weightQuery.data);
   // The weight section rests folded, and opens for the two occasions it is the reason the page
   // was loaded: a first visit, and the weigh-in morning while no recent weighing answers it.
@@ -299,14 +305,15 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, onSignOu
                                   גרפי מגמה 📈 ונתוני הימים האחרונים 📋
                                 </button>
                                 <TrendChart questionnaire={questionnaire} days={data.days}
-                                            today={data.today} headlineOnly endDate={trendEndDate} />
+                                            today={data.today} headlineOnly endDate={trendEndDate}
+                                            loadedInMs={loadedInMs} />
                               </>
                             )}
                             className={trendsFold.waning ? "trends section-waning" : "trends"}>
           <div className={trendsFold.folding ? "section-fold-body section-folding" : "section-fold-body"}>
           <div>
           <TrendChart questionnaire={questionnaire} days={data.days} today={data.today}
-                      endDate={trendEndDate} />
+                      endDate={trendEndDate} loadedInMs={loadedInMs} />
           {viewedDate !== null && (
             viewedDayQuery.isPending ? <p>טוען…</p>
             : viewedDayQuery.isError ? <div className="alert">{alertMessage("טעינת היום נכשלה", viewedDayQuery.error)}</div>

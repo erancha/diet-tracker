@@ -37,7 +37,7 @@ function api(days: Partial<Awaited<ReturnType<Api["getDays"]>>> = {}): Api {
   return {
     getDays: vi.fn().mockResolvedValue({
       days: [], today: emptyDay(isoDate(now)), yesterday: emptyDay(isoDate(yesterdayOf(now))),
-      muted: false, undelivered: [], ...days,
+      muted: false, undelivered: [], loadedInMs: 150, ...days,
     }),
     getWeight: vi.fn().mockResolvedValue({ target: null, entries: [] }),
     getChatTranscript: vi.fn().mockResolvedValue({ turns: [] }),
@@ -51,15 +51,42 @@ function api(days: Partial<Awaited<ReturnType<Api["getDays"]>>> = {}): Api {
   };
 }
 
-function renderApp(isAdmin: boolean, client: Api = api()) {
-  vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => CONFIG }));
+function renderApp(isAdmin: boolean, client: Api = api(), isDev = false,
+                   config: AppConfigFile = CONFIG) {
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => config }));
   render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
       <App email="a@b.com" api={client} firstMealHour={9} mealGapHours={3}
-           isAdmin={isAdmin} onSignOut={vi.fn()} />
+           isAdmin={isAdmin} isDev={isDev} onSignOut={vi.fn()} />
     </QueryClientProvider>,
   );
 }
+
+// The tracker questionnaire charts no trend panel, so the timing tests give the carbs question a
+// panel title: the label lives beside the chart legend and needs a chart to sit on.
+const CHARTING_CONFIG: AppConfigFile = {
+  ...CONFIG,
+  questionnaire: {
+    ...trackerQuestionnaire,
+    questions: trackerQuestionnaire.questions.map((q) =>
+      q.id === "carbs" ? { ...q, panel_title: "סכום ציוני ארוחות" } : q),
+  },
+};
+
+describe("history load timing", () => {
+  const charting = () => api({ today: trackedDay(isoDate(new Date())) });
+
+  it("labels the chart with the load time for the developer account", async () => {
+    renderApp(false, charting(), true, CHARTING_CONFIG);
+    expect(await screen.findByText("טעינה: 150ms")).toBeInTheDocument();
+  });
+
+  it("withholds the label from every other account", async () => {
+    renderApp(false, charting(), false, CHARTING_CONFIG);
+    await screen.findByText("חריגה");
+    expect(screen.queryByText(/טעינה/)).not.toBeInTheDocument();
+  });
+});
 
 const atClock = (hour: number, minute: number) => {
   vi.useFakeTimers({ toFake: ["Date"] });
