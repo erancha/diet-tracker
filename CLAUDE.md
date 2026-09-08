@@ -22,6 +22,9 @@ means the shell didn't source that file — not an expired session. The aws CLI 
   also ships inside the Lambda package, so config edits need `deploy.sh`, not just an S3 sync.
 - `set-rag-key.sh` — copies Summaries.AI's API key into the SSM parameter the chat Lambda reads,
   without the key value touching a file or the terminal.
-- `simulate-rejected-email.sh <email>` — writes one message into the deployed undelivered table so
-  the header's alarm bell shows it, which is the only way to see that surface on an account whose
-  address SES has verified. Dismissing the message in the app deletes the row.
+- `emails-helper.sh` — simulates one outgoing-mail surface for one user; `--help` lists them.
+  `--rejected <email>` writes a message into the deployed undelivered table so the header's alarm
+  bell shows it, the only way to see that surface on an account whose address SES has verified
+  (dismissing it in the app deletes the row). `--weekly-recap <email>` runs the weekly recap job
+  now, on the working tree's code against the deployed data, printing the question, the email and
+  the chat it would store; `--send` delivers and stores them for that one user.
