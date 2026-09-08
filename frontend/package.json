@@ -1,6 +1,7 @@
 {
   "name": "diet-tracker-frontend",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "dev": "vite",

@@ -1,5 +1,7 @@
 # diet-tracker
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 Free multi-user SaaS: a serverless Hebrew diet tracker built around an intraday meal log. No
 calories are counted: what the log scores is the character of each meal and the intervals between
 meals, in points golf-style — lower is better.
@@ -99,3 +101,7 @@ the kilogram bounds the API and the input both constrain to.
 - [Domain rules](docs/domain-rules.md) — scoring model, day lifecycle, and nudge behavior
 - [Development & deployment](docs/development.md) — local setup, tests, deploy scripts, and
   Telegram configuration
+
+## License
+
+Released under the MIT License. See [LICENSE](LICENSE).
