@@ -6,19 +6,20 @@ import { instantLabel } from "../dates";
 import type { ChatTurn } from "../types";
 import { Chat } from "./Chat";
 
-type ChatApi = Pick<Api, "ask" | "getChatTranscript" | "deleteChatTurn">;
+type ChatApi = Pick<Api, "ask" | "getChatTranscript" | "deleteChatTurn" | "summarizeChatTurn">;
 
 function api(overrides: Partial<ChatApi> = {}): ChatApi {
   return {
     ask: vi.fn(),
     getChatTranscript: vi.fn().mockResolvedValue({ turns: [] }),
     deleteChatTurn: vi.fn(),
+    summarizeChatTurn: vi.fn(),
     ...overrides,
   };
 }
 
 function turn(index: number): ChatTurn {
-  return { question: `שאלה ${index}`, answer: `תשובה ${index}`, sources: [],
+  return { question: `שאלה ${index}`, answer: `תשובה ${index}`, sources: [], summarized: false,
            at: `2026-09-01T10:00:${String(index).padStart(2, "0")}` };
 }
 
@@ -296,7 +297,8 @@ describe("Chat", () => {
     expect(screen.getByText("תשובה 1").closest("li")!.nextElementSibling).toBe(composerRow);
     expect(screen.getByRole("button", { name: "שאלת המשך על שאלה 1" }))
       .toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByText("שאלת המשך")).toBeInTheDocument();
+    // The chip and the reply control read the same words, so the chip is picked by its element.
+    expect(screen.getByText("שאלת המשך", { selector: "span" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "ביטול שאלת ההמשך" })).toBeInTheDocument();
   });
 
@@ -565,5 +567,106 @@ describe("Chat", () => {
 
     expect(await screen.findByText("תשובה חדשה")).toBeInTheDocument();
     expect(screen.getByText("שאלה 1")).toBeInTheDocument();
+  });
+
+  it("replaces a chat with its summary once the user confirms", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    const chatApi = api({
+      getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(1) }),
+      summarizeChatTurn: vi.fn().mockResolvedValue(
+        { ...turn(1), answer: "סיכום השיחה", summarized: true }),
+    });
+    render(<Chat api={chatApi} sampleQuestions={[]} />);
+    await userEvent.click(await screen.findByRole("button", { name: "שאלה 1" }));
+
+    await userEvent.click(screen.getByRole("button", { name: "סיכום הצ'אט על שאלה 1" }));
+
+    expect(chatApi.summarizeChatTurn).toHaveBeenCalledWith(turn(1).at);
+    expect(await screen.findByText("סיכום השיחה")).toBeInTheDocument();
+    expect(screen.queryByText("תשובה 1")).not.toBeInTheDocument();
+  });
+
+  it("keeps the conversation when the summary is not confirmed", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(false);
+    const chatApi = api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(1) }) });
+    render(<Chat api={chatApi} sampleQuestions={[]} />);
+    await userEvent.click(await screen.findByRole("button", { name: "שאלה 1" }));
+
+    await userEvent.click(screen.getByRole("button", { name: "סיכום הצ'אט על שאלה 1" }));
+
+    expect(chatApi.summarizeChatTurn).not.toHaveBeenCalled();
+    expect(screen.getByText("תשובה 1")).toBeInTheDocument();
+  });
+
+  it("keeps the conversation and shows what failed when summarizing fails", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    const chatApi = api({
+      getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(1) }),
+      summarizeChatTurn: vi.fn().mockRejectedValue(new ApiError(502, "POST /chat/at/summary → 502")),
+    });
+    render(<Chat api={chatApi} sampleQuestions={[]} />);
+    await userEvent.click(await screen.findByRole("button", { name: "שאלה 1" }));
+
+    await userEvent.click(screen.getByRole("button", { name: "סיכום הצ'אט על שאלה 1" }));
+
+    expect(await screen.findByText(/סיכום השיחה נכשל/)).toBeInTheDocument();
+    expect(screen.getByText("תשובה 1")).toBeInTheDocument();
+  });
+  it("cancels a reply in progress to the chat being summarized", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    const chatApi = api({
+      getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(1) }),
+      summarizeChatTurn: vi.fn().mockResolvedValue(
+        { ...turn(1), answer: "סיכום השיחה", summarized: true }),
+    });
+    render(<Chat api={chatApi} sampleQuestions={[]} />);
+    await userEvent.click(await screen.findByRole("button", { name: "שאלה 1" }));
+    await userEvent.click(screen.getByRole("button", { name: "שאלת המשך על שאלה 1" }));
+    expect(screen.getByText("שאלת המשך", { selector: "span" })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "סיכום הצ'אט על שאלה 1" }));
+
+    expect(await screen.findByText("סיכום השיחה")).toBeInTheDocument();
+    expect(screen.queryByText("שאלת המשך", { selector: "span" })).not.toBeInTheDocument();
+  });
+  it("shows a summarizing indicator in place of the answer while the digest is made", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    const chatApi = api({
+      getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(1) }),
+      summarizeChatTurn: vi.fn().mockReturnValue(new Promise(() => {})),
+    });
+    render(<Chat api={chatApi} sampleQuestions={[]} />);
+    await userEvent.click(await screen.findByRole("button", { name: "שאלה 1" }));
+
+    await userEvent.click(screen.getByRole("button", { name: "סיכום הצ'אט על שאלה 1" }));
+
+    expect(screen.getByText("מסכם…")).toHaveClass("chat-pending");
+    expect(screen.queryByText("תשובה 1")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "סיכום הצ'אט על שאלה 1" })).toBeNull();
+  });
+
+  it("moves focus to the summarizing indicator, and back to the question once it is done", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    const chatApi = api({
+      getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(1) }),
+      summarizeChatTurn: vi.fn().mockResolvedValue(
+        { ...turn(1), answer: "תמצית השיחה", summarized: true }),
+    });
+    render(<Chat api={chatApi} sampleQuestions={[]} />);
+    await userEvent.click(await screen.findByRole("button", { name: "שאלה 1" }));
+
+    await userEvent.click(screen.getByRole("button", { name: "סיכום הצ'אט על שאלה 1" }));
+
+    expect(await screen.findByText("תמצית השיחה")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "שאלה 1" })).toHaveFocus();
+  });
+
+  it("offers no second digest of a chat that has not moved on since its summary", async () => {
+    const summarized = { ...turn(1), answer: "סיכום השיחה", summarized: true };
+    render(<Chat api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: [summarized] }) })}
+                 sampleQuestions={[]} />);
+    await userEvent.click(await screen.findByRole("button", { name: "שאלה 1" }));
+
+    expect(screen.getByRole("button", { name: "סיכום הצ'אט על שאלה 1" })).toBeDisabled();
   });
 });

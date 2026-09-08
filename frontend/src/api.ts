@@ -3,8 +3,8 @@
 
 import { isUnexpired, reauthenticate, type Tokens } from "./auth";
 import type { AppConfig } from "./config";
-import type { AdminActivity, AnswerValue, ChatAnswer, ChatTranscript, DayPayload, HistoryResponse,
-  NewMeal, NotificationSettings, SubmitResult, WeightPayload } from "./types";
+import type { AdminActivity, AnswerValue, ChatAnswer, ChatTranscript, ChatTurn, DayPayload,
+  HistoryResponse, NewMeal, NotificationSettings, SubmitResult, WeightPayload } from "./types";
 
 /** Backend request rejected; the message keeps the method, path, status, and body for diagnosis. */
 export class ApiError extends Error {
@@ -48,6 +48,7 @@ export interface Api {
   ask(question: string, at?: string): Promise<ChatAnswer>;
   getChatTranscript(): Promise<ChatTranscript>;
   deleteChatTurn(at: string): Promise<{ at: string }>;
+  summarizeChatTurn(at: string): Promise<ChatTurn>;
 }
 
 export function createApi(
@@ -106,5 +107,8 @@ export function createApi(
     // The timestamp's '+' and ':' must reach the route as the literal characters the turn is
     // stored under, so it travels percent-encoded.
     deleteChatTurn: (at) => request("DELETE", `/chat/${encodeURIComponent(at)}`),
+    // Returns the chat as the summary leaves it: the conversation's original question, the
+    // digest as its answer, and the same timestamp it was already stored under.
+    summarizeChatTurn: (at) => request("POST", `/chat/${encodeURIComponent(at)}/summary`),
   };
 }

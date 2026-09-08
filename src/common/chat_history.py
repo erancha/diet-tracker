@@ -1,8 +1,9 @@
 """Per-user chat transcript: one DynamoDB item per chat — the whole conversation in one item,
 its question text carrying the chain of questions and answers, its answer attribute the latest
-reply. The partition key is the user's sub and the sort key is the UTC ISO timestamp of the
-chat's last answer, so a key-ordered query reads the transcript newest activity first; a
-follow-up replaces the item whole with a fresh sort key, moving the chat to the top.
+reply. A summarized chat holds a digest in place of that chain, under a mark that stands until a
+follow-up rewrites the item. The partition key is the user's sub and the sort key is the UTC ISO
+timestamp of the chat's last answer, so a key-ordered query reads the transcript newest activity
+first; a follow-up replaces the item whole with a fresh sort key, moving the chat to the top.
 
 Source scores are floats, which the DynamoDB document layer refuses, so the sources list rides
 as a JSON string attribute and is parsed back on read."""
@@ -45,6 +46,36 @@ def append(table, sub, question, answer, sources, at=None):
     return sk
 
 
+def get(table, sub, at):
+    """One stored chat of the user's, by its timestamp; raises KeyError when the user holds no
+    such chat — including a timestamp that exists only for another user."""
+    stored = table.get_item(Key={"pk": sub, "sk": at})
+    if "Item" not in stored:
+        raise KeyError(at)
+    return _turn(stored["Item"])
+
+
+def summarize(table, sub, at, question, summary):
+    """Replaces the user's chat at the given timestamp with its digest: the conversation's
+    original question, the summary as the answer, and no sources — the chain, its follow-ups and
+    the citations they were answered from are gone for good. The key is untouched, so a
+    summarized chat keeps its place in the transcript. The digest mark it leaves behind stands
+    until the chat moves on: a follow-up rewrites the item whole and so drops the mark with the
+    digest it described. Raises KeyError when the user holds no chat at that timestamp."""
+    try:
+        table.update_item(
+            Key={"pk": sub, "sk": at},
+            UpdateExpression=("SET #question = :question, #answer = :answer, "
+                              "#sources = :sources, #summarized = :summarized"),
+            ExpressionAttributeNames={"#question": "question", "#answer": "answer",
+                                      "#sources": "sources", "#summarized": "summarized"},
+            ExpressionAttributeValues={":question": question, ":answer": summary, ":sources": "[]",
+                                       ":summarized": True},
+            ConditionExpression="attribute_exists(pk)")
+    except table.meta.client.exceptions.ConditionalCheckFailedException:
+        raise KeyError(at)
+
+
 def delete(table, sub, at):
     """Permanently removes the user's chat keyed by the given timestamp; raises KeyError when
     the user holds no such chat — including a timestamp that exists only for another user."""
@@ -75,10 +106,17 @@ def _count(table, key_condition) -> int:
 
 def turns(table, sub):
     """The user's full transcript, newest first."""
-    return [{
+    return [_turn(item) for item in query_all(table, KeyConditionExpression=Key("pk").eq(sub),
+                                              ScanIndexForward=False)]
+
+
+def _turn(item):
+    return {
         "question": item["question"],
         "answer": item["answer"],
         "sources": json.loads(item["sources"]),
+        # Written only by summarize, so a chat that was answered rather than digested carries no
+        # such attribute at all.
+        "summarized": "summarized" in item,
         "at": item["sk"],
-    } for item in query_all(table, KeyConditionExpression=Key("pk").eq(sub),
-                            ScanIndexForward=False)]
+    }

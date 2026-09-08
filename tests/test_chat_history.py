@@ -43,7 +43,7 @@ def test_a_follow_up_replaces_the_turn_whole_under_a_fresh_key(table):
 
     assert returned > at
     (turn,) = chat_history.turns(table, "u1")
-    assert turn == {"question": "שרשור מלא", "answer": "תשובה חדשה",
+    assert turn == {"question": "שרשור מלא", "answer": "תשובה חדשה", "summarized": False,
                     "sources": [{"fileName": "מדריך.pdf", "score": 0.9}], "at": returned}
 
 
@@ -138,3 +138,59 @@ def test_turns_follows_pagination_to_the_end():
     questions = [turn["question"] for turn in chat_history.turns(paged, "u1")]
     assert questions == ["שנייה", "ראשונה"]
     assert paged.seen_start_keys == [None, {"pk": "u1", "sk": "2026-09-01T10:00:00"}]
+
+
+def test_get_returns_the_stored_turn(table):
+    sources = [{"fileName": "מדריך.pdf", "score": 0.83}]
+    at = chat_history.append(table, "u1", "שאלה?", "תשובה", sources)
+
+    assert chat_history.get(table, "u1", at) == {"question": "שאלה?", "answer": "תשובה",
+                                                 "sources": sources, "summarized": False, "at": at}
+
+
+def test_get_of_a_missing_turn_raises(table):
+    at = chat_history.append(table, "u1", "שאלה?", "תשובה", [])
+
+    with pytest.raises(KeyError):
+        chat_history.get(table, "u2", at)
+
+
+def test_summarize_replaces_the_chain_in_place_under_the_same_key(table):
+    at = chat_history.append(table, "u1", "השאלה המקורית: מה מותר?\nהתשובה: הרבה\nשאלת המשך: ולמה?",
+                             "כי כך", [{"fileName": "מדריך.pdf", "score": 0.9}])
+
+    chat_history.summarize(table, "u1", at, "מה מותר?", "השיחה עסקה במה שמותר לאכול")
+
+    (turn,) = chat_history.turns(table, "u1")
+    assert turn == {"question": "מה מותר?", "answer": "השיחה עסקה במה שמותר לאכול",
+                    "sources": [], "summarized": True, "at": at}
+
+
+def test_summarize_of_a_missing_turn_raises_and_leaves_the_transcript_alone(table):
+    at = chat_history.append(table, "u1", "שאלה", "תשובה", [])
+
+    with pytest.raises(KeyError):
+        chat_history.summarize(table, "u1", "2026-09-01T10:00:00+00:00", "ש", "סיכום")
+    with pytest.raises(KeyError):
+        chat_history.summarize(table, "u2", at, "ש", "סיכום")
+
+    assert [turn["question"] for turn in chat_history.turns(table, "u1")] == ["שאלה"]
+    assert chat_history.turns(table, "u2") == []
+
+
+def test_summarize_marks_the_chat_as_digested(table):
+    at = chat_history.append(table, "u1", "שאלה", "תשובה", [])
+    assert chat_history.get(table, "u1", at)["summarized"] is False
+
+    chat_history.summarize(table, "u1", at, "שאלה", "סיכום")
+
+    assert chat_history.get(table, "u1", at)["summarized"] is True
+
+
+def test_a_follow_up_on_a_summarized_chat_clears_the_digest_mark(table):
+    at = chat_history.append(table, "u1", "שאלה", "תשובה", [])
+    chat_history.summarize(table, "u1", at, "שאלה", "סיכום")
+
+    followed = chat_history.append(table, "u1", "שרשור", "תשובת המשך", [], at=at)
+
+    assert chat_history.get(table, "u1", followed)["summarized"] is False

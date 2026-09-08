@@ -315,3 +315,107 @@ def test_ask_posts_the_question_with_the_api_key(monkeypatch):
 
     chat_client.ask("https://rag.example/prod", "the-key", "שאלה", context="נתוני המעקב")
     assert captured["payload"] == {"question": "שאלה", "context": "נתוני המעקב"}
+
+
+def summary_request(at, sub="u1", email="a@gmail.com"):
+    return {
+        "routeKey": "POST /chat/{at}/summary",
+        "pathParameters": {"at": at},
+        "requestContext": {"authorizer": {"jwt": {"claims": {"sub": sub, "email": email}}}},
+    }
+
+
+def stored_chat(monkeypatch, question="שאלה מקורית", answer="תשובה", sources=None):
+    """Answers one question and returns the stamp its stored chat is keyed by."""
+    monkeypatch.setattr(chat_handler.chat, "ask", lambda api_url, key, question, context=None:
+                        {"answer": answer, "sources": sources or []})
+    return body_of(chat_handler.handler(request({"question": question}), None))["at"]
+
+
+def test_a_summary_replaces_the_chat_with_its_original_question_and_the_digest(env, monkeypatch):
+    at = stored_chat(monkeypatch,
+                     question="השאלה המקורית: מה מותר?\nהתשובה: הרבה\nשאלת המשך: ולמה?",
+                     answer="כי כך", sources=[{"fileName": "מדריך.pdf", "score": 0.9}])
+    monkeypatch.setattr(chat_handler.chat, "ask", lambda api_url, key, question, context=None:
+                        {"answer": "השיחה עסקה במה שמותר לאכול", "sources": [{"fileName": "א.pdf", "score": 0.4}]})
+
+    response = chat_handler.handler(summary_request(at), None)
+
+    assert response["statusCode"] == 200
+    assert body_of(response) == {"question": "מה מותר?", "answer": "השיחה עסקה במה שמותר לאכול",
+                                 "sources": [], "summarized": True, "at": at}
+    (turn,) = transcript()
+    assert turn == {"question": "מה מותר?", "answer": "השיחה עסקה במה שמותר לאכול",
+                    "sources": [], "summarized": True, "at": at}
+
+
+def test_a_summary_keeps_every_line_of_a_multi_line_original_question(env, monkeypatch):
+    at = stored_chat(monkeypatch,
+                     question="השאלה המקורית: אכלתי מאוחר\nוגם שתיתי יין. מה עכשיו?\n"
+                              "התשובה: לחכות\nשאלת המשך: כמה זמן?",
+                     answer="14 שעות")
+    monkeypatch.setattr(chat_handler.chat, "ask", lambda api_url, key, question, context=None:
+                        {"answer": "סיכום", "sources": []})
+
+    chat_handler.handler(summary_request(at), None)
+
+    (turn,) = transcript()
+    assert turn["question"] == "אכלתי מאוחר\nוגם שתיתי יין. מה עכשיו?"
+
+
+def test_a_summary_sends_the_labeled_conversation_upstream_as_context(env, monkeypatch):
+    at = stored_chat(monkeypatch, question="כמה חלבון?", answer="1.5 גרם לקילו")
+    asked = {}
+    monkeypatch.setattr(chat_handler.chat, "ask", lambda api_url, key, question, context=None:
+                        asked.update(question=question, context=context)
+                        or {"answer": "סיכום", "sources": []})
+
+    chat_handler.handler(summary_request(at), None)
+
+    assert asked["question"] == chat_handler.SUMMARY_INSTRUCTION
+    assert asked["context"] == "השאלה המקורית: כמה חלבון?\nהתשובה: 1.5 גרם לקילו"
+
+
+def test_a_summary_beyond_the_daily_limit_is_refused_without_asking_upstream(env, monkeypatch):
+    at = stored_chat(monkeypatch, question="1")
+    assert chat_handler.handler(request({"question": "2"}), None)["statusCode"] == 200
+    calls = []
+    monkeypatch.setattr(chat_handler.chat, "ask", lambda api_url, key, question, context=None:
+                        calls.append(question) or {"answer": "סיכום", "sources": []})
+
+    refused = chat_handler.handler(summary_request(at), None)
+
+    assert refused["statusCode"] == 429
+    assert calls == []
+    assert transcript()[-1]["question"] == "1"
+
+
+def test_summarizing_a_missing_chat_is_404_and_spends_no_quota(env, monkeypatch):
+    monkeypatch.setattr(chat_handler.chat, "ask", lambda api_url, key, question, context=None:
+                        {"answer": "ת", "sources": []})
+
+    assert chat_handler.handler(summary_request("2026-09-01T10:00:00+00:00"), None)["statusCode"] == 404
+
+    assert chat_handler.handler(request({"question": "1"}), None)["statusCode"] == 200
+    assert chat_handler.handler(request({"question": "2"}), None)["statusCode"] == 200
+
+
+def test_a_user_cannot_summarize_another_users_chat(env, monkeypatch):
+    at = stored_chat(monkeypatch)
+
+    assert chat_handler.handler(summary_request(at, sub="other"), None)["statusCode"] == 404
+    assert transcript()[0]["question"] == "שאלה מקורית"
+
+
+def test_an_upstream_failure_leaves_the_chat_unsummarized(env, monkeypatch):
+    at = stored_chat(monkeypatch, question="שאלה מקורית", answer="תשובה")
+
+    def failing_ask(api_url, key, question, context=None):
+        raise urllib.error.URLError("connection refused")
+
+    monkeypatch.setattr(chat_handler.chat, "ask", failing_ask)
+    assert chat_handler.handler(summary_request(at), None)["statusCode"] == 502
+
+    (turn,) = transcript()
+    assert turn["question"] == "שאלה מקורית"
+    assert turn["answer"] == "תשובה"

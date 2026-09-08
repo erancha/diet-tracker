@@ -293,11 +293,15 @@ export interface ChatAnswer {
   at: string;
 }
 
-// One stored Q&A exchange from the user's chat history.
+// One stored exchange from the user's chat history: a question and its answer, or — once
+// summarized — a conversation's opening question and the digest standing for the whole of it.
 export interface ChatTurn {
   question: string;
   answer: string;
   sources: ChatSource[];
+  // Whether the answer is a digest rather than a reply to the question. It stands until the chat
+  // moves on: a follow-up replaces the digest and clears the mark.
+  summarized: boolean;
   // UTC ISO timestamp of the chat's latest answer — the transcript's sort key.
   at: string;
 }

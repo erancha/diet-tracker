@@ -359,6 +359,12 @@ Resources:
             ApiId: !Ref Api
             Method: GET
             Path: /chat
+        ChatSummary:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref Api
+            Method: POST
+            Path: /chat/{at}/summary
         ChatDelete:
           Type: HttpApi
           Properties:

@@ -47,7 +47,7 @@ function api(days: Partial<Awaited<ReturnType<Api["getDays"]>>> = {}): Api {
     getDay: vi.fn(), submitDay: vi.fn(), deleteDay: vi.fn(), addMeal: vi.fn(),
     updateMeal: vi.fn(), deleteMeal: vi.fn(), recordWeight: vi.fn(), setWeightTarget: vi.fn(),
     deleteWeight: vi.fn(), setMuted: vi.fn(), ask: vi.fn(),
-    deleteChatTurn: vi.fn(), dismissUndelivered: vi.fn(),
+    deleteChatTurn: vi.fn(), summarizeChatTurn: vi.fn(), dismissUndelivered: vi.fn(),
   };
 }
 

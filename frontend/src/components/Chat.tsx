@@ -9,6 +9,8 @@ import { useGlobalFold } from "./useFoldAll";
 // not surface the response body (the appTitle.ts precedent for cross-runtime strings).
 const QUOTA_MESSAGE = "מכסת השאלות היומית נוצלה — אפשר לשאול שוב מחר";
 
+// handlers/chat.py mirrors these to take a chain apart when summarizing it, so the wording is a
+// cross-runtime contract rather than presentation.
 const ORIGINAL_LABEL = "השאלה המקורית:";
 const ANSWER_LABEL = "התשובה:";
 const FOLLOW_UP_LABEL = "שאלת המשך:";
@@ -61,19 +63,22 @@ function renderQuestion(text: string): ReactNode {
 // sight.
 //
 // The transcript loads once in full, so toggling a question, its sources, or the transcript
-// reveals data already in memory. A fresh answer opens expanded — the user is
-// waiting for it — while loaded chats start collapsed; each row is dated in the reader's local
-// clock and offers deletion behind a confirm.
+// reveals data already in memory. A fresh answer opens expanded — the user is waiting for it —
+// while loaded chats start collapsed; each row is dated in the reader's local clock and offers
+// deletion behind a confirm.
 //
-// An open answer's foot offers a reply control beside a closing one. The reply moves the
-// composer under the answer: the follow-up is sent as the chat's labeled chain plus the new
-// question, and the answered chat re-keys to the top of the transcript. Closing folds the chat
-// from where reading ends and hands focus back to its question bubble. While a question is in
-// flight the composer withdraws, leaving the sent question and the thinking indicator.
-// Sample-question links above the composer only fill the input — no quota is spent before the
-// user chooses to submit.
+// An open answer's foot offers a reply control and a summarize control beside a closing one. The
+// reply moves the composer under the answer: the follow-up is sent as the chat's labeled chain plus
+// the new question, and the answered chat re-keys to the top of the transcript. Summarizing is the
+// lossy one — a follow-up keeps the exchange it extends, while a digest does not give the chain
+// back — so it confirms first, and the answer gives way to a waiting indicator while the digest is
+// made. A chat that is already a digest offers the control disabled until a follow-up gives it
+// something to summarize again. Closing folds the chat from where reading ends and hands focus back
+// to its question bubble. While a question is in flight the composer withdraws, leaving the sent
+// question and the thinking indicator. Sample-question links above the composer only fill the
+// input — no quota is spent before the user chooses to submit.
 export function Chat({ api, sampleQuestions, defaultTranscriptFolded = false }: {
-  api: Pick<Api, "ask" | "getChatTranscript" | "deleteChatTurn">;
+  api: Pick<Api, "ask" | "getChatTranscript" | "deleteChatTurn" | "summarizeChatTurn">;
   sampleQuestions: ChatSampleQuestion[];
   defaultTranscriptFolded?: boolean;
 }) {
@@ -86,13 +91,16 @@ export function Chat({ api, sampleQuestions, defaultTranscriptFolded = false }: 
   // The question awaiting its answer, or null. Doubles as the pending flag: the composer is
   // withdrawn while it is set, so at most one question is in flight.
   const [pendingQuestion, setPendingQuestion] = useState<string | null>(null);
+  // The chat whose digest is being made, or null. At most one summary is in flight, and the
+  // chat's answer gives way to the waiting indicator while it is.
+  const [summarizingAt, setSummarizingAt] = useState<string | null>(null);
   // The chat the next question follows up on, or null for a standalone question.
   const [replyTo, setReplyTo] = useState<ChatTurn | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [transcriptFolded, setTranscriptFolded] = useState(defaultTranscriptFolded);
   useGlobalFold(setTranscriptFolded);
   // Question buttons by timestamp, for handing focus back when a chat folds from its answer's
-  // foot.
+  // foot or its digest replaces the answer that held it.
   const questionRefs = useRef(new Map<string, HTMLButtonElement>());
 
   // Sending withdraws the composer out from under the user's focus, so the thinking indicator
@@ -101,6 +109,13 @@ export function Chat({ api, sampleQuestions, defaultTranscriptFolded = false }: 
   useEffect(() => {
     if (pendingQuestion !== null) pendingRef.current?.focus();
   }, [pendingQuestion]);
+
+  // The summarize control goes with the answer it acted on, so the waiting indicator takes the
+  // focus it held.
+  const summarizingRef = useRef<HTMLParagraphElement>(null);
+  useEffect(() => {
+    if (summarizingAt !== null) summarizingRef.current?.focus();
+  }, [summarizingAt]);
 
   useEffect(() => {
     api.getChatTranscript()
@@ -118,7 +133,9 @@ export function Chat({ api, sampleQuestions, defaultTranscriptFolded = false }: 
     try {
       const asked = replyTo === null ? question : composeFollowUp(replyTo, question);
       const reply = replyTo === null ? await api.ask(asked) : await api.ask(asked, replyTo.at);
-      const answered = { question: asked, answer: reply.answer, sources: reply.sources, at: reply.at };
+      // An answered question is never a digest, so the freshly answered chat offers summarizing.
+      const answered = { question: asked, answer: reply.answer, sources: reply.sources,
+                         summarized: false, at: reply.at };
       // Fresh or followed-up, the answered turn leads — the order the server returns on reload.
       setTurns((current) => [answered, ...current.filter((turn) => turn.at !== replyTo?.at)]);
       setExpanded((current) => new Set(current).add(reply.at));
@@ -146,6 +163,27 @@ export function Chat({ api, sampleQuestions, defaultTranscriptFolded = false }: 
       setReplyTo((current) => (current?.at === turn.at ? null : current));
     } catch (thrown) {
       setError(`מחיקת השאלה נכשלה (${(thrown as Error).message})`);
+    }
+  };
+
+  // The digest lands under the chat's own timestamp, so the summarized chat is mapped in place
+  // rather than moved the way a follow-up moves it.
+  const summarize = async (turn: ChatTurn) => {
+    if (!window.confirm("לסכם את השיחה? הסיכום יחליף את השאלות והתשובות לצמיתות.")) return;
+    setError(null);
+    setSummarizingAt(turn.at);
+    try {
+      const summarized = await api.summarizeChatTurn(turn.at);
+      setTurns((current) => current.map((kept) => (kept.at === turn.at ? summarized : kept)));
+      // The chain a pending follow-up would have carried is gone, so the reply goes with it.
+      setReplyTo((current) => (current?.at === turn.at ? null : current));
+    } catch (thrown) {
+      setError(`סיכום השיחה נכשל (${(thrown as Error).message})`);
+    } finally {
+      setSummarizingAt(null);
+      // The indicator holding focus goes with the wait, so the chat's question button takes it
+      // back — as it does when a chat folds from its answer's foot.
+      questionRefs.current.get(turn.at)!.focus();
     }
   };
 
@@ -235,40 +273,50 @@ export function Chat({ api, sampleQuestions, defaultTranscriptFolded = false }: 
               </li>
               {expanded.has(turn.at) && (
                 <li className="chat-assistant">
-                  <p>{turn.answer}</p>
-                  {turn.sources.length > 0 && (
+                  {summarizingAt === turn.at ? (
+                    <p className="chat-pending" tabIndex={-1} ref={summarizingRef}>מסכם…</p>
+                  ) : (
                     <>
-                      <button type="button" className="disclosure more-toggle"
-                        aria-expanded={sourcesShown.has(turn.at)}
-                        onClick={() => toggleSources(turn.at)}>
-                        {sourcesShown.has(turn.at) ? "פחות" : "התאמות"}
-                      </button>
-                      {sourcesShown.has(turn.at) && (
-                        <table className="chat-sources">
-                          <thead>
-                            <tr><th>מקור</th><th>התאמה</th></tr>
-                          </thead>
-                          <tbody>
-                            {turn.sources.map((source, index) => (
-                              <tr key={index}>
-                                <td>{source.fileName}</td>
-                                <td>{Math.round(source.score * 100)}%</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                      <p>{turn.answer}</p>
+                      {turn.sources.length > 0 && (
+                        <>
+                          <button type="button" className="disclosure more-toggle"
+                            aria-expanded={sourcesShown.has(turn.at)}
+                            onClick={() => toggleSources(turn.at)}>
+                            {sourcesShown.has(turn.at) ? "פחות" : "התאמות"}
+                          </button>
+                          {sourcesShown.has(turn.at) && (
+                            <table className="chat-sources">
+                              <thead>
+                                <tr><th>מקור</th><th>התאמה</th></tr>
+                              </thead>
+                              <tbody>
+                                {turn.sources.map((source, index) => (
+                                  <tr key={index}>
+                                    <td>{source.fileName}</td>
+                                    <td>{Math.round(source.score * 100)}%</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          )}
+                        </>
                       )}
+                      <div className="answer-foot">
+                        <button type="button" className="secondary compact reply-turn"
+                          aria-label={`שאלת המשך על ${turn.question}`}
+                          aria-pressed={replyTo?.at === turn.at}
+                          onClick={() => setReplyTo(turn)}>שאלת המשך</button>
+                        <button type="button" className="secondary compact"
+                          aria-label={`סיכום הצ'אט על ${turn.question}`}
+                          disabled={turn.summarized}
+                          onClick={() => void summarize(turn)}>סיכום הצ'אט</button>
+                        <button type="button" className="secondary compact close-turn"
+                          aria-label={`סגירת התשובה על ${turn.question}`}
+                          onClick={() => collapseFromFoot(turn.at)}>סגירה</button>
+                      </div>
                     </>
                   )}
-                  <div className="answer-foot">
-                    <button type="button" className="secondary compact reply-turn"
-                      aria-label={`שאלת המשך על ${turn.question}`}
-                      aria-pressed={replyTo?.at === turn.at}
-                      onClick={() => setReplyTo(turn)}>המשך</button>
-                    <button type="button" className="secondary compact"
-                      aria-label={`סגירת התשובה על ${turn.question}`}
-                      onClick={() => collapseFromFoot(turn.at)}>סגירה</button>
-                  </div>
                 </li>
               )}
               {replyTo?.at === turn.at && (

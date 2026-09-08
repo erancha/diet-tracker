@@ -105,6 +105,17 @@ describe("createApi", () => {
     expect(init.method).toBe("DELETE");
   });
 
+  it("percent-encodes the turn timestamp in the chat summary path", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response('{"at": "2026-09-01T10:00:00+00:00"}'));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await createApi(cfg, tokens).summarizeChatTurn("2026-09-01T10:00:00+00:00");
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("https://api.example.com/chat/2026-09-01T10%3A00%3A00%2B00%3A00/summary");
+    expect(init.method).toBe("POST");
+  });
+
   it("sends the notification opt-out as a boolean the account is set to", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response('{"muted": true}'));
     vi.stubGlobal("fetch", fetchMock);

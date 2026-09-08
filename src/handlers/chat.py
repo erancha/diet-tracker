@@ -12,8 +12,10 @@ Each answered chat is stored per user (common.chat_history) and served back by G
 it survives reloads and follows the user across devices. A POST naming a stored chat's
 timestamp (`at`) is a follow-up: the answered chat replaces it under a fresh timestamp —
 one stored chat per conversation, risen to the top — and the response's `at` is the chat's
-new identity. DELETE /chat/{at} permanently removes one of the caller's own chats by its
-timestamp; the quota already spent on its questions is unaffected."""
+new identity. POST /chat/{at}/summary replaces one chat with a digest of its conversation,
+answered by the same upstream service and so counted against the same quota. DELETE /chat/{at}
+permanently removes one of the caller's own chats by its timestamp; the quota already spent on
+its questions is unaffected."""
 
 import json
 import os
@@ -29,6 +31,17 @@ from common.webapi import response
 
 logger = get_logger(__name__)
 
+# The labels a followed-up conversation is chained under. Chat.tsx composes the chain and the
+# summary request takes it apart again, so the labels are mirrored across the two runtimes the way
+# the quota refusal and appTitle.ts are.
+ORIGINAL_QUESTION_LABEL = "השאלה המקורית:"
+ANSWER_LABEL = "התשובה:"
+
+# Asks the answering service for the digest rather than an answer; the conversation itself rides
+# as the request's context block.
+SUMMARY_INSTRUCTION = ("סכם בעברית את השיחה המצורפת בהקשר: מה נשאל ומה עלה בתשובות. "
+                       "עד חמישה משפטים, בלי פתיח ובלי הפניה למסמכים.")
+
 
 def handler(event, context):
     claims = event["requestContext"]["authorizer"]["jwt"]["claims"]
@@ -39,6 +52,8 @@ def handler(event, context):
         return _ask(sub, claims["email"], json.loads(event["body"]))
     if route == "GET /chat":
         return response(200, {"turns": chat_history.turns(_history_table(), sub)})
+    if route == "POST /chat/{at}/summary":
+        return _summarize(sub, claims["email"], event["pathParameters"]["at"])
     if route == "DELETE /chat/{at}":
         return _delete_turn(sub, event["pathParameters"]["at"])
     raise ValueError(f"unhandled route {route!r}")
@@ -66,13 +81,9 @@ def _ask(sub, email, body):
     if at is not None and (not isinstance(at, str) or not at.strip()):
         return response(400, {"error": "at must be the timestamp of a stored turn"})
 
-    table = boto3.resource("dynamodb").Table(os.environ["CHAT_QUOTA_TABLE"])
-    count = quota.consume(table, sub, today())
-    limit = _daily_limit(email)
-    if count > limit:
-        if count == limit + 1:
-            _notify_admin_quota_reached(email, limit)
-        return response(429, {"error": "מכסת השאלות היומית נוצלה — אפשר לשאול שוב מחר"})
+    refusal = _quota_refusal(sub, email)
+    if refusal is not None:
+        return refusal
 
     # The asker's tracked data goes upstream only as the request's context field; the stored
     # chat keeps the bare question, so the transcript stays readable and a follow-up re-attaches
@@ -85,8 +96,7 @@ def _ask(sub, email, body):
     try:
         answer = chat.ask(os.environ["RAG_API_URL"], key, question.strip(), context)
     except (urllib.error.URLError, TimeoutError) as error:
-        logger.error("rag service call failed: %s", error)
-        return response(502, {"error": "שירות המענה אינו זמין כרגע — נסו שוב מאוחר יותר"})
+        return _upstream_unavailable(error)
     try:
         at = chat_history.append(_history_table(), sub, question.strip(), answer["answer"],
                                  answer["sources"], at=at)
@@ -95,8 +105,77 @@ def _ask(sub, email, body):
     return response(200, {"answer": answer["answer"], "sources": answer["sources"], "at": at})
 
 
+def _quota_refusal(sub, email):
+    """Counts one upstream call against the caller's day and returns the response refusing it
+    once the limit is crossed, or None while the day still has room. Every path that spends money
+    upstream goes through here, so questions and summaries draw on the one allowance."""
+    table = boto3.resource("dynamodb").Table(os.environ["CHAT_QUOTA_TABLE"])
+    count = quota.consume(table, sub, today())
+    limit = _daily_limit(email)
+    if count > limit:
+        if count == limit + 1:
+            _notify_admin_quota_reached(email, limit)
+        return response(429, {"error": "מכסת השאלות היומית נוצלה — אפשר לשאול שוב מחר"})
+    return None
+
+
+def _upstream_unavailable(error):
+    """The 502 an unreachable or hung answering service becomes, logged with what went wrong."""
+    logger.error("rag service call failed: %s", error)
+    return response(502, {"error": "שירות המענה אינו זמין כרגע — נסו שוב מאוחר יותר"})
+
+
+def _summarize(sub, email, at):
+    """Replaces one of the caller's chats with a digest of its conversation. The chat is read
+    before the quota is spent, so naming a chat the caller does not hold costs nothing; the
+    digest is written only once the service has answered, so a failed call leaves the
+    conversation intact and re-summarizing stays possible."""
+    table = _history_table()
+    try:
+        turn = chat_history.get(table, sub, at)
+    except KeyError:
+        return response(404, {"error": f"no turn stored at {at}"})
+
+    refusal = _quota_refusal(sub, email)
+    if refusal is not None:
+        return refusal
+
+    key = chat.api_key(boto3.client("ssm"), os.environ["RAG_API_KEY_PARAM"])
+    try:
+        digest = chat.ask(os.environ["RAG_API_URL"], key, SUMMARY_INSTRUCTION, _conversation(turn))
+    except (urllib.error.URLError, TimeoutError) as error:
+        return _upstream_unavailable(error)
+
+    question = _original_question(turn["question"])
+    chat_history.summarize(table, sub, at, question, digest["answer"])
+    return response(200, {"question": question, "answer": digest["answer"], "sources": [],
+                          "summarized": True, "at": at})
+
+
+def _conversation(turn):
+    """A stored chat as the labeled question-and-answer text the digest is made from. A
+    followed-up chat's question already carries the chain; a standalone one gets the same opening
+    label so both read alike upstream. The text stays within the service's context cap because
+    every follow-up that grew the chain was itself sent under the smaller question cap."""
+    chain = turn["question"]
+    if not chain.startswith(ORIGINAL_QUESTION_LABEL):
+        chain = f"{ORIGINAL_QUESTION_LABEL} {chain}"
+    return f"{chain}\n{ANSWER_LABEL} {turn['answer']}"
+
+
+def _original_question(question):
+    """The question a conversation opened with: everything a chain holds before its first answer,
+    without the opening label, or the whole question of a chat that was never followed up. The
+    answer label ends the opening rather than the first newline, so a question asked over several
+    lines survives summarizing whole."""
+    if not question.startswith(ORIGINAL_QUESTION_LABEL):
+        return question
+    opening = question.split(f"\n{ANSWER_LABEL}", 1)[0]
+    return opening[len(ORIGINAL_QUESTION_LABEL):].strip()
+
+
 def _notify_admin_quota_reached(email, limit):
-    """Emails the admin on the day's first refused question — refused attempts keep counting, so
+    """Emails the admin on the day's first refused request — refused attempts keep counting, so
     exactly one request arrives with count == limit + 1 and the notice cannot repeat within the
     day. The notice is observability, not a gate: a send failure is logged and never changes the
     refusal itself."""
