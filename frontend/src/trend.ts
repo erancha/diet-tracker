@@ -24,13 +24,15 @@ export function liveTrendDay(questionnaire: Questionnaire, today: DayPayload, da
   };
 }
 
-// Which of the charted columns falls on the treat day's weekday. The charted span is a full week,
-// so exactly one column ever matches; a span that holds none is a caller fault, not a day the
+// Which of the charted columns fall on the treat day's weekday. The charted span is longer than
+// a week, so it holds the weekday once or twice, and every match is framed: the second is what
+// lets the two treat days be compared. A span that holds none is a caller fault, not a day the
 // chart may quietly leave unframed.
-export function treatDayColumn(dayStrs: string[], weekday: string): number {
-  const index = dayStrs.findIndex((d) => parseIsoDate(d).getDay() === weekdayIndexOf(weekday));
-  if (index === -1) throw new Error(`no ${weekday} among the charted days ${dayStrs.join(", ")}`);
-  return index;
+export function treatDayColumns(dayStrs: string[], weekday: string): number[] {
+  const target = weekdayIndexOf(weekday);
+  const columns = dayStrs.flatMap((d, i) => (parseIsoDate(d).getDay() === target ? [i] : []));
+  if (columns.length === 0) throw new Error(`no ${weekday} among the charted days ${dayStrs.join(", ")}`);
+  return columns;
 }
 
 // A points panel grids at its rule's heavy-day limit and the two multiples above it, so each

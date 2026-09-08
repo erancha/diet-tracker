@@ -229,7 +229,7 @@ Scheduled jobs (EventBridge Scheduler, Asia/Jerusalem) run alongside the tracker
   only the bullets: the opening line still goes out, and no chat is stored.
 - **Weigh-in reminder** — a weekly prompt to step on the scale, skipped for anyone who already
   recorded a weight on the weigh-in day itself, on the same channels as the alerts above.
-- **Trend chart** — a 7-day trend chart after each closed day.
+- **Trend chart** — an 8-day trend chart after each closed day.
 
 Every job above reads its audience from the pool minus the accounts that have opted out, so one
 switch silences all of them — the unconditional weekly digest included. The switch is the account

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { beforeDailyCutoff, dayLabel, daysBefore, daysSince, ddmmLabel, instantLabel, mealOverdue, expandWeightSection, isWeighInDay, isoDate, last7Days, parseIsoDate, weekdayDdmmLabel, weekdayLetter } from "./dates";
+import { beforeDailyCutoff, dayLabel, daysBefore, daysSince, ddmmLabel, instantLabel, mealOverdue, expandWeightSection, isWeighInDay, isoDate, lastDays, parseIsoDate, weekdayDdmmLabel, weekdayLetter } from "./dates";
 
 describe("isoDate", () => {
   it("formats a local date as YYYY-MM-DD with zero padding", () => {
@@ -67,16 +67,16 @@ describe("daysBefore", () => {
   });
 });
 
-describe("last7Days", () => {
-  it("returns the 7 days ending at the given date, inclusive", () => {
-    const days = last7Days("2026-08-18");
-    expect(days).toHaveLength(7);
-    expect(days[0]).toBe("2026-08-12");
-    expect(days[6]).toBe("2026-08-18");
+describe("lastDays", () => {
+  it("returns the requested number of days ending at the given date, inclusive", () => {
+    const days = lastDays("2026-08-18", 8);
+    expect(days).toHaveLength(8);
+    expect(days[0]).toBe("2026-08-11");
+    expect(days[7]).toBe("2026-08-18");
   });
 
   it("crosses month boundaries", () => {
-    expect(last7Days("2026-08-03")[0]).toBe("2026-07-28");
+    expect(lastDays("2026-08-03", 7)[0]).toBe("2026-07-28");
   });
 });
 

@@ -39,9 +39,10 @@ closed from the tracker, and the week's trend over recorded history.
   beside the target weight. That recap is also stored as an answered chat, so it appears in the
   chat list and can be followed up there like any other. Every message is sent as right-to-left
   HTML beside its plain text, so Hebrew reads as written rather than as the recipient's mail
-  client guesses. Inside the app, a 7-day trend chart shows after each closed day;
+  client guesses. Inside the app, an 8-day trend chart shows after each closed day;
   its carb panel plots the part of each day's score that came from flours and sugar beside the
-  score itself, and frames the weekday the program's treat meal is aimed at.
+  score itself, and frames the weekday the program's treat meal is aimed at — one day past a
+  week, so a chart ending on the treat day sets it against the one before.
   The account menu turns all reminders off and back on. A reminder SES refuses to deliver — the
   address is not one the sending account may write to — is kept and shown behind the header's
   alarm bell instead, dated, until it is dismissed there, so a message addressed to someone still

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { domainFor, liveTrendDay, ticksFor, treatDayColumn } from "./trend";
+import { domainFor, liveTrendDay, ticksFor, treatDayColumns } from "./trend";
 import { fixtureQuestionnaire, trackedDay, trackerQuestionnaire } from "./test-fixtures";
 import type { Question, Questionnaire } from "./types";
 
@@ -68,23 +68,28 @@ describe("liveTrendDay", () => {
   });
 });
 
-describe("treatDayColumn", () => {
+describe("treatDayColumns", () => {
   // 2026-08-14 is a Friday, so a week ending on the Thursday after it holds exactly one.
   const week = ["2026-08-13", "2026-08-14", "2026-08-15", "2026-08-16", "2026-08-17",
                 "2026-08-18", "2026-08-19"];
 
   it("finds the single column falling on the treat day's weekday", () => {
-    expect(treatDayColumn(week, "FRI")).toBe(1);
-    expect(treatDayColumn(week, "THU")).toBe(0);
-    expect(treatDayColumn(week, "WED")).toBe(6);
+    expect(treatDayColumns(week, "FRI")).toEqual([1]);
+    expect(treatDayColumns(week, "THU")).toEqual([0]);
+    expect(treatDayColumns(week, "WED")).toEqual([6]);
+  });
+
+  it("finds every such column when the span holds the weekday twice", () => {
+    // Eight days from that Friday to the next, both framed.
+    expect(treatDayColumns([...week.slice(1), "2026-08-20", "2026-08-21"], "FRI")).toEqual([0, 7]);
   });
 
   it("rejects a weekday no scheduler token names", () => {
-    expect(() => treatDayColumn(week, "FRIDAY")).toThrow(/FRIDAY/);
+    expect(() => treatDayColumns(week, "FRIDAY")).toThrow(/FRIDAY/);
   });
 
   it("rejects a span holding no such day rather than leaving the column unframed", () => {
-    expect(() => treatDayColumn(week.slice(0, 3), "MON")).toThrow(/MON/);
+    expect(() => treatDayColumns(week.slice(0, 3), "MON")).toThrow(/MON/);
   });
 });
 

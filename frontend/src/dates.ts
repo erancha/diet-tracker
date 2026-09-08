@@ -107,8 +107,9 @@ export function daysBefore(s: string, n: number): string {
   return isoDate(new Date(d.getFullYear(), d.getMonth(), d.getDate() - n));
 }
 
-export function last7Days(endDateStr: string): string[] {
-  return Array.from({ length: 7 }, (_, i) => daysBefore(endDateStr, 6 - i));
+// The count days ending at the given one, inclusive, oldest first.
+export function lastDays(endDateStr: string, count: number): string[] {
+  return Array.from({ length: count }, (_, i) => daysBefore(endDateStr, count - 1 - i));
 }
 
 // Whether the clock still sits before a small-hours bound like "02:00" — the form the day-close

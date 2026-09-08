@@ -1,10 +1,14 @@
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, usePlotArea, XAxis, YAxis } from "recharts";
 import type { Day, DayPayload, Question, Questionnaire, TreatDaySettings } from "../types";
-import { dayLabel, last7Days } from "../dates";
-import { domainFor, liveTrendDay, ticksFor, treatDayColumn } from "../trend";
+import { dayLabel, lastDays } from "../dates";
+import { domainFor, liveTrendDay, ticksFor, treatDayColumns } from "../trend";
 import { isViolating, panelTitle, ruleBoundLabel, scoreLabel, trendPanels, valueLabel } from "../violations";
 
-// Every panel reserves the same y-axis width, so the 7 day columns plot at identical x positions
+// Days each panel charts. One more than a week, so a span ending on the treat day holds two of
+// them and the carb panel can set the latest treat day against the one before it.
+const CHART_DAYS = 8;
+
+// Every panel reserves the same y-axis width, so the day columns plot at identical x positions
 // down the stack and the one visible date axis dates them all.
 const Y_AXIS_WIDTH = 40;
 const MARGIN_RIGHT = 14;
@@ -41,7 +45,7 @@ function panelData(questionnaire: Questionnaire, question: Question, dayStrs: st
   });
 }
 
-// The treat day's column, marked on the panel that charts the carb score: the target the program
+// One treat day's column, marked on the panel that charts the carb score: the target the program
 // aims its treat meal at, so a lift between the two lines reads as a treat meal taken on the
 // intended day and a lift outside them as one taken off it. Only the verticals are drawn — a
 // closed box would parallel the gridlines it crosses, while two lines read as the lane the day
@@ -143,7 +147,9 @@ function TrendPanel({ questionnaire, question, dayStrs, dayByDate, index, showXA
               meet. */}
           {decomposed && (
             <>
-              <TreatDayFrame column={treatDayColumn(dayStrs, treatDay.weekday)} columns={dayStrs.length} />
+              {treatDayColumns(dayStrs, treatDay.weekday).map((column) => (
+                <TreatDayFrame key={column} column={column} columns={dayStrs.length} />
+              ))}
               <Line dataKey="excluded" stroke="var(--viz-excluded)" strokeWidth={2} strokeDasharray="4 3" isAnimationActive={false} connectNulls={false} dot={{ r: 2.5, fill: "var(--viz-excluded)", stroke: "none" }} />
             </>
           )}
@@ -154,8 +160,9 @@ function TrendPanel({ questionnaire, question, dayStrs, dayByDate, index, showXA
   );
 }
 
-// 7-day trend: one line panel per chartable question. Ends at today once today has recorded
-// meals — its running carb score charts live — else at the latest submitted date.
+// Trend of the last CHART_DAYS days: one line panel per chartable question. Ends at today once
+// today has recorded meals — its running carb score charts live — else at the latest submitted
+// date.
 export function TrendChart({ questionnaire, days, today, endDate, loadedInMs, treatDay, headlineOnly = false }: {
   questionnaire: Questionnaire; days: Day[]; today: DayPayload; endDate: string;
   // The weekday the program's treat meal is aimed at, framed on the carb panel as the target the
@@ -173,7 +180,7 @@ export function TrendChart({ questionnaire, days, today, endDate, loadedInMs, tr
   const panels = headlineOnly ? allPanels.slice(0, 1) : allPanels;
   if (panels.length === 0) return null;
   const liveDay = liveTrendDay(questionnaire, today, days);
-  const dayStrs = last7Days(liveDay?.date ?? endDate);
+  const dayStrs = lastDays(liveDay?.date ?? endDate, CHART_DAYS);
   const dayByDate = new Map(days.map((d) => [d.date, d]));
   if (liveDay) dayByDate.set(liveDay.date, liveDay);
   return (
