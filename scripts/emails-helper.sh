@@ -133,10 +133,10 @@ stored = []
 store_chat = nudge.chat_history.append
 
 
-def append(table, sub, question, answer, sources):
+def append(table, sub, question, answer, sources, **marks):
     stored.append(question)
     if send:
-        return store_chat(table, sub, question, answer, sources)
+        return store_chat(table, sub, question, answer, sources, **marks)
     print(f"--- would store the chat {question!r} ---\n")
     return None
 
@@ -144,7 +144,9 @@ def append(table, sub, question, answer, sources):
 nudge.chat_history.append = append
 
 if not send:
-    def ask(url, key, question):
+    # Standing in for the answering service, so it takes the job's whole call — the timeout it
+    # budgets for the wait included — and prints only the question.
+    def ask(url, key, question, **_):
         print(f"--- question to {url} ---\n{question}\n")
         return {"answer": "<כאן תיכתב תשובת שירות המענה>", "sources": []}
 
