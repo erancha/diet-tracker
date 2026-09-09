@@ -1,15 +1,20 @@
 #!/bin/bash
-# Simulation helper for the app's outgoing mail, against the deployed stacks. Each simulation is
-# named by its own parameter and acts on one user, so a surface can be looked at on demand instead
-# of waiting for a schedule to fire or for SES to refuse something.
+# Helper for the app's outgoing mail, against the deployed stacks. Each action is named by its own
+# parameter and acts on one user, so a surface can be looked at on demand instead of waiting for a
+# schedule to fire or for SES to refuse something. Most only simulate; --verify really asks SES to
+# send, and the usage below says which is which.
 #
 # Usage:
 #   scripts/emails-helper.sh --rejected <email> [--subject <text>] [--body <text>] [--env <suffix>]
 #   scripts/emails-helper.sh --weekly-recap <email> [--send] [--env <suffix>]
+#   scripts/emails-helper.sh --verify <email> [--env <suffix>]
 #
 # Simulations:
 #   --rejected <email>      Show that user a message as one SES refused to deliver
 #   --weekly-recap <email>  Run the weekly recap job for that user now, rather than on its schedule
+#
+# Real actions:
+#   --verify <email>        Ask SES to mail that address its verification request again
 #
 # Options:
 #   --subject <text>  With --rejected: subject to show (default: the nightly reminder's)
@@ -23,6 +28,7 @@
 #   scripts/emails-helper.sh --rejected someone@gmail.com --subject 'סיכום שבועי' --body 'שבוע טוב'
 #   scripts/emails-helper.sh --weekly-recap someone@gmail.com          # what the week would send
 #   scripts/emails-helper.sh --weekly-recap someone@gmail.com --send   # send it, to that user only
+#   scripts/emails-helper.sh --verify someone@gmail.com                # re-request a dead link
 set -euo pipefail
 cd "$(dirname "$0")/.."
 source scripts/aws-config.sh
@@ -42,11 +48,11 @@ while [ $# -gt 0 ]; do
   # Every flag below that names a value, checked once here so a missing one prints the usage
   # rather than tripping over set -u.
   case "$1" in
-    --rejected|--weekly-recap|--subject|--body|--env)
+    --rejected|--weekly-recap|--verify|--subject|--body|--env)
       [ $# -ge 2 ] || { echo "$1 needs a value" >&2; usage 1; } ;;
   esac
   case "$1" in
-    --rejected|--weekly-recap) ACTION="${1#--}"; EMAIL="$2"; shift 2 ;;
+    --rejected|--weekly-recap|--verify) ACTION="${1#--}"; EMAIL="$2"; shift 2 ;;
     --subject) SUBJECT="$2"; shift 2 ;;
     --body)    BODY="$2"; shift 2 ;;
     --send)    SEND=1; shift ;;
@@ -177,7 +183,39 @@ PY
   fi
 }
 
+# Asks SES to mail the address its verification request again. In the sandbox a message reaches
+# only an address that is itself a verified identity, and the request's link dies 24 hours after
+# it is sent, so an address whose window expired has no way back on its own: the sign-up trigger
+# runs once per account, and an account that already exists never signs up again. Skipping an
+# address SES already reports as verified is the same guard src/handlers/presignup.py applies, so
+# running this against a working address costs nothing.
+verify() {
+  # SES email identities are case sensitive, and sign-up creates the identity from the lowercased
+  # address, so both the lookup and the request have to name it in that same form.
+  ADDRESS=$(tr "[:upper:]" "[:lower:]" <<<"$EMAIL")
+
+  status() {
+    aws ses get-identity-verification-attributes --identities "$ADDRESS" \
+      --query "VerificationAttributes.\"$ADDRESS\".VerificationStatus" --output text
+  }
+
+  BEFORE=$(status)
+  # SES leaves an address it has never been asked about out of its answer, which the CLI renders
+  # as None — a state of its own, and the one a sign-up whose SES call failed leaves behind.
+  echo "SES reports $ADDRESS as ${BEFORE/None/an address it has never been asked about}"
+  if [ "$BEFORE" = "Success" ]; then
+    echo "Already verified — no request sent."
+    return
+  fi
+
+  aws ses verify-email-identity --email-address "$ADDRESS"
+  echo "Requested verification; SES now reports $(status)."
+  echo "Amazon Web Services has mailed $ADDRESS a confirmation link that expires in 24 hours."
+  echo "It commonly lands in spam, since it comes from a sender the recipient does not know."
+}
+
 case "$ACTION" in
   rejected)     rejected ;;
   weekly-recap) weekly_recap ;;
+  verify)       verify ;;
 esac
