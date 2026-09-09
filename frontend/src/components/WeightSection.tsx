@@ -1,8 +1,9 @@
 import { useState } from "react";
 import type { ChartSpan, WeightPayload, WeightSettings } from "../types";
-import { isoDate } from "../dates";
+import { isWeighInDay, isoDate } from "../dates";
 import { mayDiscardEdits } from "../edits";
-import { activeSpan, entriesWithin, kgLabel, offeredSpans, parseKg, rhythmReading, summarize, targetChangePrompt, type WeightSummary } from "../weight";
+import { activeSpan, entriesWithin, kgLabel, offeredSpans, parseKg, rhythmReading, summarize,
+         targetChangePrompt, WEIGH_IN_CADENCE_QUESTION, type WeightSummary } from "../weight";
 import { CollapsibleSection } from "./CollapsibleSection";
 import { Icon } from "./Icon";
 import { useGlobalFold } from "./useFoldAll";
@@ -81,13 +82,15 @@ function TargetReading({ summary, limits, onSet }: {
   );
 }
 
-function TodayRow({ recorded, limits, onRecord }: {
-  recorded: number | null; limits: Limits; onRecord: (kg: number) => void;
+// Today's weighing. The row marks itself on the weigh-in day, which is what the stylesheet sizes
+// it by: the day the rhythm asks for a weighing reads larger, and recording stays open on any.
+function TodayRow({ recorded, limits, due, onRecord }: {
+  recorded: number | null; limits: Limits; due: boolean; onRecord: (kg: number) => void;
 }) {
   const [draft, setDraft] = useState("");
   const kg = parseKg(draft, limits);
   return (
-    <p className="weight-today">
+    <p className={due ? "weight-today weigh-in-due" : "weight-today"}>
       <span>המשקל היום:</span>
       <KgInput value={draft} limits={limits} label="המשקל היום" onChange={setDraft} />
       <button type="button" className="primary" disabled={kg === null} onClick={() => onRecord(kg!)}>
@@ -108,8 +111,11 @@ function TodayRow({ recorded, limits, onRecord }: {
 // reading, not this section's; a section the caller opened stands until a toggle or the menu's
 // global fold closes it — or until a weighing is saved, which is the errand the open section was
 // serving, so the section folds back to its reading line on its own.
+//
+// The rhythm line above the chart carries the one word that opens the chat, so a reader who wonders
+// why the weighing is weekly can ask without leaving the section.
 export function WeightSection({ weight, settings, now, defaultExpanded,
-                                onRecord, onSetTarget, onDelete }: {
+                                onRecord, onSetTarget, onDelete, onAskChat }: {
   weight: WeightPayload;
   settings: WeightSettings;
   now: Date;
@@ -117,6 +123,7 @@ export function WeightSection({ weight, settings, now, defaultExpanded,
   onRecord: (kg: number) => void;
   onSetTarget: (kg: number) => void;
   onDelete: (date: string) => void;
+  onAskChat: (question: string) => void;
 }) {
   const [span, setSpan] = useState<ChartSpan>(settings.chart_months);
   const [collapsed, setCollapsed] = useState(!defaultExpanded);
@@ -149,8 +156,19 @@ export function WeightSection({ weight, settings, now, defaultExpanded,
       className={summary.overTarget ? "weight weight-over-target" : "weight"}
       headerAside={<TargetReading summary={summary} limits={settings.limits} onSet={onSetTarget} />}
     >
-      {rhythm !== null && <p className="weight-rhythm">{rhythm}</p>}
+      {rhythm !== null && (
+        <p className="weight-rhythm">
+          {rhythm.before}
+          {rhythm.linked !== "" && (
+            <button type="button" onClick={() => onAskChat(WEIGH_IN_CADENCE_QUESTION)}>
+              {rhythm.linked}
+            </button>
+          )}
+          {rhythm.after}
+        </p>
+      )}
       <TodayRow recorded={recordedToday?.kg ?? null} limits={settings.limits}
+                due={isWeighInDay(now, settings.weigh_in.weekday)}
                 onRecord={(kg) => { onRecord(kg); setCollapsed(true); }} />
       {weight.entries.length > 0 && (
         <WeightChart entries={plotted} target={weight.target} span={active} spans={spans}

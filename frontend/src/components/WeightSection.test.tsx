@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { WeightSection } from "./WeightSection";
 import type { WeightPayload, WeightSettings } from "../types";
 import { DISCARD_EDITS_PROMPT } from "../edits";
+import { WEIGH_IN_CADENCE_QUESTION } from "../weight";
 
 const NOW = new Date(2026, 7, 27); // 2026-08-27
 const TODAY = "2026-08-27";
@@ -19,18 +20,20 @@ interface Handlers {
   onRecord?: (kg: number) => void;
   onSetTarget?: (kg: number) => void;
   onDelete?: (date: string) => void;
+  onAskChat?: (question: string) => void;
 }
 
 function renderSection(weight: Partial<WeightPayload> = {}, handlers: Handlers = {},
-                       defaultExpanded = false) {
+                       defaultExpanded = false, now: Date = NOW) {
   render(
     <WeightSection
       weight={{ ...EMPTY, ...weight }}
       settings={SETTINGS}
-      now={NOW}
+      now={now}
       onRecord={handlers.onRecord ?? (() => {})}
       onSetTarget={handlers.onSetTarget ?? (() => {})}
       onDelete={handlers.onDelete ?? (() => {})}
+      onAskChat={handlers.onAskChat ?? (() => {})}
       defaultExpanded={defaultExpanded}
     />,
   );
@@ -38,12 +41,18 @@ function renderSection(weight: Partial<WeightPayload> = {}, handlers: Handlers =
 
 // Renders the section and opens it, since folded is where it rests; the fold's own tests reach for
 // renderSection instead.
-function show(weight: Partial<WeightPayload> = {}, handlers: Handlers = {}) {
-  renderSection(weight, handlers);
+function show(weight: Partial<WeightPayload> = {}, handlers: Handlers = {}, now: Date = NOW) {
+  renderSection(weight, handlers, false, now);
   fireEvent.click(screen.getByRole("button", { name: /^משקל/ }));
 }
 
 afterEach(() => vi.restoreAllMocks());
+
+// Today's control row carries the marker that sizes it to the target input; without it the row
+// stands shorter, which is how the section says a weighing is allowed but not due today.
+function todayRow(): HTMLElement {
+  return document.querySelector(".weight-today")!;
+}
 
 function line(): HTMLElement {
   return document.querySelector(".weight-summary")!;
@@ -274,5 +283,28 @@ describe("summary line", () => {
     fireEvent.click(toggle);
     expect(toggle).toHaveAttribute("aria-expanded", "false");
     expect(reading()).toContain("76.5 ק״ג · 4.5 מעל היעד: 72 ק״ג");
+  });
+
+  it("marks today's row as due on the weigh-in day", () => {
+    show();
+
+    expect(todayRow()).toHaveClass("weigh-in-due");
+  });
+
+  it("leaves today's row unmarked on every other day, where a weighing is not due", () => {
+    show({}, {}, new Date(2026, 7, 26));
+
+    expect(todayRow()).not.toHaveClass("weigh-in-due");
+  });
+
+  it("asks the chat about the cadence from the word naming the recommendation", () => {
+    const onAskChat = vi.fn();
+    // A day that is not the weigh-in day, so the reading is the recommendation.
+    show({ entries: [{ date: "2026-08-20", kg: 76, at: null }] }, { onAskChat },
+         new Date(2026, 7, 26));
+
+    fireEvent.click(screen.getByRole("button", { name: "המומלצת" }));
+
+    expect(onAskChat).toHaveBeenCalledWith(WEIGH_IN_CADENCE_QUESTION);
   });
 });

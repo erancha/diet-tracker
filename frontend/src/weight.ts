@@ -2,7 +2,8 @@
 // line renders, the wording of the confirmations the section raises, and what a typed weight has
 // to satisfy to count. The components hold no arithmetic of their own.
 
-import { daysSince, ddmmLabel, isWeighInDay, minutesOfDay, parseIsoDate, weekdayLetter } from "./dates";
+import { daysSince, ddmmLabel, isWeighInDay, minutesOfDay, nextWeekdayDate, parseIsoDate,
+         weekdayLetter } from "./dates";
 import type { ChartSpan, WeightEntry } from "./types";
 
 // The spans the range selector offers, in the order it lays them out. Mirrors CHART_SPANS in
@@ -162,6 +163,22 @@ export function usualHour(entries: WeightEntry[]): string | null {
 // worth more to the reader than which weekday comes round next.
 const STALE_DAYS = 7;
 
+// The question the rhythm line's control puts to the chat. The app guide in the knowledge base
+// answers it, so the wording has to keep asking what that guide explains.
+export const WEIGH_IN_CADENCE_QUESTION = "כל כמה זמן מומלץ להישקל, ולמה לא כל יום?";
+
+/** One rhythm sentence, split where the section seats the control that opens the chat about the
+ *  cadence. linked is empty on the readings that carry no control. */
+export interface RhythmLine {
+  before: string;
+  linked: string;
+  after: string;
+}
+
+function plainLine(text: string): RhythmLine {
+  return { before: text, linked: "", after: "" };
+}
+
 /**
  * Where the reader stands in the weekly rhythm, or null when there is nothing to say — before the
  * first weighing, and on the weigh-in day once it has been answered.
@@ -169,14 +186,29 @@ const STALE_DAYS = 7;
  * The reading reports and never judges: a weight enters no score and raises no alert, so a rhythm
  * that has slipped is stated as elapsed days, not flagged as a miss.
  */
-export function rhythmReading(entries: WeightEntry[], weekday: string, now: Date): string | null {
+export function rhythmReading(entries: WeightEntry[], weekday: string,
+                              now: Date): RhythmLine | null {
   if (entries.length === 0) return null;
   const since = daysSince(entries[entries.length - 1].date, now);
-  const base = since > STALE_DAYS ? `נשקלת לפני ${since} ימים`
-    : !isWeighInDay(now, weekday) ? `השקילה הבאה ביום ${weekdayLetter(weekday)}׳`
-    : since === 0 ? null
-    : "היום יום השקילה";
-  if (base === null) return null;
+  if (since > STALE_DAYS) return plainLine(withUsualHour(`נשקלת לפני ${since} ימים`, entries));
+  // A recommendation rather than a description, so it names the day and date the weigh-in is due
+  // and not the hour this reader has been weighing at. The morning it advises is the part of the
+  // day weigh_in.hour sits in, and moving that hour out of the morning would strand this wording.
+  if (!isWeighInDay(now, weekday)) {
+    return {
+      before: "השקילה ",
+      linked: "המומלצת",
+      after: ` הבאה היא בבוקר יום ${weekdayLetter(weekday)}׳, `
+        + ddmmLabel(nextWeekdayDate(now, weekday)),
+    };
+  }
+  if (since === 0) return null;
+  return plainLine(withUsualHour("היום יום השקילה", entries));
+}
+
+// The hour this reader usually weighs at, appended where one has been established. It describes
+// the habit, so it rides only the readings that speak to a weighing already due or missed.
+function withUsualHour(base: string, entries: WeightEntry[]): string {
   const hour = usualHour(entries);
   return hour === null ? base : `${base} · בסביבות ${hour}`;
 }

@@ -292,6 +292,7 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, o
           onRecord={(kg) => recordWeightMutation.mutate(kg)}
           onSetTarget={(kg) => setTargetMutation.mutate(kg)}
           onDelete={(date) => deleteWeightMutation.mutate(date)}
+          onAskChat={askChat}
         />
         <DayTracker
             questionnaire={questionnaire}

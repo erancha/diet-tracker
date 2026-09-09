@@ -70,6 +70,12 @@ export function weekdayLetter(weekday: string): string {
   return WEEKDAY_LETTERS[weekdayIndexOf(weekday)];
 }
 
+// The next date the given weekday falls on, counting today when today is already that weekday.
+export function nextWeekdayDate(now: Date, weekday: string): string {
+  const ahead = (weekdayIndexOf(weekday) - now.getDay() + 7) % 7;
+  return isoDate(new Date(now.getFullYear(), now.getMonth(), now.getDate() + ahead));
+}
+
 // Whole days from a recorded date to the day now falls in — the calendar distance the rhythm is
 // read in, not an elapsed-hours count.
 export function daysSince(date: string, now: Date): number {

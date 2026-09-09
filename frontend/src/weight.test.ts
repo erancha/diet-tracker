@@ -161,33 +161,62 @@ describe("usualHour", () => {
   });
 });
 
+// The sentence as the section reads it, with the linked word back in place; the tests that care
+// about the control itself assert on the parts instead.
+function rhythmText(entries: WeightEntry[], weekday: string, now: Date): string | null {
+  const line = rhythmReading(entries, weekday, now);
+  return line === null ? null : line.before + line.linked + line.after;
+}
+
 describe("rhythmReading", () => {
   it("says nothing before the first weighing", () => {
-    expect(rhythmReading([], THU, TODAY)).toBeNull();
+    expect(rhythmText([], THU, TODAY)).toBeNull();
   });
 
   it("names the weigh-in day while the scale has not been stepped on", () => {
-    expect(rhythmReading([timed("2026-08-20", null)], THU, TODAY)).toBe("היום יום השקילה");
+    expect(rhythmText([timed("2026-08-20", null)], THU, TODAY)).toBe("היום יום השקילה");
   });
 
   it("says nothing on the weigh-in day once it has been answered", () => {
-    expect(rhythmReading([timed("2026-08-27", "07:30")], THU, TODAY)).toBeNull();
+    expect(rhythmText([timed("2026-08-27", "07:30")], THU, TODAY)).toBeNull();
   });
 
-  it("points at the next weigh-in day on every other day", () => {
+  it("recommends the next weigh-in by day and date on every other day", () => {
     const wednesday = new Date(2026, 7, 26);
-    expect(rhythmReading([timed("2026-08-20", null)], THU, wednesday))
-      .toBe("השקילה הבאה ביום ה׳");
+    expect(rhythmText([timed("2026-08-20", null)], THU, wednesday))
+      .toBe("השקילה המומלצת הבאה היא בבוקר יום ה׳, 27/08");
+  });
+
+  it("dates the recommendation a week on when the weigh-in day has only just passed", () => {
+    const friday = new Date(2026, 7, 28);
+    expect(rhythmText([timed("2026-08-27", null)], THU, friday))
+      .toBe("השקילה המומלצת הבאה היא בבוקר יום ה׳, 03/09");
+  });
+
+  it("links the word naming the recommendation, and only on that reading", () => {
+    const wednesday = new Date(2026, 7, 26);
+    expect(rhythmReading([timed("2026-08-20", null)], THU, wednesday)!.linked).toBe("המומלצת");
+    // The other readings report where the reader stands and offer nothing to open.
+    expect(rhythmReading([timed("2026-08-20", null)], THU, TODAY)!.linked).toBe("");
+    expect(rhythmReading([timed("2026-08-11", null)], THU, TODAY)!.linked).toBe("");
+  });
+
+  it("leaves the usual hour off the recommendation, which states the morning it advises", () => {
+    const wednesday = new Date(2026, 7, 26);
+    const timedSeries = [timed("2026-08-06", "13:20"), timed("2026-08-13", "13:40"),
+                         timed("2026-08-20", "13:30")];
+    expect(rhythmText(timedSeries, THU, wednesday))
+      .toBe("השקילה המומלצת הבאה היא בבוקר יום ה׳, 27/08");
   });
 
   it("states how long it has been once a whole week has passed", () => {
-    expect(rhythmReading([timed("2026-08-11", null)], THU, TODAY)).toBe("נשקלת לפני 16 ימים");
+    expect(rhythmText([timed("2026-08-11", null)], THU, TODAY)).toBe("נשקלת לפני 16 ימים");
   });
 
   it("carries the usual hour once there is one, and only then", () => {
     const timedSeries = [timed("2026-08-06", "07:20"), timed("2026-08-13", "07:40"),
                          timed("2026-08-20", "07:30")];
-    expect(rhythmReading(timedSeries, THU, TODAY)).toBe("היום יום השקילה · בסביבות 07:30");
-    expect(rhythmReading([timed("2026-08-20", "07:30")], THU, TODAY)).toBe("היום יום השקילה");
+    expect(rhythmText(timedSeries, THU, TODAY)).toBe("היום יום השקילה · בסביבות 07:30");
+    expect(rhythmText([timed("2026-08-20", "07:30")], THU, TODAY)).toBe("היום יום השקילה");
   });
 });

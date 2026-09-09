@@ -596,7 +596,21 @@ td.view-day { cursor: pointer; }
    rather than left to the browser's 1em — the section is a handful of short rows and reads as one
    block at half that. */
 .weight-today { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin: 0.5rem 0; }
-.weight-today button { padding: 0.5rem 1.5rem; }
+/* The height the target input and today's row are both cut to, named once so the two agree by
+   construction. */
+.weight { --weight-input-height: 1.75rem; }
+/* Today's controls carry that height on the weigh-in day, so the two read as equals on the one day
+   the rhythm asks for a weighing. Every other day they stand a quarter shorter: recording is still
+   open, and the smaller row is what says the day is not the recommended one. Height is set rather
+   than left to the padding, which could not reach three quarters of a box the text already fills. */
+.weight-today input, .weight-today button { height: calc(var(--weight-input-height) * 0.75); }
+.weight-today.weigh-in-due input,
+.weight-today.weigh-in-due button { height: var(--weight-input-height); }
+/* Side padding stays close to the row's height, so the shorter box does not read as a wide, flat
+   pill. The label is centred by the box because the inherited line-height is taller than that box
+   and cannot centre it. */
+.weight-today button { padding: 0 0.75rem; display: inline-flex; align-items: center;
+                       justify-content: center; line-height: 1; }
 /* A target nobody has set yet is an absence, not a figure, so it reads as chrome rather than
    taking the accent the value carries. */
 .weight-target-unset { color: #5f5f5f; }
@@ -604,12 +618,14 @@ td.view-day { cursor: pointer; }
    second row on a phone, which is the whole thing this arrangement avoids, so the confirmation is
    a glyph seated on the text baseline. */
 .weight-target-commit { --btn-fg: var(--accent); margin-block: -0.15rem; }
-.weight-today input { width: 6rem; padding: 0.5rem; font-size: 1rem;
-                      border: 1px solid #ccc; border-radius: 8px; }
-/* The target's input sits in running text rather than in a control row, so it is sized to the
-   figure it holds and set back to the body weight the surrounding line is not. */
-.weight-summary input { width: 5rem; padding: 0.2rem 0.4rem; font-size: 1rem; font-weight: 400;
-                        border: 1px solid #ccc; border-radius: 8px; vertical-align: baseline; }
+/* Both inputs hold the same kind of figure and stand the same height, so they share one box. */
+.weight-today input,
+.weight-summary input { width: 5rem; padding: 0 0.4rem; font-size: 1rem;
+                        border: 1px solid #ccc; border-radius: 8px; }
+/* The target's sits in running text rather than in a control row, so it is set back to the body
+   weight the surrounding line is not, and seated on that line's baseline. */
+.weight-summary input { height: var(--weight-input-height); font-weight: 400;
+                        vertical-align: baseline; }
 /* Already-recorded is a statement about the day, not a second value to act on, so it reads as
    chrome beside the input that would replace it. */
 .weight-recorded { font-size: 0.85rem; color: #5f5f5f; }
@@ -647,6 +663,9 @@ td.view-day { cursor: pointer; }
    control reads right beside the weight it removes. The rows dissolve into the grid
    (display: contents) so every row's cells share the same columns. */
 .weight-rhythm { margin: 0 0 0.5rem; opacity: 0.8; }
+/* The word that opens the chat sits inside the sentence rather than beside it, so it reads as a
+   link in running text: the sentence's own colour, marked by the underline alone. */
+.weight-rhythm button { text-decoration: underline; text-underline-offset: 2px; }
 .weight-entries { list-style: none; padding: 0; margin: 0.5rem 0 0; display: grid;
                   grid-template-columns: repeat(4, max-content); align-items: center;
                   gap: 0.25rem 1rem; }
