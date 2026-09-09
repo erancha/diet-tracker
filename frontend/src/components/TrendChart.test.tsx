@@ -137,6 +137,16 @@ describe("TrendChart", () => {
     expect(centers[5]).toBeGreaterThan(right);
   });
 
+  it("colors the treat day's date on the axis green, whichever panel carries the axis", () => {
+    // The date row sits under the last panel, which is not the carb panel here.
+    const { container } = render(<TrendChart questionnaire={fixtureQuestionnaire} days={days} today={emptyToday} endDate="2026-08-18" treatDay={TREAT_DAY} loadedInMs={0} />);
+    const fillOf = (label: string) => [...container.querySelectorAll(".recharts-cartesian-axis-tick-value")]
+      .find((tick) => tick.textContent === label)!.getAttribute("fill");
+    // 2026-08-14 is the Friday among the charted days.
+    expect(fillOf("14.8")).toBe("var(--accent)");
+    expect(fillOf("13.8")).toBe("var(--viz-muted)");
+  });
+
   it("frames both treat days when the span ends on one, so the two can be compared", () => {
     // 2026-08-21 is a Friday; the ten days ending on it open two days before the Friday before.
     const { container } = render(<TrendChart questionnaire={withCarbsPanel} days={days} today={emptyToday} endDate="2026-08-21" treatDay={TREAT_DAY} loadedInMs={0} />);

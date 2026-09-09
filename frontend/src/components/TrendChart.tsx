@@ -1,4 +1,4 @@
-import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, usePlotArea, XAxis, YAxis } from "recharts";
+import { CartesianGrid, Line, LineChart, ResponsiveContainer, Text, Tooltip, usePlotArea, XAxis, YAxis } from "recharts";
 import type { Day, DayPayload, Question, Questionnaire, TreatDaySettings } from "../types";
 import { dayLabel, lastDays } from "../dates";
 import { domainFor, liveTrendDay, ticksFor, treatDayColumns } from "../trend";
@@ -73,6 +73,23 @@ function TreatDayFrame({ column, columns }: { column: number; columns: number })
   );
 }
 
+// One date on the axis row. Bold, because the one visible date row serves every panel in the
+// stack, not just its own. The treat day's date takes the app's accent green, so the framed
+// column can be found from the date row alone on the panels that carry no frame.
+function DateTick({ treatLabels, className, x, y, payload, textAnchor, verticalAnchor }: {
+  treatLabels: Set<string>; className?: string; x?: number; y?: number; payload?: { value: string };
+  textAnchor?: "start" | "middle" | "end"; verticalAnchor?: "start" | "middle" | "end";
+}) {
+  const label = payload!.value;
+  return (
+    <Text className={className} x={x} y={y} textAnchor={textAnchor} verticalAnchor={verticalAnchor}
+          fontSize={11} fontWeight={700}
+          fill={treatLabels.has(label) ? "var(--accent)" : "var(--viz-muted)"}>
+      {label}
+    </Text>
+  );
+}
+
 function PanelDot({ cx, cy, payload, color }: { cx?: number; cy?: number; payload?: PanelPoint; color: string }) {
   if (cx == null || cy == null || payload!.value == null) return null;
   const violating = payload!.violating;
@@ -107,6 +124,8 @@ function TrendPanel({ questionnaire, question, dayStrs, dayByDate, index, showXA
   const data = panelData(questionnaire, question, dayStrs, dayByDate, decomposed);
   const domain = domainFor(questionnaire, question, data.map((d) => d.value));
   const boundLabel = ruleBoundLabel(questionnaire, question.id);
+  const treatColumns = treatDayColumns(dayStrs, treatDay.weekday);
+  const treatLabels = new Set(treatColumns.map((column) => data[column].label));
   return (
     <div className="trend-panel">
       {/* The chart container is LTR for the axes; the heading flips back so the Hebrew title
@@ -131,8 +150,7 @@ function TrendPanel({ questionnaire, question, dayStrs, dayByDate, index, showXA
             hide={!showXAxis}
             tickLine={false}
             axisLine={{ stroke: "var(--viz-baseline)" }}
-            // Bold: the one visible date row serves every panel in the stack, not just its own.
-            tick={{ fontSize: 11, fontWeight: 700, fill: "var(--viz-muted)" }}
+            tick={<DateTick treatLabels={treatLabels} />}
           />
           <YAxis
             domain={domain}
@@ -147,7 +165,7 @@ function TrendPanel({ questionnaire, question, dayStrs, dayByDate, index, showXA
               meet. */}
           {decomposed && (
             <>
-              {treatDayColumns(dayStrs, treatDay.weekday).map((column) => (
+              {treatColumns.map((column) => (
                 <TreatDayFrame key={column} column={column} columns={dayStrs.length} />
               ))}
               <Line dataKey="excluded" stroke="var(--viz-excluded)" strokeWidth={2} strokeDasharray="4 3" isAnimationActive={false} connectNulls={false} dot={{ r: 2.5, fill: "var(--viz-excluded)", stroke: "none" }} />
