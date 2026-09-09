@@ -343,6 +343,10 @@ export interface ChatTurn {
   // Whether the answer is a digest rather than a reply to the question. It stands until the chat
   // moves on: a follow-up replaces the digest and clears the mark.
   summarized: boolean;
+  // Whether the app composed the question — a weekly recap, or one of the guided questions a
+  // panel puts to the chat — rather than the user typing it. It follows the chat through
+  // follow-ups and digests.
+  app: boolean;
   // UTC ISO timestamp of the chat's latest answer — the transcript's sort key.
   at: string;
 }

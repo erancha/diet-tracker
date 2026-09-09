@@ -1,9 +1,11 @@
 """Per-user chat transcript: one DynamoDB item per chat — the whole conversation in one item,
 its question text carrying the chain of questions and answers, its answer attribute the latest
 reply. A summarized chat holds a digest in place of that chain, under a mark that stands until a
-follow-up rewrites the item. The partition key is the user's sub and the sort key is the UTC ISO
-timestamp of the chat's last answer, so a key-ordered query reads the transcript newest activity
-first; a follow-up replaces the item whole with a fresh sort key, moving the chat to the top.
+follow-up rewrites the item. A second mark records that the app wrote the chat rather than the
+user asking it, so a transcript can be read as one side or the other. The partition key is the
+user's sub and the sort key is the UTC ISO timestamp of the chat's last answer, so a key-ordered
+query reads the transcript newest activity first; a follow-up replaces the item whole with a
+fresh sort key, moving the chat to the top.
 
 Source scores are floats, which the DynamoDB document layer refuses, so the sources list rides
 as a JSON string attribute and is parsed back on read."""
@@ -16,11 +18,14 @@ from boto3.dynamodb.conditions import Key
 from common.paging import query_all
 
 
-def append(table, sub, question, answer, sources, at=None):
+def append(table, sub, question, answer, sources, at=None, app=False):
     """Stores one answered chat for the user, stamped now (UTC), and returns that stamp — the
     chat's identity for a later delete or follow-up. With `at`, one transaction replaces the
     named chat with the fresh-stamped one, so the chat cannot be lost or doubled between the
-    two writes; naming a missing chat raises KeyError rather than resurrecting a deleted one."""
+    two writes; naming a missing chat raises KeyError rather than resurrecting a deleted one.
+
+    `app` marks a chat the app itself wrote. A follow-up writes the item whole, so it has to
+    re-state the mark to keep it."""
     sk = datetime.now(timezone.utc).isoformat()
     item = {
         "pk": sub,
@@ -29,6 +34,8 @@ def append(table, sub, question, answer, sources, at=None):
         "answer": answer,
         "sources": json.dumps(sources, ensure_ascii=False),
     }
+    if app:
+        item["app"] = True
     if at is None:
         table.put_item(Item=item)
         return sk
@@ -118,5 +125,8 @@ def _turn(item):
         # Written only by summarize, so a chat that was answered rather than digested carries no
         # such attribute at all.
         "summarized": "summarized" in item,
+        # Likewise written only for a chat the app wrote, so one carrying no such attribute is
+        # one the user asked.
+        "app": "app" in item,
         "at": item["sk"],
     }

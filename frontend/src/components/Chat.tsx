@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
 import { ApiError, type Api } from "../api";
+import { storeChatFilter, storedChatFilter, type ChatFilter } from "../chatFilter";
 import { instantLabel } from "../dates";
 import type { ChatSampleQuestion, ChatTurn } from "../types";
 import { Icon } from "./Icon";
@@ -57,12 +58,19 @@ function renderQuestion(text: string): ReactNode {
 }
 
 // Q&A over the diet knowledge base: a composer on top of the user's stored transcript — newest
-// first, one row per chat, behind a count-labeled previous-chats toggle. The menu's
-// condensed/full command folds and unfolds the transcript, the condensed sign-in starts it
-// folded, and sending a question always reveals it so the arriving answer never lands out of
-// sight. A question commanded from elsewhere in the app (askCommand) is sent as a standalone
-// question the moment it arrives, and handed back through onAskCommandTaken so the owner clears
-// it — the chat may unmount and remount with the section's fold, and must not ask twice.
+// first, one row per chat, behind a count-labeled previous-chats toggle. Beside that toggle a
+// filter picks which side of the transcript is listed — every chat, only the ones the user asked,
+// or only the ones the app wrote (the weekly recap, and the guided questions panels put to the
+// chat) — and the count follows the filter, so the label always matches what unfolds under it.
+// The choice outlives the visit (chatFilter); an arriving answer widens it back to every chat
+// rather than landing outside the listed side. The menu's condensed/full command folds and
+// unfolds the transcript, the condensed sign-in starts it folded, and sending a question always
+// reveals it so the arriving answer never lands out of sight. A question commanded from elsewhere
+// in the app (askCommand) is the app's own wording, so it is sent the moment it arrives as a
+// standalone question filed on the app's side of the filter, and handed back through
+// onAskCommandTaken so the owner clears it — the chat may unmount and remount with the section's
+// fold, and must not ask twice. A follow-up inherits the side of the chat it extends, so a
+// conversation stays on one side for its whole life.
 //
 // The transcript loads once in full, so toggling a question, its sources, or the transcript
 // reveals data already in memory. A fresh answer opens expanded — the user is waiting for it —
@@ -103,6 +111,7 @@ export function Chat({ api, sampleQuestions, defaultTranscriptFolded = false, as
   const [replyTo, setReplyTo] = useState<ChatTurn | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [transcriptFolded, setTranscriptFolded] = useState(defaultTranscriptFolded);
+  const [filter, setFilter] = useState<ChatFilter>(storedChatFilter);
   useGlobalFold(setTranscriptFolded);
   // Question buttons by timestamp, for handing focus back when a chat folds from its answer's
   // foot or its digest replaces the answer that held it.
@@ -139,17 +148,23 @@ export function Chat({ api, sampleQuestions, defaultTranscriptFolded = false, as
       .catch((thrown) => setError(`טעינת השיחה נכשלה (${(thrown as Error).message})`));
   }, [api]);
 
-  // Sends the question, as a follow-up on target when one is given.
-  const send = async (question: string, target: ChatTurn | null) => {
+  // Sends the question, as a follow-up on target when one is given. `app` marks a question the
+  // app composed; a follow-up keeps whichever mark the chat it extends already carries.
+  const send = async (question: string, target: ChatTurn | null, app = false) => {
     setError(null);
     setTranscriptFolded(false);
+    // The answer must not land outside the listed side of the transcript.
+    setFilter("all");
     setPendingQuestion(question);
     try {
       const asked = target === null ? question : composeFollowUp(target, question);
-      const reply = target === null ? await api.ask(asked) : await api.ask(asked, target.at);
+      const authored = target === null ? app : target.app;
+      const reply = target === null
+        ? await api.ask(asked, undefined, authored)
+        : await api.ask(asked, target.at, authored);
       // An answered question is never a digest, so the freshly answered chat offers summarizing.
       const answered = { question: asked, answer: reply.answer, sources: reply.sources,
-                         summarized: false, at: reply.at };
+                         summarized: false, app: authored, at: reply.at };
       // Fresh or followed-up, the answered turn leads — the order the server returns on reload.
       setTurns((current) => [answered, ...current.filter((turn) => turn.at !== target?.at)]);
       setExpanded((current) => new Set(current).add(reply.at));
@@ -176,7 +191,7 @@ export function Chat({ api, sampleQuestions, defaultTranscriptFolded = false, as
     onAskCommandTaken!();
     // A commanded question stands alone: a reply the user had begun is dropped, not chained.
     setReplyTo(null);
-    void send(askCommand, null);
+    void send(askCommand, null, true);
     // The command alone triggers this; the state send closes over must not resend it.
   }, [askCommand]);
 
@@ -264,6 +279,8 @@ export function Chat({ api, sampleQuestions, defaultTranscriptFolded = false, as
     </>
   );
 
+  const listed = filter === "all" ? turns : turns.filter((turn) => turn.app === (filter === "app"));
+
   return (
     <div className="chat">
       {sampleQuestions.length > 0 && (
@@ -277,19 +294,34 @@ export function Chat({ api, sampleQuestions, defaultTranscriptFolded = false, as
       {replyTo === null && pendingQuestion === null && composer}
       {error && <div className="alert">{error}</div>}
       {turns.length > 0 && (
-        <button type="button" className="disclosure transcript-toggle"
-          aria-expanded={!transcriptFolded}
-          onClick={() => {
-            scrollTranscriptOnOpen.current = transcriptFolded;
-            setTranscriptFolded((folded) => !folded);
-          }}>
-          {turns.length === 1 ? "צ'אט קודם אחד" : `${turns.length} צ'אטים קודמים`}
-        </button>
+        <div className="transcript-head">
+          <button type="button" className="disclosure transcript-toggle"
+            aria-expanded={!transcriptFolded}
+            disabled={listed.length === 0}
+            onClick={() => {
+              scrollTranscriptOnOpen.current = transcriptFolded;
+              setTranscriptFolded((folded) => !folded);
+            }}>
+            {listed.length === 0 ? "אין צ'אטים קודמים"
+              : listed.length === 1 ? "צ'אט קודם אחד"
+              : `${listed.length} צ'אטים קודמים`}
+          </button>
+          <select className="transcript-filter" aria-label="סינון הצ'אטים" value={filter}
+            onChange={(event) => {
+              const chosen = event.target.value as ChatFilter;
+              setFilter(chosen);
+              storeChatFilter(chosen);
+            }}>
+            <option value="all">הכול</option>
+            <option value="mine">שלי</option>
+            <option value="app">מהאפליקציה</option>
+          </select>
+        </div>
       )}
-      {(pendingQuestion !== null || (turns.length > 0 && !transcriptFolded)) && (
+      {(pendingQuestion !== null || (listed.length > 0 && !transcriptFolded)) && (
         <ul className="chat-messages" ref={transcript}>
           {replyTo === null && pendingExchange}
-          {!transcriptFolded && turns.map((turn) => (
+          {!transcriptFolded && listed.map((turn) => (
             <Fragment key={turn.at}>
               <li className="chat-user">
                 <time className="chat-turn-at" dateTime={turn.at}>{instantLabel(turn.at)}</time>

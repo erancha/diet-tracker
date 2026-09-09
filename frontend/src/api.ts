@@ -45,7 +45,7 @@ export interface Api {
   setMuted(muted: boolean): Promise<NotificationSettings>;
   dismissUndelivered(at: string): Promise<{ at: string }>;
   getAdminActivity(): Promise<AdminActivity>;
-  ask(question: string, at?: string): Promise<ChatAnswer>;
+  ask(question: string, at?: string, app?: boolean): Promise<ChatAnswer>;
   getChatTranscript(): Promise<ChatTranscript>;
   deleteChatTurn(at: string): Promise<{ at: string }>;
   summarizeChatTurn(at: string): Promise<ChatTurn>;
@@ -111,7 +111,13 @@ export function createApi(
     getAdminActivity: () => request("GET", "/admin/activity"),
     // `at` marks the question as a follow-up: the server writes the answered question over the
     // turn stored under that timestamp, keeping the conversation as that one turn.
-    ask: (question, at) => request("POST", "/chat", { question, ...(at !== undefined && { at }) }),
+    // `app` marks a question the app composed rather than one the user typed; the stored chat
+    // keeps the mark, and a follow-up has to repeat it because the server rewrites the chat whole.
+    ask: (question, at, app) => request("POST", "/chat", {
+      question,
+      ...(at !== undefined && { at }),
+      ...(app === true && { app }),
+    }),
     getChatTranscript: () => request("GET", "/chat"),
     // The timestamp's '+' and ':' must reach the route as the literal characters the turn is
     // stored under, so it travels percent-encoded.

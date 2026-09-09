@@ -436,6 +436,12 @@ td.view-day { cursor: pointer; }
    under the text around them, since no block of their own sets their type. */
 :is(.section-summary, .transcript-toggle, .more-toggle) { font-size: 0.85rem; }
 :is(.section-summary, .transcript-toggle) { padding-bottom: 0.4rem; }
+/* The previous-chats count and the filter choosing which chats it counts share one line, the
+   count taking the width so the filter settles against the far edge. The count keeps the
+   padding that spaces it from the list below, so the row's items align on their text. */
+.transcript-head { display: flex; align-items: baseline; gap: 0.5rem; }
+.transcript-head .transcript-toggle { flex: 1; text-align: start; }
+.transcript-filter { font-size: 0.85rem; }
 /* An overdue meal blinks the folded add-meal toggle instead of opening the inputs uninvited:
    once a second at first, pressing to twice a second when ten seconds go unanswered, then
    settling into a slow standing reminder. The tracker's nudge phase picks the beat. */

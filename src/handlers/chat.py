@@ -12,10 +12,12 @@ Each answered chat is stored per user (common.chat_history) and served back by G
 it survives reloads and follows the user across devices. A POST naming a stored chat's
 timestamp (`at`) is a follow-up: the answered chat replaces it under a fresh timestamp —
 one stored chat per conversation, risen to the top — and the response's `at` is the chat's
-new identity. POST /chat/{at}/summary replaces one chat with a digest of its conversation,
-answered by the same upstream service and so counted against the same quota. DELETE /chat/{at}
-permanently removes one of the caller's own chats by its timestamp; the quota already spent on
-its questions is unaffected."""
+new identity. A POST flagged `app` stores the chat as one the app composed rather than one the
+user typed, which is what the transcript's origin filter reads; a follow-up has to repeat the
+flag, since it rewrites the stored chat whole. POST /chat/{at}/summary replaces one chat with a
+digest of its conversation, answered by the same upstream service and so counted against the
+same quota. DELETE /chat/{at} permanently removes one of the caller's own chats by its
+timestamp; the quota already spent on its questions is unaffected."""
 
 import json
 import os
@@ -80,6 +82,9 @@ def _ask(sub, email, body):
     at = body.get("at")
     if at is not None and (not isinstance(at, str) or not at.strip()):
         return response(400, {"error": "at must be the timestamp of a stored turn"})
+    app = body.get("app", False)
+    if not isinstance(app, bool):
+        return response(400, {"error": "app must be a boolean"})
 
     refusal = _quota_refusal(sub, email)
     if refusal is not None:
@@ -99,7 +104,7 @@ def _ask(sub, email, body):
         return _upstream_unavailable(error)
     try:
         at = chat_history.append(_history_table(), sub, question.strip(), answer["answer"],
-                                 answer["sources"], at=at)
+                                 answer["sources"], at=at, app=app)
     except KeyError:
         return response(404, {"error": f"no turn stored at {at}"})
     return response(200, {"answer": answer["answer"], "sources": answer["sources"], "at": at})
@@ -149,7 +154,7 @@ def _summarize(sub, email, at):
     question = _original_question(turn["question"])
     chat_history.summarize(table, sub, at, question, digest["answer"])
     return response(200, {"question": question, "answer": digest["answer"], "sources": [],
-                          "summarized": True, "at": at})
+                          "summarized": True, "app": turn["app"], "at": at})
 
 
 def _conversation(turn):

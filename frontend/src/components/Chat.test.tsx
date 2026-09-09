@@ -1,7 +1,8 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError, type Api } from "../api";
+import { STORAGE_KEY as FILTER_KEY } from "../chatFilter";
 import { instantLabel } from "../dates";
 import type { ChatTurn } from "../types";
 import { Chat } from "./Chat";
@@ -18,9 +19,9 @@ function api(overrides: Partial<ChatApi> = {}): ChatApi {
   };
 }
 
-function turn(index: number): ChatTurn {
+function turn(index: number, app = false): ChatTurn {
   return { question: `שאלה ${index}`, answer: `תשובה ${index}`, sources: [], summarized: false,
-           at: `2026-09-01T10:00:${String(index).padStart(2, "0")}` };
+           app, at: `2026-09-01T10:00:${String(index).padStart(2, "0")}` };
 }
 
 // Newest first, mirroring the order the server returns.
@@ -33,7 +34,14 @@ async function ask(question: string) {
   await userEvent.click(screen.getByRole("button", { name: "שליחה" }));
 }
 
+// Newest first, as the server returns them: two the user asked and one the app wrote.
+function mixedTurns(): ChatTurn[] {
+  return [turn(3), turn(2, true), turn(1)];
+}
+
 describe("Chat", () => {
+  afterEach(() => window.localStorage.clear());
+
   it("sends a question commanded from outside the composer and hands the command back", async () => {
     const client = api({ ask: vi.fn().mockResolvedValue({ answer: "תשובה", sources: [],
                                                             at: "2026-09-01T10:00:00" }) });
@@ -42,7 +50,7 @@ describe("Chat", () => {
                                       onAskCommandTaken={onAskCommandTaken} />);
 
     expect(await screen.findByText("תשובה")).toBeInTheDocument();
-    expect(client.ask).toHaveBeenCalledWith("שאלה מבחוץ");
+    expect(client.ask).toHaveBeenCalledWith("שאלה מבחוץ", undefined, true);
     expect(onAskCommandTaken).toHaveBeenCalledTimes(1);
 
     // The parent clears the command once taken, so a remount does not ask again.
@@ -60,7 +68,7 @@ describe("Chat", () => {
 
     await ask("כמה פחמימות מותר ביום?");
 
-    expect(chatApi.ask).toHaveBeenCalledWith("כמה פחמימות מותר ביום?");
+    expect(chatApi.ask).toHaveBeenCalledWith("כמה פחמימות מותר ביום?", undefined, false);
     expect(screen.getByText("כמה פחמימות מותר ביום?")).toBeInTheDocument();
     expect(await screen.findByText("מותר עד 4 נקודות פחמימה")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "התאמות" }));
@@ -369,7 +377,7 @@ describe("Chat", () => {
     await ask("ומה עוד?");
 
     expect(chatApi.ask).toHaveBeenCalledWith(
-      "השאלה המקורית: שאלה 1\nהתשובה: תשובה 1\nשאלת המשך: ומה עוד?", turn(1).at);
+      "השאלה המקורית: שאלה 1\nהתשובה: תשובה 1\nשאלת המשך: ומה עוד?", turn(1).at, false);
     expect(await screen.findByText("תשובת המשך")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "שאלה 1" })).not.toBeInTheDocument();
     const questions = [...document.querySelectorAll(".chat-question")].map((el) => el.textContent);
@@ -398,7 +406,8 @@ describe("Chat", () => {
 
   it("extends an already-composed chain without re-wrapping it", async () => {
     const chain = "השאלה המקורית: א\nהתשובה: ב\nשאלת המשך: ג";
-    const stored = { question: chain, answer: "ד", sources: [], at: "2026-09-01T10:00:00" };
+    const stored = { question: chain, answer: "ד", sources: [], app: false,
+                     at: "2026-09-01T10:00:00" };
     const chatApi = api({
       getChatTranscript: vi.fn().mockResolvedValue({ turns: [stored] }),
       ask: vi.fn().mockResolvedValue({ answer: "ו", sources: [], at: stored.at }),
@@ -409,7 +418,7 @@ describe("Chat", () => {
 
     await ask("ה");
 
-    expect(chatApi.ask).toHaveBeenCalledWith(`${chain}\nהתשובה: ד\nשאלת המשך: ה`, stored.at);
+    expect(chatApi.ask).toHaveBeenCalledWith(`${chain}\nהתשובה: ד\nשאלת המשך: ה`, stored.at, false);
   });
 
   it("swaps the composer placeholder to follow-up wording while a reply is in progress", async () => {
@@ -437,7 +446,7 @@ describe("Chat", () => {
     await ask("שאלה עצמאית");
 
     expect(screen.getByRole("textbox").closest("li")).toBeNull();
-    expect(chatApi.ask).toHaveBeenCalledWith("שאלה עצמאית");
+    expect(chatApi.ask).toHaveBeenCalledWith("שאלה עצמאית", undefined, false);
   });
 
   it("returns the composer to the top once the follow-up is answered", async () => {
@@ -701,5 +710,89 @@ describe("Chat", () => {
     await userEvent.click(await screen.findByRole("button", { name: "שאלה 1" }));
 
     expect(screen.getByRole("button", { name: "סיכום הצ'אט על שאלה 1" })).toBeDisabled();
+  });
+
+  it("lists every chat until the filter narrows it, and counts what it lists", async () => {
+    render(<Chat api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: mixedTurns() }) })}
+                 sampleQuestions={[]} />);
+    await screen.findByText("שאלה 3");
+    const filter = screen.getByRole("combobox", { name: "סינון הצ'אטים" });
+    expect(screen.getByRole("button", { name: "3 צ'אטים קודמים" })).toBeInTheDocument();
+
+    await userEvent.selectOptions(filter, "mine");
+
+    expect(screen.getAllByText(/^שאלה \d+$/).map((el) => el.textContent)).toEqual(
+      ["שאלה 3", "שאלה 1"]);
+    expect(screen.getByRole("button", { name: "2 צ'אטים קודמים" })).toBeInTheDocument();
+
+    await userEvent.selectOptions(filter, "app");
+
+    expect(screen.getAllByText(/^שאלה \d+$/).map((el) => el.textContent)).toEqual(["שאלה 2"]);
+    expect(screen.getByRole("button", { name: "צ'אט קודם אחד" })).toBeInTheDocument();
+  });
+
+  it("reopens on the side the filter last chose", async () => {
+    window.localStorage.setItem(FILTER_KEY, "app");
+
+    render(<Chat api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: mixedTurns() }) })}
+                 sampleQuestions={[]} />);
+
+    expect(await screen.findByText("שאלה 2")).toBeInTheDocument();
+    expect(screen.queryByText("שאלה 3")).not.toBeInTheDocument();
+  });
+
+  it("stores the chosen side for the next visit", async () => {
+    render(<Chat api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: mixedTurns() }) })}
+                 sampleQuestions={[]} />);
+    await screen.findByText("שאלה 3");
+
+    await userEvent.selectOptions(screen.getByRole("combobox", { name: "סינון הצ'אטים" }), "mine");
+
+    expect(window.localStorage.getItem(FILTER_KEY)).toBe("mine");
+  });
+
+  it("says a narrowed side holds no chats and offers nothing to unfold", async () => {
+    render(<Chat api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(2) }) })}
+                 sampleQuestions={[]} />);
+    await screen.findByText("שאלה 2");
+
+    await userEvent.selectOptions(screen.getByRole("combobox", { name: "סינון הצ'אטים" }), "app");
+
+    expect(screen.queryByText("שאלה 2")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "אין צ'אטים קודמים" })).toBeDisabled();
+  });
+
+  it("widens the filter back so an arriving answer is not hidden by it", async () => {
+    window.localStorage.setItem(FILTER_KEY, "app");
+    const chatApi = api({
+      getChatTranscript: vi.fn().mockResolvedValue({ turns: mixedTurns() }),
+      ask: vi.fn().mockResolvedValue({ answer: "תשובה חדשה", sources: [], at: "2026-09-02T10:00:00" }),
+    });
+    render(<Chat api={chatApi} sampleQuestions={[]} />);
+    await screen.findByText("שאלה 2");
+
+    await ask("שאלה חדשה");
+
+    expect(await screen.findByText("תשובה חדשה")).toBeInTheDocument();
+    expect(screen.getAllByText(/^שאלה/).map((el) => el.textContent)).toEqual(
+      ["שאלה חדשה", "שאלה 3", "שאלה 2", "שאלה 1"]);
+  });
+
+  it("keeps a follow-up on the side of the chat it extends", async () => {
+    const chatApi = api({
+      getChatTranscript: vi.fn().mockResolvedValue({ turns: mixedTurns() }),
+      ask: vi.fn().mockResolvedValue({ answer: "תשובת המשך", sources: [], at: "2026-09-02T10:00:00" }),
+    });
+    render(<Chat api={chatApi} sampleQuestions={[]} />);
+    await userEvent.click(await screen.findByRole("button", { name: "שאלה 2" }));
+    await userEvent.click(screen.getByRole("button", { name: "שאלת המשך על שאלה 2" }));
+
+    await ask("ומה עוד?");
+
+    await screen.findByText("תשובת המשך");
+    expect(chatApi.ask).toHaveBeenCalledWith(
+      "השאלה המקורית: שאלה 2\nהתשובה: תשובה 2\nשאלת המשך: ומה עוד?", turn(2).at, true);
+    await userEvent.selectOptions(screen.getByRole("combobox", { name: "סינון הצ'אטים" }), "app");
+    expect(screen.getAllByText(/^השאלה המקורית/)).toHaveLength(1);
   });
 });

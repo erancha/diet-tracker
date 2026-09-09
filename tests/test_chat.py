@@ -233,6 +233,37 @@ def test_a_follow_up_replaces_the_replied_to_turn_under_a_fresh_key(env, monkeyp
     assert turn["at"] == followed_at
 
 
+def test_a_question_the_app_composed_is_stored_marked_and_a_typed_one_is_not(env, monkeypatch):
+    monkeypatch.setattr(chat_handler.chat, "ask",
+                        lambda api_url, key, question, context=None: {"answer": "ת", "sources": []})
+
+    chat_handler.handler(request({"question": "איך מאשרים את כתובת המייל?", "app": True}), None)
+    chat_handler.handler(request({"question": "שאלה שהקלדתי"}), None)
+
+    marks = {turn["question"]: turn["app"] for turn in transcript()}
+    assert marks == {"איך מאשרים את כתובת המייל?": True, "שאלה שהקלדתי": False}
+
+
+def test_a_follow_up_can_carry_the_apps_mark_across_to_the_replacing_chat(env, monkeypatch):
+    monkeypatch.setattr(chat_handler.chat, "ask",
+                        lambda api_url, key, question, context=None: {"answer": "ת", "sources": []})
+    at = body_of(chat_handler.handler(request({"question": "שאלת האפליקציה", "app": True}), None))["at"]
+
+    chat_handler.handler(request({"question": "שרשור", "at": at, "app": True}), None)
+
+    (turn,) = transcript()
+    assert turn["app"] is True
+
+
+def test_a_non_boolean_app_mark_is_400_and_spends_no_quota(env, monkeypatch):
+    monkeypatch.setattr(chat_handler.chat, "ask",
+                        lambda api_url, key, question, context=None: {"answer": "ת", "sources": []})
+    assert chat_handler.handler(request({"question": "שאלה", "app": "yes"}), None)["statusCode"] == 400
+
+    assert chat_handler.handler(request({"question": "1"}), None)["statusCode"] == 200
+    assert chat_handler.handler(request({"question": "2"}), None)["statusCode"] == 200
+
+
 def test_a_follow_up_to_a_missing_turn_is_404_and_persists_nothing(env, monkeypatch):
     monkeypatch.setattr(chat_handler.chat, "ask",
                         lambda api_url, key, question, context=None: {"answer": "ת", "sources": []})
@@ -343,10 +374,10 @@ def test_a_summary_replaces_the_chat_with_its_original_question_and_the_digest(e
 
     assert response["statusCode"] == 200
     assert body_of(response) == {"question": "מה מותר?", "answer": "השיחה עסקה במה שמותר לאכול",
-                                 "sources": [], "summarized": True, "at": at}
+                                 "sources": [], "summarized": True, "app": False, "at": at}
     (turn,) = transcript()
     assert turn == {"question": "מה מותר?", "answer": "השיחה עסקה במה שמותר לאכול",
-                    "sources": [], "summarized": True, "at": at}
+                    "sources": [], "summarized": True, "app": False, "at": at}
 
 
 def test_a_summary_keeps_every_line_of_a_multi_line_original_question(env, monkeypatch):

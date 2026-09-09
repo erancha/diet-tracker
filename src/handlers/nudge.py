@@ -190,7 +190,7 @@ def _weekly_body(env, user, history, week_start) -> str:
         logger.warning("weekly summary generation failed; sending the plain digest", exc_info=True)
         return text
     chat_history.append(env.chat_history, user.sub, digest.recap_chat_title(week_start),
-                        answer["answer"], answer["sources"])
+                        answer["answer"], answer["sources"], app=True)
     return f"{text}\n\n{answer['answer']}"
 
 

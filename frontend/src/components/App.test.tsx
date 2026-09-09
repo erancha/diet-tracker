@@ -191,7 +191,8 @@ describe("App", () => {
     fireEvent.click(screen.getByRole("button", { name: "אישור המייל" }));
 
     expect(await screen.findByText("ככה")).toBeInTheDocument();
-    expect(client.ask).toHaveBeenCalledWith(VERIFY_MAIL_QUESTION);
+    // The app composed the question, so the chat it stores is filed on the app's side.
+    expect(client.ask).toHaveBeenCalledWith(VERIFY_MAIL_QUESTION, undefined, true);
     expect(screen.getByRole("button", { name: /שאלות על סבא חטוב/ }))
       .toHaveAttribute("aria-expanded", "true");
   });

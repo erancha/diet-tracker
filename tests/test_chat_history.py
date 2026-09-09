@@ -44,7 +44,8 @@ def test_a_follow_up_replaces_the_turn_whole_under_a_fresh_key(table):
     assert returned > at
     (turn,) = chat_history.turns(table, "u1")
     assert turn == {"question": "שרשור מלא", "answer": "תשובה חדשה", "summarized": False,
-                    "sources": [{"fileName": "מדריך.pdf", "score": 0.9}], "at": returned}
+                    "app": False, "sources": [{"fileName": "מדריך.pdf", "score": 0.9}],
+                    "at": returned}
 
 
 def test_a_follow_up_moves_the_turn_to_the_top_of_the_transcript(table):
@@ -145,7 +146,8 @@ def test_get_returns_the_stored_turn(table):
     at = chat_history.append(table, "u1", "שאלה?", "תשובה", sources)
 
     assert chat_history.get(table, "u1", at) == {"question": "שאלה?", "answer": "תשובה",
-                                                 "sources": sources, "summarized": False, "at": at}
+                                                 "sources": sources, "summarized": False,
+                                                 "app": False, "at": at}
 
 
 def test_get_of_a_missing_turn_raises(table):
@@ -163,7 +165,7 @@ def test_summarize_replaces_the_chain_in_place_under_the_same_key(table):
 
     (turn,) = chat_history.turns(table, "u1")
     assert turn == {"question": "מה מותר?", "answer": "השיחה עסקה במה שמותר לאכול",
-                    "sources": [], "summarized": True, "at": at}
+                    "sources": [], "summarized": True, "app": False, "at": at}
 
 
 def test_summarize_of_a_missing_turn_raises_and_leaves_the_transcript_alone(table):
@@ -194,3 +196,37 @@ def test_a_follow_up_on_a_summarized_chat_clears_the_digest_mark(table):
     followed = chat_history.append(table, "u1", "שרשור", "תשובת המשך", [], at=at)
 
     assert chat_history.get(table, "u1", followed)["summarized"] is False
+
+
+def test_a_chat_the_app_wrote_is_marked_and_a_users_own_is_not(table):
+    written = chat_history.append(table, "u1", "סיכום שבועי 07/09/2026", "ת", [], app=True)
+    asked = chat_history.append(table, "u1", "שאלה שלי", "ת", [])
+
+    assert chat_history.get(table, "u1", written)["app"] is True
+    assert chat_history.get(table, "u1", asked)["app"] is False
+
+
+def test_a_follow_up_carries_the_apps_mark_only_when_told_to(table):
+    written = chat_history.append(table, "u1", "סיכום שבועי 07/09/2026", "ת", [], app=True)
+
+    kept = chat_history.append(table, "u1", "שרשור", "ת", [], at=written, app=True)
+    assert chat_history.get(table, "u1", kept)["app"] is True
+
+    dropped = chat_history.append(table, "u1", "שרשור נוסף", "ת", [], at=kept)
+    assert chat_history.get(table, "u1", dropped)["app"] is False
+
+
+def test_summarizing_leaves_the_apps_mark_standing(table):
+    at = chat_history.append(table, "u1", "סיכום שבועי 07/09/2026", "ת", [], app=True)
+
+    chat_history.summarize(table, "u1", at, "סיכום שבועי 07/09/2026", "תקציר")
+
+    assert chat_history.get(table, "u1", at)["app"] is True
+
+
+def test_a_chat_stored_before_the_mark_existed_reads_as_the_users_own(table):
+    table.put_item(Item={"pk": "u1", "sk": "2026-08-01T10:00:00+00:00", "question": "ישנה",
+                         "answer": "ת", "sources": "[]"})
+
+    (turn,) = chat_history.turns(table, "u1")
+    assert turn["app"] is False

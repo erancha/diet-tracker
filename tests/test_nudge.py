@@ -182,6 +182,8 @@ def test_weekly_stores_the_recap_as_a_chat_titled_for_the_transcript(env, monkey
     assert [turn["question"] for turn in stored] == [nudge.digest.recap_chat_title(week_start)]
     assert stored[0]["answer"] == "היה שבוע מאוזן"
     assert stored[0]["sources"] == [{"fileName": "f", "score": 0.4}]
+    # The recap is the app's own writing, not a question the user asked.
+    assert stored[0]["app"] is True
 
 
 def test_weekly_stores_no_chat_when_the_llm_call_fails(env, monkeypatch):
