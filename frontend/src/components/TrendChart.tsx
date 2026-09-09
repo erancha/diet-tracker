@@ -4,9 +4,9 @@ import { dayLabel, lastDays } from "../dates";
 import { domainFor, liveTrendDay, ticksFor, treatDayColumns } from "../trend";
 import { isViolating, panelTitle, ruleBoundLabel, scoreLabel, trendPanels, valueLabel } from "../violations";
 
-// Days each panel charts. One more than a week, so a span ending on the treat day holds two of
-// them and the carb panel can set the latest treat day against the one before it.
-const CHART_DAYS = 8;
+// Days each panel charts. Past a week, so a span ending on the treat day holds two of them and
+// the carb panel can set the latest treat day against the one before it, with days of lead-in.
+const CHART_DAYS = 10;
 
 // Every panel reserves the same y-axis width, so the day columns plot at identical x positions
 // down the stack and the one visible date axis dates them all.

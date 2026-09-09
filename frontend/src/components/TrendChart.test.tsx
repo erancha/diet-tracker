@@ -118,10 +118,10 @@ describe("TrendChart", () => {
   });
 
   it("frames the column of the day the treat meal is aimed at", () => {
-    // The eight days ending 2026-08-19 run from the 12th, so their Friday — the 14th — is the
-    // third column. The frame must span exactly where that day's score plots.
-    const span = ["2026-08-12", "2026-08-13", "2026-08-14", "2026-08-15", "2026-08-16",
-                  "2026-08-17", "2026-08-18", "2026-08-19"]
+    // The ten days ending 2026-08-19 run from the 10th, so their Friday — the 14th — is the
+    // fifth column. The frame must span exactly where that day's score plots.
+    const span = ["2026-08-10", "2026-08-11", "2026-08-12", "2026-08-13", "2026-08-14",
+                  "2026-08-15", "2026-08-16", "2026-08-17", "2026-08-18", "2026-08-19"]
       .map((date) => ({ date, answers: { carbs: 9 }, excluded: 0 }));
     const { container } = render(<TrendChart questionnaire={withCarbsPanel} days={span} today={emptyToday} endDate="2026-08-19" treatDay={TREAT_DAY} loadedInMs={0} />);
     const panel = container.querySelector(".trend-panel")!;
@@ -130,15 +130,15 @@ describe("TrendChart", () => {
     // The score line's own dots mark where each day plots; the last dot group is that line's.
     const dots = [...panel.querySelectorAll(".recharts-line-dots")].at(-1)!.querySelectorAll("circle");
     const centers = [...dots].map((dot) => Number(dot.getAttribute("cx")));
-    expect(centers).toHaveLength(8);
-    expect(centers[2]).toBeGreaterThanOrEqual(left);
-    expect(centers[2]).toBeLessThanOrEqual(right);
-    expect(centers[1]).toBeLessThan(left);
-    expect(centers[3]).toBeGreaterThan(right);
+    expect(centers).toHaveLength(10);
+    expect(centers[4]).toBeGreaterThanOrEqual(left);
+    expect(centers[4]).toBeLessThanOrEqual(right);
+    expect(centers[3]).toBeLessThan(left);
+    expect(centers[5]).toBeGreaterThan(right);
   });
 
   it("frames both treat days when the span ends on one, so the two can be compared", () => {
-    // 2026-08-21 is a Friday; the eight days ending on it open on the Friday before.
+    // 2026-08-21 is a Friday; the ten days ending on it open two days before the Friday before.
     const { container } = render(<TrendChart questionnaire={withCarbsPanel} days={days} today={emptyToday} endDate="2026-08-21" treatDay={TREAT_DAY} loadedInMs={0} />);
     const framed = [...container.querySelectorAll(".trend-panel")]
       .map((panel) => panel.querySelectorAll(".trend-treat-day").length);
@@ -146,8 +146,8 @@ describe("TrendChart", () => {
   });
 
   it("moves the frame with the week it charts, keeping it on the configured weekday", () => {
-    // 2026-08-14 is a Friday: it is the second column of the week ending 2026-08-18 and the
-    // first of the week ending a day later.
+    // 2026-08-14 is a Friday: it is the sixth column of the span ending 2026-08-18 and the
+    // fifth of the span ending a day later.
     const frameAt = (endDate: string) => {
       const { container } = render(<TrendChart questionnaire={withCarbsPanel} days={days} today={emptyToday} endDate={endDate} treatDay={TREAT_DAY} loadedInMs={0} />);
       return Number(container.querySelector(".trend-treat-day line")!.getAttribute("x1"));
