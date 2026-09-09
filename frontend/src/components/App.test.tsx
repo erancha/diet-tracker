@@ -164,6 +164,26 @@ describe("App", () => {
     expect(screen.queryByRole("button", { name: "אישור המייל" })).not.toBeInTheDocument();
   });
 
+  it("carries the mail step alone to an account past its first visit", async () => {
+    const client = weighed(65);
+    client.getDays = unverified().getDays;
+    renderApp(false, client);
+
+    expect(await screen.findByRole("heading", { name: "אישור כתובת המייל" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "אישור המייל" })).toBeInTheDocument();
+    // The account has taken the tracking steps, so only the outstanding one is listed.
+    expect(screen.queryByText("רושמים כל ארוחה כשהיא נאכלת")).toBeNull();
+    expect(screen.queryByRole("heading", { name: /ברוכים הבאים/ })).toBeNull();
+  });
+
+  it("leaves an account no panel once it has started and its address is verified", async () => {
+    renderApp(false, weighed(65));
+    await screen.findByRole("button", { name: "יומן היום" });
+
+    expect(screen.queryByRole("heading", { name: /ברוכים הבאים/ })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "אישור כתובת המייל" })).toBeNull();
+  });
+
   it("keeps the welcome panel open through the intro while the mail step shows", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     renderApp(false, unverified());

@@ -11,14 +11,17 @@ APP_CONFIG = Path(__file__).parent.parent / "config" / "app.json"
 
 
 class FakeSes:
-    """Records send_email calls and address-verification requests; raises instead when primed
-    with a failure. verification maps an address to the status SES reports for it ("Success",
-    "Pending", ...); an address absent from it is one SES has never heard of."""
+    """Records send_email calls, verification lookups and address-verification requests; raises
+    instead when primed with a failure. verification maps an address to the status SES reports for
+    it ("Success", "Pending", ...); an address absent from it is one SES has never heard of.
+    verification_lookups holds one entry per lookup, so a caller that caches its answer can be
+    told apart from one that asks again."""
 
     def __init__(self, failure=None):
         self.sent = []
         self.failure = failure
         self.verification = {}
+        self.verification_lookups = []
         self.verification_requested = []
         self.verification_failure = None
 
@@ -30,6 +33,7 @@ class FakeSes:
     def get_identity_verification_attributes(self, Identities):
         if self.verification_failure is not None:
             raise self.verification_failure
+        self.verification_lookups.append(list(Identities))
         return {"VerificationAttributes": {
             identity: {"VerificationStatus": self.verification[identity]}
             for identity in Identities if identity in self.verification}}

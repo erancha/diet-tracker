@@ -9,6 +9,7 @@ const props = { email: "a@b.com", muted: false, isAdmin: false, onSignOut: vi.fn
                 onSetMuted: vi.fn(), onFoldAll: vi.fn(), nextViewCondensed: true,
                 activeViolations: [] as string[],
                 undelivered: [] as UndeliveredMessage[],
+                emailVerified: false,
                 onDismissUndelivered: vi.fn() };
 
 const UNDELIVERED: UndeliveredMessage = {
@@ -196,6 +197,15 @@ describe("Header", () => {
     // The sender is what makes the request findable, and spam is where it usually sits.
     expect(hint).toHaveTextContent("Amazon Web Services");
     expect(hint).toHaveTextContent("ספאם");
+  });
+
+  it("withholds the verification hint once the address is verified", async () => {
+    render(<Header {...props} undelivered={[UNDELIVERED]} emailVerified />);
+
+    await userEvent.click(screen.getByRole("button", { name: "התראות ממתינות" }));
+    // The messages stay readable — verifying delivers the next one, not the ones already missed.
+    expect(screen.getByText(UNDELIVERED.subject)).toBeInTheDocument();
+    expect(screen.queryByText(/בקשת אימות הכתובת/)).toBeNull();
   });
 
   it("keeps both framing lines out of the way while nothing went undelivered", async () => {

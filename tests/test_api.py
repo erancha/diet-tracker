@@ -1,5 +1,6 @@
 import json
 import logging
+from datetime import datetime, timedelta
 from decimal import Decimal
 
 import boto3
@@ -733,13 +734,13 @@ def ses(monkeypatch):
     return fake
 
 
-def test_history_of_an_untouched_account_reports_its_verified_address(env, ses):
+def test_history_reports_a_verified_address(env, ses):
     ses.verification = {"a@gmail.com": "Success"}
     assert body_of(api.handler(request("GET /days"), None))["email_verified"] is True
 
 
 @pytest.mark.parametrize("known", [{}, {"a@gmail.com": "Pending"}, {"a@gmail.com": "Failed"}])
-def test_history_of_an_untouched_account_reports_an_unverified_address(env, ses, known):
+def test_history_reports_an_unverified_address(env, ses, known):
     ses.verification = known
     assert body_of(api.handler(request("GET /days"), None))["email_verified"] is False
 
@@ -749,7 +750,45 @@ def test_history_of_an_untouched_account_reports_an_unverified_address(env, ses,
     lambda: api.handler(request("PUT /weight", {"kg": 70}), None),
     lambda: api.handler(request("PUT /weight/target", {"kg": 65}), None),
 ])
-def test_history_of_a_started_account_omits_the_address_state_without_asking_ses(env, ses, start):
+def test_history_of_a_started_account_still_reports_the_address_state(env, ses, start):
+    """The mail step outlives the first visit, so an account that has begun tracking still has to
+    be told its address is undeliverable."""
     start()
-    ses.verification_failure = AssertionError("SES must not be asked once the account has started")
-    assert body_of(api.handler(request("GET /days"), None))["email_verified"] is None
+    ses.verification = {"a@gmail.com": "Failed"}
+    assert body_of(api.handler(request("GET /days"), None))["email_verified"] is False
+
+
+def test_a_mixed_case_address_claim_finds_the_lowercased_identity(env, ses):
+    """SES email identities are case sensitive and sign-up creates them from the lowercased
+    address, so a claim carrying uppercase must not read as an address SES has never heard of."""
+    ses.verification = {"a@gmail.com": "Success"}
+    verified = body_of(api.handler(request("GET /days", email="A@GMail.com"), None))
+    assert verified["email_verified"] is True
+    assert ses.verification_lookups == [["a@gmail.com"]]
+
+
+def test_a_stored_verification_reading_answers_the_next_request(env, ses):
+    """SES rate-limits the lookup account-wide, so a reload inside the minute reports the stored
+    reading rather than asking again — even though the address has since been verified."""
+    ses.verification = {"a@gmail.com": "Failed"}
+    api.handler(request("GET /days"), None)
+    ses.verification = {"a@gmail.com": "Success"}
+    assert body_of(api.handler(request("GET /days"), None))["email_verified"] is False
+    assert ses.verification_lookups == [["a@gmail.com"]]
+
+
+def test_a_verification_reading_older_than_a_minute_is_taken_again(env, ses):
+    ses.verification = {"a@gmail.com": "Failed"}
+    api.handler(request("GET /days"), None)
+    _age_verification_reading(minutes=2)
+    ses.verification = {"a@gmail.com": "Success"}
+    assert body_of(api.handler(request("GET /days"), None))["email_verified"] is True
+    assert len(ses.verification_lookups) == 2
+
+
+def _age_verification_reading(minutes):
+    """Backdates the stored reading, standing in for the time a test cannot wait out."""
+    store = api._store()
+    state = store.get_nudge_state("u1")
+    aged = datetime.fromisoformat(state["ses"]["at"]) - timedelta(minutes=minutes)
+    store.put_nudge_state("u1", {**state, "ses": {**state["ses"], "at": aged.isoformat()}})

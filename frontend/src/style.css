@@ -251,8 +251,11 @@ button:disabled { cursor: not-allowed; }
    height holds a weekly recap without scrolling and lets a longer one scroll inside the frame. */
 .undelivered-body { display: block; width: 100%; height: 11rem; margin: 0.2rem 0 0; border: 0;
                     background: #fff; border-radius: 4px; }
-/* The welcome panel is a notice with a heading and a list inside it, so all it adds is the inner
-   spacing: both would otherwise carry their default block margins into the box. */
+/* The welcome panel is a notice with a heading and a list inside it, so what it adds is the inner
+   spacing — both would otherwise carry their default block margins into the box — and a wider gap
+   beneath than the other notices carry: it is a set of instructions rather than a passing message,
+   and butting against the weight row reads as part of it. */
+.notice.welcome { margin-bottom: 1rem; }
 .welcome h2 { margin: 0 0 0.4rem; font-size: 1.05rem; }
 .welcome ul { margin: 0; padding-inline-start: 1.7rem; }
 .welcome li + li { margin-top: 0.3rem; }

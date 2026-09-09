@@ -9,7 +9,8 @@ import { Icon } from "./Icon";
 // reminder with nothing to explain how it got there.
 const UNDELIVERED_LEAD = "הודעות שנשלחו אליכם ולא הגיעו לדוא״ל:";
 
-// The way out of the situation, named where the user meets it. Delivery is refused until the
+// The way out of the situation, named where the user meets it, and true only while the address is
+// undeliverable — a verified address has nothing left to confirm. Delivery is refused until the
 // address is confirmed from the request AWS sends it, and that request is itself a mail the
 // recipient never asked for from a sender they do not know — so it commonly lands in spam, and
 // the sender is named here because that is what makes it findable.
@@ -32,7 +33,7 @@ const UNDELIVERED_VERIFY_HINT =
 // being reminded, so the opt-out is offered alongside the exit; it reads as a toggle, so the
 // same menu is also the way back.
 export function Header({ email, muted, isAdmin, onSignOut, onSetMuted, onFoldAll,
-                         nextViewCondensed, activeViolations, undelivered,
+                         nextViewCondensed, activeViolations, undelivered, emailVerified,
                          onDismissUndelivered }: {
   email: string; muted: boolean;
   // Picks the invite's opening voice: the admin invites as the app's developer.
@@ -43,6 +44,7 @@ export function Header({ email, muted, isAdmin, onSignOut, onSetMuted, onFoldAll
   nextViewCondensed: boolean;
   activeViolations: string[];
   undelivered: UndeliveredMessage[];
+  emailVerified: boolean;
   onDismissUndelivered: (at: string) => void;
 }) {
   const [alarmOpen, setAlarmOpen] = useState(false);
@@ -136,7 +138,7 @@ export function Header({ email, muted, isAdmin, onSignOut, onSetMuted, onFoldAll
                       srcDoc={message.html} />
             </div>
           ))}
-          {undelivered.length > 0 && (
+          {undelivered.length > 0 && !emailVerified && (
             <p className="undelivered-aside trailing">{UNDELIVERED_VERIFY_HINT}</p>
           )}
         </>

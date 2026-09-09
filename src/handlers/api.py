@@ -14,7 +14,7 @@ verified — the request body never names a user."""
 import json
 import os
 from dataclasses import asdict
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 import boto3
 
@@ -27,6 +27,9 @@ from common.store import Store
 from common.webapi import response as _response
 
 logger = get_logger(__name__)
+
+# How long a stored SES verification reading stands before the address is asked about again.
+_VERIFICATION_MAX_AGE = timedelta(minutes=1)
 
 
 def handler(event, context):
@@ -190,6 +193,7 @@ def _history(sub, email):
     excluded = _excluded_by_day(questionnaire, store.get_meals_range(sub, start, day))
     today_payload = _day_payload(store, questionnaire, sub, day)
     yesterday_payload = _day_payload(store, questionnaire, sub, yesterday)
+    nudge_state = store.get_nudge_state(sub)
     return _response(200, {
         # A day recorded with no meals — one closed before the meal log — excludes nothing.
         "days": [{"date": d, "answers": a, "excluded": excluded.get(d, 0)}
@@ -198,29 +202,34 @@ def _history(sub, email):
         # Yesterday rides along for the small-hours grace window, in which the tracker still
         # targets it: its meals and floors are what that view records and closes against.
         "yesterday": yesterday_payload,
-        "muted": store.get_nudge_state(sub)["muted"],
+        "muted": nudge_state["muted"],
         # Rides along with muted rather than costing its own request: both answer the header
         # alone, which the app has already loaded this payload to draw.
         "undelivered": _undelivered_messages(sub),
-        "email_verified": _email_verified(
-            store, sub, email, not history and not today_payload["meals"]
-            and not yesterday_payload["meals"]),
+        "email_verified": _email_verified(store, sub, email, nudge_state),
     })
 
 
-def _email_verified(store, sub, email, nothing_closed_or_eaten):
-    """Whether SES will deliver to the caller's address, or None once the account has recorded
-    anything — the welcome panel that shows the mail-confirmation step is the flag's only reader,
-    and it is gone by then. "Recorded anything" is the frontend's own first-visit reading
-    (frontend/src/firstVisit.ts): a closed day, a meal today or yesterday, a weighing or a target.
-    SES rate-limits the lookup to one call a second account-wide, so it must not ride every
-    reload of a tracking account."""
-    if not nothing_closed_or_eaten:
-        return None
-    weights = _weight_payload(store, sub)
-    if weights["entries"] or weights["target"] is not None:
-        return None
-    status = ses_identity.verification_status(boto3.client("ses"), email)
+def _email_verified(store, sub, email, nudge_state) -> bool:
+    """Whether SES will deliver to the caller's address. Reported on every history read: an
+    address stays undeliverable however much the account has recorded, so the answer is needed
+    long past the first visit.
+
+    SES rate-limits the lookup to one call a second account-wide, which is why the answer is kept
+    beside the account's nudge state and the address is asked about again only once the stored
+    reading is older than _VERIFICATION_MAX_AGE.
+
+    The address is lowercased for the lookup: SES email identities are case sensitive, and the
+    identity was created from the lowercased address, while the Cognito claim carries whatever
+    the identity provider sent."""
+    now = now_iso()
+    if "ses" in nudge_state:
+        stored = nudge_state["ses"]
+        age = datetime.fromisoformat(now) - datetime.fromisoformat(stored["at"])
+        if age < _VERIFICATION_MAX_AGE:
+            return stored["status"] == ses_identity.VERIFIED
+    status = ses_identity.verification_status(boto3.client("ses"), email.lower())
+    store.put_nudge_state(sub, {**nudge_state, "ses": {"status": status, "at": now}})
     return status == ses_identity.VERIFIED
 
 
