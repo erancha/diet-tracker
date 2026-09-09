@@ -4,7 +4,8 @@ export GOOGLE_CLIENT_ID="<google-oauth-client-id>"
 export GOOGLE_CLIENT_SECRET="<google-oauth-client-secret>"
 # Regex an email must fullmatch to sign up; join addresses with "|", ".*" allows everyone.
 export ALLOWED_EMAILS=".*"
-export SES_SENDER="erancha@gmail.com"
+# From address of every mail the app sends; must be a verified SES identity.
+export SES_SENDER="webcharm.tech@gmail.com"
 # Notified about each new user, and shown to rejected sign-ins as the access contact.
 export ADMIN_EMAIL="webcharm.tech@gmail.com"
 # The developer's own account: diagnostic readings the app takes of itself are shown to it
