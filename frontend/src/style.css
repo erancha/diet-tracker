@@ -652,8 +652,17 @@ td.view-day { cursor: pointer; }
                   gap: 0.25rem 1rem; }
 .weight-entries li { display: contents; }
 .weight-entries .weight-entry-date { font-weight: 600; }
+/* The weekday letters are not all the same width, so padding each out to a common one is what
+   starts every date at the same place down the list. */
+.weight-entries .weight-entry-weekday { display: inline-block; min-width: 1.3em; }
 .weight-entries .weight-entry-at { opacity: 0.7; font-variant-numeric: tabular-nums; }
 .weight-entries .weight-entry-kg { font-weight: 600; }
+/* Padding the number out to a common width is what puts the units in a column and stacks the
+   digits: five characters covers a three-digit weight carrying a decimal, and tabular figures
+   make every digit the same width. Aligned to the end — the unit's side — so the padding falls
+   away from it. */
+.weight-entries .weight-entry-value { display: inline-block; min-width: 5ch; text-align: end;
+                                      font-variant-numeric: tabular-nums; }
 .weight-entries .far-over { font-weight: 800; }
 
 /* The knowledge-base chat: composer first, then one question bubble per chat, its answer and

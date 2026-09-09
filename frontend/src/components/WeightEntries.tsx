@@ -1,5 +1,5 @@
 import type { WeightEntry } from "../types";
-import { weekdayDdmmLabel } from "../dates";
+import { ddmmLabel, weekdayLabel } from "../dates";
 import { deleteWeightPrompt, kgLabel, overTargetSeverity } from "../weight";
 import { Icon } from "./Icon";
 
@@ -8,7 +8,8 @@ import { Icon } from "./Icon";
 // carries the hour it was weighed at, which is what makes a weekly rhythm legible; a weighing
 // recorded before the time was kept holds a dash, keeping the columns aligned. Each value is read
 // against the target the way the section's heading is — the colour lands on the number alone,
-// leaving the unit as chrome.
+// leaving the unit as chrome. The weekday and the value each carry their own span so the
+// stylesheet can pad them to a common width, which is what holds the columns straight.
 //
 // Deletion is offered at every date, however old. A weight feeds no day score and no rule streak,
 // so removing one restates nothing; a measurement logged against the wrong day would otherwise
@@ -25,11 +26,15 @@ export function WeightEntries({ entries, target, onDelete }: {
         const severity = overTargetSeverity(entry.kg, target);
         return (
         <li key={entry.date}>
-          <span className="weight-entry-date">{weekdayDdmmLabel(entry.date)}</span>
+          <span className="weight-entry-date">
+            <span className="weight-entry-weekday">{weekdayLabel(entry.date)}</span>
+            {" "}{ddmmLabel(entry.date)}
+          </span>
           <span className="weight-entry-at">{entry.at === null ? "—" : entry.at}</span>
           <span className="weight-entry-kg">
-            <span className={severity === null ? undefined
-              : severity === "far" ? "over-target far-over" : "over-target"}>
+            <span className={severity === null ? "weight-entry-value"
+              : severity === "far" ? "weight-entry-value over-target far-over"
+              : "weight-entry-value over-target"}>
               {kgLabel(entry.kg)}
             </span> ק״ג
           </span>

@@ -28,10 +28,16 @@ export function ddmmLabel(s: string): string {
 // all seven as day names rather than stray letters. Index matches Date.getDay(), Sunday first.
 const WEEKDAY_LETTERS = ["א", "ב", "ג", "ד", "ה", "ו", "ש"];
 
+// The weekday a calendar date falls on, e.g. "ג׳". Distinct from weekdayLetter below, which names
+// a configured weekday token rather than a date and carries no geresh.
+export function weekdayLabel(s: string): string {
+  return `${WEEKDAY_LETTERS[parseIsoDate(s).getDay()]}׳`;
+}
+
 // Where the layout affords a wider date, the weekday leads it; the space between them is also the
 // break opportunity that drops the date to a second line when the column is too narrow for both.
 export function weekdayDdmmLabel(s: string): string {
-  return `${WEEKDAY_LETTERS[parseIsoDate(s).getDay()]}׳ ${ddmmLabel(s)}`;
+  return `${weekdayLabel(s)} ${ddmmLabel(s)}`;
 }
 
 // Local-clock label of a stored UTC instant, e.g. "ג׳ 01/09 14:05".

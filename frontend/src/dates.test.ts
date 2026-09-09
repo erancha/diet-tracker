@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { beforeDailyCutoff, dayLabel, daysBefore, daysSince, ddmmLabel, instantLabel, mealOverdue, expandWeightSection, isWeighInDay, isoDate, lastDays, parseIsoDate, weekdayDdmmLabel, weekdayLetter } from "./dates";
+import { beforeDailyCutoff, dayLabel, daysBefore, daysSince, ddmmLabel, instantLabel, mealOverdue, expandWeightSection, isWeighInDay, isoDate, lastDays, parseIsoDate, weekdayDdmmLabel, weekdayLabel, weekdayLetter } from "./dates";
 
 describe("isoDate", () => {
   it("formats a local date as YYYY-MM-DD with zero padding", () => {
@@ -24,6 +24,13 @@ describe("dayLabel", () => {
 describe("ddmmLabel", () => {
   it("renders DD/MM with zero padding and no year", () => {
     expect(ddmmLabel("2026-08-05")).toBe("05/08");
+  });
+});
+
+describe("weekdayLabel", () => {
+  it("names the weekday a date falls on, marked as a day name rather than a stray letter", () => {
+    expect(weekdayLabel("2026-08-05")).toBe("ד׳");
+    expect(weekdayLabel("2026-08-22")).toBe("ש׳");
   });
 });
 
