@@ -511,8 +511,10 @@ td.view-day { cursor: pointer; }
 .meal-cap-note { color: var(--viz-muted); margin: 1rem 0 0.5rem; }
 /* Worn by an add-meal control — the form toggle's label or the closed day's reopen button —
    once one more meal would cross the meals bound: the same red the history paints after the
-   fact, shown while the choice can still go differently. */
-.meal-add-warn { color: var(--danger); font-weight: 700; }
+   fact, shown while the choice can still go differently. It also steps down to four fifths of
+   the body size the close-day button inherits, so closing reads as the next step and adding as
+   the smaller option. */
+.meal-add-warn { color: var(--danger); font-weight: 700; font-size: 0.8rem; }
 /* Open, the form gains its own frame in the secondary controls' accent tint, so the editing surface
    reads as one bounded unit against the tracker card and its hairline fieldsets. The box takes
    over the heading's 1rem gap above, and the heading sits on the frame's padding instead. */
