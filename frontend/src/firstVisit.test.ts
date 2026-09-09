@@ -18,6 +18,7 @@ const EMPTY_HISTORY: HistoryResponse = {
   today: emptyDay("2026-08-28"),
   yesterday: emptyDay("2026-08-27"),
   muted: false,
+  email_verified: false,
   undelivered: [],
 };
 const EMPTY_WEIGHT: WeightPayload = { target: null, entries: [] };

@@ -102,6 +102,13 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, o
   // only its previous turns — so both keep their own hand-toggled folds.
   const [foldAll, setFoldAll] = useState<FoldAllCommand>({ gen: 0, collapsed: openedCondensed });
   const [chatCollapsed, setChatCollapsed] = useState(false);
+  // A question another panel asked the chat to send, until the chat takes it. Opening the chat
+  // section is part of asking: the chat mounts with the command and the answer lands in view.
+  const [askCommand, setAskCommand] = useState<string | null>(null);
+  const askChat = (question: string) => {
+    setChatCollapsed(false);
+    setAskCommand(question);
+  };
   useFoldAllEffect(foldAll, trendsFold.set);
 
   // The history row whose read-only day view is open, or null when none is.
@@ -224,6 +231,13 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, o
   // other account is passed none.
   const loadedInMs = isDev ? data.loadedInMs : null;
   const firstVisit = isFirstVisit(data, weightQuery.data);
+  // The server reports the address's mail state under the same first-visit reading, so on a first
+  // visit it is never null. The mail step keeps the welcome panel open past the intro: it ends in
+  // a button, and folding it would hide the one step the user still has to take.
+  if (firstVisit && data.email_verified === null) {
+    throw new Error("history of an untouched account carries no email_verified");
+  }
+  const mailStep = firstVisit && data.email_verified === false;
   // The weight section rests folded, and opens for the two occasions it is the reason the page
   // was loaded: a first visit, and the weigh-in morning while no recent weighing answers it.
   const openWeight = firstVisit
@@ -267,7 +281,10 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, o
       <FoldAllContext.Provider value={foldAll}>
         <Alerts items={alerts} onDismiss={dismissAlerts} />
         {!isAdmin && <>
-        {firstVisit && <Welcome autoFold={intro === 3 || intro === "rest" || intro === "meal"} />}
+        {firstVisit && <Welcome mailStep={mailStep}
+                                autoFold={!mailStep
+                                  && (intro === 4 || intro === "rest" || intro === "meal")}
+                                onAskChat={askChat} />}
         <WeightSection
           weight={weightQuery.data}
           settings={configQuery.data.weight}
@@ -346,7 +363,8 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, o
                             collapsed={chatCollapsed}
                             onToggle={() => setChatCollapsed((c) => !c)}>
           <Chat api={api} sampleQuestions={configQuery.data.chat.sample_questions}
-                defaultTranscriptFolded={openedCondensed} />
+                defaultTranscriptFolded={openedCondensed}
+                askCommand={askCommand} onAskCommandTaken={() => setAskCommand(null)} />
         </CollapsibleSection>
         {isAdmin && <AdminSection api={api} />}
       </FoldAllContext.Provider>

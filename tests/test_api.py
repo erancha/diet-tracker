@@ -4,7 +4,7 @@ from decimal import Decimal
 
 import boto3
 import pytest
-from conftest import APP_CONFIG
+from conftest import APP_CONFIG, FakeSes
 
 from common import appconfig, notify, undelivered
 from common.dates import days_before, today
@@ -721,3 +721,35 @@ def test_admin_activity_splits_week_and_total_and_orders_by_the_week_alone(admin
     # which is why the target arrives as a boolean and never as the kilograms themselves.
     assert all(set(user) == {"email", "days", "meals", "chats", "weights", "target"}
                for user in listed)
+
+
+@pytest.fixture
+def ses(monkeypatch):
+    fake = FakeSes()
+    real_client = api.boto3.client
+    monkeypatch.setattr(
+        api.boto3, "client",
+        lambda service, **kw: fake if service == "ses" else real_client(service, **kw))
+    return fake
+
+
+def test_history_of_an_untouched_account_reports_its_verified_address(env, ses):
+    ses.verification = {"a@gmail.com": "Success"}
+    assert body_of(api.handler(request("GET /days"), None))["email_verified"] is True
+
+
+@pytest.mark.parametrize("known", [{}, {"a@gmail.com": "Pending"}, {"a@gmail.com": "Failed"}])
+def test_history_of_an_untouched_account_reports_an_unverified_address(env, ses, known):
+    ses.verification = known
+    assert body_of(api.handler(request("GET /days"), None))["email_verified"] is False
+
+
+@pytest.mark.parametrize("start", [
+    lambda: add_meal(),
+    lambda: api.handler(request("PUT /weight", {"kg": 70}), None),
+    lambda: api.handler(request("PUT /weight/target", {"kg": 65}), None),
+])
+def test_history_of_a_started_account_omits_the_address_state_without_asking_ses(env, ses, start):
+    start()
+    ses.verification_failure = AssertionError("SES must not be asked once the account has started")
+    assert body_of(api.handler(request("GET /days"), None))["email_verified"] is None

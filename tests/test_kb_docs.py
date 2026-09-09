@@ -134,3 +134,14 @@ def test_day_close_bounds():
     assert f"עד {day_close['close_until']} בלילה" in DOC
     assert f"עד {day_close['delete_until']}" in DOC
     assert f"{day_close['min_window_hours']} שעות" in _doc_line("משתרעות על")
+
+
+def test_mail_confirmation_section_names_the_senders_a_user_must_look_for():
+    # The confirmation request comes from Amazon's own sender, and the reminders from the deployed
+    # SesSender, so the guide's spam-filter steps have to name both; the app's is pinned to the
+    # committed deploy parameter template so a sender change is the reminder to update the guide.
+    section = _doc_section("אישור כתובת המייל")
+    assert "no-reply-aws@amazon.com" in section
+    params = (ROOT / "scripts" / "params.example.sh").read_text()
+    sender = next(line for line in params.splitlines() if line.startswith("export SES_SENDER="))
+    assert sender.split("=", 1)[1].strip('"') in section

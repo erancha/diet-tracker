@@ -7,7 +7,9 @@ import { trackerQuestionnaire } from "../test-fixtures";
 import type { AppConfigFile, DayPayload } from "../types";
 import { STORAGE_KEY } from "../viewMode";
 import { App } from "./App";
+import { VERIFY_MAIL_QUESTION } from "./Welcome";
 import { TARGET_FLASH_DELAY_MS } from "./useTargetUnsetFlash";
+import { INTRO_STAGE_MS } from "./useWelcomeIntro";
 
 const CONFIG: AppConfigFile = {
   questionnaire: trackerQuestionnaire,
@@ -39,7 +41,7 @@ function api(days: Partial<Awaited<ReturnType<Api["getDays"]>>> = {}): Api {
   return {
     getDays: vi.fn().mockResolvedValue({
       days: [], today: emptyDay(isoDate(now)), yesterday: emptyDay(isoDate(yesterdayOf(now))),
-      muted: false, undelivered: [], loadedInMs: 150, ...days,
+      muted: false, undelivered: [], email_verified: true, loadedInMs: 150, ...days,
     }),
     getWeight: vi.fn().mockResolvedValue({ target: null, entries: [] }),
     getChatTranscript: vi.fn().mockResolvedValue({ turns: [] }),
@@ -51,6 +53,18 @@ function api(days: Partial<Awaited<ReturnType<Api["getDays"]>>> = {}): Api {
     deleteWeight: vi.fn(), setMuted: vi.fn(), ask: vi.fn(),
     deleteChatTurn: vi.fn(), summarizeChatTurn: vi.fn(), dismissUndelivered: vi.fn(),
   };
+}
+
+// Walks the intro's flashed stages in turn: each stage's timer is armed only once the previous
+// stage has rendered, so one act per stage.
+function advanceIntroStages(...stages: (0 | 1 | 2 | 3 | 4)[]) {
+  for (const stage of stages) act(() => vi.advanceTimersByTime(INTRO_STAGE_MS[stage]));
+}
+
+// An untouched account whose address SES has not verified, so the welcome panel carries the
+// mail step.
+function unverified(): Api {
+  return api({ email_verified: false });
 }
 
 // An account past its first visit by one weighing, with the target as given.
@@ -135,6 +149,51 @@ describe("App", () => {
     renderApp(false);
     await screen.findByRole("button", { name: "יומן היום" });
     expect(document.querySelector("main")).toHaveClass("intro-0");
+  });
+
+  it("shows the mail step only while SES has not verified the address", async () => {
+    renderApp(false, unverified());
+    expect(await screen.findByRole("button", { name: "אישור המייל" })).toBeInTheDocument();
+    expect(screen.getAllByRole("listitem")).toHaveLength(4);
+  });
+
+  it("greets a verified address with the three tracking steps alone", async () => {
+    renderApp(false);
+    await screen.findByRole("heading", { name: /ברוכים הבאים/ });
+    expect(screen.getAllByRole("listitem")).toHaveLength(3);
+    expect(screen.queryByRole("button", { name: "אישור המייל" })).not.toBeInTheDocument();
+  });
+
+  it("keeps the welcome panel open through the intro while the mail step shows", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    renderApp(false, unverified());
+    await screen.findByRole("button", { name: "אישור המייל" });
+    advanceIntroStages(0, 1, 2, 3, 4);
+    expect(screen.getAllByRole("listitem")).toHaveLength(4);
+  });
+
+  it("folds the welcome panel after the intro's sentences when no mail step shows", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    renderApp(false);
+    await screen.findByRole("heading", { name: /ברוכים הבאים/ });
+    advanceIntroStages(0, 1, 2, 3);
+    expect(screen.queryAllByRole("listitem")).toHaveLength(0);
+  });
+
+  it("asks the chat the mail-confirmation question from the welcome button, opening the chat", async () => {
+    const client = unverified();
+    client.ask = vi.fn().mockResolvedValue({ answer: "ככה", sources: [], at: "2026-09-01T10:00:00" });
+    renderApp(false, client);
+    fireEvent.click(await screen.findByRole("button", { name: /שאלות על סבא חטוב/ }));
+    expect(screen.getByRole("button", { name: /שאלות על סבא חטוב/ }))
+      .toHaveAttribute("aria-expanded", "false");
+
+    fireEvent.click(screen.getByRole("button", { name: "אישור המייל" }));
+
+    expect(await screen.findByText("ככה")).toBeInTheDocument();
+    expect(client.ask).toHaveBeenCalledWith(VERIFY_MAIL_QUESTION);
+    expect(screen.getByRole("button", { name: /שאלות על סבא חטוב/ }))
+      .toHaveAttribute("aria-expanded", "true");
   });
 
   it("leaves the intro off an account that has recorded anything", async () => {

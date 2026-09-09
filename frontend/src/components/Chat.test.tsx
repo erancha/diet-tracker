@@ -34,6 +34,23 @@ async function ask(question: string) {
 }
 
 describe("Chat", () => {
+  it("sends a question commanded from outside the composer and hands the command back", async () => {
+    const client = api({ ask: vi.fn().mockResolvedValue({ answer: "תשובה", sources: [],
+                                                            at: "2026-09-01T10:00:00" }) });
+    const onAskCommandTaken = vi.fn();
+    const { rerender } = render(<Chat api={client} sampleQuestions={[]} askCommand="שאלה מבחוץ"
+                                      onAskCommandTaken={onAskCommandTaken} />);
+
+    expect(await screen.findByText("תשובה")).toBeInTheDocument();
+    expect(client.ask).toHaveBeenCalledWith("שאלה מבחוץ");
+    expect(onAskCommandTaken).toHaveBeenCalledTimes(1);
+
+    // The parent clears the command once taken, so a remount does not ask again.
+    rerender(<Chat api={client} sampleQuestions={[]} askCommand={null}
+                   onAskCommandTaken={onAskCommandTaken} />);
+    expect(client.ask).toHaveBeenCalledTimes(1);
+  });
+
   it("shows the question, the answer, and its sources", async () => {
     const chatApi = api({ ask: vi.fn().mockResolvedValue({
       answer: "מותר עד 4 נקודות פחמימה",

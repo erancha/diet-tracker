@@ -337,6 +337,14 @@ Resources:
         - DynamoDBReadPolicy:
             TableName: !Ref ChatHistoryTable
         - !Ref ListUsersPolicy
+        # The history of an account that has recorded nothing reports whether SES will deliver to
+        # its address — the sandbox refuses every message to an address that has not confirmed
+        # its verification request. The action takes no resource-level grant.
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action: ses:GetIdentityVerificationAttributes
+              Resource: '*'
 
   ChatFunction:
     Type: AWS::Serverless::Function

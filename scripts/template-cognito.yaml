@@ -50,6 +50,14 @@ Resources:
               # verified identities, which is exactly the audience the sandbox permits.
               Action: ses:SendEmail
               Resource: !Sub 'arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/*'
+            - Effect: Allow
+              # The sandbox refuses every message to an address that is not a verified identity,
+              # so sign-up asks SES to mail the new address its verification request, after
+              # reading whether one is already out. Neither action takes a resource-level grant.
+              Action:
+                - ses:GetIdentityVerificationAttributes
+                - ses:VerifyEmailIdentity
+              Resource: '*'
 
   UserPool:
     Type: AWS::Cognito::UserPool

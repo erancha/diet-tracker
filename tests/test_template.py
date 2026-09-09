@@ -49,6 +49,9 @@ def test_admin_listing_is_routed_gated_and_granted_pool_access():
     assert api_function["Environment"]["Variables"]["ADMIN_EMAIL"] == "AdminEmail"
     assert "ListUsersPolicy" in api_function["Policies"]
     assert {"DynamoDBReadPolicy": {"TableName": "ChatHistoryTable"}} in api_function["Policies"]
+    assert any(statement["Action"] == "ses:GetIdentityVerificationAttributes"
+               for policy in api_function["Policies"] if isinstance(policy, dict)
+               for statement in policy.get("Statement", []))
     assert "ListUsersPolicy" in template["Resources"]["NudgeFunction"]["Properties"]["Policies"]
     assert "AdminEmail=" in DEPLOY.read_text()
 

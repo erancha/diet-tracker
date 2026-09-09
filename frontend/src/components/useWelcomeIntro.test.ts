@@ -6,7 +6,7 @@ describe("useWelcomeIntro", () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
-  it("walks the sentences and the target line, rests, then settles on the add-meal invitation", () => {
+  it("walks the four sentences and the target line, rests, then settles on the add-meal invitation", () => {
     const { result } = renderHook(() => useWelcomeIntro(true));
     expect(result.current).toBe(0);
     // The opening sentence outlasts a middle sentence's beat.
@@ -18,7 +18,12 @@ describe("useWelcomeIntro", () => {
     expect(result.current).toBe(2);
     act(() => vi.advanceTimersByTime(INTRO_STAGE_MS[2]));
     expect(result.current).toBe(3);
-    act(() => vi.advanceTimersByTime(INTRO_STAGE_MS[3]));
+    // The mail sentence is the longest and carries a button, so it holds past the middle beats.
+    act(() => vi.advanceTimersByTime(INTRO_STAGE_MS[2]));
+    expect(result.current).toBe(3);
+    act(() => vi.advanceTimersByTime(INTRO_STAGE_MS[3] - INTRO_STAGE_MS[2]));
+    expect(result.current).toBe(4);
+    act(() => vi.advanceTimersByTime(INTRO_STAGE_MS[4]));
     expect(result.current).toBe("rest");
 
     // The invitation lands measured from the page opening, not from the flashes' end.

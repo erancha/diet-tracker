@@ -11,16 +11,33 @@ APP_CONFIG = Path(__file__).parent.parent / "config" / "app.json"
 
 
 class FakeSes:
-    """Records send_email calls; raises instead when primed with a failure."""
+    """Records send_email calls and address-verification requests; raises instead when primed
+    with a failure. verification maps an address to the status SES reports for it ("Success",
+    "Pending", ...); an address absent from it is one SES has never heard of."""
 
     def __init__(self, failure=None):
         self.sent = []
         self.failure = failure
+        self.verification = {}
+        self.verification_requested = []
+        self.verification_failure = None
 
     def send_email(self, **kwargs):
         if self.failure is not None:
             raise self.failure
         self.sent.append(kwargs)
+
+    def get_identity_verification_attributes(self, Identities):
+        if self.verification_failure is not None:
+            raise self.verification_failure
+        return {"VerificationAttributes": {
+            identity: {"VerificationStatus": self.verification[identity]}
+            for identity in Identities if identity in self.verification}}
+
+    def verify_email_identity(self, EmailAddress):
+        if self.verification_failure is not None:
+            raise self.verification_failure
+        self.verification_requested.append(EmailAddress)
 
 
 def _table(ddb, name, with_sort_key=True):

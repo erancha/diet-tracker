@@ -18,7 +18,7 @@ from datetime import date, datetime
 
 import boto3
 
-from common import appconfig, chat_history, notify, rules, undelivered, users, weight
+from common import appconfig, chat_history, notify, rules, ses_identity, undelivered, users, weight
 from common.dates import clock_time, days_before, now_iso, today
 from common.derive import derive, excluded_points
 from common.log import get_logger
@@ -37,7 +37,7 @@ def handler(event, context):
     if route == "POST /days":
         return _submit(sub, json.loads(event["body"]))
     if route == "GET /days":
-        return _history(sub)
+        return _history(sub, claims["email"])
     if route == "GET /days/{date}":
         return _get_day(sub, event["pathParameters"]["date"])
     if route == "DELETE /days/{date}":
@@ -178,7 +178,7 @@ def _excluded_by_day(questionnaire, meals_by_day) -> dict:
             for day, meals in meals_by_day.items()}
 
 
-def _history(sub):
+def _history(sub, email):
     store = _store()
     questionnaire = _questionnaire()
     day = today()
@@ -188,19 +188,40 @@ def _history(sub):
     # Derived on read rather than written with the day: every recorded day charts its subtotal
     # without a stored one to backfill.
     excluded = _excluded_by_day(questionnaire, store.get_meals_range(sub, start, day))
+    today_payload = _day_payload(store, questionnaire, sub, day)
+    yesterday_payload = _day_payload(store, questionnaire, sub, yesterday)
     return _response(200, {
         # A day recorded with no meals — one closed before the meal log — excludes nothing.
         "days": [{"date": d, "answers": a, "excluded": excluded.get(d, 0)}
                  for d, a in sorted(history.items(), reverse=True)],
-        "today": _day_payload(store, questionnaire, sub, day),
+        "today": today_payload,
         # Yesterday rides along for the small-hours grace window, in which the tracker still
         # targets it: its meals and floors are what that view records and closes against.
-        "yesterday": _day_payload(store, questionnaire, sub, yesterday),
+        "yesterday": yesterday_payload,
         "muted": store.get_nudge_state(sub)["muted"],
         # Rides along with muted rather than costing its own request: both answer the header
         # alone, which the app has already loaded this payload to draw.
         "undelivered": _undelivered_messages(sub),
+        "email_verified": _email_verified(
+            store, sub, email, not history and not today_payload["meals"]
+            and not yesterday_payload["meals"]),
     })
+
+
+def _email_verified(store, sub, email, nothing_closed_or_eaten):
+    """Whether SES will deliver to the caller's address, or None once the account has recorded
+    anything — the welcome panel that shows the mail-confirmation step is the flag's only reader,
+    and it is gone by then. "Recorded anything" is the frontend's own first-visit reading
+    (frontend/src/firstVisit.ts): a closed day, a meal today or yesterday, a weighing or a target.
+    SES rate-limits the lookup to one call a second account-wide, so it must not ride every
+    reload of a tracking account."""
+    if not nothing_closed_or_eaten:
+        return None
+    weights = _weight_payload(store, sub)
+    if weights["entries"] or weights["target"] is not None:
+        return None
+    status = ses_identity.verification_status(boto3.client("ses"), email)
+    return status == ses_identity.VERIFIED
 
 
 def _get_day(sub, chosen):

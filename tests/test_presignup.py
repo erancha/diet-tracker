@@ -30,6 +30,7 @@ def test_unknown_email_rejected(ses, monkeypatch):
     with pytest.raises(PermissionError):
         presignup.handler(event("intruder@gmail.com"), None)
     assert ses.sent == []
+    assert ses.verification_requested == []
 
 
 def test_pattern_containing_comma_quantifier_stays_intact(ses, monkeypatch):
@@ -67,3 +68,27 @@ def test_notification_failure_is_logged_and_does_not_block_signup(ses, monkeypat
     with caplog.at_level(logging.ERROR):
         assert presignup.handler(event("newcomer@gmail.com"), None) == event("newcomer@gmail.com")
     assert "newcomer@gmail.com" in caplog.text
+
+
+def test_address_unknown_to_ses_gets_its_verification_requested(ses, monkeypatch):
+    monkeypatch.setenv("ALLOWED_EMAILS", ".*")
+    presignup.handler(event("newcomer@gmail.com"), None)
+    assert ses.verification_requested == ["newcomer@gmail.com"]
+
+
+@pytest.mark.parametrize("status", ["Success", "Pending"])
+def test_verified_or_pending_address_is_not_asked_again(ses, monkeypatch, status):
+    monkeypatch.setenv("ALLOWED_EMAILS", ".*")
+    ses.verification = {"returning@gmail.com": status}
+    presignup.handler(event("returning@gmail.com"), None)
+    assert ses.verification_requested == []
+
+
+def test_verification_request_failure_is_logged_and_does_not_block_signup(ses, monkeypatch,
+                                                                          caplog):
+    monkeypatch.setenv("ALLOWED_EMAILS", ".*")
+    ses.verification_failure = RuntimeError("ses down")
+    with caplog.at_level(logging.ERROR):
+        assert presignup.handler(event("newcomer@gmail.com"), None) == event("newcomer@gmail.com")
+    assert "newcomer@gmail.com" in caplog.text
+    assert len(ses.sent) == 1

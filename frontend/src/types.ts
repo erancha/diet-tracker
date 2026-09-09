@@ -246,6 +246,10 @@ export interface HistoryResponse {
   muted: boolean;
   // Newest first. Rides along with muted because both feed the header alone.
   undelivered: UndeliveredMessage[];
+  // Whether the sending account may deliver mail to the address: false until the user confirms
+  // the verification request sign-up sent them. Null once the account has recorded anything — the
+  // welcome panel is the flag's only reader, and by then it is gone.
+  email_verified: boolean | null;
 }
 
 // The history payload carrying how long its own request took. The number is measured in the

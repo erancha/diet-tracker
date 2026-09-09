@@ -44,10 +44,10 @@ closed from the tracker, and the week's trend over recorded history.
   score itself, and frames the weekday the program's treat meal is aimed at — one day past a
   week, so a chart ending on the treat day sets it against the one before.
   The account menu turns all reminders off and back on. A reminder SES refuses to deliver — the
-  address is not one the sending account may write to — is kept and shown behind the header's
-  alarm bell instead, dated, until it is dismissed there, so a message addressed to someone still
-  reaches them rather than ending in a log line. The bell shows the mail itself: the same HTML the
-  email carried, drawn in a frame that may do nothing but draw it.
+  address has not yet confirmed the verification request sign-up sent it — is kept and shown
+  behind the header's alarm bell instead, dated, until it is dismissed there, so a message
+  addressed to someone still reaches them rather than ending in a log line. The bell shows the
+  mail itself: the same HTML the email carried, drawn in a frame that may do nothing but draw it.
 - Questions about the diet's principles are answered inside the app: a chat section sends each
   question to the knowledge base of the diet's source documents, hosted on
   [Summaries.AI](https://github.com/erancha/Summaries.AI-public), and shows the answer with the
@@ -66,7 +66,8 @@ closed from the tracker, and the week's trend over recorded history.
   Scheduler (Asia/Jerusalem)
 - **Frontend** — React (TypeScript + Vite) RTL app on S3 + CloudFront, Recharts, TanStack Query
 - **Auth** — Cognito Google sign-in gated by an allowlist regex (".*" opens sign-up to
-  everyone); the admin is emailed about each new user
+  everyone); sign-up requests the new address's SES verification, without which the sandboxed
+  SES account cannot mail it, and emails the admin about each new user
 - **Notifications** — SES email, optional Telegram bot
 - **Knowledge-base chat** — Summaries.AI RAG API over the diet documents; its API key lives in
   SSM Parameter Store and is read per request, so rotating it needs no redeploy

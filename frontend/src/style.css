@@ -254,6 +254,7 @@ button:disabled { cursor: not-allowed; }
 .welcome h2 { margin: 0 0 0.4rem; font-size: 1.05rem; }
 .welcome ul { margin: 0; padding-inline-start: 1.7rem; }
 .welcome li + li { margin-top: 0.3rem; }
+.welcome li button { margin-inline-start: 0.5rem; vertical-align: middle; }
 .welcome:has(.section-toggle[aria-expanded="false"]) h2 { margin-bottom: 0; }
 /* The banner greets someone who has never met the app's fold idiom, so its disclosure triangle
    is outsized and accent-colored: a control that announces itself, not a subtle heading mark. */
@@ -265,13 +266,14 @@ button:disabled { cursor: not-allowed; }
 @media (prefers-reduced-motion: no-preference) {
   .intro-0 .welcome li:nth-child(1),
   .intro-1 .welcome li:nth-child(2),
-  .intro-2 .welcome li:nth-child(3) {
+  .intro-2 .welcome li:nth-child(3),
+  .intro-3 .welcome li:nth-child(4) {
     animation: nudge-blink 0.5s ease-in-out infinite;
   }
   /* The target line's flash keeps the sentences' half-second beat, its iterations filling
      exactly the TARGET_FLASH_MS stretch — the intro's closing stage on a first visit, or the
      target-flash class App stamps on <main> for a later account that still has no target. */
-  .intro-3 .weight .weight-summary,
+  .intro-4 .weight .weight-summary,
   .target-flash .weight .weight-summary {
     animation: nudge-blink 0.5s ease-in-out 14;
   }
@@ -442,7 +444,7 @@ td.view-day { cursor: pointer; }
 .meal-form.nudge-2 .section-toggle { animation: nudge-blink 2s ease-in-out infinite; }
 /* While the first-visit intro's flashes run, the add-meal toggle keeps quiet — the overdue-meal
    nudge would otherwise blink alongside the sequence and muddle it. It resumes when they end. */
-:is(.intro-0, .intro-1, .intro-2, .intro-3) .meal-form .section-toggle { animation: none; }
+:is(.intro-0, .intro-1, .intro-2, .intro-3, .intro-4) .meal-form .section-toggle { animation: none; }
 /* A dip-and-return pulse rather than an on/off square wave: the label stays legible at the
    bottom of the dip, and never sits dimmed waiting for the next cycle. */
 @keyframes nudge-blink { 50% { opacity: 0.45; } }
