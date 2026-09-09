@@ -770,6 +770,16 @@ describe("Chat", () => {
     expect(screen.getByRole("button", { name: "סיכום הצ'אט על שאלה 1" })).toBeDisabled();
   });
 
+  it("marks the chats the app wrote, and only those", async () => {
+    render(<Chat api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: mixedTurns() }) })}
+                 sampleQuestions={[]} />);
+    await screen.findByText("שאלה 3");
+
+    const marks = screen.getAllByRole("img", { name: "שאלה מהאפליקציה" });
+    expect(marks).toHaveLength(1);
+    expect(marks[0].closest("li")).toContainElement(screen.getByText("שאלה 2"));
+  });
+
   it("lists every chat until the filter narrows it, and counts what it lists", async () => {
     render(<Chat api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: mixedTurns() }) })}
                  sampleQuestions={[]} />);

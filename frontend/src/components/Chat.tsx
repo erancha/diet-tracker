@@ -67,15 +67,16 @@ function renderQuestion(text: string): ReactNode {
 // or only the ones the app wrote (the weekly recap, and the guided questions panels put to the
 // chat) — and the count follows the filter, so the label always matches what unfolds under it.
 // A filter that is holding chats back says how many, so a shortened list is never taken for the
-// whole of it. The choice outlives the visit (chatFilter); an arriving answer widens it back to
-// every chat rather than landing outside the listed side. The menu's condensed/full command folds and
-// unfolds the transcript, the condensed sign-in starts it folded, and sending a question always
-// reveals it so the arriving answer never lands out of sight. A question commanded from elsewhere
-// in the app (askCommand) is the app's own wording, so it is sent the moment it arrives as a
-// standalone question filed on the app's side of the filter, and handed back through
-// onAskCommandTaken so the owner clears it — the chat may unmount and remount with the section's
-// fold, and must not ask twice. A follow-up inherits the side of the chat it extends, so a
-// conversation stays on one side for its whole life.
+// whole of it. Each chat the app wrote carries a marker of its own, so its side stays legible
+// while the filter lists every chat. The choice outlives the visit (chatFilter); an arriving
+// answer widens it back to every chat rather than landing outside the listed side. The menu's
+// condensed/full command folds and unfolds the transcript, the condensed sign-in starts it
+// folded, and sending a question always reveals it so the arriving answer never lands out of
+// sight. A question commanded from elsewhere in the app (askCommand) is the app's own wording,
+// so it is sent the moment it arrives as a standalone question filed on the app's side of the
+// filter, and handed back through onAskCommandTaken so the owner clears it — the chat may
+// unmount and remount with the section's fold, and must not ask twice. A follow-up inherits the
+// side of the chat it extends, so a conversation stays on one side for its whole life.
 //
 // The transcript loads once in full, so toggling a question, its sources, or the transcript
 // reveals data already in memory. A fresh answer opens expanded — the user is waiting for it —
@@ -350,6 +351,11 @@ export function Chat({ api, sampleQuestions, defaultTranscriptFolded = false, as
             <Fragment key={turn.at}>
               <li className="chat-user">
                 <time className="chat-turn-at" dateTime={turn.at}>{instantLabel(turn.at)}</time>
+                {turn.app && (
+                  <span className="chat-app-mark" role="img" aria-label="שאלה מהאפליקציה">
+                    <Icon name="spark" />
+                  </span>
+                )}
                 <button type="button" className="disclosure chat-question"
                   ref={(el) => {
                     if (el) questionRefs.current.set(turn.at, el);

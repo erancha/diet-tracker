@@ -28,12 +28,14 @@ const GLYPHS = {
   share: <><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" />
            <circle cx="18" cy="19" r="3" /><path d="m8.59 13.51 6.83 3.98" />
            <path d="m15.41 6.51-6.82 3.98" /></>,
+  spark: <path d="M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2Z" />,
 } satisfies Record<string, ReactElement>;
 
 export type IconName = keyof typeof GLYPHS;
 
-// Decorative by contract: every call site is a control that already carries its own accessible
-// name, so the glyph is hidden from assistive technology rather than doubling that name.
+// Decorative by contract: the glyph is hidden from assistive technology, so naming it is the call
+// site's job — a control names itself, and a marker standing on its own is wrapped in an element
+// that names it.
 export function Icon({ name }: { name: IconName }) {
   return (
     <svg className="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"

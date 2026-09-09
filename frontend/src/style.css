@@ -717,6 +717,9 @@ td.view-day { cursor: pointer; }
 .chat-user { align-self: flex-start; background: #e8f0e9; display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
 .chat-user p { flex: 1; }
 .chat-turn-at { flex-basis: 100%; font-size: 0.75rem; opacity: 0.7; font-variant-numeric: tabular-nums; }
+/* Marks a chat the app composed rather than the user asking it — the weekly recap, or a guided
+   question a panel put to the chat. */
+.chat-app-mark { color: var(--accent); display: flex; }
 /* The question doubles as its answer's toggle: a text-styled button, so the bubble keeps reading
    as conversation while the whole row stays keyboard-reachable. */
 .chat-question { flex: 1; border-radius: 0; text-align: start; white-space: pre-wrap; }
