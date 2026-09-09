@@ -5,6 +5,7 @@ confidently wrong answers. Each test pins a quoted value to its config source; a
 that fails here is the reminder to update docs/kb/app-guide-he.md and re-upload it."""
 
 import json
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).parent.parent
@@ -30,14 +31,16 @@ def _doc_row(first_cell) -> str:
     return rows[0]
 
 
-def _doc_section(title) -> str:
-    """The guide's text under one section heading, as one whitespace-normalized string: a prose
-    claim wraps across lines, so unlike the table rows above it cannot be pinned line by line."""
+def _doc_section(title, level="## ") -> str:
+    """The guide's text under one heading of the given depth, as one whitespace-normalized
+    string: a prose claim wraps across lines, so unlike the table rows above it cannot be pinned
+    line by line. The block runs to the next heading of that depth or shallower, so a section
+    carries its own subsections."""
     lines = DOC.splitlines()
-    heads = [i for i, line in enumerate(lines) if line.startswith("## ") and line.endswith(title)]
+    heads = [i for i, line in enumerate(lines) if line.startswith(level) and line.endswith(title)]
     assert len(heads) == 1, f"expected exactly one {title!r} section, got {len(heads)}"
-    end = next((i for i in range(heads[0] + 1, len(lines)) if lines[i].startswith("## ")),
-               len(lines))
+    closes = re.compile(r"#{1,%d} " % len(level.strip()))
+    end = next((i for i in range(heads[0] + 1, len(lines)) if closes.match(lines[i])), len(lines))
     return " ".join(" ".join(lines[heads[0]:end]).split())
 
 
@@ -122,6 +125,17 @@ def test_trend_chart_excluded_line():
     labels = {addition["id"]: addition["label"] for addition in CARBS["additions"]}
     for addition in CARBS["excluded_additions"]:
         assert f'"{labels[addition]}"' in section
+
+
+def test_additions_name_the_one_the_excluded_line_counts():
+    # The additions section is where a user decides whether to mark something, so it has to name
+    # which addition also lands in the chart's flour-and-sugar line — otherwise that consequence
+    # is reachable only from section 14, which nobody reads while recording a meal.
+    section = _doc_section("מה התוספת עושה ומה לא", level="### ")
+    for addition in CARBS["additions"]:
+        quoted = '"{}"'.format(addition["label"])
+        assert (quoted in section) == (addition["id"] in CARBS["excluded_additions"]), \
+            f"{addition['id']} is named wrongly for the excluded line"
 
 
 def test_trend_chart_treat_day():
