@@ -15,17 +15,34 @@
   --column-width: 48rem;
   --page-pad-top: 0.6rem;
   --page-pad-bottom: 1rem;
+  --page-bg: #fafafa;
 }
 /* The top edge is tighter than the other three: both screens open on the app title, which sits
    directly on this padding with no heading margin of its own, so a full rem here would read as a
    gap before the page starts rather than as its edge. */
-body { font-family: system-ui, sans-serif; max-width: var(--column-width); margin: 0 auto; padding: var(--page-pad-top) 1rem var(--page-pad-bottom); background: #fafafa; color: #212121; }
-/* The title's own heading margins are dropped: the body's top padding already sets the page's
-   edge. Below, a full rem of air parts the title row from the weight line, so the status line
-   reads as the page's first content rather than as part of the title block. The gap is a floor
-   on the horizontal space beside the account box: space-between alone leaves none once the title
-   grows to the width available, which on a narrow phone runs it up against the alarm badge. */
-header { display: flex; justify-content: space-between; align-items: baseline; gap: 0.75rem; margin-bottom: 1.35rem; }
+body { font-family: system-ui, sans-serif; max-width: var(--column-width); margin: 0 auto; padding: var(--page-pad-top) 1rem var(--page-pad-bottom); background: var(--page-bg); color: #212121; }
+/* Anything scrolled to lands below the app header rather than under it. The clearance is
+   approximate on purpose — the header's height follows its title and touch targets — and errs
+   high, because overshooting only opens air above the target while undershooting hides it. */
+html { scroll-padding-top: 4.5rem; }
+/* The title's own heading margins are dropped: the page's top padding already sets its edge.
+   The gap is a floor on the horizontal space beside the account box: space-between alone leaves
+   none once the title grows to the width available, which on a narrow phone runs it up against
+   the alarm badge. */
+header { display: flex; justify-content: space-between; align-items: baseline; gap: 0.75rem; }
+/* The app's chrome stays put while the day scrolls under it: the title says which screen this is,
+   the alarm badge keeps waiting notices in sight and the account menu stays one press away,
+   wherever the reader has scrolled to. It paints the page's own ground so the content passing
+   beneath never shows through, and it swallows the body's top padding — pulled up by it, restored
+   as its own — so nothing is visible in the strip above it either. The air parting the title row
+   from the first content is padding rather than margin for the same reason: it belongs to the
+   painted block, so a line sliding under the header disappears at the gap's edge rather than at
+   the account buttons. */
+#root > header {
+  position: sticky; top: 0; z-index: 5; background: var(--page-bg);
+  margin-top: calc(-1 * var(--page-pad-top)); padding-top: var(--page-pad-top);
+  padding-bottom: 1.35rem;
+}
 header h1 { margin-bottom: 0; }
 /* The alarm badge is the one thing wide enough to crowd the title: beside the account trigger
    alone a narrow phone still has room to spare, but at the shared 9vw the title fills what is
