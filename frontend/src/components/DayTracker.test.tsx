@@ -326,6 +326,29 @@ describe("DayTracker", () => {
     expect(screen.getByLabelText("דרגה 4")).toBeInTheDocument();
   });
 
+  it("withholds the density switch while no grade name is on screen", () => {
+    atLocalTime(19, 5);
+    render(<DayTracker maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={emptyDay}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    // Nothing recorded and the inputs folded: no grade name for the switch to act on.
+    expect(screen.queryByRole("button", { name: "הרחבת שמות" })).toBeNull();
+    openMealForm();
+    expect(screen.getByRole("button", { name: "הרחבת שמות" })).toBeInTheDocument();
+  });
+
+  it("keeps the density switch over a recorded meal while the inputs are folded", () => {
+    atLocalTime(19, 5);
+    render(<DayTracker maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={trackedDay}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    expect(screen.getByRole("button", { name: "הרחבת שמות" })).toBeInTheDocument();
+  });
+
   it("offers a second source only beside a light primary, over every grade but the plain no-carb one", () => {
     render(<DayTracker maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={emptyDay}
                        firstMealHour={NO_NUDGE_HOUR}

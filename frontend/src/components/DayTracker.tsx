@@ -520,12 +520,16 @@ export function DayTracker({ questionnaire, day, isToday = true, closed = false,
       )}
       {/* Governs every grade name above it — the pickers' and the meal rows' alike, the closed
           day's read-only rows included — sitting outside either branch. It closes the card as a
-          quiet setting rather than leading it as if it were the day's first control. */}
-      <div className="label-density">
-        <button type="button" className="secondary compact" onClick={() => setExpandLabels(!expandLabels)}>
-          {expandLabels ? COLLAPSE_LABELS : EXPAND_LABELS}
-        </button>
-      </div>
+          quiet setting rather than leading it as if it were the day's first control, and only
+          while a meal row or the open inputs put a grade name on screen for it to act on. The
+          density lives outside the component, so withholding the switch keeps the reading. */}
+      {(day.meals.length > 0 || !formCollapsed) && (
+        <div className="label-density">
+          <button type="button" className="secondary compact" onClick={() => setExpandLabels(!expandLabels)}>
+            {expandLabels ? COLLAPSE_LABELS : EXPAND_LABELS}
+          </button>
+        </div>
+      )}
     </CollapsibleSection>
   );
 }
