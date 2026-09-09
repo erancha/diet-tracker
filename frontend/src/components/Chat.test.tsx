@@ -7,7 +7,7 @@ import { instantLabel } from "../dates";
 import type { ChatTurn } from "../types";
 import { Chat } from "./Chat";
 
-type ChatApi = Pick<Api, "ask" | "getChatTranscript" | "deleteChatTurn" | "summarizeChatTurn">;
+type ChatApi = Pick<Api, "ask" | "getChatTranscript" | "deleteChatTurn" | "summarizeChatTurn" | "sourceUrl">;
 
 function api(overrides: Partial<ChatApi> = {}): ChatApi {
   return {
@@ -15,6 +15,7 @@ function api(overrides: Partial<ChatApi> = {}): ChatApi {
     getChatTranscript: vi.fn().mockResolvedValue({ turns: [] }),
     deleteChatTurn: vi.fn(),
     summarizeChatTurn: vi.fn(),
+    sourceUrl: vi.fn(),
     ...overrides,
   };
 }
@@ -202,6 +203,63 @@ describe("Chat", () => {
       .toEqual(["מדריך.pdf", "83%"]);
     expect(within(rows[2]).getAllByRole("cell").map((cell) => cell.textContent))
       .toEqual(["תפריט.pdf", "71%"]);
+  });
+
+  // The corpus mixes program PDFs with the app's own guide files; only a PDF is offered to open.
+  async function openSourcesOf(chatApi: ChatApi) {
+    render(<Chat api={chatApi} sampleQuestions={[]} />);
+    await userEvent.click(await screen.findByRole("button", { name: "שאלה" }));
+    await userEvent.click(screen.getByRole("button", { name: "מקורות והתאמה" }));
+    return screen.getByRole("table");
+  }
+
+  function storedWithSources() {
+    return { question: "שאלה", answer: "תשובה", at: "2026-09-01T10:00:00",
+             sources: [{ fileName: "מדריך.pdf", score: 0.83 },
+                       { fileName: "app-guide-he.md", score: 0.7 }] };
+  }
+
+  // A tab opened before the URL is known, so the browser sees it as the press's own doing.
+  function fakeTab() {
+    const tab = { location: { href: "" }, close: vi.fn() };
+    vi.spyOn(window, "open").mockReturnValue(tab as unknown as Window);
+    return tab;
+  }
+
+  it("offers a PDF source as a button to open and leaves a guide file as text", async () => {
+    const table = await openSourcesOf(api({
+      getChatTranscript: vi.fn().mockResolvedValue({ turns: [storedWithSources()] }) }));
+
+    expect(within(table).getByRole("button", { name: "מדריך.pdf" })).toBeInTheDocument();
+    expect(within(table).queryByRole("button", { name: "app-guide-he.md" })).not.toBeInTheDocument();
+    expect(within(table).getByText("app-guide-he.md")).toBeInTheDocument();
+  });
+
+  it("opens a pressed PDF source in a new tab at the link the server hands back", async () => {
+    const tab = fakeTab();
+    const chatApi = api({
+      getChatTranscript: vi.fn().mockResolvedValue({ turns: [storedWithSources()] }),
+      sourceUrl: vi.fn().mockResolvedValue({ url: "https://bucket.s3/doc.pdf?sig" }) });
+    const table = await openSourcesOf(chatApi);
+    await userEvent.click(within(table).getByRole("button", { name: "מדריך.pdf" }));
+
+    expect(window.open).toHaveBeenCalledWith("", "_blank");
+    expect(chatApi.sourceUrl).toHaveBeenCalledWith("מדריך.pdf");
+    await vi.waitFor(() => expect(tab.location.href).toBe("https://bucket.s3/doc.pdf?sig"));
+    expect(tab.close).not.toHaveBeenCalled();
+  });
+
+  it("closes the opened tab and says so when the source cannot be fetched", async () => {
+    const tab = fakeTab();
+    const chatApi = api({
+      getChatTranscript: vi.fn().mockResolvedValue({ turns: [storedWithSources()] }),
+      sourceUrl: vi.fn().mockRejectedValue(new ApiError(404, "המסמך אינו זמין")) });
+    const table = await openSourcesOf(chatApi);
+    await userEvent.click(within(table).getByRole("button", { name: "מדריך.pdf" }));
+
+    expect(await screen.findByText("פתיחת המקור נכשלה (המסמך אינו זמין)")).toBeInTheDocument();
+    expect(tab.close).toHaveBeenCalledTimes(1);
+    expect(tab.location.href).toBe("");
   });
 
   it("omits the sources toggle when the answer cites nothing", async () => {

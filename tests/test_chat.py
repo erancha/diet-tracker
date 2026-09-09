@@ -348,6 +348,86 @@ def test_ask_posts_the_question_with_the_api_key(monkeypatch):
     assert captured["payload"] == {"question": "שאלה", "context": "נתוני המעקב"}
 
 
+def test_document_url_posts_the_file_name_with_the_api_key(monkeypatch):
+    captured = {}
+
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def read(self):
+            return json.dumps({"url": "https://bucket.s3/doc.pdf?sig"}).encode()
+
+    def fake_urlopen(request_object, timeout):
+        captured["url"] = request_object.full_url
+        captured["api_key"] = request_object.get_header("X-api-key")
+        captured["payload"] = json.loads(request_object.data)
+        captured["timeout"] = timeout
+        return FakeResponse()
+
+    monkeypatch.setattr(chat_client.urllib.request, "urlopen", fake_urlopen)
+    url = chat_client.document_url("https://rag.example/prod", "the-key", "מדריך.pdf")
+    assert url == "https://bucket.s3/doc.pdf?sig"
+    assert captured["url"] == "https://rag.example/prod/rag/document-url"
+    assert captured["api_key"] == "the-key"
+    assert captured["payload"] == {"fileName": "מדריך.pdf"}
+    assert captured["timeout"] == chat_client.TIMEOUT_SECONDS
+
+
+def test_document_url_reports_a_document_the_service_does_not_hold(monkeypatch):
+    def fake_urlopen(request_object, timeout):
+        raise urllib.error.HTTPError(request_object.full_url, 404, "Not Found", {}, None)
+
+    monkeypatch.setattr(chat_client.urllib.request, "urlopen", fake_urlopen)
+    with pytest.raises(chat_client.DocumentNotFound):
+        chat_client.document_url("https://rag.example/prod", "the-key", "אין.pdf")
+
+
+def source_url_request(body, sub="u1", email="a@gmail.com"):
+    return {**request(body, sub, email), "routeKey": "POST /chat/source-url"}
+
+
+def test_a_source_url_is_fetched_upstream_and_returned_without_spending_quota(env, ddb, monkeypatch):
+    fetched = {}
+    monkeypatch.setattr(chat_handler.chat, "document_url", lambda api_url, key, file_name:
+                        fetched.update(api_url=api_url, key=key, file_name=file_name)
+                        or "https://bucket.s3/doc.pdf?sig")
+    response = chat_handler.handler(source_url_request({"fileName": "מדריך.pdf"}), None)
+    assert response["statusCode"] == 200
+    assert body_of(response) == {"url": "https://bucket.s3/doc.pdf?sig"}
+    assert fetched == {"api_url": "https://rag.example/prod", "key": "the-key",
+                       "file_name": "מדריך.pdf"}
+    assert ddb.Table("chat_quota").scan()["Items"] == []
+
+
+def test_a_source_url_for_an_unknown_document_is_404(env, monkeypatch):
+    def missing(api_url, key, file_name):
+        raise chat_client.DocumentNotFound(file_name)
+
+    monkeypatch.setattr(chat_handler.chat, "document_url", missing)
+    response = chat_handler.handler(source_url_request({"fileName": "אין.pdf"}), None)
+    assert response["statusCode"] == 404
+    assert body_of(response) == {"error": "המסמך אינו זמין"}
+
+
+def test_a_source_url_request_without_a_file_name_is_400(env, monkeypatch):
+    monkeypatch.setattr(chat_handler.chat, "document_url",
+                        lambda *args: pytest.fail("must not reach upstream"))
+    for body in ({}, {"fileName": "  "}, {"fileName": 3}):
+        assert chat_handler.handler(source_url_request(body), None)["statusCode"] == 400
+
+
+def test_a_source_url_upstream_failure_maps_to_502(env, monkeypatch):
+    def down(api_url, key, file_name):
+        raise urllib.error.URLError("connection refused")
+
+    monkeypatch.setattr(chat_handler.chat, "document_url", down)
+    assert chat_handler.handler(source_url_request({"fileName": "מדריך.pdf"}), None)["statusCode"] == 502
+
+
 def summary_request(at, sub="u1", email="a@gmail.com"):
     return {
         "routeKey": "POST /chat/{at}/summary",

@@ -49,6 +49,7 @@ export interface Api {
   getChatTranscript(): Promise<ChatTranscript>;
   deleteChatTurn(at: string): Promise<{ at: string }>;
   summarizeChatTurn(at: string): Promise<ChatTurn>;
+  sourceUrl(fileName: string): Promise<{ url: string }>;
 }
 
 export function createApi(
@@ -125,5 +126,8 @@ export function createApi(
     // Returns the chat as the summary leaves it: the conversation's original question, the
     // digest as its answer, and the same timestamp it was already stored under.
     summarizeChatTurn: (at) => request("POST", `/chat/${encodeURIComponent(at)}/summary`),
+    // A link to open one cited document, minted for this press and good for minutes only, which
+    // is why it is asked for at press time rather than kept with the chat.
+    sourceUrl: (fileName) => request("POST", "/chat/source-url", { fileName }),
   };
 }

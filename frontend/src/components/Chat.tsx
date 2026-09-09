@@ -6,6 +6,10 @@ import type { ChatSampleQuestion, ChatTurn } from "../types";
 import { Icon } from "./Icon";
 import { useGlobalFold } from "./useFoldAll";
 
+// Sources are named by the file they were retrieved from. Only a PDF is offered to open: the
+// corpus also holds the app's own guide files, which are not for readers.
+const isPdf = (fileName: string) => fileName.toLowerCase().endsWith(".pdf");
+
 // The server states the same refusal in handlers/chat.py; mirrored here because ApiError does
 // not surface the response body (the appTitle.ts precedent for cross-runtime strings).
 const QUOTA_MESSAGE = "מכסת השאלות היומית נוצלה — אפשר לשאול שוב מחר";
@@ -90,7 +94,7 @@ function renderQuestion(text: string): ReactNode {
 // input — no quota is spent before the user chooses to submit.
 export function Chat({ api, sampleQuestions, defaultTranscriptFolded = false, askCommand = null,
                        onAskCommandTaken }: {
-  api: Pick<Api, "ask" | "getChatTranscript" | "deleteChatTurn" | "summarizeChatTurn">;
+  api: Pick<Api, "ask" | "getChatTranscript" | "deleteChatTurn" | "summarizeChatTurn" | "sourceUrl">;
   sampleQuestions: ChatSampleQuestion[];
   defaultTranscriptFolded?: boolean;
   askCommand?: string | null;
@@ -177,6 +181,20 @@ export function Chat({ api, sampleQuestions, defaultTranscriptFolded = false, as
         : `השאלה נכשלה (${failure.message})`);
     } finally {
       setPendingQuestion(null);
+    }
+  };
+
+  // The tab is opened on the press itself, before the link is known: a tab opened once an
+  // await has passed is the kind a browser blocks as unasked-for.
+  const openSource = async (fileName: string) => {
+    setError(null);
+    const tab = window.open("", "_blank");
+    try {
+      const { url } = await api.sourceUrl(fileName);
+      tab!.location.href = url;
+    } catch (thrown) {
+      tab!.close();
+      setError(`פתיחת המקור נכשלה (${(thrown as Error).message})`);
     }
   };
 
@@ -365,7 +383,14 @@ export function Chat({ api, sampleQuestions, defaultTranscriptFolded = false, as
                               <tbody>
                                 {turn.sources.map((source, index) => (
                                   <tr key={index}>
-                                    <td>{source.fileName}</td>
+                                    <td>
+                                      {isPdf(source.fileName) ? (
+                                        <button type="button" className="chat-source-open"
+                                                onClick={() => openSource(source.fileName)}>
+                                          {source.fileName}
+                                        </button>
+                                      ) : source.fileName}
+                                    </td>
                                     <td>{Math.round(source.score * 100)}%</td>
                                   </tr>
                                 ))}

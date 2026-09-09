@@ -17,7 +17,11 @@ user typed, which is what the transcript's origin filter reads; a follow-up has 
 flag, since it rewrites the stored chat whole. POST /chat/{at}/summary replaces one chat with a
 digest of its conversation, answered by the same upstream service and so counted against the
 same quota. DELETE /chat/{at} permanently removes one of the caller's own chats by its
-timestamp; the quota already spent on its questions is unaffected."""
+timestamp; the quota already spent on its questions is unaffected.
+
+POST /chat/source-url fetches, at the moment a reader presses a cited source, a short-lived link
+to that document from the same upstream service. The link is never stored — a transcript keeps
+only the file names its answers cited — and no LLM runs, so the call is outside the quota."""
 
 import json
 import os
@@ -56,6 +60,8 @@ def handler(event, context):
         return response(200, {"turns": chat_history.turns(_history_table(), sub)})
     if route == "POST /chat/{at}/summary":
         return _summarize(sub, claims["email"], event["pathParameters"]["at"])
+    if route == "POST /chat/source-url":
+        return _source_url(json.loads(event["body"]))
     if route == "DELETE /chat/{at}":
         return _delete_turn(sub, event["pathParameters"]["at"])
     raise ValueError(f"unhandled route {route!r}")
@@ -108,6 +114,20 @@ def _ask(sub, email, body):
     except KeyError:
         return response(404, {"error": f"no turn stored at {at}"})
     return response(200, {"answer": answer["answer"], "sources": answer["sources"], "at": at})
+
+
+def _source_url(body):
+    file_name = body.get("fileName")
+    if not isinstance(file_name, str) or not file_name.strip():
+        return response(400, {"error": "fileName is required"})
+    key = chat.api_key(boto3.client("ssm"), os.environ["RAG_API_KEY_PARAM"])
+    try:
+        url = chat.document_url(os.environ["RAG_API_URL"], key, file_name)
+    except chat.DocumentNotFound:
+        return response(404, {"error": "המסמך אינו זמין"})
+    except (urllib.error.URLError, TimeoutError) as error:
+        return _upstream_unavailable(error)
+    return response(200, {"url": url})
 
 
 def _quota_refusal(sub, email):

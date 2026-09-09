@@ -381,6 +381,12 @@ Resources:
             ApiId: !Ref Api
             Method: DELETE
             Path: /chat/{at}
+        ChatSourceUrl:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref Api
+            Method: POST
+            Path: /chat/source-url
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref ChatQuotaTable
