@@ -62,8 +62,9 @@ function renderQuestion(text: string): ReactNode {
 // filter picks which side of the transcript is listed — every chat, only the ones the user asked,
 // or only the ones the app wrote (the weekly recap, and the guided questions panels put to the
 // chat) — and the count follows the filter, so the label always matches what unfolds under it.
-// The choice outlives the visit (chatFilter); an arriving answer widens it back to every chat
-// rather than landing outside the listed side. The menu's condensed/full command folds and
+// A filter that is holding chats back says how many, so a shortened list is never taken for the
+// whole of it. The choice outlives the visit (chatFilter); an arriving answer widens it back to
+// every chat rather than landing outside the listed side. The menu's condensed/full command folds and
 // unfolds the transcript, the condensed sign-in starts it folded, and sending a question always
 // reveals it so the arriving answer never lands out of sight. A question commanded from elsewhere
 // in the app (askCommand) is the app's own wording, so it is sent the moment it arrives as a
@@ -280,6 +281,7 @@ export function Chat({ api, sampleQuestions, defaultTranscriptFolded = false, as
   );
 
   const listed = filter === "all" ? turns : turns.filter((turn) => turn.app === (filter === "app"));
+  const filteredOut = turns.length - listed.length;
 
   return (
     <div className="chat">
@@ -306,6 +308,11 @@ export function Chat({ api, sampleQuestions, defaultTranscriptFolded = false, as
               : listed.length === 1 ? "צ'אט קודם אחד"
               : `${listed.length} צ'אטים קודמים`}
           </button>
+          {filteredOut > 0 && (
+            <span className="transcript-filtered-out">
+              {filteredOut === 1 ? "מסונן אחד" : `${filteredOut} מסוננים`}
+            </span>
+          )}
           <select className="transcript-filter" aria-label="סינון הצ'אטים" value={filter}
             onChange={(event) => {
               const chosen = event.target.value as ChatFilter;
@@ -348,7 +355,7 @@ export function Chat({ api, sampleQuestions, defaultTranscriptFolded = false, as
                           <button type="button" className="disclosure more-toggle"
                             aria-expanded={sourcesShown.has(turn.at)}
                             onClick={() => toggleSources(turn.at)}>
-                            {sourcesShown.has(turn.at) ? "פחות" : "התאמות"}
+                            {sourcesShown.has(turn.at) ? "פחות" : "מקורות והתאמה"}
                           </button>
                           {sourcesShown.has(turn.at) && (
                             <table className="chat-sources">

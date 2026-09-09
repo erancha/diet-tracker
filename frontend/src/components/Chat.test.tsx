@@ -71,7 +71,7 @@ describe("Chat", () => {
     expect(chatApi.ask).toHaveBeenCalledWith("כמה פחמימות מותר ביום?", undefined, false);
     expect(screen.getByText("כמה פחמימות מותר ביום?")).toBeInTheDocument();
     expect(await screen.findByText("מותר עד 4 נקודות פחמימה")).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "התאמות" }));
+    await userEvent.click(screen.getByRole("button", { name: "מקורות והתאמה" }));
     expect(screen.getByText(/מדריך-פחמימות\.pdf/)).toBeInTheDocument();
   });
 
@@ -176,12 +176,12 @@ describe("Chat", () => {
 
     expect(screen.queryByText(/מדריך\.pdf/)).not.toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: "התאמות", expanded: false }));
+    await userEvent.click(screen.getByRole("button", { name: "מקורות והתאמה", expanded: false }));
     expect(screen.getByText(/מדריך\.pdf/)).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "פחות", expanded: true }));
     expect(screen.queryByText(/מדריך\.pdf/)).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "התאמות" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "מקורות והתאמה" })).toBeInTheDocument();
   });
 
   it("lists the sources as a table of file and match-percent rows", async () => {
@@ -191,7 +191,7 @@ describe("Chat", () => {
     const chatApi = api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: [stored] }) });
     render(<Chat api={chatApi} sampleQuestions={[]} />);
     await userEvent.click(await screen.findByRole("button", { name: "שאלה" }));
-    await userEvent.click(screen.getByRole("button", { name: "התאמות" }));
+    await userEvent.click(screen.getByRole("button", { name: "מקורות והתאמה" }));
 
     const table = screen.getByRole("table");
     expect(within(table).getByRole("columnheader", { name: "מקור" })).toBeInTheDocument();
@@ -210,7 +210,7 @@ describe("Chat", () => {
     await userEvent.click(await screen.findByRole("button", { name: "שאלה 1" }));
 
     expect(screen.getByText("תשובה 1")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "התאמות" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "מקורות והתאמה" })).not.toBeInTheDocument();
   });
 
   it("shows a fresh answer expanded while stored turns stay collapsed", async () => {
@@ -729,6 +729,26 @@ describe("Chat", () => {
 
     expect(screen.getAllByText(/^שאלה \d+$/).map((el) => el.textContent)).toEqual(["שאלה 2"]);
     expect(screen.getByRole("button", { name: "צ'אט קודם אחד" })).toBeInTheDocument();
+  });
+
+  it("says how many chats the filter holds back, and only while it holds any", async () => {
+    render(<Chat api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: mixedTurns() }) })}
+                 sampleQuestions={[]} />);
+    await screen.findByText("שאלה 3");
+    const filter = screen.getByRole("combobox", { name: "סינון הצ'אטים" });
+    expect(screen.queryByText(/מסונן/)).not.toBeInTheDocument();
+
+    await userEvent.selectOptions(filter, "mine");
+
+    expect(screen.getByText("מסונן אחד")).toBeInTheDocument();
+
+    await userEvent.selectOptions(filter, "app");
+
+    expect(screen.getByText("2 מסוננים")).toBeInTheDocument();
+
+    await userEvent.selectOptions(filter, "all");
+
+    expect(screen.queryByText(/מסונן/)).not.toBeInTheDocument();
   });
 
   it("reopens on the side the filter last chose", async () => {

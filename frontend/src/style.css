@@ -222,8 +222,10 @@ button {
 .glyph:hover:not(:disabled) { --btn-bg: #eceff1; }
 .disclosure:hover:not(:disabled) { --btn-fg: var(--accent); }
 button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-/* Only the boxed roles are ever disabled — a submit whose form is incomplete, the meal submit
-   while the picked time is still ahead of the clock — and the grey replaces their fill. */
+/* The grey replaces the boxed roles' fill where one is disabled — a submit whose form is
+   incomplete, the meal submit while the picked time is still ahead of the clock. A frameless
+   control has no fill to replace: the previous-chats count, disabled while its filtered side
+   holds nothing, keeps its own colour and says so in its label. */
 :is(.primary, .secondary):disabled { --btn-bg: #e4e4e4; --btn-fg: #9a9a9a; --btn-border: #d8d8d8; }
 button:disabled { cursor: not-allowed; }
 /* The negative vertical-align seats a glyph on the text baseline where one sits inline, as in the
@@ -441,7 +443,16 @@ td.view-day { cursor: pointer; }
    padding that spaces it from the list below, so the row's items align on their text. */
 .transcript-head { display: flex; align-items: baseline; gap: 0.5rem; }
 .transcript-head .transcript-toggle { flex: 1; text-align: start; }
-.transcript-filter { font-size: 0.85rem; }
+/* How many chats the filter is holding back, in the muted tone the app's asides take: the count
+   beside it names what is listed, and this names what is not, so neither reads as the total. */
+.transcript-filtered-out { font-size: 0.85rem; color: #8a8a84; }
+/* Frameless like the count it sits beside, so the row reads as one quiet line above the list
+   rather than as a control bar; the native arrow is left to say it opens. A select is otherwise
+   as wide as its longest option, which strands the arrow away from a shorter chosen one, so it
+   is sized to the value on show — where the browser does not offer that, the gap is cosmetic. */
+.transcript-filter {
+  font-size: 0.85rem; border: none; background: none; color: inherit; field-sizing: content;
+}
 /* An overdue meal blinks the folded add-meal toggle instead of opening the inputs uninvited:
    once a second at first, pressing to twice a second when ten seconds go unanswered, then
    settling into a slow standing reminder. The tracker's nudge phase picks the beat. */
