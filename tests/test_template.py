@@ -102,6 +102,14 @@ def test_weigh_in_schedule_defaults_agree_with_the_app_config():
     assert parameters["WeighInHour"]["Default"] == weigh_in.hour
 
 
+def test_weekly_recap_fires_on_the_weigh_in_weekday():
+    # The recap is timed to read the weigh-in morning's weight. Spelling the weekday out here
+    # instead of reusing the parameter would let a retargeted weigh-in leave the recap behind on
+    # the old night, reading a week-old weight.
+    schedule = _load_template()["Resources"]["WeeklySchedule"]
+    assert "${WeighInWeekday}" in schedule["Properties"]["ScheduleExpression"]
+
+
 def test_every_scheduled_job_name_is_one_the_nudge_handler_dispatches():
     # A schedule invoking a job the handler has no entry for fails only when it fires, hours or
     # days after the deploy that introduced it.

@@ -143,6 +143,13 @@ def test_trend_chart_treat_day():
     assert f"יום {weekday}" in _doc_section("גרף המגמה")
 
 
+def test_weekly_recap_names_the_night_it_is_sent_on():
+    # The recap goes out on the weigh-in night, so a retargeted weigh-in moves it. The guide is
+    # what the RAG service answers from, and a wrong night there is a confidently wrong answer.
+    weekday = WEEKDAY_NAMES[CONFIG["weight"]["weigh_in"]["weekday"]]
+    assert f"ונשלח ביום {weekday}" in _doc_line("הסיכום השבועי מתייחס")
+
+
 def test_day_close_bounds():
     day_close = CONFIG["day_close"]
     assert f"עד {day_close['close_until']} בלילה" in DOC

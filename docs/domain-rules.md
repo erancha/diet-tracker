@@ -186,14 +186,17 @@ alert rules; its `version` is stamped on every closed day, so it tracks the ques
 values alone. Its `day_close` element holds the closing rules: the minimum eating window
 (`min_window_hours`), and the small-hours grace bounds — `close_until`, up to which an unclosed
 yesterday may still be closed and its meals written, and the never-later `delete_until`, up to
-which its record may still be deleted. Its `weight` element holds the
-weigh-in weekday and hour, the chart's opening span, and the kilogram bounds both the API and the
-frontend input constrain to. Its `treat_day` element names the weekday the trend chart frames;
+which its record may still be deleted. Its `weight` element holds the weigh-in weekday and hour —
+the weekday doubling as the night the weekly recap goes out on — the chart's opening span, and the
+kilogram bounds both the API and the frontend input constrain to. Its `treat_day` element names the
+weekday the trend chart frames;
 like `chat`, no Lambda reads it, so it rides along as a frontend-only section.
 
 Both runtimes read the same file: the Lambda package carries it, and the frontend fetches it from
 its own origin. The weigh-in weekday and hour are the one part `scripts/deploy.sh` also lifts out
-at deploy time, because an EventBridge cron expression is fixed when the stack deploys.
+at deploy time, because an EventBridge cron expression is fixed when the stack deploys. The recap
+schedule reuses the weekday from there rather than naming its own, so retargeting the weigh-in
+carries the recap to the new night with it.
 
 ## Nudges
 
@@ -207,10 +210,12 @@ Scheduled jobs (EventBridge Scheduler, Asia/Jerusalem) run alongside the tracker
 - **Threshold alerts** — fire over consecutive days violating the configured thresholds, by email
   plus Telegram when a bot token is configured (see
   [Development & deployment](development.md#telegram-optional)).
-- **Weekly recap** — reports the week that just ended, Sunday through Saturday. It fires in the
-  small hours of Sunday, past `day_close.close_until`, so every day it counts has already had its
-  last chance to be closed; a run inside its own day would report six closed days out of seven
-  however diligent the user was.
+- **Weekly recap** — reports the seven days ending yesterday. It fires late on the weigh-in
+  night, so the week it reports closes the day before the weighing and the recap reads that
+  morning's weight as the freshest one; the last day it counts had its final chance to be closed
+  that same morning, at `day_close.close_until`. The window stops at yesterday because today is
+  still open, and counting it would report six closed days out of seven however diligent the user
+  was.
 
   The email opens with one line — how many of the seven days were closed, and how many of those
   broke a rule, since the breaches are what asks to be acted on. Under it come three to four
@@ -224,7 +229,7 @@ Scheduled jobs (EventBridge Scheduler, Asia/Jerusalem) run alongside the tracker
   first and the weight block last.
 
   The answered recap is stored as one of the user's chats, titled with the recap's name and the
-  Sunday its week opened on, so a transcript accumulating one a week is not a column of identical
+  day its week opened on, so a transcript accumulating one a week is not a column of identical
   rows. It lists and follows up like any answered chat. An unreachable answering service costs
   only the bullets: the opening line still goes out, and no chat is stored.
 - **Weigh-in reminder** — a weekly prompt to step on the scale, skipped for anyone who already

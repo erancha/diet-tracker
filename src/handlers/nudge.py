@@ -155,11 +155,12 @@ def _rules_job(env):
 
 
 def _weekly(env):
-    """The week that just ended, Sunday through Saturday.
+    """The seven days ending yesterday.
 
-    The schedule fires in the small hours of Sunday, past the hour a day may still be closed in,
-    so the window ends yesterday: today has barely begun and counting it would report a week of
-    six closed days out of seven however diligent the user was."""
+    The schedule fires late on the weigh-in night, so the week reported closes the day before the
+    weighing and the recap reads that morning's weight as the freshest one. The window ends
+    yesterday because today is still open: counting it would report six closed days out of seven
+    however diligent the user was."""
     day = today()
     week_start = days_before(day, 7)
     for user in env.users:
