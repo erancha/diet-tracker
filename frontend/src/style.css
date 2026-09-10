@@ -578,12 +578,17 @@ main:not(.intro-0, .intro-1, .intro-2, .intro-3, .intro-4) .weight .section-togg
    face: same size, weight and colour, so the rows read beyond doubt as the same kind of number
    the total sums. Danger overrides for a heavy day or meal outrank this green by specificity. */
 .score { font-weight: 800; font-size: calc(1rem + 1px); color: var(--accent); }
-.tracker-dashboard { display: flex; gap: 1.2rem; flex-wrap: wrap; font-weight: 600;
-                     font-size: calc(1rem + 1px); margin-bottom: 0.5rem; }
+/* The day's figures hold one line at any width: the gap yields to the viewport before the line
+   would break, and no figure splits from the label naming it. A day reads as one summary, and a
+   figure that moved to a line of its own would read as a heading over the meals below it. */
+.tracker-dashboard { display: flex; gap: clamp(0.4rem, 2.5vw, 1.2rem); flex-wrap: nowrap;
+                     font-weight: 600; font-size: calc(1rem + 1px); margin-bottom: 0.5rem; }
+.tracker-dashboard > * { white-space: nowrap; }
 /* Color falls on the figures alone, their labels staying body-colored chrome. The accent green
    reads as a measurement rather than a verdict, leaving red to mean only a heavy day —
    so an all-green line means the day is on track. */
 .tracker-dashboard .value { color: var(--accent); }
+.tracker-dashboard .value.breach { color: var(--danger); }
 /* The score's label matches its figure's weight, so the pair stands out of the semibold line
    as one item. */
 .tracker-dashboard strong { font-weight: 800; }

@@ -56,6 +56,17 @@ export function isViolating(questionnaire: Questionnaire, questionId: string, va
   return questionnaire.rules.some((rule) => rule.question_id === questionId && violates(rule, value));
 }
 
+// Whether one day's value breaches what the config sets for its question, on either count: it
+// crossed the rule bound, or fell under the question's display floor. The history table keeps the
+// two apart because it marks them differently — a violation background, a shortfall color; a
+// surface carrying one red mark asks this instead.
+export function breachesLimit(questionnaire: Questionnaire, questionId: string,
+                              value: number): boolean {
+  const question = questionnaire.questions.find((q) => q.id === questionId);
+  return isViolating(questionnaire, questionId, value)
+    || (question?.warn_below !== undefined && value < question.warn_below);
+}
+
 // Whether any answer of one submitted day crosses its rule's bound on its own — the same per-day
 // signal the history table paints red. The submit banner reads it so a saved day is declared
 // clean only when nothing crossed a bound; a crossing short of its consecutive-days run is named
