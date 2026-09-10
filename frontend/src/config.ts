@@ -19,6 +19,8 @@ export interface AppConfig {
   // Hours a day may go without a meal before the next one counts as overdue; once the most recent
   // recorded meal is this far behind the clock, the tracker's add-meal toggle blinks.
   mealGapHours: number;
+  // Whether this deployment configures the external service that answers chat questions.
+  chatAvailable: boolean;
 }
 
 declare global {

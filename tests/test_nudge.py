@@ -363,3 +363,36 @@ def test_muted_users_are_dropped_from_every_jobs_audience(env):
     e, _ = env
     e.store.set_muted("u1", True)
     assert nudge._notifiable(e.store, e.users) == [User("u2", "b@gmail.com")]
+
+
+def test_weekly_sends_the_plain_digest_when_no_answering_service_is_configured(env, monkeypatch):
+    e, sent = env
+    e = dataclasses.replace(e, rag_url="", rag_key=None)
+    monkeypatch.setattr(nudge.chat, "ask", lambda url, key, question, timeout:
+                        pytest.fail("asked the LLM with no service configured"))
+    e.store.put_day("u1", days_before(today(), 1), CLEAN, 1, "t")
+    nudge._weekly(e)
+    body = next(text for _, target, text in sent if target == "a@gmail.com")
+    assert "נסגרו 1 מתוך 7 ימים" in body
+    assert chat_history.turns(e.chat_history, "u1") == []
+
+
+def test_build_env_reads_no_rag_key_when_no_answering_service_is_configured(monkeypatch, ddb):
+    monkeypatch.setenv("AWS_DEFAULT_REGION", "eu-central-1")
+    for name in ("DAYS_TABLE", "MEALS_TABLE", "STATE_TABLE", "WEIGHTS_TABLE"):
+        monkeypatch.setenv(name, name.split("_")[0].lower())
+    monkeypatch.setenv("APP_CONFIG_PATH", str(APP_CONFIG))
+    monkeypatch.setenv("USER_POOL_ID", "pool")
+    monkeypatch.setenv("BOT_TOKEN_PARAM", "/bot")
+    monkeypatch.setenv("CHAT_MAP_PARAM", "/map")
+    monkeypatch.setenv("UNDELIVERED_TABLE", "undelivered")
+    monkeypatch.setenv("CHAT_HISTORY_TABLE", "chat_history")
+    monkeypatch.setenv("SES_SENDER", "me@x.com")
+    monkeypatch.setenv("APP_URL", "https://app.example")
+    monkeypatch.setenv("RAG_API_URL", "")
+    monkeypatch.setenv("RAG_API_KEY_PARAM", "/diet-tracker/rag/api-key")
+    monkeypatch.setattr(nudge.users, "list_users", lambda client, pool: [])
+    monkeypatch.setattr(nudge.notify, "telegram_config", lambda ssm, token, chat_map: None)
+    monkeypatch.setattr(nudge.chat, "api_key", lambda ssm, param:
+                        pytest.fail("read the RAG key with no service configured"))
+    assert nudge._build_env().rag_key is None

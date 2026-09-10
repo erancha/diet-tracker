@@ -33,7 +33,7 @@ function renderSection(weight: Partial<WeightPayload> = {}, handlers: Handlers =
       onRecord={handlers.onRecord ?? (() => {})}
       onSetTarget={handlers.onSetTarget ?? (() => {})}
       onDelete={handlers.onDelete ?? (() => {})}
-      onAskChat={handlers.onAskChat ?? (() => {})}
+      onAskChat={handlers.onAskChat}
       defaultExpanded={defaultExpanded}
     />,
   );
@@ -308,6 +308,14 @@ describe("summary line", () => {
     show({}, {}, new Date(2026, 7, 26));
 
     expect(todayRow()).not.toHaveClass("weigh-in-due");
+  });
+
+  it("reads the recommendation as plain words where no chat answers", () => {
+    // A day that is not the weigh-in day, so the reading is the recommendation.
+    show({ entries: [{ date: "2026-08-20", kg: 76, at: null }] }, {}, new Date(2026, 7, 26));
+
+    expect(document.querySelector(".weight-rhythm")).toHaveTextContent("השקילה המומלצת הבאה");
+    expect(screen.queryByRole("button", { name: "המומלצת" })).not.toBeInTheDocument();
   });
 
   it("asks the chat about the cadence from the word naming the recommendation", () => {

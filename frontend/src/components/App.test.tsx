@@ -78,12 +78,12 @@ function weighed(target: number | null): Api {
 }
 
 function renderApp(isAdmin: boolean, client: Api = api(), isDev = false,
-                   config: AppConfigFile = CONFIG) {
+                   config: AppConfigFile = CONFIG, chatAvailable = true) {
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => config }));
   render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
       <App email="a@b.com" api={client} firstMealHour={9} mealGapHours={3}
-           isAdmin={isAdmin} isDev={isDev} onSignOut={vi.fn()} />
+           isAdmin={isAdmin} isDev={isDev} chatAvailable={chatAvailable} onSignOut={vi.fn()} />
     </QueryClientProvider>,
   );
 }
@@ -131,6 +131,13 @@ describe("App", () => {
     expect(screen.queryByRole("button", { name: "משקל" })).toBeNull();
     expect(screen.queryByRole("button", { name: "יומן היום" })).toBeNull();
     expect(screen.queryByRole("button", { name: "מגמות" })).toBeNull();
+  });
+
+  it("withholds the chat section where no answering service is configured", async () => {
+    renderApp(false, api(), false, CONFIG, false);
+
+    expect(await screen.findByRole("button", { name: "יומן היום" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "שאלות על סבא חטוב 👴" })).toBeNull();
   });
 
   it("keeps a regular account on the tracking sections and shows it no admin panel", async () => {

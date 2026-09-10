@@ -28,7 +28,9 @@ export function Welcome({ autoFold, trackingSteps, mailStep, onAskChat }: {
   autoFold: boolean;
   trackingSteps: boolean;
   mailStep: boolean;
-  onAskChat: (question: string) => void;
+  // Absent where the deployment configures no answering service; the step then keeps its
+  // instructions alone, since asking is all the button does.
+  onAskChat?: (question: string) => void;
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const [engaged, setEngaged] = useState(false);
@@ -54,8 +56,10 @@ export function Welcome({ autoFold, trackingSteps, mailStep, onAskChat }: {
           <li>
             מאשרים את בקשת אימות הכתובת מ-Amazon Web Services (יש לחפש גם בתיקיית הספאם)
             ומגדירים שהמיילים של האפליקציה לא יסומנו כספאם
-            <button type="button" className="secondary compact"
-                    onClick={() => onAskChat(VERIFY_MAIL_QUESTION)}>אישור המייל</button>
+            {onAskChat !== undefined && (
+              <button type="button" className="secondary compact"
+                      onClick={() => onAskChat(VERIFY_MAIL_QUESTION)}>אישור המייל</button>
+            )}
           </li>
         )}
       </ul>

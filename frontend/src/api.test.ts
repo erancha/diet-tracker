@@ -10,6 +10,7 @@ const cfg: AppConfig = {
   redirectUri: "https://app.example.com/",
   rootEmail: "root@example.com",
   devEmail: "dev@example.com",
+  chatAvailable: true,
   firstMealHour: 11,
   mealGapHours: 4,
 };

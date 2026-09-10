@@ -134,7 +134,8 @@ export function WeightSection({ weight, settings, now, defaultExpanded,
   onRecord: (kg: number) => void;
   onSetTarget: (kg: number) => void;
   onDelete: (date: string) => void;
-  onAskChat: (question: string) => void;
+  // Absent where the deployment configures no answering service.
+  onAskChat?: (question: string) => void;
 }) {
   const [span, setSpan] = useState<ChartSpan>(settings.chart_months);
   const [collapsed, setCollapsed] = useState(!defaultExpanded);
@@ -183,7 +184,8 @@ export function WeightSection({ weight, settings, now, defaultExpanded,
       {rhythm !== null && (
         <p className="weight-rhythm">
           {rhythm.before}
-          {rhythm.linked !== "" && (
+          {/* The linked words sit mid-sentence, so with nothing to ask they read as plain text. */}
+          {onAskChat === undefined ? rhythm.linked : rhythm.linked !== "" && (
             <button type="button" onClick={() => onAskChat(WEIGH_IN_CADENCE_QUESTION)}>
               {rhythm.linked}
             </button>

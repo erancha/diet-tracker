@@ -1,9 +1,10 @@
 /**
- * Signed-out screen. Opens condensed — three friendly paragraphs naming what the app is about
- * (no calorie counting, the שכפ"צ habits spelled in place, the in-app chat, progress graphs and
- * weight tracking) over the more and sign-in buttons — and a click on "יותר" swaps in the full
- * summary: a Hebrew, functionality-only rundown of the app. The same toggle reads "פחות" there,
- * holding its spot above the sign-in button, and folds the page back to the condensed intro.
+ * Signed-out screen. Opens condensed — friendly paragraphs naming what the app is about (no
+ * calorie counting, the שכפ"צ habits spelled in place, the in-app chat where a deployment
+ * configures the service answering it, progress graphs and weight tracking) over the more and
+ * sign-in buttons — and a click on "יותר" swaps in the full summary: a Hebrew,
+ * functionality-only rundown of the app. The same toggle reads "פחות" there, holding its spot
+ * above the sign-in button, and folds the page back to the condensed intro.
  * The full summary's bullets mirror the root README's overview and must stay aligned with it, and
  * they name the שכפ"צ principle each tracked value serves — the carb score, which serves none,
  * kept in a bullet of its own so the acronym's count reads straight. A closing table spells the
@@ -22,7 +23,12 @@ const PRINCIPLES_ID = "landing-principles";
 // The carb-grade ladder, published beside the app from frontend/public. The summary already names
 // the score, so the grades hang off that name rather than a link line of their own.
 const CARB_GRADES_PATH = "carb-grades.html";
-export function Landing({ onSignIn }: { onSignIn: () => void }) {
+export function Landing({ onSignIn, chatAvailable }: {
+  onSignIn: () => void;
+  // Whether this deployment configures the service answering the in-app chat. The landing page
+  // advertises the app, so it names the chat only where there is one.
+  chatAvailable: boolean;
+}) {
   const [expanded, setExpanded] = useState(false);
   const signInButton = (
     <button type="button" className="primary" onClick={onSignIn}>התחברות עם Google</button>
@@ -59,10 +65,12 @@ export function Landing({ onSignIn }: { onSignIn: () => void }) {
           והאפליקציה עוזרת לשמור על ארבעה הרגלים פשוטים — שכפ"צ (<strong>ש</strong>תיה, <strong>כ</strong>מות ירקות,{" "}
           <strong>פ</strong>תיחת חלון אכילה, <strong>צ</strong>מצום ארוחות).
         </p>
-        <p className="landing-condensed">
-          יש גם עוזר AI — צ'אט בתוך האפליקציה שעונה על שאלות על התוכנית, ישירות מתוך מסמכי
-          המקור שלה.
-        </p>
+        {chatAvailable && (
+          <p className="landing-condensed">
+            יש גם עוזר AI — צ'אט בתוך האפליקציה שעונה על שאלות על התוכנית, ישירות מתוך מסמכי
+            המקור שלה.
+          </p>
+        )}
         <p className="landing-condensed">
           וההתקדמות נראית לעין: גרפים לאורך זמן ומעקב משקל שבועי מול היעד.
         </p>
@@ -103,9 +111,11 @@ export function Landing({ onSignIn }: { onSignIn: () => void }) {
           גם בטלגרם: תזכורת כשדיווח של יום חסר, תזכורת שקילה שבועית, התראה כשהציון היומי חורג
           כמה ימים ברצף וסיכום שבועי
         </li>
-        <li>
-          שאלות על עקרונות התוכנית נענות בצ'אט בתוך האפליקציה, מתוך מסמכי המקור של התוכנית
-        </li>
+        {chatAvailable && (
+          <li>
+            שאלות על עקרונות התוכנית נענות בצ'אט בתוך האפליקציה, מתוך מסמכי המקור של התוכנית
+          </li>
+        )}
       </ul>
       {toggleButton}
       {signInButton}

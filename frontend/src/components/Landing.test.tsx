@@ -7,7 +7,7 @@ const expandLanding = () => userEvent.click(screen.getByRole("button", { name: "
 
 describe("Landing", () => {
   it("opens condensed: three paragraphs, then the more and sign-in buttons", () => {
-    const { container } = render(<Landing onSignIn={() => {}} />);
+    const { container } = render(<Landing onSignIn={() => {}} chatAvailable />);
 
     expect(screen.getByRole("heading", { name: "מעקב תזונה AI" })).toBeInTheDocument();
     expect(container.querySelector("h1 img.app-icon")).toHaveAttribute("src", "favicon.svg");
@@ -18,8 +18,19 @@ describe("Landing", () => {
     expect(screen.getByRole("button", { name: "התחברות עם Google" })).toBeInTheDocument();
   });
 
+  it("withholds the chat from both views where no answering service is configured", async () => {
+    const { container } = render(<Landing onSignIn={() => {}} chatAvailable={false} />);
+
+    expect(container.querySelectorAll(".landing-condensed")).toHaveLength(2);
+    expect(screen.queryByText(/עוזר AI/)).not.toBeInTheDocument();
+
+    await expandLanding();
+
+    expect(screen.queryByText(/בצ'אט בתוך האפליקציה/)).not.toBeInTheDocument();
+  });
+
   it("spells the שכפ\"צ acronym in place inside the condensed intro", () => {
-    const { container } = render(<Landing onSignIn={() => {}} />);
+    const { container } = render(<Landing onSignIn={() => {}} chatAvailable />);
 
     const condensedText = [...container.querySelectorAll(".landing-condensed")]
       .map((paragraph) => paragraph.textContent)
@@ -30,7 +41,7 @@ describe("Landing", () => {
   });
 
   it("replaces the condensed intro with the full summary when expanded", async () => {
-    const { container } = render(<Landing onSignIn={() => {}} />);
+    const { container } = render(<Landing onSignIn={() => {}} chatAvailable />);
 
     await expandLanding();
 
@@ -40,7 +51,7 @@ describe("Landing", () => {
   });
 
   it("spells the שכפ\"צ acronym down its principles table, after the app summary", async () => {
-    const { container } = render(<Landing onSignIn={() => {}} />);
+    const { container } = render(<Landing onSignIn={() => {}} chatAvailable />);
 
     await expandLanding();
 
@@ -56,7 +67,7 @@ describe("Landing", () => {
   });
 
   it("points the acronym's first mention at the table that spells it out", async () => {
-    const { container } = render(<Landing onSignIn={() => {}} />);
+    const { container } = render(<Landing onSignIn={() => {}} chatAvailable />);
 
     await expandLanding();
 
@@ -66,7 +77,7 @@ describe("Landing", () => {
   });
 
   it("mentions each tracked value once across the summary bullets", async () => {
-    const { container } = render(<Landing onSignIn={() => {}} />);
+    const { container } = render(<Landing onSignIn={() => {}} chatAvailable />);
 
     await expandLanding();
 
@@ -79,7 +90,7 @@ describe("Landing", () => {
   });
 
   it("mentions the chat answering questions from the diet's source documents", async () => {
-    const { container } = render(<Landing onSignIn={() => {}} />);
+    const { container } = render(<Landing onSignIn={() => {}} chatAvailable />);
 
     await expandLanding();
 
@@ -91,7 +102,7 @@ describe("Landing", () => {
   });
 
   it("links to the source repository in both modes", async () => {
-    render(<Landing onSignIn={() => {}} />);
+    render(<Landing onSignIn={() => {}} chatAvailable />);
 
     expect(screen.getByRole("link", { name: "קוד המקור ב-GitHub" })).toHaveAttribute(
       "href", "https://github.com/erancha/diet-tracker",
@@ -106,7 +117,7 @@ describe("Landing", () => {
 
   it("offers the WhatsApp invite in both modes, speaking as an invitee rather than the developer",
      async () => {
-    render(<Landing onSignIn={() => {}} />);
+    render(<Landing onSignIn={() => {}} chatAvailable />);
 
     const inviteHref = () =>
       screen.getByRole("link", { name: "הזמנת חברים ב-WhatsApp" }).getAttribute("href")!;
@@ -119,7 +130,7 @@ describe("Landing", () => {
   });
 
   it("offers פחות above the sign-in button once expanded, folding back to the condensed intro", async () => {
-    const { container } = render(<Landing onSignIn={() => {}} />);
+    const { container } = render(<Landing onSignIn={() => {}} chatAvailable />);
 
     await expandLanding();
 
@@ -135,7 +146,7 @@ describe("Landing", () => {
 
   it("invokes onSignIn from the condensed state", async () => {
     const onSignIn = vi.fn();
-    render(<Landing onSignIn={onSignIn} />);
+    render(<Landing onSignIn={onSignIn} chatAvailable />);
 
     await userEvent.click(screen.getByRole("button", { name: "התחברות עם Google" }));
 
@@ -144,7 +155,7 @@ describe("Landing", () => {
 
   it("invokes onSignIn from the expanded state", async () => {
     const onSignIn = vi.fn();
-    render(<Landing onSignIn={onSignIn} />);
+    render(<Landing onSignIn={onSignIn} chatAvailable />);
 
     await expandLanding();
     await userEvent.click(screen.getByRole("button", { name: "התחברות עם Google" }));

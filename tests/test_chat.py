@@ -530,3 +530,40 @@ def test_an_upstream_failure_leaves_the_chat_unsummarized(env, monkeypatch):
     (turn,) = transcript()
     assert turn["question"] == "שאלה מקורית"
     assert turn["answer"] == "תשובה"
+
+
+def unreachable(*args, **kwargs):
+    raise AssertionError("the answering service must not be called when none is configured")
+
+
+def test_an_unconfigured_service_refuses_a_question_before_spending_quota(env, ddb, monkeypatch):
+    monkeypatch.setenv("RAG_API_URL", "")
+    monkeypatch.setattr(chat_handler.chat, "ask", unreachable)
+    response = chat_handler.handler(request({"question": "כמה פחמימות מותר ביום?"}), None)
+    assert response["statusCode"] == 503
+    assert ddb.Table("chat_quota").scan()["Items"] == []
+
+
+def test_an_unconfigured_service_refuses_a_summary_before_spending_quota(env, ddb, monkeypatch):
+    at = stored_chat(monkeypatch)
+    # Storing the chat spent a question of its own; the day starts clean so what the refused
+    # summary leaves behind is the whole of what the table holds.
+    ddb.Table("chat_quota").delete_item(Key={"pk": f"u1#{today()}"})
+    monkeypatch.setenv("RAG_API_URL", "")
+    monkeypatch.setattr(chat_handler.chat, "ask", unreachable)
+    assert chat_handler.handler(summary_request(at), None)["statusCode"] == 503
+    assert ddb.Table("chat_quota").scan()["Items"] == []
+
+
+def test_an_unconfigured_service_refuses_a_source_url(env, monkeypatch):
+    monkeypatch.setenv("RAG_API_URL", "")
+    monkeypatch.setattr(chat_handler.chat, "document_url", unreachable)
+    assert chat_handler.handler(source_url_request({"fileName": "מדריך.pdf"}), None)["statusCode"] == 503
+
+
+def test_an_unconfigured_service_still_serves_and_deletes_the_stored_transcript(env, monkeypatch):
+    at = stored_chat(monkeypatch, question="שאלה מקורית")
+    monkeypatch.setenv("RAG_API_URL", "")
+    assert [turn["question"] for turn in transcript()] == ["שאלה מקורית"]
+    assert chat_handler.handler(delete_request(at), None)["statusCode"] == 200
+    assert transcript() == []

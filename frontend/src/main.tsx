@@ -25,7 +25,7 @@ try {
     root.render(
       <StrictMode>
         <ErrorBoundary>
-          <Landing onSignIn={() => redirectToLogin(cfg)} />
+          <Landing onSignIn={() => redirectToLogin(cfg)} chatAvailable={cfg.chatAvailable} />
         </ErrorBoundary>
       </StrictMode>,
     );
@@ -42,6 +42,7 @@ try {
                  firstMealHour={cfg.firstMealHour} mealGapHours={cfg.mealGapHours}
                  isAdmin={email.toLowerCase() === cfg.rootEmail.toLowerCase()}
                  isDev={cfg.devEmail !== "" && email.toLowerCase() === cfg.devEmail.toLowerCase()}
+                 chatAvailable={cfg.chatAvailable}
                  onSignOut={() => signOut(cfg)} />
           </QueryClientProvider>
         </ErrorBoundary>

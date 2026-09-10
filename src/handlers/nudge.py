@@ -46,8 +46,8 @@ class NudgeEnv:
     chat_history: object  # transcript table the weekly recap is stored in, as an answered chat
     sender: str
     app_url: str  # the deployed frontend, cited in every email's mute footnote
-    rag_url: str
-    rag_key: str
+    rag_url: str  # empty when the deployment configures no answering service
+    rag_key: str | None  # None exactly when rag_url is empty
 
 
 def handler(event, context):
@@ -72,6 +72,9 @@ def _build_env() -> NudgeEnv:
     dynamodb = boto3.resource("dynamodb")
     store = Store(os.environ["DAYS_TABLE"], os.environ["MEALS_TABLE"], os.environ["STATE_TABLE"],
                   os.environ["WEIGHTS_TABLE"])
+    # Every job builds this — last call, nightly rules, the weekly digest and the weigh-in — so
+    # nothing here may require the chat's answering service.
+    rag_url = os.environ["RAG_API_URL"]
     return NudgeEnv(
         store=store,
         questionnaire=appconfig.load(os.environ["APP_CONFIG_PATH"]).questionnaire,
@@ -83,8 +86,9 @@ def _build_env() -> NudgeEnv:
         chat_history=dynamodb.Table(os.environ["CHAT_HISTORY_TABLE"]),
         sender=os.environ["SES_SENDER"],
         app_url=os.environ["APP_URL"],
-        rag_url=os.environ["RAG_API_URL"],
-        rag_key=chat.api_key(ssm, os.environ["RAG_API_KEY_PARAM"]),
+        rag_url=rag_url,
+        rag_key=chat.api_key(ssm, os.environ["RAG_API_KEY_PARAM"])
+                if chat.configured(rag_url) else None,
     )
 
 
@@ -174,13 +178,14 @@ def _weekly_body(env, user, history, week_start) -> str:
 
     The recap is an optional garnish: when the RAG service is unreachable or slow the
     plain digest still goes out, because losing the whole weekly send over it would be worse.
-    An empty week has nothing to recap, so the service is not asked.
+    An empty week has nothing to recap, and a deployment configuring no answering service has
+    nothing to ask, so in both cases the service is not called.
 
     An answered recap is also stored as a chat of the user's, under the recap's short title rather
     than the instruction the service was asked with — the shape the chat endpoint stores, so the
     recap lists and follows up like any answered chat, its data re-attached fresh on follow-up."""
     text = digest.weekly_text(env.questionnaire, history)
-    if not history:
+    if not history or not chat.configured(env.rag_url):
         return text
     question = digest.weekly_summary_question(env.questionnaire, history,
                                               env.store.get_weights(user.sub),

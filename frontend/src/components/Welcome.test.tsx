@@ -17,6 +17,14 @@ describe("Welcome", () => {
     expect(screen.queryByRole("button", { name: "אישור המייל" })).not.toBeInTheDocument();
   });
 
+  it("keeps the mail step's instructions but drops its button where no chat answers", () => {
+    render(<Welcome autoFold={false} trackingSteps mailStep />);
+
+    expect(screen.getAllByRole("listitem")).toHaveLength(4);
+    expect(screen.getByText(/בקשת אימות הכתובת/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "אישור המייל" })).not.toBeInTheDocument();
+  });
+
   it("folds the steps behind the greeting, leaving the heading in place", () => {
     render(<Welcome autoFold={false} trackingSteps mailStep onAskChat={vi.fn()} />);
     const toggle = screen.getByRole("button", { name: /ברוכים הבאים/ });

@@ -44,12 +44,17 @@ import { Welcome } from "./Welcome";
 // It also reads whether the account has recorded anything yet, because the greeting, the weight
 // section's opening fold and the first-visit intro all answer to that one reading and must not
 // disagree about it.
-export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, onSignOut }: {
+export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, chatAvailable,
+                      onSignOut }: {
   email: string; api: Api; firstMealHour: number; mealGapHours: number;
   isAdmin: boolean;
   // Whether the signed-in account is the developer's, which is what the app's readings of itself
   // are shown to; see devEmail in config.ts.
-  isDev: boolean; onSignOut: () => void;
+  isDev: boolean;
+  // Whether this deployment configures the service answering chat questions. False withholds the
+  // chat section and the panels' controls whose only action is to ask it something.
+  chatAvailable: boolean;
+  onSignOut: () => void;
 }) {
   const queryClient = useQueryClient();
   const [now] = useState(() => new Date());
@@ -283,7 +288,7 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, o
           && <Welcome trackingSteps={firstVisit} mailStep={mailStep}
                       autoFold={!mailStep
                         && (intro === 4 || intro === "rest" || intro === "meal")}
-                      onAskChat={askChat} />}
+                      onAskChat={chatAvailable ? askChat : undefined} />}
         <WeightSection
           weight={weightQuery.data}
           settings={configQuery.data.weight}
@@ -292,7 +297,7 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, o
           onRecord={(kg) => recordWeightMutation.mutate(kg)}
           onSetTarget={(kg) => setTargetMutation.mutate(kg)}
           onDelete={(date) => deleteWeightMutation.mutate(date)}
-          onAskChat={askChat}
+          onAskChat={chatAvailable ? askChat : undefined}
         />
         <DayTracker
             questionnaire={questionnaire}
@@ -359,13 +364,15 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, o
           </div>
         </CollapsibleSection>
         </>}
-        <CollapsibleSection className="chat-section" title="שאלות על סבא חטוב 👴"
-                            collapsed={chatCollapsed}
-                            onToggle={() => setChatCollapsed((c) => !c)}>
-          <Chat api={api} sampleQuestions={configQuery.data.chat.sample_questions}
-                defaultTranscriptFolded={openedCondensed}
-                askCommand={askCommand} onAskCommandTaken={() => setAskCommand(null)} />
-        </CollapsibleSection>
+        {chatAvailable && (
+          <CollapsibleSection className="chat-section" title="שאלות על סבא חטוב 👴"
+                              collapsed={chatCollapsed}
+                              onToggle={() => setChatCollapsed((c) => !c)}>
+            <Chat api={api} sampleQuestions={configQuery.data.chat.sample_questions}
+                  defaultTranscriptFolded={openedCondensed}
+                  askCommand={askCommand} onAskCommandTaken={() => setAskCommand(null)} />
+          </CollapsibleSection>
+        )}
         {isAdmin && <AdminSection api={api} />}
       </FoldAllContext.Provider>
       </main>

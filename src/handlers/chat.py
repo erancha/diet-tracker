@@ -49,11 +49,18 @@ SUMMARY_INSTRUCTION = ("סכם בעברית את השיחה המצורפת בה�
                        "עד חמישה משפטים, בלי פתיח ובלי הפניה למסמכים.")
 
 
+# The routes that reach the answering service. The transcript routes are outside it, so a
+# deployment without the service still serves and deletes what earlier ones stored.
+UPSTREAM_ROUTES = {"POST /chat", "POST /chat/{at}/summary", "POST /chat/source-url"}
+
+
 def handler(event, context):
     claims = event["requestContext"]["authorizer"]["jwt"]["claims"]
     route = event["routeKey"]
     sub = claims["sub"]
     logger.info("request route=%s sub=%s", route, sub)
+    if route in UPSTREAM_ROUTES and not chat.configured(_rag_url()):
+        return _service_unconfigured()
     if route == "POST /chat":
         return _ask(sub, claims["email"], json.loads(event["body"]))
     if route == "GET /chat":
@@ -69,6 +76,16 @@ def handler(event, context):
 
 def _history_table():
     return boto3.resource("dynamodb").Table(os.environ["CHAT_HISTORY_TABLE"])
+
+
+def _rag_url():
+    return os.environ["RAG_API_URL"]
+
+
+def _rag_key():
+    """The answering service's API key, read per call so rotating the stored value takes effect
+    without a redeploy."""
+    return chat.api_key(boto3.client("ssm"), os.environ["RAG_API_KEY_PARAM"])
 
 
 def _daily_limit(email):
@@ -103,9 +120,9 @@ def _ask(sub, email, body):
                   os.environ["WEIGHTS_TABLE"])
     questionnaire = appconfig.load(os.environ["APP_CONFIG_PATH"]).questionnaire
     context = chat_context.user_context(store, questionnaire, sub, today())
-    key = chat.api_key(boto3.client("ssm"), os.environ["RAG_API_KEY_PARAM"])
+    key = _rag_key()
     try:
-        answer = chat.ask(os.environ["RAG_API_URL"], key, question.strip(), context)
+        answer = chat.ask(_rag_url(), key, question.strip(), context)
     except (urllib.error.URLError, TimeoutError) as error:
         return _upstream_unavailable(error)
     try:
@@ -120,9 +137,9 @@ def _source_url(body):
     file_name = body.get("fileName")
     if not isinstance(file_name, str) or not file_name.strip():
         return response(400, {"error": "fileName is required"})
-    key = chat.api_key(boto3.client("ssm"), os.environ["RAG_API_KEY_PARAM"])
+    key = _rag_key()
     try:
-        url = chat.document_url(os.environ["RAG_API_URL"], key, file_name)
+        url = chat.document_url(_rag_url(), key, file_name)
     except chat.DocumentNotFound:
         return response(404, {"error": "המסמך אינו זמין"})
     except (urllib.error.URLError, TimeoutError) as error:
@@ -142,6 +159,13 @@ def _quota_refusal(sub, email):
             _notify_admin_quota_reached(email, limit)
         return response(429, {"error": "מכסת השאלות היומית נוצלה — אפשר לשאול שוב מחר"})
     return None
+
+
+def _service_unconfigured():
+    """The 503 a deployment with no answering service gives the routes that would call one,
+    before the quota is touched, so a question nobody can answer costs no allowance."""
+    logger.warning("chat requested on a deployment with no answering service configured")
+    return response(503, {"error": "שירות המענה אינו מוגדר בגרסה הזו"})
 
 
 def _upstream_unavailable(error):
@@ -165,9 +189,9 @@ def _summarize(sub, email, at):
     if refusal is not None:
         return refusal
 
-    key = chat.api_key(boto3.client("ssm"), os.environ["RAG_API_KEY_PARAM"])
+    key = _rag_key()
     try:
-        digest = chat.ask(os.environ["RAG_API_URL"], key, SUMMARY_INSTRUCTION, _conversation(turn))
+        digest = chat.ask(_rag_url(), key, SUMMARY_INSTRUCTION, _conversation(turn))
     except (urllib.error.URLError, TimeoutError) as error:
         return _upstream_unavailable(error)
 

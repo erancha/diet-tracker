@@ -24,6 +24,12 @@ MAX_CONTEXT_CHARS = 8000
 TIMEOUT_SECONDS = 25
 
 
+def configured(api_url) -> bool:
+    """Whether the deployment configures an answering service; RagApiUrl is empty where it
+    does not."""
+    return api_url != ""
+
+
 def api_key(ssm_client, key_param) -> str:
     return ssm_client.get_parameter(Name=key_param, WithDecryption=True)["Parameter"]["Value"]
 
