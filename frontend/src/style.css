@@ -653,16 +653,24 @@ td.view-day { cursor: pointer; }
 /* The section reads as one line under the app title: the latest weight heads it, doubling as the
    toggle, and the distance to the target follows on the same row. The heading is sized to the
    body rather than to a section title, since the line is a status reading and not a banner; the
-   row starts at the leading edge instead of pushing the aside to the far end, so the two read as
-   one sentence. */
+   row starts at the leading edge instead of pushing the aside to the far end, so the reading and
+   the button that opens the chart follow the weight as one line. */
 .weight .section-header { justify-content: flex-start; align-items: baseline; gap: 0.35rem;
                           flex-wrap: wrap; }
 .weight h2 { font-size: 1.05rem; margin: 0 0 0.5rem; }
+/* Opens the same fold the heading does, in a framed box: the heading reads as a weight and the
+   summary as a sentence, so the line needs one shape that says a control. It stands a rem clear
+   of that sentence, so the frame is not read as enclosing the target beside it. Centred against a
+   row aligned on the text baseline, where a bordered box would otherwise hang low. */
+.weight-chart-toggle { --btn-fg: var(--accent); --btn-border: var(--accent-border);
+                       border-radius: 8px; align-self: center; margin-inline-start: 1rem; }
 /* Folded, the section is the one line, so this is the gap to the tracker card below it. */
 .weight { margin-bottom: 1rem; }
 /* Open, the section ends on the measurements list: bare rows with no card edge of their own,
-   which at the folded gap read as the top of the tracker card below them. */
-.weight:has(.section-toggle[aria-expanded="true"]) { margin-bottom: 2rem; }
+   which at the folded gap read as the top of the tracker card below them. The list's own bottom
+   margin cannot make that room — the section has no bottom edge for it to sit against, so it
+   collapses into this one. */
+.weight:has(.section-toggle[aria-expanded="true"]) { margin-bottom: 3rem; }
 /* Inline flow rather than a flex row: it is a sentence whose parts carry their own spacing, and
    the target's input has to sit inside that sentence. As on the tracker dashboard, the accent
    lands on the figures alone; units and phrasing read as body-coloured chrome. */
@@ -680,16 +688,15 @@ td.view-day { cursor: pointer; }
 .weight-over-target .weight-summary .weight-gap,
 .weight-entries .over-target { color: var(--danger); }
 /* The measurements behind the chart: one grid whose columns — date, hour, weight, delete — each
-   sit at their widest content, aligned down the list with no cell stretched, so the delete
-   control reads right beside the weight it removes. The rows dissolve into the grid
-   (display: contents) so every row's cells share the same columns. */
+   sit at their widest content, aligned down the list with no cell stretched. The rows dissolve
+   into the grid (display: contents) so every row's cells share the same columns. */
 .weight-rhythm { margin: 0 0 0.5rem; opacity: 0.8; }
 /* The word that opens the chat sits inside the sentence rather than beside it, so it reads as a
    link in running text: the sentence's own colour, marked by the underline alone. */
 .weight-rhythm button { text-decoration: underline; text-underline-offset: 2px; }
 .weight-entries { list-style: none; padding: 0; margin: 0.5rem 0 0; display: grid;
                   grid-template-columns: repeat(4, max-content); align-items: center;
-                  gap: 0.25rem 1rem; }
+                  gap: 0.25rem 1rem; font-size: calc(1rem - 1px); }
 .weight-entries li { display: contents; }
 .weight-entries .weight-entry-date { font-weight: 600; }
 /* The weekday letters are not all the same width, so padding each out to a common one is what
@@ -704,6 +711,11 @@ td.view-day { cursor: pointer; }
 .weight-entries .weight-entry-value { display: inline-block; min-width: 5ch; text-align: end;
                                       font-variant-numeric: tabular-nums; }
 .weight-entries .far-over { font-weight: 800; }
+/* The delete control is chrome next to the measurements, so it is set in grey, cut two pixels
+   below the app's glyph size, and held a further rem clear of the weight it removes — abutting
+   the value at full size, it read as part of the figure. */
+.weight-entries .glyph { --btn-fg: #8a8a8a; justify-self: end; margin-inline-start: 1rem; }
+.weight-entries .glyph .icon { width: calc(1.1em - 2px); height: calc(1.1em - 2px); }
 
 /* The knowledge-base chat: composer first, then one question bubble per chat, its answer and
    muted source table unfolding beneath. As with .trends h2, the heading's own margin provides

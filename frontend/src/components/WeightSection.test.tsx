@@ -68,6 +68,19 @@ describe("opening fold", () => {
     renderSection({}, {}, true);
     expect(screen.getByLabelText("המשקל היום")).toBeInTheDocument();
   });
+
+  it("opens and closes from the framed button, the line's one shape reading as a control", () => {
+    renderSection({ entries: [{ date: TODAY, kg: 76.5, at: null }] });
+    const button = screen.getByRole("button", { name: "גרף המשקל" });
+
+    fireEvent.click(button);
+    expect(button).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByLabelText("המשקל היום")).toBeInTheDocument();
+
+    fireEvent.click(button);
+    expect(button).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByLabelText("המשקל היום")).toBeNull();
+  });
 });
 
 describe("open panel at rest", () => {
@@ -248,7 +261,7 @@ describe("target", () => {
 });
 
 describe("today's weighing", () => {
-  it("records a weight and folds the section, its job for the day done", () => {
+  it("records a weight and stays open, so the new measurement is read against the chart", () => {
     const onRecord = vi.fn();
     show({}, { onRecord });
 
@@ -256,7 +269,7 @@ describe("today's weighing", () => {
     fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
 
     expect(onRecord).toHaveBeenCalledWith(76.5);
-    expect(screen.queryByLabelText("המשקל היום")).toBeNull();
+    expect(screen.getByLabelText("המשקל היום")).toBeInTheDocument();
   });
 
   it("offers an update, and shows the standing value, once the day holds one", () => {

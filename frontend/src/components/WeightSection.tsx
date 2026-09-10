@@ -3,9 +3,10 @@ import type { ChartSpan, WeightPayload, WeightSettings } from "../types";
 import { isWeighInDay, isoDate } from "../dates";
 import { mayDiscardEdits } from "../edits";
 import { activeSpan, entriesWithin, kgLabel, offeredSpans, parseKg, rhythmReading, summarize,
-         targetChangePrompt, WEIGH_IN_CADENCE_QUESTION, type WeightSummary } from "../weight";
+         targetChangePrompt, trendShape, WEIGH_IN_CADENCE_QUESTION, type TrendShape,
+         type WeightSummary } from "../weight";
 import { CollapsibleSection } from "./CollapsibleSection";
-import { Icon } from "./Icon";
+import { Icon, type IconName } from "./Icon";
 import { useGlobalFold } from "./useFoldAll";
 import { WeightChart } from "./WeightChart";
 import { WeightEntries } from "./WeightEntries";
@@ -82,6 +83,16 @@ function TargetReading({ summary, limits, onSet }: {
   );
 }
 
+// The glyph the chart button wears for each shape the last three weighings draw. Before a second
+// weighing there is no direction to draw, and the button falls back to a plain chart.
+const TREND_ICONS: Record<TrendShape, IconName> = {
+  down: "trendDown",
+  flat: "trendFlat",
+  up: "trendUp",
+  peak: "trendPeak",
+  valley: "trendValley",
+};
+
 // Today's weighing. The row marks itself on the weigh-in day, which is what the stylesheet sizes
 // it by: the day the rhythm asks for a weighing reads larger, and recording stays open on any.
 function TodayRow({ recorded, limits, due, onRecord }: {
@@ -104,13 +115,13 @@ function TodayRow({ recorded, limits, due, onRecord }: {
 // The weight log's whole surface: today's weighing, the chart, and the measurements behind it,
 // under one line opening the page above the day tracker. That line is the section's own heading —
 // the latest weight, which is what the reader came for, doubling as the control that opens the
-// rest — followed by the distance to the target and the control that sets it. Both sit outside
-// the fold, which is where the section normally rests: weight moves weekly while the tracker below
-// it moves through the day, so the line reports and the rest opens on demand, with the target
-// settable either way. Whether that resting fold is the right one for the account is the caller's
-// reading, not this section's; a section the caller opened stands until a toggle or the menu's
-// global fold closes it — or until a weighing is saved, which is the errand the open section was
-// serving, so the section folds back to its reading line on its own.
+// rest — followed by the distance to the target, the control that sets it, and a framed button
+// opening the same fold the heading does. All of it sits outside the fold, which is where the
+// section normally rests: weight moves weekly while the tracker below it moves through the day,
+// so the line reports and the rest opens on demand, with the target settable either way. Whether
+// that resting fold is the right one for the account is the caller's reading, not this section's;
+// a section the caller opened stands until a toggle or the menu's global fold closes it. Saving a
+// weighing leaves it open: the chart is what the new measurement is worth reading against.
 //
 // The rhythm line above the chart carries the one word that opens the chat, so a reader who wonders
 // why the weighing is weekly can ask without leaving the section.
@@ -143,6 +154,7 @@ export function WeightSection({ weight, settings, now, defaultExpanded,
   // carries the weight and the target, and the one morning the reading is urgent is the morning
   // the caller opens the section anyway.
   const rhythm = rhythmReading(weight.entries, settings.weigh_in.weekday, now);
+  const shape = trendShape(weight.entries);
   const spans = offeredSpans(weight.entries, now);
   const active = activeSpan(spans, span);
   const plotted = entriesWithin(weight.entries, active, now);
@@ -154,7 +166,19 @@ export function WeightSection({ weight, settings, now, defaultExpanded,
       onToggle={() => setCollapsed((c) => !c)}
       label={figure === null ? "משקל" : `משקל: ${figure} ${unit}`}
       className={summary.overTarget ? "weight weight-over-target" : "weight"}
-      headerAside={<TargetReading summary={summary} limits={settings.limits} onSet={onSetTarget} />}
+      headerAside={
+        <>
+          <TargetReading summary={summary} limits={settings.limits} onSet={onSetTarget} />
+          {/* The heading is a weight reading, so nothing on the folded line looks like a control
+              that opens the chart. This one does the same job in a framed button, and its glyph
+              draws the last three weighings, so the folded line carries the direction the chart
+              behind it would show. */}
+          <button type="button" className="glyph weight-chart-toggle" aria-expanded={!collapsed}
+                  aria-label="גרף המשקל" onClick={() => setCollapsed((c) => !c)}>
+            <Icon name={shape === null ? "trend" : TREND_ICONS[shape]} />
+          </button>
+        </>
+      }
     >
       {rhythm !== null && (
         <p className="weight-rhythm">
@@ -169,7 +193,7 @@ export function WeightSection({ weight, settings, now, defaultExpanded,
       )}
       <TodayRow recorded={recordedToday?.kg ?? null} limits={settings.limits}
                 due={isWeighInDay(now, settings.weigh_in.weekday)}
-                onRecord={(kg) => { onRecord(kg); setCollapsed(true); }} />
+                onRecord={onRecord} />
       {weight.entries.length > 0 && (
         <WeightChart entries={plotted} target={weight.target} span={active} spans={spans}
                      onSpanChange={setSpan} />

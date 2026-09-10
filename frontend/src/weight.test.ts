@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { activeSpan, chartDomain, entriesWithin, kgLabel, offeredSpans, rhythmReading,
-         overTargetSeverity, summarize, targetChangePrompt, usualHour } from "./weight";
+         overTargetSeverity, summarize, targetChangePrompt, trendShape, usualHour } from "./weight";
 import type { WeightEntry } from "./types";
 
 const TODAY = new Date(2026, 7, 27); // 2026-08-27
@@ -120,6 +120,38 @@ describe("overTargetSeverity", () => {
 
   it("reads nothing before a target has been set", () => {
     expect(overTargetSeverity(105.4, null)).toBeNull();
+  });
+});
+
+describe("trendShape", () => {
+  const series = (...kgs: number[]): WeightEntry[] =>
+    kgs.map((kg, i) => ({ date: `2026-08-${String(20 + i).padStart(2, "0")}`, kg, at: null }));
+
+  it("reads the run the last three weighings make", () => {
+    expect(trendShape(series(80, 79, 78))).toBe("down");
+    expect(trendShape(series(78, 79, 80))).toBe("up");
+    expect(trendShape(series(79, 79, 79))).toBe("flat");
+  });
+
+  it("reads a turn as the shape it draws", () => {
+    expect(trendShape(series(78, 80, 79))).toBe("peak");
+    expect(trendShape(series(80, 78, 79))).toBe("valley");
+  });
+
+  it("ignores every weighing before the last three", () => {
+    expect(trendShape(series(90, 85, 78, 80, 79))).toBe("peak");
+  });
+
+  it("keeps a run standing through a weighing that did not move", () => {
+    expect(trendShape(series(80, 79, 79))).toBe("down");
+    expect(trendShape(series(79, 79, 80))).toBe("up");
+    expect(trendShape(series(80, 79, 78.96))).toBe("down");
+  });
+
+  it("takes a direction from two weighings, and none from fewer", () => {
+    expect(trendShape(series(80, 79))).toBe("down");
+    expect(trendShape(series(80))).toBeNull();
+    expect(trendShape([])).toBeNull();
   });
 });
 

@@ -77,9 +77,10 @@ export function kgLabel(kg: number): string {
   return `${Number(kg.toFixed(1))}`;
 }
 
-// Half a tenth of a kilogram: below it the gap and the target render as the same one-decimal
-// number, so the line reads as arrival rather than as a distance it cannot show.
-const AT_TARGET_KG = 0.05;
+// Half a tenth of a kilogram: two weights closer than this render as the same one-decimal number,
+// so nothing may report a move between them — the summary line reads arrival rather than a
+// distance it cannot show, and the trend reads a plateau rather than a direction.
+const SAME_KG = 0.05;
 
 // Kilograms above the target past which a measurement stops reading as merely over and starts
 // reading as far over.
@@ -91,7 +92,7 @@ const FAR_OVER_KG = 10;
  * below the target — or before a target has been set, when there is nothing to read against.
  */
 export function overTargetSeverity(kg: number, target: number | null): "over" | "far" | null {
-  if (target === null || kg - target < AT_TARGET_KG) return null;
+  if (target === null || kg - target < SAME_KG) return null;
   return kg - target > FAR_OVER_KG ? "far" : "over";
 }
 
@@ -120,7 +121,7 @@ export function summarize(entries: WeightEntry[], target: number | null): Weight
     return { latest, target, gapKg: null, prefix: "ה", overTarget: false };
   }
   const gap = latest - target;
-  if (Math.abs(gap) < AT_TARGET_KG) {
+  if (Math.abs(gap) < SAME_KG) {
     return { latest, target, gapKg: null, prefix: "ב", overTarget: false };
   }
   return {
@@ -129,6 +130,33 @@ export function summarize(entries: WeightEntry[], target: number | null): Weight
     prefix: gap > 0 ? "מעל ה" : "מתחת ל",
     overTarget: gap > 0,
   };
+}
+
+/**
+ * The shape the last three weighings draw, as the header's chart button paints it: a run down, a
+ * plateau, a run up, or a turn — a rise the newest weighing came back down from (peak), or a dip
+ * it climbed back out of (valley). Null before a second weighing gives the series a direction.
+ */
+export type TrendShape = "down" | "flat" | "up" | "peak" | "valley";
+
+// Which way one weighing moved from the one before it.
+function step(from: number, to: number): "down" | "flat" | "up" {
+  if (to - from > SAME_KG) return "up";
+  if (from - to > SAME_KG) return "down";
+  return "flat";
+}
+
+// A plateau does not turn a run: a step too small to render leaves the direction around it
+// standing, so a slow descent with one unchanged weighing in it still reads as a descent.
+export function trendShape(entries: WeightEntry[]): TrendShape | null {
+  const recent = entries.slice(-3).map((entry) => entry.kg);
+  if (recent.length < 2) return null;
+  const last = step(recent[recent.length - 2], recent[recent.length - 1]);
+  const first = recent.length === 3 ? step(recent[0], recent[1]) : last;
+  if (first === "up" && last === "down") return "peak";
+  if (first === "down" && last === "up") return "valley";
+  if (last !== "flat") return last;
+  return first === "flat" ? "flat" : first;
 }
 
 // Recent weighings the usual hour is read from: few enough to follow a rhythm that has genuinely

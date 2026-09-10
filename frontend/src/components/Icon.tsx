@@ -29,6 +29,12 @@ const GLYPHS = {
            <circle cx="18" cy="19" r="3" /><path d="m8.59 13.51 6.83 3.98" />
            <path d="m15.41 6.51-6.82 3.98" /></>,
   spark: <path d="M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2Z" />,
+  trend: <><path d="M4 3v16a2 2 0 0 0 2 2h15" /><path d="m7 15 4-5 3 3 6-7" /></>,
+  trendDown: <path d="M4 8 20 16" />,
+  trendFlat: <path d="M4 12h16" />,
+  trendUp: <path d="M4 16 20 8" />,
+  trendPeak: <path d="M4 16 12 8 20 16" />,
+  trendValley: <path d="M4 8 12 16 20 8" />,
 } satisfies Record<string, ReactElement>;
 
 export type IconName = keyof typeof GLYPHS;
