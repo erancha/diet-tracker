@@ -1,6 +1,6 @@
 # diet-tracker
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License: PolyForm Noncommercial 1.0.0](https://img.shields.io/badge/License-PolyForm%20Noncommercial%201.0.0-blue.svg)](LICENSE)
 
 Free multi-user SaaS: a serverless Hebrew diet tracker built around an intraday meal log. No
 calories are counted: what the log scores is the character of each meal and the intervals between
@@ -116,4 +116,7 @@ weekday the trend chart frames.
 
 ## License
 
-Released under the MIT License. See [LICENSE](LICENSE).
+Source-available under the [PolyForm Noncommercial License 1.0.0](LICENSE). Reading the source,
+forking it and running a private deployment are free for anyone, companies included — [NOTICE](NOTICE)
+grants that explicitly for evaluating the project or its author. Building a commercial product or
+service on it needs a commercial license: erancha@gmail.com.
