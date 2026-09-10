@@ -24,6 +24,20 @@ async function openMenu() {
 }
 
 describe("Header", () => {
+  it("explains each account-menu item on hover, the mute item by its current state", async () => {
+    render(<Header {...props} />);
+    await userEvent.click(screen.getByRole("button", { name: "תפריט חשבון" }));
+
+    expect(screen.getByRole("menuitem", { name: "ביטול התראות" }))
+      .toHaveAttribute("title", "השתקת כל התזכורות וההתראות שנשלחות במייל");
+    expect(screen.getByRole("menuitem", { name: "תצוגה מצומצמת" }))
+      .toHaveAttribute("title", "פתיחה או קיפול של כל סעיפי העמוד יחד; הבחירה נשמרת לכניסה הבאה");
+    expect(screen.getByRole("menuitem", { name: "הזמנת חברים ב-WhatsApp" }))
+      .toHaveAttribute("title", "שיתוף קישור הזמנה לאפליקציה ב-WhatsApp");
+    expect(screen.getByRole("menuitem", { name: "התנתקות" }))
+      .toHaveAttribute("title", "יציאה מהחשבון");
+  });
+
   it("titles the signed-in app with the same name the landing page shows", () => {
     render(<Header {...props} />);
 

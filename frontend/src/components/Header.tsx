@@ -17,6 +17,18 @@ const UNDELIVERED_LEAD = "הודעות שנשלחו אליכם ולא הגיעו
 const UNDELIVERED_VERIFY_HINT =
   "כדי לקבל אותן במייל יש לאשר את בקשת אימות הכתובת מ-Amazon Web Services — חפשו אותה גם בתיקיית הספאם.";
 
+// What each account-menu item reaches, shown on hover. The labels name the act in a word or two,
+// which is enough to pick from once you know the menu and too little the first time — so the
+// explanation lives here rather than lengthening the labels themselves.
+const ACCOUNT_HINTS = {
+  email: "הכתובת שאיתה התחברת",
+  mute: "השתקת כל התזכורות וההתראות שנשלחות במייל",
+  unmute: "חידוש התזכורות וההתראות שנשלחות במייל",
+  view: "פתיחה או קיפול של כל סעיפי העמוד יחד; הבחירה נשמרת לכניסה הבאה",
+  invite: "שיתוף קישור הזמנה לאפליקציה ב-WhatsApp",
+  signOut: "יציאה מהחשבון",
+};
+
 // App chrome: the title, the account menu, and — while anything is still awaiting the user — an
 // alarm that survives reloads, unlike the transient post-submit banner. The alarm starts closed
 // so the presence of notices is visible without leading every visit with their full texts.
@@ -89,22 +101,28 @@ export function Header({ email, muted, isAdmin, onSignOut, onSetMuted, onFoldAll
           </span>
           {menuOpen && (
             <span className="account-menu">
-              <span className="account-email">{email}</span>
+              <span className="account-email" title={ACCOUNT_HINTS.email}>{email}</span>
+              {/* Each item's label names the act; the tooltip says what it reaches, since a menu
+                  of four short labels cannot carry that on its own. */}
               <span role="menu">
                 <button type="button" role="menuitem" className="menu-item"
+                        title={muted ? ACCOUNT_HINTS.unmute : ACCOUNT_HINTS.mute}
                         onClick={choose(() => onSetMuted(!muted))}>
                   <Icon name={muted ? "alarm" : "alarmOff"} />
                   {muted ? "חידוש התראות" : "ביטול התראות"}
                 </button>
-                <button type="button" role="menuitem" className="menu-item" onClick={choose(onFoldAll)}>
+                <button type="button" role="menuitem" className="menu-item" title={ACCOUNT_HINTS.view}
+                        onClick={choose(onFoldAll)}>
                   <Icon name={nextViewCondensed ? "foldAll" : "unfoldAll"} />
                   {nextViewCondensed ? "תצוגה מצומצמת" : "תצוגה מלאה"}
                 </button>
-                <a role="menuitem" className="menu-item" href={whatsAppInviteUrl(isAdmin)} target="_blank"
+                <a role="menuitem" className="menu-item" title={ACCOUNT_HINTS.invite}
+                   href={whatsAppInviteUrl(isAdmin)} target="_blank"
                    rel="noreferrer" onClick={() => setMenuOpen(false)}>
                   <Icon name="share" />הזמנת חברים ב-WhatsApp
                 </a>
-                <button type="button" role="menuitem" className="menu-item" onClick={choose(onSignOut)}>
+                <button type="button" role="menuitem" className="menu-item" title={ACCOUNT_HINTS.signOut}
+                        onClick={choose(onSignOut)}>
                   <Icon name="signOut" />התנתקות
                 </button>
               </span>

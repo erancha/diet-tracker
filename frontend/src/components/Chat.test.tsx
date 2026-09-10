@@ -368,6 +368,22 @@ describe("Chat", () => {
     expect(chatApi.deleteChatTurn).toHaveBeenCalledWith("2026-09-01T11:00:00+00:00");
   });
 
+  it("explains the two controls under an answer, summarizing warning that it cannot be undone",
+     async () => {
+    render(<Chat api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(1) }) })}
+                 sampleQuestions={[]} />);
+    await userEvent.click(await screen.findByRole("button", { name: "שאלה 1" }));
+
+    expect(screen.getByRole("button", { name: "שאלת המשך על שאלה 1" })).toHaveAttribute(
+      "title",
+      "שאלה נוספת על אותה שיחה — היא נשלחת יחד עם השאלה והתשובה שכאן, כדי שהתשובה תמשיך אותן.",
+    );
+    expect(screen.getByRole("button", { name: "סיכום הצ'אט על שאלה 1" })).toHaveAttribute(
+      "title",
+      "החלפת השיחה בסיכום קצר של מה שנשאל והוסק. השאלות, התשובות והמקורות שבה נמחקים ולא ניתן לשחזר אותם.",
+    );
+  });
+
   it("moves the composer under the answer being replied to and marks the reply in progress", async () => {
     render(<Chat api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(1) }) })}
                  sampleQuestions={[]} />);

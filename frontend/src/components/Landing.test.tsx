@@ -101,6 +101,23 @@ describe("Landing", () => {
     expect(summaryText).toContain("מסמכי המקור");
   });
 
+  it("offers the walkthrough in both modes, above the invite it leads", async () => {
+    render(<Landing onSignIn={() => {}} chatAvailable />);
+
+    const walkthrough = () => screen.getByRole("link", { name: "הדגמה: יום ביומן" });
+    expect(walkthrough()).toHaveAttribute("href", "demo.html");
+    // The note rides beside the link rather than inside it, so the link's name stays the page's.
+    expect(walkthrough().parentElement).toHaveTextContent("(ניתן להאט את ההדגמה, מומלץ לראות במסך מחשב)");
+    // The footer links read walkthrough, invite, repo — the order the stylesheet spaces them in.
+    expect(walkthrough().compareDocumentPosition(
+      screen.getByRole("link", { name: "הזמנת חברים ב-WhatsApp" }),
+    ) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    await expandLanding();
+
+    expect(walkthrough()).toHaveAttribute("href", "demo.html");
+  });
+
   it("links to the source repository in both modes", async () => {
     render(<Landing onSignIn={() => {}} chatAvailable />);
 

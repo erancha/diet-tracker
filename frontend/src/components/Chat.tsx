@@ -14,6 +14,23 @@ const isPdf = (fileName: string) => fileName.toLowerCase().endsWith(".pdf");
 // not surface the response body (the appTitle.ts precedent for cross-runtime strings).
 const QUOTA_MESSAGE = "מכסת השאלות היומית נוצלה — אפשר לשאול שוב מחר";
 
+// What the score column measures. The figure is the retrieval engine's similarity between the
+// question and the document, which ranks the citations — it is not a confidence in the answer,
+// and a reader meeting a number like 42% under a heading of התאמה will otherwise read it as one.
+// The stated range is what this deployment's own stored citations actually span.
+const MATCH_HINT =
+  "מידת הדמיון בין השאלה למסמך, לפי מנוע החיפוש — לא אחוז הנכונות של התשובה. "
+  + "בפועל הערכים נעים בערך בין 35% ל-80%, והמספר משמש בעיקר לדירוג המקורות ביניהם.";
+
+// What the two controls under an answer do, which their labels name but do not explain: a
+// follow-up carries this chat's question and answer up with it, and summarizing is a one-way
+// trade of the conversation for a digest of it — chat_history.summarize drops the chain, the
+// follow-ups and the citations for good.
+const FOLLOW_UP_HINT =
+  "שאלה נוספת על אותה שיחה — היא נשלחת יחד עם השאלה והתשובה שכאן, כדי שהתשובה תמשיך אותן.";
+const SUMMARIZE_HINT =
+  "החלפת השיחה בסיכום קצר של מה שנשאל והוסק. השאלות, התשובות והמקורות שבה נמחקים ולא ניתן לשחזר אותם.";
+
 // handlers/chat.py mirrors these to take a chain apart when summarizing it, so the wording is a
 // cross-runtime contract rather than presentation.
 const ORIGINAL_LABEL = "השאלה המקורית:";
@@ -384,7 +401,7 @@ export function Chat({ api, sampleQuestions, defaultTranscriptFolded = false, as
                           {sourcesShown.has(turn.at) && (
                             <table className="chat-sources">
                               <thead>
-                                <tr><th>מקור</th><th>התאמה</th></tr>
+                                <tr><th>מקור</th><th title={MATCH_HINT}>התאמה</th></tr>
                               </thead>
                               <tbody>
                                 {turn.sources.map((source, index) => (
@@ -408,10 +425,12 @@ export function Chat({ api, sampleQuestions, defaultTranscriptFolded = false, as
                       <div className="answer-foot">
                         <button type="button" className="secondary compact reply-turn"
                           aria-label={`שאלת המשך על ${turn.question}`}
+                          title={FOLLOW_UP_HINT}
                           aria-pressed={replyTo?.at === turn.at}
                           onClick={() => setReplyTo(turn)}>שאלת המשך</button>
                         <button type="button" className="secondary compact"
                           aria-label={`סיכום הצ'אט על ${turn.question}`}
+                          title={SUMMARIZE_HINT}
                           disabled={turn.summarized}
                           onClick={() => void summarize(turn)}>סיכום הצ'אט</button>
                         <button type="button" className="secondary compact close-turn"
