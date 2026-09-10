@@ -206,7 +206,7 @@ describe("rhythmReading", () => {
   });
 
   it("names the weigh-in day while the scale has not been stepped on", () => {
-    expect(rhythmText([timed("2026-08-20", null)], THU, TODAY)).toBe("היום יום השקילה");
+    expect(rhythmText([timed("2026-08-20", null)], THU, TODAY)).toBe("היום יום השקילה המומלץ");
   });
 
   it("says nothing on the weigh-in day once it has been answered", () => {
@@ -248,7 +248,7 @@ describe("rhythmReading", () => {
   it("carries the usual hour once there is one, and only then", () => {
     const timedSeries = [timed("2026-08-06", "07:20"), timed("2026-08-13", "07:40"),
                          timed("2026-08-20", "07:30")];
-    expect(rhythmText(timedSeries, THU, TODAY)).toBe("היום יום השקילה · בסביבות 07:30");
-    expect(rhythmText([timed("2026-08-20", "07:30")], THU, TODAY)).toBe("היום יום השקילה");
+    expect(rhythmText(timedSeries, THU, TODAY)).toBe("היום יום השקילה המומלץ · בסביבות 07:30");
+    expect(rhythmText([timed("2026-08-20", "07:30")], THU, TODAY)).toBe("היום יום השקילה המומלץ");
   });
 });

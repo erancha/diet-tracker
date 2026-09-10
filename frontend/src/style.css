@@ -495,9 +495,19 @@ td.view-day { cursor: pointer; }
   animation: nudge-blink 0.5s ease-in-out 20, nudge-blink 1s ease-in-out 10s 20,
              nudge-blink 2s ease-in-out 30s infinite;
 }
+/* On load the folded weight line points at itself: the trend glyph, the reading and the
+   disclosure arrow take four beats of the shared blink. The intro classes carry their own flash
+   sequence, so the line keeps quiet under them. Folding leaves these mounted, so it plays once. */
+main:not(.intro-0, .intro-1, .intro-2, .intro-3, .intro-4) :is(.weight .weight-latest,
+                                                               .weight .weight-chart-toggle),
+main:not(.intro-0, .intro-1, .intro-2, .intro-3, .intro-4) .weight .section-toggle::before {
+  animation: nudge-blink 0.5s ease-in-out 4;
+}
 @media (prefers-reduced-motion: reduce) {
   .meal-form .section-toggle { animation: none; }
   .trends .section-toggle[aria-expanded="false"]::before { animation: none; }
+  .weight :is(.weight-latest, .weight-chart-toggle) { animation: none; }
+  .weight .section-toggle::before { animation: none; }
   .section-waning, .section-folding { animation: none; }
   /* The ring stays as a static mark of the wait. */
   .chat-pending::before { animation: none; }

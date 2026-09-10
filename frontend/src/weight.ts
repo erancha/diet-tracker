@@ -231,7 +231,7 @@ export function rhythmReading(entries: WeightEntry[], weekday: string,
     };
   }
   if (since === 0) return null;
-  return plainLine(withUsualHour("היום יום השקילה", entries));
+  return plainLine(withUsualHour("היום יום השקילה המומלץ", entries));
 }
 
 // The hour this reader usually weighs at, appended where one has been established. It describes

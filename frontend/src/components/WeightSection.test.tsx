@@ -97,7 +97,7 @@ describe("open panel at rest", () => {
 describe("rhythm reading", () => {
   it("names the weigh-in day while the day holds no weighing", () => {
     show({ entries: [{ date: "2026-08-20", kg: 77, at: "07:30" }] });
-    expect(document.querySelector(".weight-rhythm")).toHaveTextContent("היום יום השקילה");
+    expect(document.querySelector(".weight-rhythm")).toHaveTextContent("היום יום השקילה המומלץ");
   });
 
   it("drops away once the weigh-in day has been answered", () => {
