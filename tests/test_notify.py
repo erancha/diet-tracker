@@ -29,7 +29,7 @@ def test_send_email_via_ses():
         assert ses.get_send_quota()["SentLast24Hours"] == 1
 
 
-def test_send_email_closes_with_mute_footnote_and_app_link():
+def test_send_email_closes_with_the_app_link_and_then_the_mute_footnote():
     captured = {}
 
     class FakeSes:
@@ -39,9 +39,25 @@ def test_send_email_closes_with_mute_footnote_and_app_link():
     notify.send_email(FakeSes(), "me@x.com", "you@x.com", "נושא", "גוף ההודעה",
                       "https://dxyz.cloudfront.net")
     body = captured["Message"]["Body"]["Text"]["Data"]
-    assert body.startswith("גוף ההודעה\n\n")
-    assert "ביטול התראות" in body
-    assert body.endswith("https://dxyz.cloudfront.net")
+    assert body == "גוף ההודעה\n\nhttps://dxyz.cloudfront.net\n\n" + notify.MUTE_FOOTNOTE
+
+
+def test_the_mute_footnote_is_typed_smaller_than_the_message_it_closes():
+    # The footnote is a note about the mail, not part of it, so it closes below the body in
+    # smaller type — while the app's address stays in the body, at reading size.
+    captured = {}
+
+    class FakeSes:
+        def send_email(self, **kwargs):
+            captured.update(kwargs)
+
+    notify.send_email(FakeSes(), "me@x.com", "you@x.com", "נושא", "גוף ההודעה",
+                      "https://dxyz.cloudfront.net")
+    html = captured["Message"]["Body"]["Html"]["Data"]
+    body_html, footnote_html = html.split("</div>")[:2]
+    assert "font-size: 15px" in body_html and "https://dxyz.cloudfront.net" in body_html
+    assert footnote_html.startswith("<br><br>")
+    assert "font-size: 12px" in footnote_html and "ביטול התראות" in footnote_html
 
 
 def test_send_plain_email_sends_the_body_verbatim():

@@ -50,6 +50,19 @@ def _line_html(line, first) -> str:
     return f"<strong>{label.group(1)}</strong>{label.group(2)}"
 
 
+_BODY_FONT_PX = 15
+
+# The mute footnote closes the mail a step below the body, so it reads as a note about the mail
+# rather than part of the message.
+_FOOTNOTE_FONT_PX = _BODY_FONT_PX - 3
+
+
+def _rtl_div(rendered, font_px) -> str:
+    """Wraps already-escaped HTML in the direction and type the mail is read in."""
+    return (f'<div dir="rtl" style="font-family: Arial, sans-serif; font-size: {font_px}px; '
+            f'line-height: 1.6; white-space: normal">{rendered}</div>')
+
+
 def rtl_html(body) -> str:
     """One message body as the right-to-left HTML its email carries.
 
@@ -59,33 +72,41 @@ def rtl_html(body) -> str:
     lines = body.split("\n")
     rendered = "<br>".join(_line_html(line, first=index == 0)
                            for index, line in enumerate(lines))
-    return (f'<div dir="rtl" style="font-family: Arial, sans-serif; font-size: 15px; '
-            f'line-height: 1.6; white-space: normal">{rendered}</div>')
+    return _rtl_div(rendered, _BODY_FONT_PX)
 
 
-def send_plain_email(ses_client, sender, recipient, subject, body) -> None:
-    """Sends one email with the body exactly as given — the variant for admin notices, which
-    carry no user-facing mute footnote. The same body rides twice, as text and as the
-    right-to-left HTML most clients show, so a reader whose client refuses HTML loses only the
-    direction."""
+def _send(ses_client, sender, recipient, subject, text, html_body) -> None:
+    """Sends one email as both parts, so a reader whose client refuses HTML loses only the
+    direction and the type, never the message."""
     ses_client.send_email(
         Source=sender,
         Destination={"ToAddresses": [recipient]},
         Message={
             "Subject": {"Data": subject, "Charset": "UTF-8"},
-            "Body": {"Text": {"Data": body, "Charset": "UTF-8"},
-                     "Html": {"Data": rtl_html(body), "Charset": "UTF-8"}},
+            "Body": {"Text": {"Data": text, "Charset": "UTF-8"},
+                     "Html": {"Data": html_body, "Charset": "UTF-8"}},
         },
     )
     logger.info("email sent to=%s subject=%s", recipient, subject)
 
 
+def send_plain_email(ses_client, sender, recipient, subject, body) -> None:
+    """Sends one email with the body exactly as given — the variant for admin notices, which
+    carry no user-facing mute footnote."""
+    _send(ses_client, sender, recipient, subject, body, rtl_html(body))
+
+
 def send_email(ses_client, sender, recipient, subject, body, app_url) -> None:
-    """Sends one user-facing email, closing it with the mute footnote and the app's address —
-    appending here rather than at call sites is what guarantees every user-facing email carries
-    its own way out."""
-    send_plain_email(ses_client, sender, recipient, subject,
-                     f"{body}\n\n{MUTE_FOOTNOTE}\n{app_url}")
+    """Sends one user-facing email, closing it with the app's address and then the mute footnote —
+    appending here rather than at call sites is what guarantees every user-facing email carries its
+    own way out. The address sits directly under the message so a reader who came to act on it
+    reaches the app before the note on how to stop the mail."""
+    message = f"{body}\n\n{app_url}"
+    # The footnote rides in its own block, so the blank line the text part carries between the two
+    # has to be drawn explicitly here.
+    footnote = f"<br><br>{_rtl_div(html.escape(MUTE_FOOTNOTE), _FOOTNOTE_FONT_PX)}"
+    _send(ses_client, sender, recipient, subject, f"{message}\n\n{MUTE_FOOTNOTE}",
+          rtl_html(message) + footnote)
 
 
 def send_telegram(bot_token, chat_id, text) -> None:
