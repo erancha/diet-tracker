@@ -7,7 +7,8 @@ The block carries the last week's submitted day summaries, today's and yesterday
 their derived scores, and the latest weight measurements beside the target weight, all keyed
 and labeled in the questionnaire's Hebrew vocabulary so the answering LLM reads domain terms
 rather than internal ids. It also names the app's full tracking scope, so the answering LLM
-can tell a subject the app has no field for from one the user left unrecorded."""
+can tell a subject the app has no field for from one the user left unrecorded, and the whole carb
+grade ladder, so a grade in a meal entry reads as food rather than a bare rung."""
 
 import json
 
@@ -32,6 +33,10 @@ _FRUIT = "פרי"
 _ADDITIONS = "תוספות"
 _AMOUNT = "כמות"
 
+# Names the grade ladder for what it is on both counts: every grade the app records, each named by
+# foods that exemplify it rather than bound it.
+_GRADE_LADDER = "דרגות מקור הפחמימה (דוגמאות מזון)"
+
 
 def user_context(store, questionnaire, sub, day) -> str | None:
     """The user's recent data as a labeled context block, never exceeding the upstream cap;
@@ -39,10 +44,11 @@ def user_context(store, questionnaire, sub, day) -> str | None:
 
     When the cap is tight, whole sections are dropped in _bounded's fixed order of decreasing
     bulk, the weight block last because it is small.
-    The tracking scope is never dropped: it is what keeps absent data readable as a missing field
-    rather than an unrecorded habit. Absent data is a legal domain state and still rides (empty
-    summaries let the LLM say nothing was tracked); false meal flags, empty addition lists and
-    an unset target weight are omitted from the block as the equally legal quiet state."""
+    The tracking scope and the grade ladder are never dropped: the first keeps absent data
+    readable as a missing field rather than an unrecorded habit, the second keeps the grades the
+    meals are recorded in from arriving undefined. Absent data is a legal domain state and still
+    rides (empty summaries let the LLM say nothing was tracked); false meal flags, empty addition
+    lists and an unset target weight are omitted from the block as the equally legal quiet state."""
     data = {
         "סיכום ימים אחרונים": _summaries(store, questionnaire, sub, day),
         "היום": _day_detail(store, questionnaire, sub, day),
@@ -50,6 +56,7 @@ def user_context(store, questionnaire, sub, day) -> str | None:
         weight.LABEL: weight.measurements_block(store.get_weights(sub),
                                                 store.get_target(sub)),
         "תחומי המעקב של האפליקציה": _tracking_scope(questionnaire),
+        _GRADE_LADDER: _grade_ladder(questionnaire),
     }
     block = _bounded(data, MAX_CONTEXT_CHARS - len(_HEADER))
     if block is None:
@@ -62,7 +69,7 @@ def _bounded(data, budget) -> str | None:
     leaves after the labeling header. While the text is too long, one section is removed and the
     rest re-serialized, in fixed order — yesterday's meals, today's, the oldest summary days one
     at a time, then the weight block. None when the text is still too long once only the empty
-    summaries and the tracking scope remain."""
+    summaries, the tracking scope and the grade ladder remain."""
     summaries = data["סיכום ימים אחרונים"]
     sheds = [lambda: data.pop("אתמול"), lambda: data.pop("היום")]
     sheds += [lambda d=date: summaries.pop(d) for date in sorted(summaries)]
@@ -74,6 +81,16 @@ def _bounded(data, budget) -> str | None:
         if not sheds:
             return None
         sheds.pop(0)()
+
+
+def _grade_ladder(questionnaire) -> dict:
+    """Every grade a carb source can be recorded at, beside the sample foods the config names it
+    by — the whole ladder, each rung exemplified rather than defined. Meal entries send a grade by
+    its label alone, and the knowledge base defines the ladder only on the page a question has to
+    retrieve to reach it, so the ladder rides with every question instead."""
+    return {choice.label: choice.examples
+            for choice in questionnaire.question("carbs").choices
+            if choice.examples is not None}
 
 
 def _tracking_scope(questionnaire) -> dict:

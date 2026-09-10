@@ -15,6 +15,9 @@ class Choice:
     # measured step, so its value is a sentinel one step beyond rather than a quantity. Mirrors
     # the bound field frontend/src/types.ts declares.
     bound: bool = False
+    # Sample foods spelling out what the choice covers, carried only by the carb grades. Mirrors
+    # the examples field frontend/src/types.ts declares.
+    examples: str | None = None
 
 
 QUESTION_TYPES = {"single", "points"}
@@ -320,7 +323,8 @@ def parse(raw: dict) -> Questionnaire:
         questions.append(Question(
             id=q["id"], type=q["type"], text=q["text"],
             choices=tuple(Choice(id=c["id"], label=c["label"], value=c["value"],
-                                 bound=c.get("bound", False)) for c in q["choices"]),
+                                 bound=c.get("bound", False), examples=c.get("examples"))
+                          for c in q["choices"]),
             day_title=q.get("day_title"), day_qualifier=q.get("day_qualifier"),
             unit=q.get("unit"),
             panel_title=q.get("panel_title"), max=q.get("max"),

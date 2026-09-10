@@ -110,7 +110,7 @@ def test_the_tracking_scope_of_the_app_rides_in_the_context(store, questionnaire
                              "באפליקציה, ולכן היעדרו מהנתונים אינו מעיד שהמשתמש לא צרך אותו.")
 
 
-def test_a_tight_cap_keeps_the_tracking_scope(store, questionnaire, monkeypatch):
+def test_a_tight_cap_keeps_the_tracking_scope_and_grade_examples(store, questionnaire, monkeypatch):
     for i in range(30):
         store.add_meal("u1", TODAY, meal(f"{TODAY}T{10 + i // 6:02}:{i % 6}0:00+03:00",
                                          additions=[{"id": "sweet", "amount": "little"}],
@@ -122,6 +122,7 @@ def test_a_tight_cap_keeps_the_tracking_scope(store, questionnaire, monkeypatch)
     assert "היום" not in data
     assert "משקל" in data
     assert "תחומי המעקב של האפליקציה" in data
+    assert chat_context._GRADE_LADDER in data
 
 
 def test_a_user_with_no_data_still_sends_the_empty_state(store, questionnaire):
@@ -152,3 +153,11 @@ def test_an_unset_target_is_omitted_from_the_weight_block(store, questionnaire):
     weight = data_of(chat_context.user_context(store, questionnaire, "u1", TODAY))["משקל"]
 
     assert weight == {"מדידות": {"2026-08-30": 82.5}}
+
+
+def test_the_whole_grade_ladder_rides_in_the_context(store, questionnaire):
+    ladder = data_of(chat_context.user_context(
+        store, questionnaire, "u1", TODAY))[chat_context._GRADE_LADDER]
+
+    assert ladder["דרגה 2"] == "קינואה, כוסמת, שיבולת שועל עבה, ארטישוק ירושלמי"
+    assert set(ladder) == {choice.label for choice in questionnaire.question("carbs").choices}

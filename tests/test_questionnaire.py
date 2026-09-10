@@ -289,3 +289,13 @@ def test_value_label_maps_single_choices_but_keeps_points_scores_numeric():
     # A points score is a meal-weight sum, not a picked choice — 3 must not read as grade3.
     assert q.question("carbs").value_label(3) == "3"
     assert q.question("carbs").value_label(17) == "17"
+
+
+def test_repo_config_carries_the_grade_ladders_example_foods():
+    q = appconfig.load(APP_CONFIG).questionnaire
+    examples = {choice.label: choice.examples for choice in q.question("carbs").choices}
+    assert examples["דרגה 4"] == "אורז לבן, בטטה, סלק, תירס"
+    assert examples["ללא מקור פחמימה"] == "ירקות, חלבון, שומן"
+    # Only the grade ladder names foods; a daily question's choices are quantities of their own
+    # unit, and nothing exemplifies them.
+    assert all(choice.examples is None for choice in q.question("drinking").choices)
