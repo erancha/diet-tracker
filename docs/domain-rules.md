@@ -4,12 +4,12 @@
 
 Each meal is recorded as it happens with a timestamp, the carb source or sources it drew on,
 whether it included vegetables or fruit, and its additions (see below). Every carb grade carries a
-point weight defined in `config/app.json`; the day's carb score is the sum of its meals' weights.
+point weight defined in `config/app.json`; the day's score is the sum of its meals' weights.
 Scoring is golf-style: lower is better.
 
 The day's four tracked values all derive from the meal log:
 
-- **Carb score** — sum of the meals' carb-source weights, with the fruit escalation below.
+- **Daily score** — sum of the meals' carb-source weights, with the fruit escalation below.
 - **Meal count** — number of recorded meals.
 - **Vegetable meals** — number of meals that included vegetables.
 - **Eating window** — hours between the first and last meal, rounded to the nearest half hour.
@@ -125,7 +125,7 @@ Both implementations
 must satisfy the shared test vectors in `config/derive-vectors.json`, keeping the two runtimes in
 lockstep.
 
-- **Excluded points** — the same meal walk also decomposes the day's carb score: per meal, the
+- **Excluded points** — the same meal walk also decomposes the day's score: per meal, the
   weighed contribution of any carb source graded at or above the carbs question's
   `excluded_grade`, plus the weighed surcharge of every addition its `excluded_additions` names.
   That is what the program excludes from its six non-treat days — the flour grades and sugar,
