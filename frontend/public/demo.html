@@ -6,16 +6,20 @@
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <!--
   Standalone walkthrough of one tracked day, published beside the app at /demo.html and linked
-  from the README. It replays a single session — sign-in from the condensed landing pitch, three
-  meals recorded as they happen, the day closed from the tracker, and the week's trends — against
-  a rebuilt copy of the app's screen: the components' markup, style.css scoped to .screen with its
-  viewport-dependent values pinned to a 390px phone, and ports of derive.ts, violations.ts,
-  trend.ts and dates.ts, so every figure shown is derived here rather than written in.
+  from the README. It replays a single session on the weigh-in morning — sign-in from the
+  condensed landing pitch, the weighing the day opens on, three meals recorded as they happen,
+  the day closed from the tracker, and the ten-day trends — against a rebuilt copy of the app's
+  screen: the components' markup, style.css scoped to .screen with its viewport-dependent values
+  pinned to a 390px phone, and ports of derive.ts, violations.ts, trend.ts, weight.ts and
+  dates.ts, so every figure shown is derived here rather than written in.
 
-  The questionnaire config and the recorded history below are a matched snapshot, not live
-  reads. The narration names specific carb grades, scores and rule thresholds, so a later
-  questionnaire version would relabel days that were never answered under it. The weight and
-  admin sections sit outside the replayed session and are not rebuilt here.
+  The questionnaire config, the recorded history and the weight log below are a matched snapshot,
+  not live reads. The narration names specific carb grades, scores and rule thresholds, so a later
+  questionnaire version would relabel days that were never answered under it. The history is a
+  week of real tracking adjusted to read as the program intends a week to go, six clean days
+  around the treat day; the weighings are as recorded, save the oldest one's hour, which was never
+  stored and is filled in here so the list reads as three weighings at one morning hour. The admin
+  section sits outside the replayed session and is not rebuilt here.
 -->
 <title>יום ביומן</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -252,8 +256,8 @@ body {
    THE APP — frontend/src/style.css, scoped to .screen and resolved for a
    390px viewport (the vw-dependent title, legend and landing sizes, and the
    ≥48rem / ≤47.99rem rules, are pinned to that width rather than the
-   artifact's own viewport). Rules for surfaces the walkthrough never renders
-   (the weight section, the chat transcript, the day view) are left out.
+   page's own viewport). Rules for surfaces the walkthrough never renders
+   (the chat transcript, the day view, the admin listing) are left out.
    ───────────────────────────────────────────────────────────────────────── */
 .screen {
   --accent: #2e7d32;
@@ -263,6 +267,7 @@ body {
   --viz-series-2: #1baf7a;
   --viz-series-3: #4a3aa7;
   --viz-critical: #d03b3b;
+  --viz-excluded: #b3701c;
   --viz-grid: #e1e0d9;
   --viz-baseline: #c3c2b7;
   --viz-muted: #898781;
@@ -329,19 +334,38 @@ body {
 .screen legend { font-weight: 600; padding: 0 0.5rem; white-space: nowrap; font-size: 12.72px; }
 .screen label { display: block; padding: 0.35rem 0; cursor: pointer; }
 .screen fieldset > label, .screen .meal-flags label { padding: 0.175rem 0; }
+/* Four named control roles, each painting the same box: nothing is styled by being a button, so
+   a control says in its class what it does. */
 .screen button {
-  --btn-bg: var(--accent); --btn-fg: #fff; --btn-border: var(--accent);
+  --btn-bg: transparent; --btn-fg: inherit; --btn-border: transparent;
   background: var(--btn-bg); color: var(--btn-fg); border: 1px solid var(--btn-border);
-  border-radius: 8px; padding: 0.6rem 2.5rem; font-size: 1rem; cursor: pointer; font-family: inherit;
+  border-radius: 8px; padding: 0; font: inherit; cursor: pointer;
 }
-.screen button.quiet { --btn-bg: #fff; --btn-fg: var(--accent); --btn-border: var(--accent-border); }
-.screen button.icon-only { --btn-bg: transparent; --btn-fg: inherit; --btn-border: transparent;
-                           display: inline-flex; padding: 0.3rem; border-radius: 50%; }
-.screen button:hover:not(:disabled) { filter: brightness(0.93); }
-.screen button.icon-only:hover:not(:disabled) { --btn-bg: #eceff1; filter: none; }
+.screen .primary { --btn-bg: var(--accent); --btn-fg: #fff; --btn-border: var(--accent); }
+.screen .secondary { --btn-bg: #fff; --btn-fg: var(--accent); --btn-border: var(--accent-border); }
+.screen :is(.primary, .secondary) { padding: 0.6rem 2.5rem; }
+/* Folds content open or closed: a triangle leading text, pointing along the reading direction
+   while collapsed. Seated inside running text — the word יעד in the weight line — a leading
+   triangle would split the word, so the affordance goes under the text instead. */
+.screen .disclosure::before { content: "▾ "; font-size: calc(0.9em + 1px); }
+.screen .disclosure[aria-expanded="false"]::before { content: "◂ "; }
+.screen .disclosure.in-text::before { content: none; }
+.screen .disclosure.in-text { text-decoration: underline; text-underline-offset: 0.2em; }
+.screen .glyph { display: inline-flex; padding: 0.35rem; border-radius: 50%; }
+.screen .compact { padding: 0.25rem 0.6rem; }
+.screen .glyph.compact { padding: 0.15rem; }
+.screen :is(.primary, .secondary):hover:not(:disabled) { filter: brightness(0.93); }
+.screen .glyph:hover:not(:disabled) { --btn-bg: #eceff1; }
+.screen .disclosure:hover:not(:disabled) { --btn-fg: var(--accent); }
 .screen button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.screen button:disabled { --btn-bg: #e4e4e4; --btn-fg: #9a9a9a; --btn-border: #d8d8d8; cursor: not-allowed; }
+.screen :is(.primary, .secondary):disabled { --btn-bg: #e4e4e4; --btn-fg: #9a9a9a; --btn-border: #d8d8d8; }
+.screen button:disabled { cursor: not-allowed; }
 .screen .icon { width: 1.1em; height: 1.1em; vertical-align: -0.18em; }
+/* A section heading doubles as its fold's control, a shade lighter than a title that only titles.
+   With a control beside it, the heading and that control share one row. */
+.screen :is(h2, h3) > .section-toggle { font-weight: 600; }
+.screen .section-header { display: flex; flex-wrap: wrap; align-items: baseline;
+                          justify-content: space-between; gap: 1rem; }
 .screen .alert { background: #ffebee; color: var(--danger); border-radius: 8px; padding: 0.6rem 1rem; margin-bottom: 0.5rem; white-space: pre-line; }
 .screen .ok { background: #e8f5e9; color: var(--accent); border-radius: 8px; padding: 0.6rem 1rem; margin-bottom: 0.5rem; }
 .screen .notice { background: #fff8e1; color: #795500; border-radius: 8px; padding: 0.6rem 1rem; margin-bottom: 0.5rem; }
@@ -366,7 +390,6 @@ body {
 .screen .trend-panel + .trend-panel { margin-top: 1.75rem; }
 .screen .trend-panel-title { display: flex; align-items: center; gap: 0.35rem; font-size: 12px; font-weight: 700; margin: 0 0 0.15rem; }
 .screen .trend-chip { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
-.screen .trend-violation-tick { stroke: var(--viz-critical); stroke-width: 2; }
 .screen .trend-legend { display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; margin-bottom: 0.5rem; }
 .screen .trend-legend-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--viz-critical); display: inline-block; }
 .screen .day-tracker h2 { font-size: 1.6rem; margin: 0 0 0.4em; }
@@ -384,8 +407,14 @@ body {
 .screen .meal-form-open h3 { margin-top: 0; }
 .screen .meal-form-close { position: absolute; top: 0.4rem; inset-inline-end: 0.5rem; }
 .screen .form-actions:empty, .screen .meal-list:empty { display: none; }
-.screen .label-density { display: flex; justify-content: flex-end; margin-top: 0.75rem; }
-.screen .label-density button { padding: 0.15rem 0.6rem; font-size: 0.8rem; white-space: nowrap; }
+.screen .label-density { display: flex; justify-content: flex-end; margin-top: 0.75rem; font-size: 0.8rem; }
+.screen .label-density button { white-space: nowrap; }
+/* A carb source is its grade group plus the helping that qualifies it, so the two travel as one
+   block, leaving the helping box tucked under the grade it belongs to. */
+.screen .carb-source > fieldset { margin-bottom: 0; }
+.screen .carb-source .meal-flags { margin-top: 0.5rem; }
+/* Sized down to read as the trailing detail of the addition label it sits inside. */
+.screen .addition-amount { font-size: 0.85em; padding: 0 0.2rem; }
 .screen .carb-source { margin-bottom: 1rem; }
 .screen .carb-source > fieldset { margin-bottom: 0; }
 .screen .meal-flags { display: flex; flex-wrap: wrap; gap: 0.25rem 1.5rem; }
@@ -424,6 +453,113 @@ body {
 .screen .more-toggle { --btn-bg: transparent; --btn-fg: var(--accent); --btn-border: transparent;
                        display: block; padding: 0; margin-top: 0.35rem; border-radius: 0;
                        font-size: 0.8rem; text-decoration: underline; }
+
+/* ── the weight log ───────────────────────────────────────────────────── */
+/* Folded, the section is its one line, and this is the gap to the tracker card below it; open, it
+   ends on the measurements list, whose bare rows need the wider clearance to read apart from that
+   card. */
+.screen .weight { --weight-input-height: 1.75rem; margin-bottom: 1rem; }
+.screen .weight:has(.section-toggle[aria-expanded="true"]) { margin-bottom: 3rem; }
+/* The line reads as a status reading rather than a banner, so it starts at the leading edge and
+   is sized to the body instead of to a section title. */
+.screen .weight .section-header { justify-content: flex-start; align-items: baseline; gap: 0.35rem;
+                                  flex-wrap: wrap; }
+.screen .weight h2 { font-size: 1.05rem; margin: 0 0 0.5rem; }
+/* The heading is a weight reading, so the framed box beside it is the one shape on the line that
+   says a control. Its glyph draws the last three weighings. */
+.screen .weight-chart-toggle { --btn-fg: var(--accent); --btn-border: var(--accent-border);
+                               border-radius: 8px; align-self: center; margin-inline-start: 1rem; }
+/* A sentence whose parts carry their own spacing, with the target's input sitting inside it. The
+   accent lands on the figures alone; units and phrasing read as chrome. */
+.screen .weight-summary { font-weight: 600; }
+.screen .weight-summary .value { color: var(--accent); }
+/* Above the target, the weight and the distance to it are the miss, so both take the danger
+   colour — the figures alone. The target keeps the accent: it is the goal being missed, not the
+   figure missing it. */
+.screen .weight-over-target .weight-latest,
+.screen .weight-over-target .weight-summary .weight-gap,
+.screen .weight-entries .over-target { color: var(--danger); }
+.screen .weight-target-unset { color: #5f5f5f; }
+.screen .weight-target-commit { --btn-fg: var(--accent); margin-block: -0.15rem; }
+.screen .weight-rhythm { margin: 0 0 0.5rem; opacity: 0.8; }
+/* The word that opens the chat sits inside the sentence, so it reads as a link in running text. */
+.screen .weight-rhythm button { text-decoration: underline; text-underline-offset: 2px; }
+/* The day's weighing: label, input and button on one line. Today's controls carry the full height
+   on the weigh-in day, so the two read as equals on the one day the rhythm asks for a weighing;
+   every other day they stand a quarter shorter. */
+.screen .weight-today { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin: 0.5rem 0; }
+.screen .weight-today input, .screen .weight-today button { height: calc(var(--weight-input-height) * 0.75); }
+.screen .weight-today.weigh-in-due input,
+.screen .weight-today.weigh-in-due button { height: var(--weight-input-height); }
+.screen .weight-today button { padding: 0 0.75rem; display: inline-flex; align-items: center;
+                               justify-content: center; line-height: 1; }
+.screen .weight-today input,
+.screen .weight-summary input { width: 5rem; padding: 0 0.4rem; font-size: 1rem;
+                                border: 1px solid #ccc; border-radius: 8px; }
+.screen .weight-summary input { height: var(--weight-input-height); font-weight: 400;
+                                vertical-align: baseline; }
+.screen .weight-recorded { font-size: 0.85rem; color: #5f5f5f; }
+/* The measurements behind the chart: one grid whose columns — date, hour, weight, delete — each
+   sit at their widest content, the rows dissolving into it so every row shares those columns. */
+.screen .weight-entries { list-style: none; padding: 0; margin: 0.5rem 0 0; display: grid;
+                          grid-template-columns: repeat(4, max-content); align-items: center;
+                          gap: 0.25rem 1rem; font-size: calc(1rem - 1px); }
+.screen .weight-entries li { display: contents; }
+.screen .weight-entries .weight-entry-date { font-weight: 600; }
+.screen .weight-entries .weight-entry-weekday { display: inline-block; min-width: 1.3em; }
+.screen .weight-entries .weight-entry-at { opacity: 0.7; font-variant-numeric: tabular-nums; }
+.screen .weight-entries .weight-entry-kg { font-weight: 600; }
+/* Padding the number to a common width is what puts the units in a column and stacks the digits. */
+.screen .weight-entries .weight-entry-value { display: inline-block; min-width: 5ch; text-align: end;
+                                              font-variant-numeric: tabular-nums; }
+.screen .weight-entries .far-over { font-weight: 800; }
+.screen .weight-entries .glyph { --btn-fg: #8a8a8a; justify-self: end; margin-inline-start: 1rem; }
+.screen .weight-entries .glyph .icon { width: calc(1.1em - 2px); height: calc(1.1em - 2px); }
+.screen :is(.meal-list .meal-actions, .weight-entries) .glyph { margin-block: -0.35rem; }
+/* The chart's span chips, offered only where a wider span would draw different points. */
+.screen .range-picker { display: flex; gap: 1rem; align-items: center; margin-bottom: 0.75rem;
+                        font-size: 0.9rem; margin-top: 0.5rem; }
+.screen .range-picker label { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0; cursor: pointer; }
+
+/* ── trend panels: the limit note, the excluded subtotal, the treat day ── */
+.screen .trend-panel-limit { color: var(--viz-critical); font-weight: 400; }
+.screen .trend-panel-excluded { display: flex; align-items: center; gap: 0.3rem;
+                                color: var(--viz-excluded); font-weight: 400; }
+/* Two verticals rather than a closed box: a box would parallel the gridlines it crosses, while
+   two lines read as the lane the day sits in. */
+.screen .trend-treat-day line { stroke: var(--accent); stroke-width: 1.5; stroke-dasharray: 1 4;
+                                stroke-linecap: round; }
+.screen .trend-treat-day text { font-size: 9px; fill: var(--viz-muted); }
+.screen .meal-list.expanded-labels { font-size: calc(1em - 1px); }
+/* Quieter openers that preview rather than head: a folded section's at-a-glance line. */
+.screen .section-summary { font-size: 0.85rem; }
+
+/* ── the chat transcript ─────────────────────────────────────────────── */
+.screen .chat-messages { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+.screen .chat-messages li { border-radius: 8px; padding: 0.5rem 0.8rem; max-width: 85%; }
+.screen .chat-messages li p { margin: 0; white-space: pre-wrap; }
+/* The question the reader asked leads from one edge, the answer answers from the other. */
+.screen .chat-user { align-self: flex-start; background: #e8f0e9; display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+.screen .chat-user p { flex: 1; }
+.screen .chat-turn-at { flex-basis: 100%; font-size: 0.75rem; opacity: 0.7; font-variant-numeric: tabular-nums; }
+/* The question doubles as its answer's toggle: a text-styled button, so the bubble keeps reading
+   as conversation. A closed row clamps, since a followed-up chat carries its whole chain. */
+.screen .chat-question { flex: 1; border-radius: 0; text-align: start; white-space: pre-wrap; }
+.screen .chat-question[aria-expanded="false"] {
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3;
+  line-clamp: 3; overflow: hidden;
+}
+.screen .chat-assistant { align-self: flex-end; background: #fff; border: 1px solid #e0e0da; }
+.screen .more-toggle { display: block; margin-top: 0.35rem; }
+.screen .chat-assistant > .more-toggle { margin-top: 0.75rem; --btn-fg: var(--accent); }
+/* The citations table sizes to its two short columns rather than to the wide history grid. */
+.screen .chat-sources { margin-top: 0.35rem; min-width: 0; opacity: 0.7; }
+.screen .chat-sources :is(th, td) { font-size: 0.8rem; padding: 0.2rem 0.5rem; }
+/* A cited PDF opens in its own tab, so its name reads as a link among the plain-text rows. */
+.screen .chat-source-open { --btn-fg: var(--accent); text-decoration: underline; text-underline-offset: 0.2em; }
+.screen .chat .answer-foot { display: flex; gap: 0.5rem; margin-top: 0.5rem; font-size: 0.85rem; }
+.screen .chat .close-turn { margin-inline-start: auto; }
+.screen .chat .clear-draft { position: absolute; inset-inline-end: 0.2rem; top: 50%; transform: translateY(-50%); }
 </style>
 </head>
 <body>
@@ -436,30 +572,25 @@ body {
 
   <div class="about" id="about" hidden>
     <p class="lede">
-      מסלול שלם באפליקציה, על מסך טלפון: התחברות עם Google, שלוש ארוחות שנרשמות בזמן שהן קורות,
-      סגירת היום מתוך היומן, וגרפי המגמה של השבוע — הכול על הממשק העדכני של האפליקציה.
-      <strong>ההיסטוריה שמאחורי הכול היא נתונים חיים</strong> — חמישה ימים שנשלחו ושבע־עשרה ארוחות
-      שנקראו היישר מ־DynamoDB.
+      מסלול שלם באפליקציה, על מסך טלפון: התחברות עם Google, השקילה השבועית, שלוש ארוחות
+      שנרשמות בזמן שהן קורות, סגירת היום מתוך היומן, גרפי המגמה ושאלה בצ'אט — הכול על הממשק
+      העדכני של האפליקציה. <strong>מאחורי הכול עומדים נתונים אמיתיים</strong> — ימים, שקילות
+      ושיחת צ'אט שנקראו היישר מהטבלאות החיות.
     </p>
 
   <div class="provenance">
     <div>
       <h3>ההיסטוריה</h3>
-      <p>הימים 20–24 באוגוסט 2026 והארוחות שלהם הם הרשומות האמיתיות — תשובות, ציוני פחמימות,
-        חלונות אכילה והכול — שנסרקו מהטבלאות החיות <code>DaysTable</code> ו־<code>MealsTable</code>.
-        הם נקראים כאן דרך גרסת השאלון הנוכחית, כך שהסימונים האדומים נופלים היכן שהספים של היום
-        שמים אותם.</p>
+      <p>שישה ימים נקיים סביב יום פינוק אחד, בשישי.</p>
     </div>
     <div>
-      <h3>היום שנרשם כאן</h3>
-      <p>ה־25 באוגוסט מוצג בהדמיה. שתי הארוחות הראשונות שלו הן אלה שנרשמו בפועל באותו יום;
-        ארוחת הערב והסגירה מודמות כדי להשלים את המסלול.</p>
+      <h3>השקילה</h3>
+      <p>יום חמישי, 10 בספטמבר, הוא יום השקילה שבהגדרות — ולכן הפאנל נפתח כאן מעצמו.</p>
     </div>
     <div>
-      <h3>הניקוד</h3>
-      <p>הפחמימות נמדדות כמו בגולף — כל ארוחה מוסיפה את מחירה הכולל: דרגת הפחמימה, מקור שני אם
-        היה, ותוספות כמו מתוק או אלכוהול. נמוך יותר עדיף, וכל ערך שמופיע כאן מחושב בגזירה של
-        האפליקציה עצמה, לא נכתב ביד.</p>
+      <h3>הצ'אט</h3>
+      <p>השאלה, התשובה ורשימת המסמכים שנשענה עליהם הן שיחה שנשאלה באמת דרך האפליקציה ונענתה
+        ממסמכי המקור של התוכנית.</p>
     </div>
     <div>
       <h3>המקור</h3>
@@ -475,7 +606,7 @@ body {
         <div class="device">
         <div class="viewport" id="viewport">
           <div class="statusbar">
-            <span id="clock">11:47</span>
+            <span id="clock">08:55</span>
             <span class="glyphs">▮▮▯ ⌁ 78%</span>
           </div>
           <div class="screen" id="screen" dir="rtl" lang="he"></div>
@@ -489,8 +620,8 @@ body {
         <div class="controls">
           <button type="button" class="primary" id="playpause">השהיה</button>
           <button type="button" id="restart">מהתחלה</button>
-          <button type="button" id="speed">1×</button>
-          <span class="clockread" id="beatread">1 / 31</span>
+          <button type="button" id="speed">2×</button>
+          <span class="clockread" id="beatread">1 / 40</span>
         </div>
       </div>
     </div>
@@ -504,48 +635,66 @@ body {
 "use strict";
 
 /* ═══════════════════════════════════════════════════════════════════════
-   config/app.json's questionnaire element, pinned at version 13 — see the head comment on
+   config/app.json's questionnaire element, pinned at version 15 — see the head comment on
    why this walkthrough carries a snapshot rather than reading the live config.
    ═══════════════════════════════════════════════════════════════════════ */
 const Q = {
-  version: 13,
+  version: 15,
   questions: [
-    { id: "drinking", type: "single", text: 'שכפ"צ - שתיה', unit: "ליטר", panel_title: "שתיה (ליטרים)",
+    { id: "drinking", type: "single", text: "שכפ\"צ - שתיה", unit: "ליטר", panel_title: "שתיה (ליטרים)",
       choices: [
         { id: "under_2_5l", label: "פחות מ-2.5 ליטר !!", value: 2.0, bound: true },
         { id: "l2_5", label: "2.5 ליטר", value: 2.5 },
         { id: "l3", label: "3 ליטר", value: 3 },
         { id: "l3_5", label: "3.5 ליטר", value: 3.5 },
-        { id: "l4", label: "4 ליטר", value: 4 }] },
-    { id: "vegetables", type: "single", text: 'שכפ"צ - כמות ירקות', unit: "ארוחות", warn_below: 2,
+        { id: "l4", label: "4 ליטר", value: 4 }
+      ]
+    },
+    { id: "vegetables", type: "single", text: "שכפ\"צ - כמות ירקות", unit: "ארוחות", warn_below: 2, norm: 2,
       choices: [
         { id: "none", label: "אף ארוחה !!", value: 0 },
         { id: "meals1", label: "ב-1 ארוחות", value: 1 },
         { id: "meals2", label: "ב-2 ארוחות", value: 2 },
-        { id: "meals3", label: "ב-3 ארוחות", value: 3 }] },
-    { id: "eating_window", type: "single", text: 'שכפ"צ - פתיחת חלון אכילה', unit: "שעות",
-      panel_title: "חלון אכילה (שעות)",
+        { id: "meals3", label: "ב-3 ארוחות", value: 3 }
+      ]
+    },
+    { id: "eating_window", type: "single", text: "שכפ\"צ - פתיחת חלון אכילה", unit: "שעות", panel_title: "חלון אכילה (שעות)",
       choices: [
         { id: "h8", label: "8 שעות", value: 8 },
         { id: "h9", label: "9 שעות", value: 9 },
         { id: "h10", label: "10 שעות", value: 10 },
         { id: "h11", label: "11 שעות", value: 11 },
         { id: "h12", label: "12 שעות", value: 12 },
-        { id: "over_12", label: "מעל 12 שעות !!", value: 13, bound: true }] },
-    { id: "meals", type: "single", text: 'שכפ"צ - צמצום מספר ארוחות', unit: "ארוחות",
+        { id: "over_12", label: "מעל 12 שעות !!", value: 13, bound: true }
+      ]
+    },
+    { id: "meals", type: "single", text: "שכפ\"צ - צמצום מספר ארוחות", unit: "ארוחות",
       choices: [
         { id: "m2", label: "2 ארוחות", value: 2 },
         { id: "m3", label: "3 ארוחות", value: 3 },
-        { id: "over_3", label: "מעל 3 ארוחות / נשנושים בין הארוחות !!", value: 4, bound: true }] },
-    { id: "carbs", type: "points", text: "פחמימות / קמחים / סוכרים",
-      day_qualifier: "סיכום ציון", meal_qualifier: "דרגת הארוחה",
-      tooltip: "כל ארוחה שנרשמת ביומן מוסיפה את הנקודות של דרגת הפחמימות שנבחרה לה; הציון היומי הוא סכום הנקודות מכל הארוחות. כמו בגולף — המטרה היא ציון נמוך ככל האפשר",
-      panel_qualifier: "ציון, נמוך = טוב", max: 35, heavy_meal: 4,
+        { id: "over_3", label: "מעל 3 ארוחות / נשנושים בין הארוחות !!", value: 4, bound: true }
+      ]
+    },
+    { id: "carbs", type: "points", text: "פחמימות / קמחים / סוכרים", day_title: "ציון יומי", meal_qualifier: "דרגת הארוחה", tooltip: "כל ארוחה שנרשמת ביומן מוסיפה את הנקודות של דרגת הפחמימות שנבחרה לה; הציון היומי הוא סכום הנקודות מכל הארוחות. כמו בגולף — המטרה היא ציון נמוך ככל האפשר", panel_title: "סכום ציוני ארוחות", max: 35, heavy_meal: 4, excluded_grade: 6,
+      amounts: { default: "regular", options: [
+        { id: "little", label: "מעט", percent: 50 },
+        { id: "regular", label: "רגיל", percent: 100 },
+        { id: "much", label: "הרבה", percent: 150 },
+        { id: "very_much", label: "הרבה מאוד", percent: 200 }
+      ] },
+      portions: { from_value: 4, options: [
+        { id: "small", label: "מנה קטנה", percent: 60 },
+        { id: "medium", label: "מנה בינונית", percent: 80 },
+        { id: "full", label: "מנה רגילה", percent: 100 }
+      ] },
+      second_source: { light_grade_max: 2 },
+      excluded_additions: ["sweet"],
       additions: [
-        { id: "sweet", label: "כולל מתוק", value: 4 },
-        { id: "alcohol", label: "כולל אלכוהול לא יבש", value: 4 },
-        { id: "nuts", label: "כולל הרבה אגוזים או שקדים", value: 3 },
-        { id: "fat", label: "כולל הרבה שומן (אבוקדו, טחינה, גבינה שמנה, טיגון, 2+ נקניקיות)", value: 2 }],
+        { id: "sweet", label: "כולל מתוק", value: 3 },
+        { id: "alcohol", label: "כולל אלכוהול לא יבש", value: 3 },
+        { id: "nuts", label: "כולל אגוזים או שקדים", value: 2 },
+        { id: "fat", label: "כולל שומן (אבוקדו, טחינה, גבינה שמנה, טיגון, 2+ נקניקיות)", value: 2 }
+      ],
       choices: [
         { id: "no_carbs", label: "ללא מקור פחמימה", examples: "ירקות, חלבון, שומן", value: 0 },
         { id: "carb_grade_1", label: "דרגה 1", examples: "קטניות", value: 1 },
@@ -554,37 +703,75 @@ const Q = {
         { id: "carb_grade_4", label: "דרגה 4", examples: "אורז לבן, בטטה, סלק, תירס", value: 4 },
         { id: "carb_grade_5", label: "דרגה 5", examples: "פירות", value: 5 },
         { id: "carb_grade_6", label: "דרגה 6", examples: "קמח מלא, שיבולת שועל דקה", value: 6 },
-        { id: "carb_grade_7", label: "דרגה 7", examples: "קמח לבן, סוכר ודומיו", value: 7 }],
-      small_portion: { label: "כמות קטנה", from_value: 4, percent: 50 },
-      second_source: { light_grade_max: 2,
-        portions: [
-          { id: "quarter", label: "רבע מנה", percent: 25 },
-          { id: "half", label: "חצי מנה", percent: 50 }] } }
+        { id: "carb_grade_7", label: "דרגה 7", examples: "קמח לבן, סוכר ודומיו", value: 7 }
+      ]
+    }
   ],
   rules: [
     { id: "low_drinking", question_id: "drinking", below: 2.5, consecutive_days: 2, message: "פחות מ-{value} ליטר שתיה {days} ימים ברצף" },
     { id: "no_vegetables", question_id: "vegetables", below: 1, consecutive_days: 2, message: "אף ארוחה עם ירקות {days} ימים ברצף" },
-    { id: "long_eating_window", question_id: "eating_window", at_least: 12.1, consecutive_days: 3, message: "חלון אכילה מעל 12 שעות {days} ימים ברצף" },
+    { id: "long_eating_window", question_id: "eating_window", above: 12, consecutive_days: 3, message: "חלון אכילה מעל 12 שעות {days} ימים ברצף" },
     { id: "too_many_meals", question_id: "meals", at_least: 4, consecutive_days: 2, message: "מעל 3 ארוחות או נשנושים {days} ימים ברצף" },
     { id: "heavy_day", question_id: "carbs", at_least: 12, consecutive_days: 2, message: "ציון יומי {value} ומעלה {days} ימים ברצף" }
   ]
 };
 
-/* Sample questions the chat offers, from config/app.json's chat element. */
-const CHAT_SAMPLES = ["עקרונות", "ירקות מנקים", "חלון אכילה", "חשקים", "חלבון"];
-
-/* Recorded days, newest first, in the shape GET /days returns them. The meal ids below are
-   expressed in the current questionnaire's vocabulary; the recorded values are unchanged. */
-const HISTORY = [
-  { date: "2026-08-24", answers: { carbs: 11, drinking: 4,   meals: 3, vegetables: 2, eating_window: 8 } },
-  { date: "2026-08-23", answers: { carbs: 18, drinking: 4,   meals: 3, vegetables: 3, eating_window: 10.5 } },
-  { date: "2026-08-22", answers: { carbs: 10, drinking: 3.5, meals: 3, vegetables: 2, eating_window: 7.5 } },
-  { date: "2026-08-21", answers: { carbs: 16, drinking: 4,   meals: 3, vegetables: 3, eating_window: 10 } },
-  { date: "2026-08-20", answers: { carbs: 3,  drinking: 3.5, meals: 3, vegetables: 3, eating_window: 8 } }
+/* Sample questions the chat offers, from config/app.json's chat element: the label the chip
+   shows, and the question it fills the composer with. */
+const CHAT_SAMPLES = [
+  { label: "עקרונות", question: "מהם עקרונות התוכנית?" },
+  { label: "ירקות מנקים", question: "אילו ירקות נחשבים ירקות מנקים ולמה הם עוזרים?" },
+  { label: "חלון אכילה", question: "למה כדאי לשמור על חלון אכילה קצר ומה זה עושה לגוף?" },
+  { label: "שריפת שומנים", question: "מתי הגוף מתחיל לשרוף שומן?" },
+  { label: "חשקים", question: "מה גורם לחשקים ואיך אפשר להפחית אותם?" },
+  { label: "חלבון", question: "כמה חלבון מומלץ לצרוך ביום?" },
+  { label: "שינה", question: "איך השינה משפיעה על הרעב, על החשקים ועל הירידה במשקל?" },
+  { label: "נפילה", question: "הייתה לי נפילה — יום שלם עם הרבה חריגות. איך מתאוששים מיום כזה וחוזרים למסלול?" },
+  { label: "אכילת לילה", question: "התעוררתי באמצע הלילה ואכלתי חטיף אנרגיה עם כוס יין. מה עושים עם חלון האכילה הענק שייווצר מזה?" }
 ];
 
-const TODAY = "2026-08-25";
-const YESTERDAY = "2026-08-24";
+/* The rest of config/app.json the rebuilt screen reads: the weekday the trend chart frames, and
+   the weight log's schedule, opening chart span and accepted kilogram range. */
+const TREAT_DAY = { weekday: "FRI" };
+const WEIGHT_CFG = { weigh_in: { weekday: "THU", hour: 8 }, chart_months: 3,
+                     limits: { min_kg: 20, max_kg: 400 } };
+
+/* Recorded days, newest first, in the shape GET /days returns them: the day's answers, and the
+   excluded part of its score that the trend chart plots beside it. The week is one of tracking
+   actually recorded through this app, adjusted so it reads as the program intends a week to go —
+   six clean days around the one treat day the program aims at Friday.
+
+   Every figure here is a derivation of a meal list rather than a number written by hand, so the
+   score, its excluded part and the eating window cannot disagree with one another. */
+const HISTORY = [
+  { date: "2026-09-09", excluded: 0, answers: { carbs: 8.4, drinking: 4, meals: 3, vegetables: 2, eating_window: 7 } },
+  { date: "2026-09-08", excluded: 0, answers: { carbs: 3.5, drinking: 4, meals: 3, vegetables: 2, eating_window: 7 } },
+  { date: "2026-09-07", excluded: 0, answers: { carbs: 9, drinking: 4, meals: 3, vegetables: 2, eating_window: 9 } },
+  { date: "2026-09-06", excluded: 0, answers: { carbs: 7, drinking: 4, meals: 3, vegetables: 2, eating_window: 7 } },
+  { date: "2026-09-05", excluded: 0, answers: { carbs: 7, drinking: 4, meals: 3, vegetables: 2, eating_window: 8 } },
+  { date: "2026-09-04", excluded: 10, answers: { carbs: 19, drinking: 4, meals: 3, vegetables: 2, eating_window: 8 } },
+  { date: "2026-09-03", excluded: 0, answers: { carbs: 9, drinking: 4, meals: 3, vegetables: 3, eating_window: 8 } },
+  { date: "2026-09-02", excluded: 0, answers: { carbs: 10, drinking: 4, meals: 3, vegetables: 3, eating_window: 8 } },
+  { date: "2026-09-01", excluded: 0, answers: { carbs: 10, drinking: 4, meals: 3, vegetables: 3, eating_window: 9 } }
+];
+
+/* The weight log as GET /weight returns it: the measurements oldest first, and the one current
+   target. These are as recorded — the replay's own weighing, on the weigh-in morning it opens on,
+   is the one the script records live. */
+const WEIGHT_LOG = {
+  target: 95,
+  entries: [
+    { date: "2026-08-27", kg: 106.7, at: "09:30" },
+    { date: "2026-09-03", kg: 105.4, at: "09:50" }
+  ]
+};
+/* The series the section reads: what is stored, plus today's weighing once the replay records it. */
+const weighings = () => state.weightRecorded === null
+  ? WEIGHT_LOG.entries
+  : [...WEIGHT_LOG.entries, { date: TODAY, kg: state.weightRecorded, at: "09:02" }];
+
+const TODAY = "2026-09-10";
+const YESTERDAY = "2026-09-09";
 const EMAIL = "erancha@gmail.com";
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -594,56 +781,83 @@ const carbsQ = Q.questions.find(q => q.id === "carbs");
 const drinkingQ = Q.questions.find(q => q.id === "drinking");
 const WEIGHTS = Object.fromEntries(carbsQ.choices.map(c => [c.id, c.value]));
 const ADDITIONS = Object.fromEntries(carbsQ.additions.map(a => [a.id, a.value]));
-const SMALL_PORTION = carbsQ.small_portion;
+const AMOUNTS = carbsQ.amounts;
+const PORTIONS = carbsQ.portions;
 const SECOND_SOURCE = carbsQ.second_source;
+const EXCLUDED = { grade: carbsQ.excluded_grade, additions: carbsQ.excluded_additions };
 const FRUIT_ESCALATION_CHOICE = "carb_grade_5";
 const CLOSE_DAY_MIN_WINDOW_HOURS = 6;   // app.json day_close.min_window_hours
 const TIME_STEP_MINUTES = 5;
 
 function minutesOf(at) { const [h, m] = at.slice(11, 16).split(":").map(Number); return h * 60 + m; }
 
-function sourceWeight(choice, smallPortionFlag) {
+function scalePercent(options, optionId, kind) {
+  const step = options.find(o => o.id === optionId);
+  if (step === undefined) throw new Error("unknown " + kind + " " + optionId);
+  return step.percent;
+}
+
+/* A helping discounts a grade only from portions.from_value up, which is where the meal form
+   offers the picker. */
+const portionOffered = weight => weight >= PORTIONS.from_value;
+
+function sourceWeight(choice, portionId) {
   const weight = WEIGHTS[choice];
-  if (smallPortionFlag && weight >= SMALL_PORTION.from_value) {
-    return (weight * SMALL_PORTION.percent) / 100;
+  if (portionId !== null && portionOffered(weight)) {
+    return (weight * scalePercent(PORTIONS.options, portionId, "portion")) / 100;
   }
   return weight;
 }
 
-/* derive.ts mealWeights: quantity, then the second source (light merges, heavy adds a reduced
-   helping), then fruit escalation, then additions. */
+/* derive.ts mealWeights: helping, then the second source (light merges, heavy adds its own
+   helping), then fruit escalation, then additions at the amount each was recorded at. Each meal
+   yields its score and the part of it the program excludes from its six non-treat days, weighed
+   in one walk so the part can never disagree with the whole. */
 function mealWeights(meals) {
   const chronological = meals.map((meal, index) => ({ meal, index }))
     .sort((a, b) => minutesOf(a.meal.at) - minutesOf(b.meal.at));
   const result = new Array(meals.length);
+  const excludesSource = weight => weight >= EXCLUDED.grade;
   let fruits = 0;
   for (const { meal, index } of chronological) {
-    let weight = sourceWeight(meal.carbs_choice, meal.small_portion);
+    let weight = sourceWeight(meal.carbs_choice, meal.portion);
+    let part = excludesSource(WEIGHTS[meal.carbs_choice]) ? weight : 0;
     if (meal.second_source !== null) {
       const secondWeight = WEIGHTS[meal.second_source.carbs_choice];
       if (secondWeight <= SECOND_SOURCE.light_grade_max) {
         weight = Math.max(weight, secondWeight);
+        if (excludesSource(secondWeight)) part = Math.max(part, secondWeight);
       } else {
-        const helping = SECOND_SOURCE.portions.find(p => p.id === meal.second_source.portion);
-        weight += (secondWeight * helping.percent) / 100;
+        const added = (secondWeight * scalePercent(PORTIONS.options, meal.second_source.portion, "portion")) / 100;
+        weight += added;
+        if (excludesSource(secondWeight)) part += added;
       }
     }
     if (meal.fruit) {
       fruits += 1;
       if (fruits > 1) weight = Math.max(weight, WEIGHTS[FRUIT_ESCALATION_CHOICE]);
     }
-    for (const addition of meal.additions) weight += ADDITIONS[addition];
-    result[index] = weight;
+    for (const addition of meal.additions) {
+      const value = ADDITIONS[addition.id];
+      const surcharge = addition.amount === null
+        ? value
+        : (value * scalePercent(AMOUNTS.options, addition.amount, "amount")) / 100;
+      weight += surcharge;
+      if (EXCLUDED.additions.includes(addition.id)) part += surcharge;
+    }
+    result[index] = { total: weight, excluded: part };
   }
   return result;
 }
+
+const excludedPoints = meals => mealWeights(meals).reduce((sum, w) => sum + w.excluded, 0);
 
 function deriveDay(meals) {
   if (meals.length === 0) return { carbs: 0, meals: 0, vegetables: 0, eating_window: 0 };
   const ordered = [...meals].sort((a, b) => minutesOf(a.at) - minutesOf(b.at));
   const span = minutesOf(ordered[ordered.length - 1].at) - minutesOf(ordered[0].at);
   return {
-    carbs: mealWeights(meals).reduce((sum, w) => sum + w, 0),
+    carbs: mealWeights(meals).reduce((sum, w) => sum + w.total, 0),
     meals: meals.length,
     vegetables: meals.filter(m => m.vegetables).length,
     /* Whole hours, rounded up like the server: the window never understates itself. */
@@ -686,7 +900,10 @@ function headedValue(q, value) {
   const bound = boundChoice(q, value);
   return bound !== undefined ? bound.label : String(value);
 }
+/* A standalone day_title replaces the composition, as panel_title does for panelTitle; otherwise
+   the scope's qualifier is appended to the base text in parentheses. */
 function questionTitle(q, scope) {
+  if (scope === "day" && q.day_title !== undefined) return q.day_title;
   const qualifier = scope === "day" ? (q.day_qualifier !== undefined ? q.day_qualifier : q.unit)
     : scope === "meal" ? q.meal_qualifier : q.panel_qualifier;
   return qualifier === undefined ? q.text : q.text + " (" + qualifier + ")";
@@ -697,7 +914,6 @@ function panelTitle(q) {
 }
 const PANELS = Q.questions.filter(q => panelTitle(q) !== undefined)
   .sort((a, b) => Number(b.type === "points") - Number(a.type === "points"));
-const STRIP = Q.questions.filter(q => !PANELS.includes(q));
 
 /* gradeLabels.ts — the walkthrough keeps the default density, examples spelled out. */
 const choiceLabel = (choice, expanded) =>
@@ -713,12 +929,141 @@ function daysBefore(s, n) { const d = parseIso(s); return isoDate(new Date(d.get
 function dayLabel(s) { const [, m, d] = s.split("-"); return Number(d) + "." + Number(m); }
 function ddmmLabel(s) { const [, m, d] = s.split("-"); return d + "/" + m; }
 function weekdayDdmm(s) { return WEEKDAY_LETTERS[parseIso(s).getDay()] + "׳ " + ddmmLabel(s); }
-function last7Days(end) { return Array.from({ length: 7 }, (_, i) => daysBefore(end, 6 - i)); }
+/* Days each panel charts. Past a week, so a span ending on the treat day holds two of them. */
+const CHART_DAYS = 10;
+function lastDays(end) { return Array.from({ length: CHART_DAYS }, (_, i) => daysBefore(end, CHART_DAYS - 1 - i)); }
 
-/* trend.ts — gridlines skip the choices the config marks as open-ended bounds. */
+/* weight.ts — the reading the section's one line renders, the shape its chart button wears, and
+   where the reader stands in the weekly rhythm. */
+/* Half a tenth of a kilogram: two weights closer than this render as the same one-decimal number,
+   so nothing may report a move between them. */
+const SAME_KG = 0.05;
+/* Kilograms above the target past which a measurement stops reading as merely over. */
+const FAR_OVER_KG = 10;
+/* Past a week without weighing, how long it has been is worth more than which weekday is next. */
+const STALE_DAYS = 7;
+/* The question the rhythm line's control puts to the chat; the app guide answers it. */
+const WEIGH_IN_CADENCE_QUESTION = "כל כמה זמן מומלץ להישקל, ולמה לא כל יום?";
+const CHART_SPANS = [
+  { months: 1, label: "חודש" }, { months: 3, label: "3 חודשים" }, { months: 6, label: "חצי שנה" },
+  { months: 12, label: "שנה" }, { months: null, label: "הכל" }
+];
+
+const kgLabel = kg => String(Number(kg.toFixed(1)));
+
+function overTargetSeverity(kg, target) {
+  if (target === null || kg - target < SAME_KG) return null;
+  return kg - target > FAR_OVER_KG ? "far" : "over";
+}
+
+/* The section's one-line reading. It comes apart rather than arriving rendered because the line
+   paints its figures, leaves the units as chrome, and hands the word יעד to a control. */
+function summarize(entries, target) {
+  const latest = entries.length === 0 ? null : entries[entries.length - 1].kg;
+  if (latest === null || target === null) {
+    return { latest, target, gapKg: null, prefix: "ה", overTarget: false };
+  }
+  const gap = latest - target;
+  if (Math.abs(gap) < SAME_KG) return { latest, target, gapKg: null, prefix: "ב", overTarget: false };
+  return { latest, target, gapKg: Math.abs(gap), prefix: gap > 0 ? "מעל ה" : "מתחת ל",
+           overTarget: gap > 0 };
+}
+
+/* A plateau does not turn a run: a step too small to render leaves the direction around it
+   standing, so a slow descent with one unchanged weighing still reads as a descent. */
+function trendShape(entries) {
+  const recent = entries.slice(-3).map(e => e.kg);
+  if (recent.length < 2) return null;
+  const step = (from, to) => to - from > SAME_KG ? "up" : from - to > SAME_KG ? "down" : "flat";
+  const last = step(recent[recent.length - 2], recent[recent.length - 1]);
+  const first = recent.length === 3 ? step(recent[0], recent[1]) : last;
+  if (first === "up" && last === "down") return "peak";
+  if (first === "down" && last === "up") return "valley";
+  if (last !== "flat") return last;
+  return first === "flat" ? "flat" : first;
+}
+const TREND_ICONS = { down: "trendDown", flat: "trendFlat", up: "trendUp",
+                      peak: "trendPeak", valley: "trendValley" };
+
+/* The hour the reader usually weighs at — the middle recorded time of the last few weighings, so
+   it names an hour actually weighed at. Null before three timed weighings exist to name one. */
+function usualHour(entries) {
+  const recent = entries.filter(e => e.at !== null).map(e => e.at).slice(-8);
+  if (recent.length < 3) return null;
+  return [...recent].sort()[Math.floor(recent.length / 2)];
+}
+
+const nextWeekdayDate = (from, weekdayIndex) => {
+  const d = parseIso(from);
+  const ahead = ((weekdayIndex - d.getDay()) + 7) % 7 || 7;
+  return isoDate(new Date(d.getFullYear(), d.getMonth(), d.getDate() + ahead));
+};
+const WEIGH_IN_INDEX = { SUN: 0, MON: 1, TUE: 2, WED: 3, THU: 4, FRI: 5, SAT: 6 };
+const isWeighInDay = (dayStr, weekday) => parseIso(dayStr).getDay() === WEIGH_IN_INDEX[weekday];
+
+/* Where the reader stands in the weekly rhythm, split where the section seats the control that
+   opens the chat about the cadence. Null when there is nothing to say — before the first weighing,
+   and on the weigh-in day once it has been answered. The reading reports and never judges: a
+   weight raises no alert, so a slipped rhythm is stated as elapsed days. */
+function rhythmReading(entries, weekday, dayStr) {
+  if (entries.length === 0) return null;
+  const plain = text => ({ before: text, linked: "", after: "" });
+  const withHour = base => {
+    const hour = usualHour(entries);
+    return hour === null ? base : base + " · בסביבות " + hour;
+  };
+  const since = Math.round((parseIso(dayStr) - parseIso(entries[entries.length - 1].date)) / 86400000);
+  if (since > STALE_DAYS) return plain(withHour("נשקלת לפני " + since + " ימים"));
+  if (!isWeighInDay(dayStr, weekday)) {
+    const next = nextWeekdayDate(dayStr, WEIGH_IN_INDEX[weekday]);
+    return { before: "השקילה ", linked: "המומלצת",
+             after: " הבאה היא בבוקר יום " + WEEKDAY_LETTERS[WEIGH_IN_INDEX[weekday]] + "׳, " + ddmmLabel(next) };
+  }
+  if (since === 0) return null;
+  return plain(withHour("היום יום השקילה המומלץ"));
+}
+
+/* The spans worth offering: one is kept only where it reaches past every span already offered, so
+   a chip that would redraw the same points never appears. Widest last, which activeSpan relies on. */
+function entriesWithin(entries, months, dayStr) {
+  if (months === null) return entries;
+  const d = parseIso(dayStr);
+  const from = new Date(d.getFullYear(), d.getMonth() - months, d.getDate());
+  return entries.filter(e => parseIso(e.date) >= from);
+}
+function offeredSpans(entries, dayStr) {
+  const offered = [];
+  let widest = 0;
+  for (const { months } of CHART_SPANS) {
+    const reach = entriesWithin(entries, months, dayStr).length;
+    if (reach > widest) { offered.push(months); widest = reach; }
+  }
+  return offered;
+}
+const activeSpan = (offered, chosen) =>
+  offered.includes(chosen) ? chosen : offered.length === 0 ? null : offered[offered.length - 1];
+
+/* The chart's y-axis bounds span the plotted weights and the target they are read against — a
+   target off the plotted range still has to be on screen for the distance to mean anything. */
+function weightDomain(entries, target) {
+  const values = entries.map(e => e.kg);
+  if (target !== null) values.push(target);
+  const min = Math.min(...values), max = Math.max(...values);
+  const padding = max === min ? 1 : (max - min) * EDGE_PADDING;
+  return [min - padding, max + padding];
+}
+
+/* trend.ts — a points panel is ruled by its rule's limit; other questions by their measured
+   choices, skipping the ones the config marks as open-ended bounds. */
 const EDGE_PADDING = 0.08;
+const questionRule = id => Q.rules.find(r => r.question_id === id);
+const ruleLimit = rule => rule.at_least !== undefined ? rule.at_least : rule.above;
+
 function ticksFor(q) {
-  if (q.type === "points") return [0, q.max / 2, q.max];
+  if (q.type === "points") {
+    const limit = ruleLimit(questionRule(q.id));
+    return [limit, limit * 2, limit * 3];
+  }
   const measured = q.choices.filter(c => c.bound !== true);
   const values = [...new Set(measured.map(c => c.value))].sort((a, b) => a - b);
   const min = values[0], max = values[values.length - 1], midTarget = (min + max) / 2;
@@ -726,20 +1071,35 @@ function ticksFor(q) {
   return [...new Set([min, mid, max])];
 }
 function domainFor(q, values) {
-  if (q.type === "points") {
-    const dataMax = values.reduce((max, v) => (v !== null && v > max ? v : max), 0);
-    return [-0.5, Math.max(q.max, dataMax) + 0.5];
-  }
   const ticks = ticksFor(q);
+  if (q.type === "points") {
+    /* A summed day total starts at 0 and spans the top gridline, extended if a day exceeds it. */
+    const dataMax = values.reduce((max, v) => (v !== null && v > max ? v : max), 0);
+    return [-0.5, Math.max(ticks[ticks.length - 1], dataMax) + 0.5];
+  }
   const plotted = values.filter(v => v !== null);
   const min = Math.min(ticks[0], ...plotted);
   const max = Math.max(ticks[ticks.length - 1], ...plotted);
   const padding = (max - min) * EDGE_PADDING;
   return [min - padding, max + padding];
 }
+/* What a panel heading names as the line its days are read against. */
+function ruleBoundLabel(q) {
+  const rule = questionRule(q.id);
+  if (rule === undefined) return undefined;
+  if (rule.at_least !== undefined) return String(rule.at_least) + " ומעלה";
+  if (rule.above !== undefined) return "מעל " + rule.above;
+  return "מתחת ל-" + rule.below;
+}
+/* Which charted columns fall on the weekday the program aims its treat meal at. */
+const TREAT_INDEX = { SUN: 0, MON: 1, TUE: 2, WED: 3, THU: 4, FRI: 5, SAT: 6 };
+const treatDayColumns = dayStrs => dayStrs.reduce((cols, d, i) =>
+  parseIso(d).getDay() === TREAT_INDEX[TREAT_DAY.weekday] ? [...cols, i] : cols, []);
+
 function liveTrendDay(today, days) {
   if (today.meals.length === 0 || days.some(d => d.date === today.date)) return null;
-  return { date: today.date, answers: { carbs: today.derived.carbs } };
+  return { date: today.date, excluded: excludedPoints(today.meals),
+           answers: { carbs: today.derived.carbs } };
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -763,6 +1123,14 @@ const GLYPHS = {
   foldAll: '<path d="m7 20 5-5 5 5"/><path d="m7 4 5 5 5-5"/>',
   unfoldAll: '<path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/>',
   signOut: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/>',
+  check: '<path d="M20 6 9 17l-5-5"/>',
+  /* The weight header's chart button wears the shape the last three weighings draw. */
+  trend: '<path d="M3 17 9 11l4 4 8-8"/>',
+  trendDown: '<path d="M4 8 20 16"/>',
+  trendFlat: '<path d="M4 12h16"/>',
+  trendUp: '<path d="M4 16 20 8"/>',
+  trendPeak: '<path d="M4 16 12 8 20 16"/>',
+  trendValley: '<path d="M4 8 12 16 20 8"/>',
 };
 const icon = name => '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"'
   + ' stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"'
@@ -775,13 +1143,28 @@ const state = {
   landingExpanded: false,
   meals: [],
   formOpen: false,
-  pick: { carbs_choice: null, vegetables: false, fruit: false, additions: [] },
+  pick: { carbs_choice: null, portion: null, vegetables: false, fruit: false, additions: [],
+          second_source: null },
   mealTime: "11:50",
   closing: false,
   drinking: null,
   submitted: false,
   ok: null,
   menuOpen: false,
+  /* The tracker opens on grade names alone; the density toggle spells out what each covers. */
+  denseLabels: true,
+  /* The weight log. The section opens itself on the weigh-in day while the day holds no weighing
+     (dates.ts expandWeightSection), which is the state the replay starts in. */
+  weightOpen: true,
+  /* What is typed into today's weighing box, and what has been saved from it. */
+  weightDraft: "",
+  weightRecorded: null,
+  /* The chat: what stands in the composer, whether the question has been sent, and whether the
+     stored chat and its citations are open. */
+  chatDraft: "",
+  chatSent: false,
+  chatOpen: false,
+  chatSourcesOpen: false,
   /* The condensed view is the browser's default before a press chooses otherwise (viewMode.ts),
      so the session opens with the trends section folded to its summary line. */
   trendsOpen: false,
@@ -796,13 +1179,13 @@ function days() {
     eating_window: derived.eating_window,
     drinking: drinkingQ.choices.find(c => c.id === state.drinking).value
   };
-  return [{ date: TODAY, answers }, ...HISTORY];
+  return [{ date: TODAY, excluded: excludedPoints(state.meals), answers }, ...HISTORY];
 }
 
 /* ── Landing.tsx: the condensed pitch, or the full summary once "יותר" is pressed ─────── */
 function landingHtml() {
   const repoLink = '<p class="landing-repo"><a href="https://github.com/erancha/diet-tracker">קוד המקור ב-GitHub</a></p>';
-  const signIn = '<button type="button" data-t="signin">התחברות עם Google</button>';
+  const signIn = '<button type="button" class="primary" data-t="signin">התחברות עם Google</button>';
   if (!state.landingExpanded) {
     return '<main class="landing landing-brief">' + APP_HEADING +
       '<p class="landing-condensed">תזונה בלי לספור קלוריות: רושמים כל ארוחה, רק את אופייה ובלי לפרט מה וכמה בדיוק נאכל, והאפליקציה עוזרת לשמור על ארבעה הרגלים פשוטים — שכפ"צ (<strong>ש</strong>תיה, <strong>כ</strong>מות ירקות, <strong>פ</strong>תיחת חלון אכילה, <strong>צ</strong>מצום ארוחות).</p>' +
@@ -836,24 +1219,174 @@ function landingHtml() {
   "</main>";
 }
 
+/* What each account-menu item reaches, shown on hover — the same hints Header.tsx carries. */
+const ACCOUNT_HINTS = {
+  email: "הכתובת שאיתה התחברת",
+  mute: "השתקת כל התזכורות וההתראות שנשלחות במייל",
+  view: "פתיחה או קיפול של כל סעיפי העמוד יחד; הבחירה נשמרת לכניסה הבאה",
+  signOut: "יציאה מהחשבון"
+};
+
 /* ── Header.tsx: the title, the account menu, and the alarm while violations are active ── */
 function headerHtml(violations) {
   let html = "<header>" + APP_HEADING + '<span class="account"><span class="account-actions">';
   if (violations.length > 0) {
-    html += '<button type="button" class="alarm" data-t="alarm">' + icon("alarm") + " " + violations.length + "</button>";
+    html += '<button type="button" class="alarm glyph" data-t="alarm">' + icon("alarm") + " " + violations.length + "</button>";
   }
-  html += '<button type="button" class="icon-only account-trigger" aria-expanded="' + state.menuOpen +
+  html += '<button type="button" class="glyph account-trigger" aria-expanded="' + state.menuOpen +
     '" data-t="menu">' + icon(state.menuOpen ? "close" : "menu") + "</button></span>";
   if (state.menuOpen) {
-    html += '<span class="account-menu"><span class="account-email">' + EMAIL + '</span><span role="menu">' +
-      '<button type="button" role="menuitem">' + icon("alarmOff") + "ביטול התראות</button>" +
-      '<button type="button" role="menuitem" data-t="view-item">' +
+    html += '<span class="account-menu"><span class="account-email" title="' +
+      esc(ACCOUNT_HINTS.email) + '">' + EMAIL + '</span><span role="menu">' +
+      '<button type="button" role="menuitem" title="' + esc(ACCOUNT_HINTS.mute) + '">' +
+        icon("alarmOff") + "ביטול התראות</button>" +
+      '<button type="button" role="menuitem" data-t="view-item" title="' + esc(ACCOUNT_HINTS.view) + '">' +
         icon(state.fullView ? "foldAll" : "unfoldAll") +
         (state.fullView ? "תצוגה מצומצמת" : "תצוגה מלאה") + "</button>" +
-      '<button type="button" role="menuitem">' + icon("signOut") + "התנתקות</button>" +
+      '<button type="button" role="menuitem" title="' + esc(ACCOUNT_HINTS.signOut) + '">' +
+        icon("signOut") + "התנתקות</button>" +
     "</span></span>";
   }
   return html + "</span></header>";
+}
+
+/* ── WeightSection.tsx / WeightChart.tsx / WeightEntries.tsx ──────────────────────────────
+     The weight log's whole surface, opening the page above the day tracker: the latest weight
+     heads it and doubles as the control that opens the rest, followed by the distance to the
+     target, the control that sets it, and a framed button whose glyph draws the last three
+     weighings. Inside the fold sit the rhythm line, today's weighing, the chart and the
+     measurements behind it. ─────────────────────────────────────────────────────────────── */
+const WEIGHT_CHART_H = 180;
+
+function weightChartHtml(entries, target, spans, span) {
+  const [d0, d1] = weightDomain(entries, target);
+  const plotBottom = WEIGHT_CHART_H - AXIS_H;
+  const plotH = plotBottom - TOP;
+  const x = i => Y_AXIS_W + (entries.length === 1 ? (CHART_W - MARGIN_R - Y_AXIS_W) / 2
+    : i * ((CHART_W - MARGIN_R - Y_AXIS_W) / (entries.length - 1)));
+  const y = v => TOP + ((d1 - v) / (d1 - d0)) * plotH;
+
+  /* Offered only where a wider span would draw different points, so a short series shows none. */
+  const picker = spans.length < 2 ? "" :
+    '<div class="range-picker">טווח:' + spans.map(m =>
+      '<label><input type="radio" tabindex="-1" name="weight-range"' +
+      (m === span ? " checked" : "") + "> " +
+      esc(CHART_SPANS.find(c => c.months === m).label) + "</label>").join("") + "</div>";
+
+  let svg = '<svg width="' + CHART_W + '" height="' + WEIGHT_CHART_H + '" viewBox="0 0 ' +
+    CHART_W + " " + WEIGHT_CHART_H + '" role="img" aria-label="גרף המשקל">';
+  /* Three gridlines across the plotted range, labelled in kilograms. */
+  [d0 + (d1 - d0) * 0.15, (d0 + d1) / 2, d1 - (d1 - d0) * 0.15].forEach(t => {
+    svg += '<line x1="' + Y_AXIS_W + '" y1="' + y(t).toFixed(1) + '" x2="' + (CHART_W - MARGIN_R) +
+      '" y2="' + y(t).toFixed(1) + '" stroke="var(--viz-grid)"></line>' +
+      '<text x="' + (Y_AXIS_W - 5) + '" y="' + (y(t) + 4).toFixed(1) +
+      '" text-anchor="end" font-size="11" fill="var(--viz-muted)" font-family="system-ui, sans-serif">' +
+      kgLabel(t) + "</text>";
+  });
+  /* The target as a dashed reference line: the distance to it is what the chart exists to show. */
+  if (target !== null) {
+    svg += '<line data-t="weight-target-line" x1="' + Y_AXIS_W + '" y1="' + y(target).toFixed(1) +
+      '" x2="' + (CHART_W - MARGIN_R) + '" y2="' + y(target).toFixed(1) +
+      '" stroke="var(--viz-series-2)" stroke-dasharray="5 4"></line>';
+  }
+  if (entries.length > 1) {
+    svg += '<polyline fill="none" stroke="var(--viz-series-1)" stroke-width="2" points="' +
+      entries.map((e, i) => x(i).toFixed(1) + "," + y(e.kg).toFixed(1)).join(" ") + '"></polyline>';
+  }
+  entries.forEach((e, i) => {
+    svg += '<circle cx="' + x(i).toFixed(1) + '" cy="' + y(e.kg).toFixed(1) +
+      '" r="3" fill="var(--viz-series-1)"></circle>';
+  });
+  svg += '<line x1="' + Y_AXIS_W + '" y1="' + plotBottom + '" x2="' + (CHART_W - MARGIN_R) +
+    '" y2="' + plotBottom + '" stroke="var(--viz-baseline)"></line>';
+  entries.forEach((e, i) => {
+    svg += '<text x="' + x(i).toFixed(1) + '" y="' + (plotBottom + 16) +
+      '" text-anchor="middle" font-size="11" fill="var(--viz-muted)" font-family="system-ui, sans-serif">' +
+      ddmmLabel(e.date) + "</text>";
+  });
+  return picker + '<div class="trend" dir="ltr" data-t="weight-chart"><div class="trend-panel">' +
+    svg + "</svg></div></div>";
+}
+
+/* Newest first — the chart reads oldest first, but a reader looking for the entry to remove
+   starts from the most recent. Each value is read against the target the way the heading is. */
+function weightEntriesHtml(entries, target) {
+  return '<ul class="weight-entries" data-t="weight-entries">' + [...entries].reverse().map(e => {
+    const severity = overTargetSeverity(e.kg, target);
+    const cls = severity === null ? "weight-entry-value"
+      : severity === "far" ? "weight-entry-value over-target far-over"
+      : "weight-entry-value over-target";
+    return "<li>" +
+      '<span class="weight-entry-date"><span class="weight-entry-weekday">' +
+        WEEKDAY_LETTERS[parseIso(e.date).getDay()] + "׳</span> " + ddmmLabel(e.date) + "</span>" +
+      '<span class="weight-entry-at">' + (e.at === null ? "—" : e.at) + "</span>" +
+      '<span class="weight-entry-kg"><span class="' + cls + '">' + kgLabel(e.kg) + "</span> ק״ג</span>" +
+      '<button type="button" class="glyph">' + icon("remove") + "</button>" +
+    "</li>";
+  }).join("") + "</ul>";
+}
+
+function weightSectionHtml() {
+  const entries = weighings();
+  const target = WEIGHT_LOG.target;
+  const summary = summarize(entries, target);
+  const figure = summary.latest === null ? null : kgLabel(summary.latest);
+  const shape = trendShape(entries);
+  const spans = offeredSpans(entries, TODAY);
+  const span = activeSpan(spans, WEIGHT_CFG.chart_months);
+  const plotted = entriesWithin(entries, span, TODAY);
+  const rhythm = rhythmReading(entries, WEIGHT_CFG.weigh_in.weekday, TODAY);
+  const recorded = entries.find(e => e.date === TODAY);
+
+  /* Nothing weighed yet leaves no value to head the section with, so it falls back to its name. */
+  const heading = figure === null ? "משקל"
+    : '<span class="weight-latest">' + figure + "</span> ק״ג";
+
+  let html = '<section class="weight' + (summary.overTarget ? " weight-over-target" : "") +
+    '" data-t="weight">' +
+    '<div class="section-header">' +
+      '<h2><button type="button" class="disclosure section-toggle" data-t="weight-toggle"' +
+      ' aria-expanded="' + state.weightOpen + '">' + heading + "</button></h2>" +
+      '<span class="weight-summary">' +
+        (summary.latest !== null ? "· " : "") +
+        (summary.gapKg !== null
+          ? '<span class="value weight-gap">' + kgLabel(summary.gapKg) + "</span> " : "") +
+        summary.prefix +
+        '<button type="button" class="disclosure in-text" data-t="weight-target">יעד</button>: ' +
+        (target === null ? '<span class="weight-target-unset">טרם נקבע</span>'
+          : '<span class="value">' + kgLabel(target) + "</span> ק״ג") +
+      "</span>" +
+      /* The heading is a weight reading, so nothing on the folded line looks like a control that
+         opens the chart. This one does, and its glyph draws the last three weighings. */
+      '<button type="button" class="glyph weight-chart-toggle" data-t="weight-trend"' +
+      ' aria-expanded="' + state.weightOpen + '">' +
+        icon(shape === null ? "trend" : TREND_ICONS[shape]) + "</button>" +
+    "</div>";
+
+  if (state.weightOpen) {
+    if (rhythm !== null) {
+      html += '<p class="weight-rhythm" data-t="weight-rhythm">' + esc(rhythm.before) +
+        (rhythm.linked === "" ? "" :
+          '<button type="button" data-t="weight-cadence">' + esc(rhythm.linked) + "</button>") +
+        esc(rhythm.after) + "</p>";
+    }
+    /* The row marks itself on the weigh-in day, which is what the stylesheet sizes it by. */
+    html += '<p class="weight-today' +
+      (isWeighInDay(TODAY, WEIGHT_CFG.weigh_in.weekday) ? " weigh-in-due" : "") +
+      '" data-t="weight-today">' +
+      "<span>המשקל היום:</span>" +
+      '<input type="number" tabindex="-1" value="' + esc(state.weightDraft) + '">' +
+      '<button type="button" class="primary" data-t="weight-save"' +
+      (state.weightDraft === "" ? " disabled" : "") + ">" +
+      (recorded === undefined ? "שמירה" : "עדכון") + "</button>" +
+      (recorded === undefined ? ""
+        : '<span class="weight-recorded">נרשם: ' + kgLabel(recorded.kg) + " ק״ג</span>") +
+      "</p>";
+    if (entries.length > 0) {
+      html += weightChartHtml(plotted, target, spans, span) + weightEntriesHtml(plotted, target);
+    }
+  }
+  return html + "</section>";
 }
 
 /* ── DayDashboard.tsx: the tracker's always-visible summary line ──────── */
@@ -872,20 +1405,26 @@ const ADDITION_MARKERS = { sweet: "🍪", alcohol: "🍷", nuts: "🥜", fat: "�
 /* ── MealList.tsx: chronological rows, each ending with its effective points ──────────── */
 function mealListHtml(meals, interactive) {
   const points = mealWeights(meals);
-  return '<ul class="meal-list" data-t="meal-list">' + meals.map((meal, i) => {
-    const choice = carbsQ.choices.find(c => c.id === meal.carbs_choice);
+  const grade = id => {
+    const choice = carbsQ.choices.find(c => c.id === id);
+    return "<span>" + esc(choiceLabel(choice, !state.denseLabels)) + "</span>";
+  };
+  return '<ul class="meal-list' + (state.denseLabels ? "" : " expanded-labels") +
+    '" data-t="meal-list">' + meals.map((meal, i) => {
     const time = meal.at.slice(11, 16);
+    /* A plate that drew on two carb sources names both; the row's points are their sum. */
+    const second = meal.second_source === null ? "" : " + " + grade(meal.second_source.carbs_choice);
     const marks = (meal.vegetables ? " · 🥗" : "") + (meal.fruit ? " · 🍎" : "") +
-      meal.additions.map(id => " · " + ADDITION_MARKERS[id]).join("");
+      meal.additions.map(a => " · " + ADDITION_MARKERS[a.id]).join("");
     const actions = interactive
-      ? '<span class="meal-actions"><button type="button" class="icon-only">' + icon("edit") + "</button>" +
-        '<button type="button" class="icon-only">' + icon("remove") + "</button></span>"
+      ? '<span class="meal-actions"><button type="button" class="glyph">' + icon("edit") + "</button>" +
+        '<button type="button" class="glyph">' + icon("remove") + "</button></span>"
       : '<span class="meal-actions"></span>';
     return "<li>" +
       '<strong class="meal-at">' + time + "</strong>" +
-      '<span class="meal-text"><span>' + esc(choiceLabel(choice, true)) + "</span>" + marks + "</span>" +
-      '<span class="meal-points score' + (isHeavyMeal(points[i]) ? " heavy-meal" : "") + '"> · ' +
-        points[i] + "</span>" + actions +
+      '<span class="meal-text">' + grade(meal.carbs_choice) + second + marks + "</span>" +
+      '<span class="meal-points score' + (isHeavyMeal(points[i].total) ? " heavy-meal" : "") +
+        '" title="' + esc(carbsQ.tooltip) + '"> · ' + points[i].total + "</span>" + actions +
     "</li>";
   }).join("") + "</ul>";
 }
@@ -900,6 +1439,17 @@ function choiceFieldsetHtml(q, selectedId, scope, prefix, expanded) {
   "</fieldset>";
 }
 
+/* The switch is named for the direction the press moves in, as the tracker names it. */
+const EXPAND_LABELS = "הרחבת שמות";
+const COLLAPSE_LABELS = "צמצום שמות";
+
+/* Governs every grade name on the card — the picker's and the meal rows' alike — and is offered
+   only while a meal row or the open inputs put a grade name on screen for it to act on. */
+const densitySwitchHtml = () =>
+  state.meals.length === 0 && !state.formOpen ? "" :
+    '<div class="label-density"><button type="button" class="secondary compact" data-t="density">' +
+    (state.denseLabels ? EXPAND_LABELS : COLLAPSE_LABELS) + "</button></div>";
+
 /* ── DayTracker.tsx: the day's one journal — open, or closed behind its reopen gate ───── */
 function trackerHtml() {
   const derived = deriveDay(state.meals);
@@ -911,45 +1461,79 @@ function trackerHtml() {
   const addMealTitle = addMealWarns ? '<span class="meal-add-warn">הוספת ארוחה</span>' : "הוספת ארוחה";
 
   let html = '<section class="day-tracker" data-t="tracker">' +
-    '<h2><button type="button" class="section-toggle" aria-expanded="true">יומן היום</button></h2>' +
+    '<h2><button type="button" class="disclosure section-toggle" aria-expanded="true">יומן היום</button></h2>' +
     dashboardHtml(derived);
 
   if (state.submitted) {
     return html +
       '<div class="form-actions">' +
-        '<button type="button" class="quiet reopen-toggle' + (addMealWarns ? " meal-add-warn" : "") +
+        '<button type="button" class="secondary reopen-toggle' + (addMealWarns ? " meal-add-warn" : "") +
           '" data-t="reopen">הוספת ארוחה</button>' +
         '<span class="reopen-hint">(פתיחת חלון האכילה)</span>' +
       "</div>" +
       mealListHtml(state.meals, false) +
-      '<div class="label-density"><button type="button" class="quiet">צמצום שמות</button></div>' +
+      densitySwitchHtml() +
     "</section>";
   }
 
   html += mealListHtml(state.meals, true);
 
   html += '<section class="meal-form' + (state.formOpen ? " meal-form-open" : "") + '">' +
-    '<h3><button type="button" class="section-toggle" data-t="form-toggle"' +
+    '<h3><button type="button" class="disclosure section-toggle" data-t="form-toggle"' +
     ' aria-expanded="' + (state.formOpen ? "true" : "false") + '">' + addMealTitle + "</button></h3>";
   if (state.formOpen) {
-    html += '<button type="button" class="icon-only meal-form-close">' + icon("close") + "</button>" +
+    /* Both carb sources ask the same helping question off the same scale, so one control renders
+       for whichever source currently offers it. */
+    const portionPicker = (value, marker) =>
+      '<div class="meal-flags"><label data-t="' + marker + '">גודל המנה ' +
+        '<select tabindex="-1">' + PORTIONS.options.map(o =>
+          '<option' + (o.id === value ? " selected" : "") + ">" + esc(o.label) + "</option>").join("") +
+        "</select></label></div>";
+
+    html += '<button type="button" class="glyph meal-form-close">' + icon("close") + "</button>" +
       '<div class="carb-source">' +
-        choiceFieldsetHtml(carbsQ, p.carbs_choice, "meal", "grade-", true) +
+        choiceFieldsetHtml(carbsQ, p.carbs_choice, "meal", "grade-", !state.denseLabels) +
+        /* The lighter grades are not worth splitting by helping, so the picker appears only where
+           it moves the score. */
+        (p.carbs_choice !== null && portionOffered(WEIGHTS[p.carbs_choice])
+          ? portionPicker(p.portion, "portion") : "") +
       "</div>";
-    /* A second source is offered only beside a light primary grade (1–2), the one place the
-       contract admits one. */
+
+    /* A second source rides only on a light primary grade — the one place the contract admits
+       one — and never on a no-carb plate, whose only carb would simply be the primary. */
     const offersSecond = p.carbs_choice !== null &&
       WEIGHTS[p.carbs_choice] > 0 && WEIGHTS[p.carbs_choice] <= SECOND_SOURCE.light_grade_max;
-    if (offersSecond) {
-      html += '<div class="form-actions">' +
-        '<button type="button" class="quiet" data-t="second-src">הוספת מקור פחמימה נוסף</button></div>';
+    if (p.second_source !== null) {
+      const secondQ = { ...carbsQ, text: "מקור פחמימה נוסף", meal_qualifier: undefined };
+      /* A light second grade merges into the plate and records no helping; only a heavier one
+         asks which helping it was. */
+      const secondHeavy = WEIGHTS[p.second_source.carbs_choice] > SECOND_SOURCE.light_grade_max;
+      html += '<div class="carb-source" data-t="second-source">' +
+        choiceFieldsetHtml(secondQ, p.second_source.carbs_choice, "meal", "second-", !state.denseLabels) +
+        (secondHeavy ? portionPicker(p.second_source.portion, "second-portion") : "") +
+      "</div>";
     }
+    if (offersSecond || p.second_source !== null) {
+      html += '<div class="form-actions">' +
+        '<button type="button" class="secondary" data-t="second-src">' +
+        (p.second_source === null ? "הוספת מקור פחמימה נוסף" : "הסרת מקור הפחמימה הנוסף") +
+        "</button></div>";
+    }
+
     html += '<div class="meal-flags">' +
       '<label data-t="flag-veg"><input type="checkbox" tabindex="-1"' + (p.vegetables ? " checked" : "") + "> כולל ירקות</label>" +
       '<label data-t="flag-fruit"><input type="checkbox" tabindex="-1"' + (p.fruit ? " checked" : "") + "> כולל פרי</label>" +
-      carbsQ.additions.map(a =>
-        '<label data-t="flag-' + a.id + '"><input type="checkbox" tabindex="-1"' +
-        (p.additions.includes(a.id) ? " checked" : "") + "> " + esc(a.label) + "</label>").join("") +
+      carbsQ.additions.map(a => {
+        const picked = p.additions.find(x => x.id === a.id);
+        /* The amount rides inside the addition's own label, so it reads as part of that one
+           accompaniment and appears only once there is something to quantify. */
+        const amount = picked === undefined ? "" :
+          '<select class="addition-amount" tabindex="-1">' + AMOUNTS.options.map(o =>
+            '<option' + (o.id === picked.amount ? " selected" : "") + ">" + esc(o.label) + "</option>").join("") +
+          "</select>";
+        return '<label data-t="flag-' + a.id + '"><input type="checkbox" tabindex="-1"' +
+          (picked !== undefined ? " checked" : "") + "> " + esc(a.label) + amount + "</label>";
+      }).join("") +
       "</div>" +
       '<label class="meal-time" data-t="meal-time">שעת הארוחה ' +
         '<input type="time" tabindex="-1" value="' + state.mealTime + '"></label>';
@@ -957,39 +1541,49 @@ function trackerHtml() {
   html += "</section>";
 
   html += '<div class="form-actions">';
-  if (p.carbs_choice !== null) html += '<button type="button" data-t="record">שמירת ארוחה</button>';
-  if (closable && !state.closing) html += '<button type="button" class="quiet" data-t="close-day">סגירת יום</button>';
+  if (p.carbs_choice !== null) html += '<button type="button" class="primary" data-t="record">שמירת ארוחה</button>';
+  if (closable && !state.closing) html += '<button type="button" class="secondary" data-t="close-day">סגירת יום</button>';
   html += "</div>";
 
   if (state.closing && closable) {
     html += '<div class="close-day" data-t="close-panel">' +
       '<h3 class="close-day-banner">השלב האחרון בסגירת היום</h3>' +
       choiceFieldsetHtml(drinkingQ, state.drinking, "day", "drink-", true) +
-      '<button type="button" data-t="confirm"' + (state.drinking === null ? " disabled" : "") +
+      '<button type="button" class="primary" data-t="confirm"' + (state.drinking === null ? " disabled" : "") +
       ">אישור וסגירה</button></div>";
   }
 
-  html += '<div class="label-density"><button type="button" class="quiet">צמצום שמות</button></div>';
+  html += densitySwitchHtml();
   return html + "</section>";
 }
 
 /* ── trend chart: the Recharts geometry, drawn as SVG ─────────────────── */
 const CHART_W = 340, Y_AXIS_W = 40, MARGIN_R = 14, TOP = 6, AXIS_H = 30;
+/* The flour grades and sugar the program's six non-treat days exclude, which is what the second
+   line on the score panel sums. */
+const EXCLUDED_LABEL = "קמחים וסוכרים";
+const TREAT_DAY_LABEL = "יום פינוק";
 
 function trendPanelHtml(q, dayStrs, byDate, index, showXAxis) {
   const color = "var(--viz-series-" + (index + 1) + ")";
+  /* The excluded subtotal decomposes the score alone, so that panel gains the second line and the
+     treat day the score is read against. */
+  const decomposed = q.id === "carbs";
   const points = dayStrs.map(date => {
     const day = byDate.get(date);
     const has = day && q.id in day.answers;
     const value = has ? day.answers[q.id] : null;
-    return { date, label: dayLabel(date), value, violating: has && isViolating(q.id, value) };
+    return { date, label: dayLabel(date), value,
+             excluded: decomposed && has ? day.excluded : null,
+             violating: has && isViolating(q.id, value) };
   });
   const h = showXAxis ? 122 : 104;
   const plotBottom = showXAxis ? h - AXIS_H : h - 6;
   const plotH = plotBottom - TOP;
   const [d0, d1] = domainFor(q, points.map(p => p.value));
   const ticks = ticksFor(q);
-  const x = i => Y_AXIS_W + i * ((CHART_W - MARGIN_R - Y_AXIS_W) / (points.length - 1));
+  const step = (CHART_W - MARGIN_R - Y_AXIS_W) / (points.length - 1);
+  const x = i => Y_AXIS_W + i * step;
   const y = v => TOP + ((d1 - v) / (d1 - d0)) * plotH;
 
   let svg = '<svg width="' + CHART_W + '" height="' + h + '" viewBox="0 0 ' + CHART_W + " " + h +
@@ -1003,68 +1597,88 @@ function trendPanelHtml(q, dayStrs, byDate, index, showXAxis) {
       String(t) + "</text>";
   });
 
-  /* connectNulls={false}: the line breaks wherever a day has no record. */
-  let run = [];
-  const flush = () => {
-    if (run.length > 1) {
-      svg += '<polyline fill="none" stroke="' + color + '" stroke-width="2" points="' +
-        run.map(p => p.join(",")).join(" ") + '"></polyline>';
-    }
-    run = [];
-  };
-  points.forEach((p, i) => {
-    if (p.value === null) { flush(); return; }
-    run.push([x(i).toFixed(1), y(p.value).toFixed(1)]);
-  });
-  flush();
+  /* The treat day's lane, drawn before the lines so the score reads over it. Only the verticals:
+     a closed box would parallel the gridlines it crosses, while two lines read as a lane. The
+     outermost columns are half a step wide, their outer line falling on the plot's own edge. */
+  if (decomposed) {
+    treatDayColumns(dayStrs).forEach(column => {
+      const left = Math.max(Y_AXIS_W, x(column) - step / 2);
+      const right = Math.min(CHART_W - MARGIN_R, x(column) + step / 2);
+      const anchor = column === 0 ? "start" : column === points.length - 1 ? "end" : "middle";
+      const labelX = anchor === "start" ? left : anchor === "end" ? right : (left + right) / 2;
+      svg += '<g class="trend-treat-day" data-t="treat-frame">' +
+        '<line x1="' + left.toFixed(1) + '" y1="' + TOP + '" x2="' + left.toFixed(1) + '" y2="' + plotBottom + '"></line>' +
+        '<line x1="' + right.toFixed(1) + '" y1="' + TOP + '" x2="' + right.toFixed(1) + '" y2="' + plotBottom + '"></line>' +
+        '<text x="' + labelX.toFixed(1) + '" y="' + (TOP + 9) + '" text-anchor="' + anchor + '">' +
+        TREAT_DAY_LABEL + "</text></g>";
+    });
+  }
 
-  points.forEach((p, i) => {
-    if (p.value === null) return;
-    svg += '<circle data-t="dot-' + q.id + "-" + p.date + '" cx="' + x(i).toFixed(1) + '" cy="' + y(p.value).toFixed(1) +
-      '" r="' + (p.violating ? 4.5 : 4) + '" fill="' + (p.violating ? "var(--viz-critical)" : color) + '"></circle>';
-  });
+  /* connectNulls={false}: a line breaks wherever a day has no record. */
+  const series = (key, stroke, dash, radius) => {
+    let out = "", run = [];
+    const flush = () => {
+      if (run.length > 1) {
+        out += '<polyline fill="none" stroke="' + stroke + '" stroke-width="2"' +
+          (dash ? ' stroke-dasharray="4 3"' : "") + ' points="' + run.map(p => p.join(",")).join(" ") + '"></polyline>';
+      }
+      run = [];
+    };
+    points.forEach((p, i) => {
+      if (p[key] === null) { flush(); return; }
+      run.push([x(i).toFixed(1), y(p[key]).toFixed(1)]);
+    });
+    flush();
+    points.forEach((p, i) => {
+      if (p[key] === null) return;
+      const critical = key === "value" && p.violating;
+      out += '<circle data-t="dot-' + (key === "value" ? q.id : "excluded") + "-" + p.date +
+        '" cx="' + x(i).toFixed(1) +
+        '" cy="' + y(p[key]).toFixed(1) + '" r="' + (critical ? 4.5 : radius) +
+        '" fill="' + (critical ? "var(--viz-critical)" : stroke) + '"></circle>';
+    });
+    return out;
+  };
+  if (decomposed) svg += series("excluded", "var(--viz-excluded)", true, 2.5);
+  svg += series("value", color, false, 4);
 
   if (showXAxis) {
+    const treatLabels = new Set(treatDayColumns(dayStrs).map(c => points[c].label));
     svg += '<line x1="' + Y_AXIS_W + '" y1="' + plotBottom + '" x2="' + (CHART_W - MARGIN_R) +
       '" y2="' + plotBottom + '" stroke="var(--viz-baseline)"></line>';
     points.forEach((p, i) => {
+      /* The one date row serves every panel in the stack, so it is bold; the treat day's date
+         takes the accent, so the framed column can be found from the row alone. */
       svg += '<text x="' + x(i).toFixed(1) + '" y="' + (plotBottom + 16) +
-        '" text-anchor="middle" font-size="11" fill="var(--viz-muted)" font-family="system-ui, sans-serif">' +
-        p.label + "</text>";
+        '" text-anchor="middle" font-size="11" font-weight="700" fill="' +
+        (treatLabels.has(p.label) ? "var(--accent)" : "var(--viz-muted)") +
+        '" font-family="system-ui, sans-serif">' + p.label + "</text>";
     });
   }
   svg += "</svg>";
 
+  const bound = ruleBoundLabel(q);
   return '<div class="trend-panel" data-t="panel-' + q.id + '">' +
-    '<div class="trend-panel-title"><span class="trend-chip" style="background:' + color + '"></span>' +
-    esc(panelTitle(q)) + "</div>" + svg + "</div>";
+    '<div class="trend-panel-title" dir="rtl"><span class="trend-chip" style="background:' + color + '"></span>' +
+    esc(panelTitle(q)) +
+    (bound === undefined ? "" : '<span class="trend-panel-limit">(חריגה: ' + esc(bound) + ")</span>") +
+    (decomposed ? '<span class="trend-panel-excluded">' +
+      '<span class="trend-chip" style="background: var(--viz-excluded)"></span>' + EXCLUDED_LABEL + "</span>" : "") +
+    "</div>" + svg + "</div>";
 }
 
 function trendHtml() {
   const list = days();
   const todayPayload = { date: TODAY, meals: state.meals, derived: deriveDay(state.meals) };
   const live = liveTrendDay(todayPayload, list);
-  const dayStrs = last7Days(live ? live.date : list[0].date);
+  const dayStrs = lastDays(live ? live.date : list[0].date);
   const byDate = new Map(list.map(d => [d.date, d]));
   if (live) byDate.set(live.date, live);
 
   let html = '<div class="trend" dir="ltr" data-t="trend">' +
-    '<div class="trend-legend"><span class="trend-legend-dot"></span> חריגה</div>';
+    '<div class="trend-legend" dir="rtl"><span class="trend-legend-dot"></span><span>חריגה</span></div>';
   PANELS.forEach((q, i) => { html += trendPanelHtml(q, dayStrs, byDate, i, i === PANELS.length - 1); });
-
-  /* The violations strip: one tick per non-charted question that broke a rule that day. */
-  const stripW = CHART_W, stripH = 22;
-  let strip = '<svg width="' + stripW + '" height="' + stripH + '" aria-hidden="true">';
-  dayStrs.forEach((date, i) => {
-    const day = byDate.get(date);
-    const hits = day ? STRIP.filter(q => q.id in day.answers && isViolating(q.id, day.answers[q.id])) : [];
-    const cx = Y_AXIS_W + i * ((stripW - MARGIN_R - Y_AXIS_W) / (dayStrs.length - 1));
-    hits.forEach((_, j) => {
-      const tx = cx + (j - (hits.length - 1) / 2) * 5;
-      strip += '<line class="trend-violation-tick" x1="' + tx + '" y1="7" x2="' + tx + '" y2="15"></line>';
-    });
-  });
-  return html + strip + "</svg></div>";
+  return html + "</div>";
 }
 
 /* ── HistoryTable.tsx. The recorded week fits the 7-day window whole, so no range picker
@@ -1102,30 +1716,89 @@ function historyTableHtml() {
 function trendsSectionHtml() {
   if (!state.trendsOpen) {
     return '<section class="trends">' +
-      '<h2><button type="button" class="section-toggle" aria-expanded="false">מגמות</button></h2>' +
-      '<button type="button" class="quiet section-summary" data-t="trends-summary">' +
+      '<h2><button type="button" class="disclosure section-toggle" aria-expanded="false">מגמות</button></h2>' +
+      '<button type="button" class="disclosure section-summary" data-t="trends-summary">' +
         "גרפי מגמה 📈 ונתוני הימים האחרונים 📋</button>" +
     "</section>";
   }
   return '<section class="trends" data-t="trends">' +
-    '<h2><button type="button" class="section-toggle" aria-expanded="true">מגמות</button></h2>' +
+    '<h2><button type="button" class="disclosure section-toggle" aria-expanded="true">מגמות</button></h2>' +
     '<div class="section-fold-body"><div>' + trendHtml() + historyTableHtml() + "</div></div>" +
   "</section>";
 }
 
-/* ── Chat.tsx with no stored turns: the sample questions and the composer ─────────────── */
+/* ── Chat.tsx: the sample questions, the composer, and one answered chat ──────────────────
+     The chat below is one really asked through this app and answered from the program's own
+     documents, with the sources it drew on and their match scores as the service returned them. */
+/* What the score column measures — the same hint Chat.tsx puts on that heading. */
+const MATCH_HINT = "מידת הדמיון בין השאלה למסמך, לפי מנוע החיפוש — לא אחוז הנכונות של התשובה. "
+  + "בפועל הערכים נעים בערך בין 35% ל-80%, והמספר משמש בעיקר לדירוג המקורות ביניהם.";
+
+const DEMO_CHAT = {
+  at: "2026-09-10T07:39",
+  question: "איך השינה משפיעה על הרעב, על החשקים ועל הירידה במשקל? ולמה זה קורה?",
+  answer: "שינה מלווה בהפרשת אנדורפינים.\n"
+        + "אנדורפינים מפחיתים רעב רגשי ומשפרים מצב רוח.\n"
+        + "כתוצאה מכך שינה טובה יכולה לצמצם חשקים לאכילה רגשית ולסייע בירידה במשקל.\n"
+        + "זה תואם לעקרונות השיטה הלפטינית שמטרתם להפחית רעב וחשקים כחלק מתהליך הירידה במשקל.\n"
+        + "בנתוני המעקב שלך אין שדה שינה ולכן לא ניתן להעריך כאן את השפעת השינה על המדדים האישיים שלך.",
+  sources: [
+    { fileName: "מילון-מושגים.pdf", score: 0.42 },
+    { fileName: "דף-תכל\'ס-שבוע-10.pdf", score: 0.416 },
+    { fileName: "דף-תכל\'ס-שבוע-11.pdf", score: 0.415 },
+    { fileName: "דף-תכל\'ס-שבוע-3.pdf", score: 0.414 },
+    { fileName: "דף-תכל\'ס-שבוע-7.pdf", score: 0.408 },
+    { fileName: "דף-תכל\'ס-שבוע-6.pdf", score: 0.405 },
+    { fileName: "דף-תכל\'ס-שבוע-12.pdf", score: 0.397 },
+    { fileName: "דף-תכל\'ס-שבוע-13.pdf", score: 0.396 }
+  ]
+};
+
 function chatSectionHtml() {
-  return '<section class="chat-section" data-t="chat">' +
-    "<h2><button type=\"button\" class=\"section-toggle\" aria-expanded=\"true\">שאלות על סבא חטוב 👴</button></h2>" +
+  let html = '<section class="chat-section" data-t="chat">' +
+    "<h2><button type=\"button\" class=\"disclosure section-toggle\" aria-expanded=\"true\">שאלות על סבא חטוב 👴</button></h2>" +
     '<div class="chat">' +
-      '<div class="chat-samples">' +
-        CHAT_SAMPLES.map(label => '<button type="button" class="quiet">' + esc(label) + "</button>").join("") +
-      "</div>" +
-      '<form><div class="composer">' +
-        '<textarea rows="2" tabindex="-1" placeholder="שאלה על סבא חטוב 👴…"></textarea>' +
-      "</div>" +
-      '<button type="submit" disabled>שליחה</button></form>' +
-    "</div></section>";
+      '<div class="chat-samples" data-t="chat-samples">' +
+        CHAT_SAMPLES.map(sample =>
+          '<button type="button" class="secondary compact" data-t="sample-' + esc(sample.label) + '">' +
+          esc(sample.label) + "</button>").join("") +
+      "</div>";
+
+  /* The transcript holds the answered chat; while none is stored the composer stands alone. */
+  if (state.chatSent) {
+    html += '<ul class="chat-messages" data-t="chat-messages">' +
+      '<li class="chat-user"><time class="chat-turn-at">' + DEMO_CHAT.at.replace("T", " ") + "</time>" +
+        '<button type="button" class="disclosure chat-question" data-t="chat-question"' +
+        ' aria-expanded="' + state.chatOpen + '">' + esc(DEMO_CHAT.question) + "</button>" +
+        '<button type="button" class="glyph delete-turn">' + icon("remove") + "</button></li>";
+    if (state.chatOpen) {
+      html += '<li class="chat-assistant" data-t="chat-answer"><p>' + esc(DEMO_CHAT.answer) + "</p>" +
+        '<button type="button" class="disclosure more-toggle" data-t="chat-sources-toggle"' +
+        ' aria-expanded="' + state.chatSourcesOpen + '">' +
+        (state.chatSourcesOpen ? "פחות" : "מקורות והתאמה") + "</button>";
+      if (state.chatSourcesOpen) {
+        html += '<table class="chat-sources" data-t="chat-sources">' +
+          '<thead><tr><th>מקור</th><th title="' + esc(MATCH_HINT) + '">התאמה</th></tr></thead><tbody>' +
+          DEMO_CHAT.sources.map(src =>
+            '<tr><td><button type="button" class="chat-source-open">' + esc(src.fileName) +
+            "</button></td><td>" + Math.round(src.score * 100) + "%</td></tr>").join("") +
+          "</tbody></table>";
+      }
+      html += "</li>";
+    }
+    html += "</ul>";
+  }
+
+  html += '<form><div class="composer">' +
+      '<textarea rows="2" tabindex="-1" placeholder="שאלה על סבא חטוב 👴…" data-t="composer">' +
+      esc(state.chatDraft) + "</textarea>" +
+      (state.chatDraft === "" ? "" :
+        '<button type="button" class="glyph clear-draft">' + icon("close") + "</button>") +
+    "</div>" +
+    '<button type="submit" class="primary" data-t="chat-send"' +
+    (state.chatDraft.trim() === "" ? " disabled" : "") + ">שליחה</button></form>";
+
+  return html + "</div></section>";
 }
 
 function appHtml() {
@@ -1133,6 +1806,9 @@ function appHtml() {
   let html = headerHtml(violations);
   html += "<main>";
   if (state.ok) html += '<div class="ok" data-t="ok">' + esc(state.ok) + "</div>";
+  /* The weight log opens the page above the tracker: the target the day's work serves, read
+     before the day it is spent on. */
+  html += weightSectionHtml();
   html += trackerHtml();
   html += trendsSectionHtml();
   html += chatSectionHtml();
@@ -1148,114 +1824,149 @@ function render() {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
-   The script — five acts, thirty-one beats
+   The script — six acts, forty beats
    ═══════════════════════════════════════════════════════════════════════ */
 const ACTS = [
   { name: "התחברות" },
+  { name: "שקילה" },
   { name: "שלוש ארוחות" },
   { name: "סגירת היום" },
   { name: "מגמות" },
-  { name: "מסביב ליומן" }
+  { name: "הצ'אט והתפריט" }
 ];
 
 const M1 = { at: TODAY + "T11:35:00+03:00", carbs_choice: "carb_grade_1", vegetables: true,
-             fruit: false, additions: [], small_portion: false, second_source: null };
+             fruit: false, additions: [], portion: null, second_source: null };
 const M2 = { at: TODAY + "T15:40:00+03:00", carbs_choice: "carb_grade_1", vegetables: true,
-             fruit: false, additions: [], small_portion: false, second_source: null };
+             fruit: false, additions: [], portion: null, second_source: null };
 const M3 = { at: TODAY + "T20:10:00+03:00", carbs_choice: "carb_grade_3", vegetables: true,
-             fruit: false, additions: [], small_portion: false, second_source: null };
+             fruit: false, additions: [], portion: null, second_source: null };
 
-const freshPick = () => ({ carbs_choice: null, vegetables: false, fruit: false, additions: [] });
+const freshPick = () => ({ carbs_choice: null, portion: null, vegetables: false, fruit: false,
+                           additions: [], second_source: null });
 
 const BEATS = [
   /* ── Act 0: sign-in ── */
-  { act: 0, hold: 3400, clock: "11:47",
-    cap: 'מסך הפתיחה נפתח מצומצם: שלוש פסקאות שמציגות את הרעיון — בלי לספור קלוריות, ארבעה הרגלים ששמם שכפ"צ, צ\'אט ידע וגרפים — מעל כפתור התחברות אחד.',
+  { act: 0, hold: 3400, clock: "08:55",
+    cap: "",
     apply() { Object.assign(state, { screen: "landing", landingExpanded: false }); } },
 
   { act: 0, hold: 3600, tap: "more",
-    cap: '<em>יותר</em> פורש את הסיכום המלא: מה נגזר מהיומן, סגירת יום על מים בלבד, ציון הפחמימות, מעקב המשקל והצ\'אט — וטבלת שכפ"צ עם היעדים סוגרת את העמוד.',
+    cap: "כפתור ה-<em>יותר</em> פורש את התיאור המלא של יכולות האפליקציה.",
     apply() { state.landingExpanded = true; } },
 
-  { act: 0, hold: 2600, tap: "signin", clock: "11:48",
-    cap: "ההתחברות עוברת במסך Google המתארח של Cognito. כתובת שאינה עוברת את מסנן ההרשמה נדחית כבר ב־pre-signup, ומקבלת את הכתובת שאליה אפשר לפנות.",
+  { act: 0, hold: 2600, tap: "signin", clock: "08:57",
+    cap: "ההתחברות נעשית דרך חשבון Google, במסך של Google עצמה — מאובטחת, ובלי למסור לאפליקציה שום סיסמה.",
     apply() { state.screen = "app"; } },
 
-  /* ── Act 1: three meals ── */
-  { act: 1, hold: 3400, scroll: "tracker",
-    cap: "הדף נפתח בתצוגה המצומצמת: היומן — משטח העבודה — פתוח, <em>מגמות</em> מקופלת לשורת סיכום, והצ'אט מציע את שאלותיו למטה. שורת הערכים רוכבת על כותרת היומן, וכולם עדיין אפס.",
+  /* ── Act 1: the weigh-in morning ── */
+  { act: 1, hold: 4400, scroll: "top", flash: "weight",
+    cap: "ביום חמישי — יום השקילה המומלץ — פאנל המשקל נפתח מעצמו.",
     apply() {} },
 
-  { act: 1, hold: 2400, tap: "form-toggle", clock: "11:52",
+  { act: 1, hold: 4200, scroll: "weight", flash: "weight-rhythm",
+    cap: "משקל אינו נכנס לשום ציון ואינו מפעיל שום התראה.",
+    apply() {} },
+
+  { act: 1, hold: 3200, tap: "weight-today", clock: "09:02",
+    cap: "המשקל של הבוקר: 105.1.",
+    apply() { state.weightDraft = "105.1"; } },
+
+  { act: 1, hold: 4600, tap: "weight-save",
+    cap: "נרשמה, עם השעה שבה נמדדה: שקילה שבועית היא אפקטיבית רק כשהיא נעשית בערך באותה שעה.",
+    apply() { state.weightRecorded = 105.1; state.weightDraft = ""; } },
+
+  { act: 1, hold: 5000, scroll: "weight-chart", flash: "weight-chart",
+    cap: "",
+    apply() {} },
+
+  { act: 1, hold: 4200, scroll: "weight-entries", flash: "weight-entries",
+    cap: "המדידות עצמן, מהחדשה לישנה. ניתן למחוק מדידות שגויות, או במקרה של היום הנוכחי לרשום מדידה חדשה ולהחליף את המדידה הקודמת.",
+    apply() {} },
+
+  { act: 1, hold: 3000, tap: "weight-toggle", scroll: "top",
+    cap: "השקילה נעשתה, והפאנל מתקפל בחזרה לשורה אחת מעל היומן.",
+    apply() { state.weightOpen = false; } },
+
+  /* ── Act 2: three meals ── */
+  { act: 2, hold: 3400, scroll: "tracker", clock: "11:47",
+    cap: "מתחת למשקל — היומן, משטח העבודה של היום: פתוח, <em>מגמות</em> מקופלת לשורת סיכום, והצ'אט מציע את שאלותיו למטה. שורת הערכים רוכבת על כותרת היומן, וכולם עדיין אפס.",
+    apply() {} },
+
+  { act: 2, hold: 2400, tap: "form-toggle", clock: "11:52",
     cap: "שדות הארוחה הם הדבר הגבוה ביותר בכרטיס, ולכן הם מקופלים עד שיש ארוחה לדווח. פתוחים, הם מקבלים מסגרת משלהם.",
     apply() { state.formOpen = true; state.mealTime = "11:50"; } },
 
-  { act: 1, hold: 3200, tap: "grade-carb_grade_1", scroll: "grade-carb_grade_1",
-    cap: 'הצהריים קטניות — דרגה 1, נקודה אחת. הסולם עולה עד דרגה 7, שמות הדרגות נפתחים עם הדוגמאות שלהן, ו"צמצום שמות" בתחתית הכרטיס מקצר אותם למי שכבר מכיר.',
+  { act: 2, hold: 3200, tap: "grade-carb_grade_1", scroll: "grade-carb_grade_1",
+    cap: "הצהריים קטניות — דרגה 1, נקודה אחת. הסולם עולה עד דרגה 7, והכרטיס נפתח על שמות הדרגות בלבד.",
     apply() { state.pick.carbs_choice = "carb_grade_1"; } },
 
-  { act: 1, hold: 3600, scroll: "second-src", flash: "second-src",
-    cap: "דרגה קלה (1–2) פותחת אפשרות למקור פחמימה נוסף באותה צלחת: שני מקורות קלים נמכרים כצלחת אחת, ומקור כבד יותר נרשם רק כתוספת מופחתת — רבע או חצי מנה.",
+  { act: 2, hold: 4000, tap: "density", scroll: "grade-carb_grade_1", flash: "grade-carb_grade_1",
+    cap: '"הרחבת שמות", בתחתית הכרטיס, פותח לצד כל דרגה את מה שהיא מכסה — קטניות, קינואה, אורז מלא — ומשהורחבו, אותו מתג קרוי "צמצום שמות". הוא מופיע רק כשיש שם דרגה על המסך, ומה שנבחר בו חל גם על שורות הארוחות שנרשמו.',
+    apply() { state.denseLabels = false; } },
+
+  { act: 2, hold: 3600, scroll: "second-src", flash: "second-src",
+    cap: "דרגה קלה (1–2) פותחת אפשרות למקור פחמימה נוסף באותה צלחת: שני מקורות קלים נמכרים כצלחת אחת, ומקור כבד יותר מוסיף את הדרגה שלו לפי גודל המנה — קטנה, בינונית או רגילה, אותו סולם שהדרגה הראשית נמדדת בו מדרגה 4 ומעלה.",
     apply() {} },
 
-  { act: 1, hold: 2000, tap: "flag-veg",
+  { act: 2, hold: 2000, tap: "flag-veg",
     cap: "עם ירקות. היום סופר <em>ארוחות</em> עם ירקות, לא כמויות — שלוש מתוך שלוש היא המטרה.",
     apply() { state.pick.vegetables = true; } },
 
-  { act: 1, hold: 2800, tap: "meal-time",
+  { act: 2, hold: 2800, tap: "meal-time",
     cap: "הבורר נפתח על 11:50 — השעון מעוגל לאחור לקפיצה של חמש דקות — אבל הארוחה נאכלה ב־11:35, אז מזיזים.",
     apply() { state.mealTime = "11:35"; } },
 
-  { act: 1, hold: 2600, tap: "record",
+  { act: 2, hold: 2600, tap: "record",
     cap: "נרשמה. השדות מתקפלים בחזרה והערכים מתעדכנים במקום: ארוחה אחת, נקודה אחת, ירקות באחת — והשורה מסתיימת במחיר הארוחה.",
     apply() { state.meals = [M1]; state.formOpen = false; state.pick = freshPick(); } },
 
-  { act: 1, hold: 1700, tap: "form-toggle", clock: "16:05",
+  { act: 2, hold: 1700, tap: "form-toggle", clock: "16:05",
     cap: "אחר צהריים מאוחר, ארוחה שנייה.",
     apply() { state.formOpen = true; state.mealTime = "16:05"; } },
 
-  { act: 1, hold: 1700, tap: "grade-carb_grade_1",
+  { act: 2, hold: 1700, tap: "grade-carb_grade_1",
     cap: "שוב קטניות — עוד נקודה בודדת.",
     apply() { state.pick.carbs_choice = "carb_grade_1"; } },
 
-  { act: 1, hold: 2400, tap: "flag-veg",
+  { act: 2, hold: 2400, tap: "flag-veg",
     cap: "ושוב ירקות; והשעה נמשכת אחורה אל 15:40, השעה שבה הארוחה נאכלה בפועל.",
     apply() { state.pick.vegetables = true; state.mealTime = "15:40"; } },
 
-  { act: 1, hold: 3200, tap: "record",
+  { act: 2, hold: 3200, tap: "record",
     cap: "שתי ארוחות, שתי נקודות. החלון — מ־11:35 עד 15:40 — נספר בשעות שלמות כלפי מעלה: 5. עדיין אין כפתור סגירה: פחות משש שעות הוא יום שעוד אוכלים אותו.",
     apply() { state.meals = [M1, M2]; state.formOpen = false; state.pick = freshPick(); } },
 
-  { act: 1, hold: 1700, tap: "form-toggle", clock: "20:34",
+  { act: 2, hold: 1700, tap: "form-toggle", clock: "20:34",
     cap: "ארוחת ערב.",
     apply() { state.formOpen = true; state.mealTime = "20:30"; } },
 
-  { act: 1, hold: 3000, tap: "grade-carb_grade_3", scroll: "grade-carb_grade_3",
-    cap: "אורז מלא — דרגה 3, שלוש נקודות. ארוחה נשפטת במחירה הכולל — דרגה, מקור שני, פרי שני ותוספות — ומחיר של 4 ומעלה היה צובע את הנקודות שלה באדום.",
+  { act: 2, hold: 3000, tap: "grade-carb_grade_3", scroll: "grade-carb_grade_3",
+    cap: "אורז מלא — דרגה 3, שלוש נקודות. ארוחה נשפטת במחירה הכולל — דרגה, גודל מנה, מקור שני, פרי שני ותוספות לפי הכמות שנרשמה לכל אחת — ומחיר של 4 ומעלה היה צובע את הנקודות שלה באדום.",
     apply() { state.pick.carbs_choice = "carb_grade_3"; } },
 
-  { act: 1, hold: 2200, tap: "flag-veg",
+  { act: 2, hold: 2200, tap: "flag-veg",
     cap: "ירקות, שלוש מתוך שלוש; והשעה — 20:10.",
     apply() { state.pick.vegetables = true; state.mealTime = "20:10"; } },
 
-  { act: 1, hold: 3200, tap: "record",
+  { act: 2, hold: 3200, tap: "record",
     cap: 'שלוש ארוחות, ציון 5, חלון של תשע שעות. "הוספת ארוחה" נצבע עכשיו באזהרה: ארוחה רביעית תחצה את כלל מספר הארוחות.',
     apply() { state.meals = [M1, M2, M3]; state.formOpen = false; state.pick = freshPick(); } },
 
-  { act: 1, hold: 3800, scroll: "close-day", flash: "close-day",
+  { act: 2, hold: 3800, scroll: "close-day", flash: "close-day",
     cap: "ורק <em>עכשיו</em> מופיע כפתור סגירת היום — מוצע רק משעה שהארוחות שנרשמו משתרעות על שש שעות ומעלה; מתחת לזה היום עדיין נאכל, והערכים היו נסגרים מוקדם מדי.",
     apply() {} },
 
-  /* ── Act 2: closing the day ── */
-  { act: 2, hold: 3200, tap: "close-day",
+  /* ── Act 3: closing the day ── */
+  { act: 3, hold: 3200, tap: "close-day",
     cap: "יום שתועד ארוחה־ארוחה כבר ענה על ארבע מתוך חמש השאלות. נשארה השתייה בלבד, והפאנל נושא את שם הצעד: <em>השלב האחרון בסגירת היום</em>.",
     apply() { state.closing = true; } },
 
-  { act: 2, hold: 2400, tap: "drink-l3_5", scroll: "close-panel",
+  { act: 3, hold: 2400, tap: "drink-l3_5", scroll: "close-panel",
     cap: "3.5 ליטר. פחות מ־2.5 ליטר יומיים ברצף הוא חוק בפני עצמו, וכאן הוא נעקף בנוחות.",
     apply() { state.drinking = "l3_5"; } },
 
-  { act: 2, hold: 3200, tap: "confirm", clock: "20:41",
+  { act: 3, hold: 3200, tap: "confirm", clock: "20:41",
     cap: "נשלח. השרת גוזר מחדש את היום מתוך הארוחות השמורות — המספרים בצד הלקוח הם משוב, לעולם לא הרשומה — ומריץ שוב את כל חוקי הסף.",
     apply() {
       state.submitted = true;
@@ -1263,43 +1974,70 @@ const BEATS = [
       state.ok = "נשמר לתאריך " + TODAY + "! אין חריגות היום ✔";
     } },
 
-  { act: 2, hold: 4400, scroll: "top",
+  { act: 3, hold: 4400, scroll: "top",
     cap: "הבאנר הירוק מאשר, ושום סף לא נחצה — יום שחוצה סף מסומן באדום בטבלה ומקבל הודעת ביניים משלו. היומן נשאר על המסך לקריאה, עם כפתור אחד שפותח את חלון האכילה מחדש: מחיקת הרשומה, והיום שוב פתוח.",
     apply() {} },
 
-  /* ── Act 3: the trends ── */
-  { act: 3, hold: 3200, tap: "trends-summary",
+  /* ── Act 4: the trends ── */
+  { act: 4, hold: 3200, tap: "trends-summary",
     cap: 'בתצוגה המצומצמת <em>מגמות</em> מקופלת לשורת סיכום שמונה את תוכנה — והשורה עצמה היא הפותחן.',
     apply() { state.trendsOpen = true; } },
 
-  { act: 3, hold: 3800, scroll: "trend",
-    cap: "שבעה ימים, שלושה פאנלים שחולקים אותן עמודות יום: ציון הפחמימות למעלה, אחריו השתייה, ואחריה חלון האכילה.",
+  { act: 4, hold: 3800, scroll: "trend",
+    cap: "עשרה ימים, שלושה פאנלים שחולקים אותן עמודות יום ואת שורת התאריכים אחת למטה: הציון היומי למעלה, אחריו השתייה, ואחריה חלון האכילה. כל כותרת נושאת את הסף שהפאנל נקרא מולו.",
     apply() {} },
 
-  { act: 3, hold: 4800, scroll: "panel-carbs", flash: "panel-carbs",
-    cap: "נקודות אדומות הן ימים שחצו את סף ה־12: ה־21 וה־23 באוגוסט (16 ו־18). ה־24, עם 11, כבר עובר מתחת לרף. ה־19 הוא פער אמיתי, ולכן הקו נשבר במקום לגשר עליו — והיום סוגר את השבוע על 5.",
+  { act: 4, hold: 4800, scroll: "panel-carbs", flash: "panel-carbs",
+    cap: "הנקודה האדומה היחידה בעשרה ימים היא יום שישי, 4.9 — והיא בתוך המסגרת הירוקה: יום הפינוק שהתוכנית מכוונת אליו. התאריך שלו צבוע באותו ירוק גם בשורה למטה, כדי שאפשר יהיה למצוא את העמודה מכל פאנל.",
     apply() {} },
 
-  { act: 3, hold: 3800, scroll: "table", flash: "row-" + TODAY,
-    cap: "אותו שבוע כטבלה, מהחדש לישן. בטלפון היא נגללת לצדדים: עמודת התאריך עוגנת בקצה הימני, וחמש התשובות רצות ממנה שמאלה.",
+  { act: 4, hold: 5000, scroll: "panel-carbs", flash: "panel-carbs",
+    cap: "הקו המקווקו הכתום הוא החלק של הציון שהגיע מקמחים וסוכרים — מה שהתוכנית מוציאה משישה ימי השבוע. בתשעה מהם הוא אפס; ביום הפינוק הוא 10 מתוך 19. המרווח בין שני הקווים הוא החלק של היום שנשאר בתוך התוכנית.",
     apply() {} },
 
-  { act: 3, hold: 4600, scroll: "table", hscroll: "table", flash: "row-" + TODAY,
-    cap: "בקצה הרחוק — עמודת הציון: 18 ו־16 באדום, וה־5 של היום בירוק הרגיל. נגיעה בציון פותחת מחדש את יומן הארוחות של אותו יום, לקריאה בלבד.",
+  { act: 4, hold: 3800, scroll: "table", flash: "row-" + TODAY,
+    cap: "אותם ימים כטבלה, מהחדש לישן. בטלפון היא נגללת לצדדים: עמודת התאריך עוגנת בקצה הימני, וחמש התשובות רצות ממנה שמאלה.",
     apply() {} },
 
-  /* ── Act 4: around the journal ── */
-  { act: 4, hold: 4400, scroll: "chat", flash: "chat",
-    cap: "מתחת למגמות — הצ'אט: שאלות על התוכנית נענות מתוך מסמכי המקור שלה, עם ציטוט המסמכים שנשענו עליהם ועם מכסה יומית לכל חשבון. שאלות לדוגמה ממלאות את התיבה בנגיעה.",
+  { act: 4, hold: 4600, scroll: "table", hscroll: "table", flash: "row-" + TODAY,
+    cap: "בקצה הרחוק — עמודת הציון: 19 של יום הפינוק באדום, וה־5 של היום בירוק הרגיל. נגיעה בציון פותחת מחדש את יומן הארוחות של אותו יום, לקריאה בלבד.",
     apply() {} },
 
-  { act: 4, hold: 3000, scroll: "top", tap: "menu",
-    cap: "תפריט החשבון: הכתובת המחוברת, השתקת ההתראות, מעבר התצוגה והתנתקות.",
+  /* ── Act 5: the chat and the account menu ── */
+  { act: 5, hold: 4000, scroll: "chat", flash: "chat-samples",
+    cap: "מתחת למגמות — הצ'אט.",
+    apply() {} },
+
+  { act: 5, hold: 3600, tap: "sample-שינה", scroll: "chat",
+    cap: "נגיעה בשאלה לדוגמה מעתיקה אותה לתיבת הכתיבה.",
+    apply() { state.chatDraft = "איך השינה משפיעה על הרעב, על החשקים ועל הירידה במשקל?"; } },
+
+  { act: 5, hold: 3600, tap: "composer", scroll: "composer",
+    cap: "אפשר לעדכן/להוסיף ולשלוח את השאלה.",
+    apply() { state.chatDraft = DEMO_CHAT.question; } },
+
+  { act: 5, hold: 5200, tap: "chat-send", scroll: "chat-answer",
+    cap: "התשובה נענית מתוך מסמכי המקור של התוכנית.",
+    apply() { state.chatDraft = ""; state.chatSent = true; state.chatOpen = true; } },
+
+  { act: 5, hold: 4600, tap: "chat-sources-toggle", scroll: "chat-sources", flash: "chat-sources",
+    cap: "<em>מקורות והתאמה</em> פורש את המסמכים שהתשובה נשענה עליהם. כל שם פותח את ה-PDF בלשונית משלו, ומעל הכותרת <em>התאמה</em> יש הסבר על הציון.",
+    apply() { state.chatSourcesOpen = true; } },
+
+  { act: 5, hold: 3000, scroll: "top", tap: "menu",
+    cap: "תפריט החשבון — העבר את העכבר מעל כל אופציה לקבלת הסבר.",
     apply() { state.menuOpen = true; } },
 
-  { act: 4, hold: 4400, tap: "view-item",
-    cap: 'הפריט קרוי על שם התצוגה שאליה הלחיצה עוברת — כאן <em>תצוגה מלאה</em> — והבחירה נשמרת בדפדפן: הכניסה הבאה תיפתח על התצוגה שנבחרה כאן.',
-    apply() { state.fullView = true; state.menuOpen = false; state.trendsOpen = true; } }
+  { act: 5, hold: 4400, tap: "view-item",
+    cap: 'פריט אחד פותח או מקפל את כל סעיפי העמוד יחד — כאן <em>מעבר לתצוגה מלאה</em>. הבחירה נשמרת בדפדפן לכניסה הבאה.',
+    apply() {
+      /* The command broadcasts to every section at once (FoldAllContext), the weight log
+         included — not the trends alone. */
+      state.fullView = true;
+      state.menuOpen = false;
+      state.trendsOpen = true;
+      state.weightOpen = true;
+    } }
 ];
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -1317,7 +2055,9 @@ const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 let cursor = 0;
 let playing = true;
-let speed = 1;
+/* Opens at double speed: the replay reads as a demonstration rather than a wait, and
+   each press of the control slows it a step for anyone who wants to follow along. */
+let speed = 2;
 let token = 0;
 
 function buildScript() {
@@ -1483,9 +2223,11 @@ function resetState() {
     screen: "landing", landingExpanded: false, meals: [], formOpen: false,
     pick: freshPick(),
     mealTime: "11:50", closing: false, drinking: null, submitted: false,
-    ok: null, menuOpen: false, trendsOpen: false, fullView: false
+    ok: null, menuOpen: false, trendsOpen: false, fullView: false,
+    denseLabels: true, weightOpen: true, weightDraft: "", weightRecorded: null,
+    chatDraft: "", chatSent: false, chatOpen: false, chatSourcesOpen: false
   });
-  clockEl.textContent = "11:47";
+  clockEl.textContent = "08:55";
   screenEl.scrollTop = 0;
   tapEl.classList.remove("on");
 }
@@ -1523,7 +2265,7 @@ function restart() {
 document.getElementById("restart").addEventListener("click", restart);
 
 speedEl.addEventListener("click", () => {
-  speed = speed === 1 ? 2 : speed === 2 ? 0.5 : 1;
+  speed = speed === 2 ? 1 : speed === 1 ? 0.5 : 2;
   speedEl.textContent = speed === 0.5 ? "0.5×" : speed + "×";
 });
 
