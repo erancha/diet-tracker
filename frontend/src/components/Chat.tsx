@@ -303,7 +303,7 @@ export function Chat({ api, sampleQuestions, defaultTranscriptFolded = false, as
             rows={2}
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
-            placeholder={replyTo === null ? "שאלה על סבא חטוב 👴…" : "שאלת המשך…"}
+            placeholder={replyTo === null ? "שאלה על סבא בכושר 👴…" : "שאלת המשך…"}
             aria-label="שאלה"
           />
           {draft !== "" && (

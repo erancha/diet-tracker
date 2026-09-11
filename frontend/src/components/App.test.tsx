@@ -125,7 +125,7 @@ describe("App", () => {
   it("shows the admin the chat and activity panels alone, without the tracking sections", async () => {
     renderApp(true);
 
-    expect(await screen.findByRole("button", { name: "שאלות על סבא חטוב 👴" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "שאלות על סבא בכושר 👴" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "פעילות משתמשים" })).toBeInTheDocument();
 
     expect(screen.queryByRole("button", { name: "משקל" })).toBeNull();
@@ -137,7 +137,7 @@ describe("App", () => {
     renderApp(false, api(), false, CONFIG, false);
 
     expect(await screen.findByRole("button", { name: "יומן היום" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "שאלות על סבא חטוב 👴" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "שאלות על סבא בכושר 👴" })).toBeNull();
   });
 
   it("keeps a regular account on the tracking sections and shows it no admin panel", async () => {
@@ -146,7 +146,7 @@ describe("App", () => {
     expect(await screen.findByRole("button", { name: "יומן היום" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "משקל" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "מגמות" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "שאלות על סבא חטוב 👴" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "שאלות על סבא בכושר 👴" })).toBeInTheDocument();
 
     expect(screen.queryByRole("button", { name: "פעילות משתמשים" })).toBeNull();
     // The tracker is the only way a day closes — there is no day-end questionnaire section.
@@ -212,8 +212,8 @@ describe("App", () => {
     const client = unverified();
     client.ask = vi.fn().mockResolvedValue({ answer: "ככה", sources: [], at: "2026-09-01T10:00:00" });
     renderApp(false, client);
-    fireEvent.click(await screen.findByRole("button", { name: /שאלות על סבא חטוב/ }));
-    expect(screen.getByRole("button", { name: /שאלות על סבא חטוב/ }))
+    fireEvent.click(await screen.findByRole("button", { name: /שאלות על סבא בכושר/ }));
+    expect(screen.getByRole("button", { name: /שאלות על סבא בכושר/ }))
       .toHaveAttribute("aria-expanded", "false");
 
     fireEvent.click(screen.getByRole("button", { name: "אישור המייל" }));
@@ -221,7 +221,7 @@ describe("App", () => {
     expect(await screen.findByText("ככה")).toBeInTheDocument();
     // The app composed the question, so the chat it stores is filed on the app's side.
     expect(client.ask).toHaveBeenCalledWith(VERIFY_MAIL_QUESTION, undefined, true);
-    expect(screen.getByRole("button", { name: /שאלות על סבא חטוב/ }))
+    expect(screen.getByRole("button", { name: /שאלות על סבא בכושר/ }))
       .toHaveAttribute("aria-expanded", "true");
   });
 
@@ -263,13 +263,13 @@ describe("App", () => {
     // the condensed view leaves both sections open.
     expect(screen.getByRole("button", { name: "יומן היום" }))
       .toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByRole("button", { name: "שאלות על סבא חטוב 👴" }))
+    expect(screen.getByRole("button", { name: "שאלות על סבא בכושר 👴" }))
       .toHaveAttribute("aria-expanded", "true");
 
     // The item now names the full view, which opens everything.
     fireEvent.click(screen.getByRole("button", { name: "תפריט חשבון" }));
     fireEvent.click(screen.getByRole("menuitem", { name: "תצוגה מלאה" }));
-    for (const name of ["משקל", "יומן היום", "מגמות", "שאלות על סבא חטוב 👴"])
+    for (const name of ["משקל", "יומן היום", "מגמות", "שאלות על סבא בכושר 👴"])
       expect(screen.getByRole("button", { name })).toHaveAttribute("aria-expanded", "true");
     // The nested meal form is an editing affordance, not a display section: opening everything
     // must not open a form whose unfolding starts composing a meal.

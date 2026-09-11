@@ -1756,7 +1756,7 @@ const DEMO_CHAT = {
 
 function chatSectionHtml() {
   let html = '<section class="chat-section" data-t="chat">' +
-    "<h2><button type=\"button\" class=\"disclosure section-toggle\" aria-expanded=\"true\">שאלות על סבא חטוב 👴</button></h2>" +
+    "<h2><button type=\"button\" class=\"disclosure section-toggle\" aria-expanded=\"true\">שאלות על סבא בכושר 👴</button></h2>" +
     '<div class="chat">' +
       '<div class="chat-samples" data-t="chat-samples">' +
         CHAT_SAMPLES.map(sample =>
@@ -1790,7 +1790,7 @@ function chatSectionHtml() {
   }
 
   html += '<form><div class="composer">' +
-      '<textarea rows="2" tabindex="-1" placeholder="שאלה על סבא חטוב 👴…" data-t="composer">' +
+      '<textarea rows="2" tabindex="-1" placeholder="שאלה על סבא בכושר 👴…" data-t="composer">' +
       esc(state.chatDraft) + "</textarea>" +
       (state.chatDraft === "" ? "" :
         '<button type="button" class="glyph clear-draft">' + icon("close") + "</button>") +

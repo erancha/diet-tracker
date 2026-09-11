@@ -115,6 +115,10 @@ header .alarm { --btn-bg: #ffebee; --btn-fg: var(--danger); --btn-border: #f3c9c
    whichever section happens to shout loudest. The viewport term keeps it inside a narrow phone's
    width; the signed-in chrome tightens it further, where the account box shares the row. */
 h1 { font-size: min(2.1rem, 9vw); color: var(--accent); margin-top: 0; }
+/* The app's own name where it sits inside a sentence, so a heading reads as "questions about X"
+   rather than as one long phrase. Hebrew has no true italic — browsers synthesize a slant, which
+   reads as a rendering fault — so the name is marked by color and weight instead. */
+.app-name { color: var(--accent); font-weight: 700; }
 /* The tab's icon beside the name, sized by the heading's own em so the pair scales as one line;
    middle alignment centers the emoji's square against the letters, which have no descenders to
    meet a baseline-seated box. */
