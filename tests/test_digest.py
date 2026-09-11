@@ -1,5 +1,6 @@
-from common.chat import MAX_QUESTION_CHARS
-from common.digest import recap_chat_title, weekly_summary_question, weekly_text
+from common.chat import MAX_CONTEXT_CHARS
+from common.digest import (SUMMARY_INSTRUCTION, SUMMARY_QUESTION, recap_chat_title,
+                           weekly_summary_context, weekly_text)
 
 WEIGHTS = {"2026-08-12": {"kg": 84.0}, "2026-08-19": {"kg": 83.2}}
 
@@ -37,42 +38,56 @@ def test_a_day_predating_a_question_still_counts_as_closed(numeric_questionnaire
     assert "נסגרו 2 מתוך 7 ימים" in weekly_text(numeric_questionnaire, history)
 
 
-def test_summary_question_asks_for_bullets_over_the_labeled_data(numeric_questionnaire):
-    history = {"2026-08-19": {"carbs": 7, "drinking": 3}}
-    question = weekly_summary_question(numeric_questionnaire, history, WEIGHTS, 78)
-    assert "תבליטים" in question
-    assert "המלצה" in question
+def test_the_instruction_asks_for_bullets_in_the_questionnaires_own_words():
+    assert "תבליטים" in SUMMARY_INSTRUCTION
+    assert "המלצה" in SUMMARY_INSTRUCTION
     # Dates and per-day values stay in the app; the email carries counts and reasons.
-    assert "בלי לפרט תאריכים" in question
+    assert "בלי לפרט תאריכים" in SUMMARY_INSTRUCTION
     # And in the questionnaire's own words, not a vocabulary the app never shows.
-    assert "בלי מילים לועזיות" in question
-    assert '"2026-08-19"' in question
-    assert '"carbs": 7' in question
+    assert "בלי מילים לועזיות" in SUMMARY_INSTRUCTION
 
 
-def test_summary_question_carries_the_weigh_ins_and_the_target(numeric_questionnaire):
+def test_the_question_names_the_subjects_a_recap_may_touch():
+    # The question is the only field embedded upstream, so it decides which program pages ground
+    # the recap.
+    for subject in ("קמחים וסוכרים", "יום פינוק", "חלון אכילה", "ירקות", "שתייה", "ארוחות",
+                    "דרגות הפחמימות", "המשקל"):
+        assert subject in SUMMARY_QUESTION
+    assert "תבליטים" not in SUMMARY_QUESTION
+
+
+def test_the_instruction_travels_with_the_week_in_the_context(numeric_questionnaire):
+    history = {"2026-08-19": {"carbs": 7, "drinking": 3}}
+    context = weekly_summary_context(numeric_questionnaire, history, WEIGHTS, 78)
+    # How to answer belongs beside the data the answer is about, out of the embedded field.
+    assert context.startswith(SUMMARY_INSTRUCTION)
+    assert '"2026-08-19"' in context
+    assert '"carbs": 7' in context
+
+
+def test_summary_context_carries_the_weigh_ins_and_the_target(numeric_questionnaire):
     history = {"2026-08-19": {"carbs": 7}}
-    question = weekly_summary_question(numeric_questionnaire, history, WEIGHTS, 78)
-    assert '"2026-08-12": 84.0' in question
-    assert '"2026-08-19": 83.2' in question
-    assert '"יעד": 78' in question
+    context = weekly_summary_context(numeric_questionnaire, history, WEIGHTS, 78)
+    assert '"2026-08-12": 84.0' in context
+    assert '"2026-08-19": 83.2' in context
+    assert '"יעד": 78' in context
 
 
-def test_summary_question_omits_an_unset_target(numeric_questionnaire):
-    question = weekly_summary_question(numeric_questionnaire, {"2026-08-19": {"carbs": 7}},
-                                       WEIGHTS, None)
-    assert '"יעד"' not in question
+def test_summary_context_omits_an_unset_target(numeric_questionnaire):
+    context = weekly_summary_context(numeric_questionnaire, {"2026-08-19": {"carbs": 7}},
+                                     WEIGHTS, None)
+    assert '"יעד"' not in context
 
 
-def test_summary_question_sheds_oldest_days_to_fit_the_upstream_cap(numeric_questionnaire):
+def test_summary_context_sheds_oldest_days_to_fit_the_upstream_cap(numeric_questionnaire):
     history = {f"2026-{month:02d}-{day:02d}": {"carbs": 7, "drinking": 3}
                for month in range(1, 13) for day in range(1, 29)}
-    question = weekly_summary_question(numeric_questionnaire, history, WEIGHTS, 78)
-    assert len(question) <= MAX_QUESTION_CHARS
-    assert "2026-12-28" in question
-    assert "2026-01-01" not in question
+    context = weekly_summary_context(numeric_questionnaire, history, WEIGHTS, 78)
+    assert len(context) <= MAX_CONTEXT_CHARS
+    assert "2026-12-28" in context
+    assert "2026-01-01" not in context
     # The weight block outlives every shed day: it goes last in the shedding order.
-    assert '"יעד": 78' in question
+    assert '"יעד": 78' in context
 
 
 def test_recap_chat_title_names_the_sunday_its_week_opened_on():

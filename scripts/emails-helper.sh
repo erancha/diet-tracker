@@ -150,10 +150,11 @@ def append(table, sub, question, answer, sources, **marks):
 nudge.chat_history.append = append
 
 if not send:
-    # Standing in for the answering service, so it takes the job's whole call — the timeout it
-    # budgets for the wait included — and prints only the question.
-    def ask(url, key, question, **_):
+    # Standing in for the answering service, so it takes the job's whole call — the context block
+    # and the timeout it budgets for the wait included — and prints what would be sent.
+    def ask(url, key, question, context=None, **_):
         print(f"--- question to {url} ---\n{question}\n")
+        print(f"--- context ---\n{context}\n")
         return {"answer": "<כאן תיכתב תשובת שירות המענה>", "sources": []}
 
     nudge.chat.ask = ask

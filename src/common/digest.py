@@ -1,6 +1,7 @@
 """Renders the weekly Hebrew digest — one line counting the week's closed days and how many of
-them broke a rule — and composes the question that asks the answering service for the bulleted
-recap printed under it.
+them broke a rule — and composes the request that asks the answering service for the bulleted
+recap printed under it: a question naming the subjects a recap may speak about, and a context block
+carrying how to answer and the week itself.
 
 Every number a week produces is already in the app, so the email carries the count alone and
 leaves the space to the part that asks for attention."""
@@ -8,7 +9,7 @@ leaves the space to the part that asks for attention."""
 import json
 
 from common import weight
-from common.chat import MAX_QUESTION_CHARS
+from common.chat import MAX_CONTEXT_CHARS
 
 # Names the recap wherever it surfaces: the numeric digest's heading, the email subject, and the
 # title the stored chat carries in the transcript.
@@ -28,7 +29,7 @@ _DAYS = "ימי השבוע"
 #
 # Composing time tracks the words asked for and varies run to run, so the bullet count and the
 # per-bullet cap are what keep the answer inside the wait the weekly job allows it.
-_SUMMARY_INSTRUCTION = (
+SUMMARY_INSTRUCTION = (
     "לפניך נתוני מעקב תזונה של משתמש מהשבוע האחרון (JSON). "
     "ענה בעברית ב-3 עד 4 תבליטים בלבד, כל תבליט משפט אחד קצר בשורה הפותחת ב-• , "
     "בלי כותרות, בלי הקדמה ובלי סימוני עיצוב, "
@@ -40,6 +41,15 @@ _SUMMARY_INSTRUCTION = (
     "כתוב בעברית פשוטה ובמונחים שבנתונים עצמם — שתייה, ירקות, חלון אכילה, פחמימות — "
     "בלי מילים לועזיות ובלי מונחים מקצועיים, ועד 20 מילים בתבליט. "
     "כתוב מה היה בפועל, בניסוח מלא וברור, בלי ניסוחים מעורפלים כגון 'בדרך ל'."
+)
+
+
+# The only field the service embeds to choose which program documents ground the recap, so it names
+# the subjects a weekly recap may speak about. The same text every week: a clean week draws on the
+# same guidance as a week that went wrong.
+SUMMARY_QUESTION = (
+    "מהן הנחיות התזונה בנושאים שסיכום שבועי עשוי לגעת בהם: קמחים וסוכרים ויום פינוק, "
+    "חלון אכילה, כמות ירקות, שתייה, מספר ארוחות ונשנושים, דרגות הפחמימות ומגמת המשקל מול היעד?"
 )
 
 
@@ -79,12 +89,15 @@ def labeled_history(questionnaire, history: dict) -> dict:
             for date, answers in history.items()}
 
 
-def weekly_summary_question(questionnaire, history: dict, weights: dict, target) -> str:
-    """The RAG question asking for a recap of the user's week plus next-week tips, grounded in the
-    week's labeled data and in the latest weigh-ins beside the target — the same weight block the
-    chat context sends, so both senders describe the trend in one vocabulary.
+def weekly_summary_context(questionnaire, history: dict, weights: dict, target) -> str:
+    """How to answer, followed by the week the recap is asked about: the closed days' labeled
+    answers beside the latest weigh-ins and the target — the same weight block the chat context
+    sends, so both senders describe the trend in one vocabulary.
 
-    To honor the upstream cap the oldest days go first, one at a time, and the weight block only
+    Both ride here because upstream embeds the question alone to choose the documents grounding the
+    answer, and the question is reserved for the subjects the recap asks about.
+
+    To honor the context cap the oldest days go first, one at a time, and the weight block only
     once no day is left: it is small, and it is the one section a week of few closed days still
     has something to say from."""
     days = labeled_history(questionnaire, history)
@@ -92,7 +105,7 @@ def weekly_summary_question(questionnaire, history: dict, weights: dict, target)
     sheds = [lambda d=date: days.pop(d) for date in sorted(days)]
     sheds.append(lambda: data.pop(weight.LABEL))
     while True:
-        question = f"{_SUMMARY_INSTRUCTION}\n{json.dumps(data, ensure_ascii=False)}"
-        if len(question) <= MAX_QUESTION_CHARS:
-            return question
+        context = f"{SUMMARY_INSTRUCTION}\n{json.dumps(data, ensure_ascii=False)}"
+        if len(context) <= MAX_CONTEXT_CHARS:
+            return context
         sheds.pop(0)()

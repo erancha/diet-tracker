@@ -182,16 +182,17 @@ def _weekly_body(env, user, history, week_start) -> str:
     nothing to ask, so in both cases the service is not called.
 
     An answered recap is also stored as a chat of the user's, under the recap's short title rather
-    than the instruction the service was asked with — the shape the chat endpoint stores, so the
+    than the question the service was asked with — the shape the chat endpoint stores, so the
     recap lists and follows up like any answered chat, its data re-attached fresh on follow-up."""
     text = digest.weekly_text(env.questionnaire, history)
     if not history or not chat.configured(env.rag_url):
         return text
-    question = digest.weekly_summary_question(env.questionnaire, history,
-                                              env.store.get_weights(user.sub),
-                                              env.store.get_target(user.sub))
+    context = digest.weekly_summary_context(env.questionnaire, history,
+                                            env.store.get_weights(user.sub),
+                                            env.store.get_target(user.sub))
     try:
-        answer = chat.ask(env.rag_url, env.rag_key, question, timeout=RECAP_TIMEOUT_SECONDS)
+        answer = chat.ask(env.rag_url, env.rag_key, digest.SUMMARY_QUESTION, context,
+                          timeout=RECAP_TIMEOUT_SECONDS)
     except (urllib.error.URLError, TimeoutError):
         logger.warning("weekly summary generation failed; sending the plain digest", exc_info=True)
         return text

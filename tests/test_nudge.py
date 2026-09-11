@@ -24,7 +24,8 @@ def env(monkeypatch, ddb):
     monkeypatch.setattr(nudge.notify, "send_email",
                         lambda ses, sender, to, subject, body, app_url: sent.append(("mail", to, body)))
     monkeypatch.setattr(nudge.chat, "ask",
-                        lambda url, key, question, timeout: {"answer": "תובנה", "sources": []})
+                        lambda url, key, question, context, timeout: {"answer": "תובנה",
+                                                                      "sources": []})
     monkeypatch.setenv("AWS_DEFAULT_REGION", "eu-central-1")
     monkeypatch.setenv("DAYS_TABLE", "days")
     monkeypatch.setenv("MEALS_TABLE", "meals")
@@ -131,27 +132,30 @@ def test_weekly_appends_the_llm_summary_after_the_numeric_digest(env, monkeypatc
     e, sent = env
     asked = []
 
-    def fake_ask(url, key, question, timeout):
-        asked.append((url, key, question))
+    def fake_ask(url, key, question, context, timeout):
+        asked.append((url, key, question, context))
         return {"answer": "היה שבוע מאוזן", "sources": []}
 
     monkeypatch.setattr(nudge.chat, "ask", fake_ask)
     yesterday = days_before(today(), 1)
     e.store.put_day("u1", yesterday, CLEAN, 1, "t")
     nudge._weekly(e)
-    expected_question = nudge.digest.weekly_summary_question(e.questionnaire, {yesterday: CLEAN},
-                                                             {}, None)
-    assert asked == [("https://rag.example", "K", expected_question)]
+    expected_context = nudge.digest.weekly_summary_context(e.questionnaire, {yesterday: CLEAN},
+                                                           {}, None)
+    # The subjects question is what the service embeds to retrieve; the week and the formatting
+    # instruction ride beside it.
+    assert asked == [("https://rag.example", "K", nudge.digest.SUMMARY_QUESTION,
+                      expected_context)]
     body = next(text for _, target, text in sent if target == "a@gmail.com")
     assert body.index("נסגרו") < body.index("היה שבוע מאוזן")
 
 
-def test_weekly_question_carries_the_asking_user_own_weigh_ins_and_target(env, monkeypatch):
+def test_weekly_context_carries_the_asking_user_own_weigh_ins_and_target(env, monkeypatch):
     e, sent = env
     asked = []
 
-    def fake_ask(url, key, question, timeout):
-        asked.append(question)
+    def fake_ask(url, key, question, context, timeout):
+        asked.append(context)
         return {"answer": "א", "sources": []}
 
     monkeypatch.setattr(nudge.chat, "ask", fake_ask)
@@ -170,7 +174,7 @@ def test_weekly_question_carries_the_asking_user_own_weigh_ins_and_target(env, m
 def test_weekly_stores_the_recap_as_a_chat_titled_for_the_transcript(env, monkeypatch):
     e, sent = env
     monkeypatch.setattr(nudge.chat, "ask",
-                        lambda url, key, question, timeout: {
+                        lambda url, key, question, context, timeout: {
                             "answer": "היה שבוע מאוזן",
                             "sources": [{"fileName": "f", "score": 0.4}]})
     e.store.put_day("u1", days_before(today(), 1), CLEAN, 1, "t")
@@ -189,7 +193,7 @@ def test_weekly_stores_the_recap_as_a_chat_titled_for_the_transcript(env, monkey
 def test_weekly_stores_no_chat_when_the_llm_call_fails(env, monkeypatch):
     e, sent = env
 
-    def failing_ask(url, key, question, timeout):
+    def failing_ask(url, key, question, context, timeout):
         raise urllib.error.URLError("service down")
 
     monkeypatch.setattr(nudge.chat, "ask", failing_ask)
@@ -200,7 +204,7 @@ def test_weekly_stores_no_chat_when_the_llm_call_fails(env, monkeypatch):
 
 def test_weekly_skips_the_llm_for_an_empty_week(env, monkeypatch):
     e, sent = env
-    monkeypatch.setattr(nudge.chat, "ask", lambda url, key, question, timeout:
+    monkeypatch.setattr(nudge.chat, "ask", lambda url, key, question, context, timeout:
                         pytest.fail("asked the LLM with no data"))
     nudge._weekly(e)
     assert all("לא נסגרו ימים השבוע" in text for _, _, text in sent)
@@ -209,7 +213,7 @@ def test_weekly_skips_the_llm_for_an_empty_week(env, monkeypatch):
 def test_weekly_falls_back_to_the_plain_digest_when_the_llm_call_fails(env, monkeypatch, caplog):
     e, sent = env
 
-    def failing_ask(url, key, question, timeout):
+    def failing_ask(url, key, question, context, timeout):
         raise urllib.error.URLError("service down")
 
     monkeypatch.setattr(nudge.chat, "ask", failing_ask)
@@ -368,7 +372,7 @@ def test_muted_users_are_dropped_from_every_jobs_audience(env):
 def test_weekly_sends_the_plain_digest_when_no_answering_service_is_configured(env, monkeypatch):
     e, sent = env
     e = dataclasses.replace(e, rag_url="", rag_key=None)
-    monkeypatch.setattr(nudge.chat, "ask", lambda url, key, question, timeout:
+    monkeypatch.setattr(nudge.chat, "ask", lambda url, key, question, context, timeout:
                         pytest.fail("asked the LLM with no service configured"))
     e.store.put_day("u1", days_before(today(), 1), CLEAN, 1, "t")
     nudge._weekly(e)
