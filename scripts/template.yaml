@@ -408,7 +408,9 @@ Resources:
       CodeUri: ../build/lambda
       Handler: handlers/nudge.handler
       # Every job loops the whole user pool inside one invocation, sending per user, so the budget
-      # scales with the pool rather than with one request — the global 30s cannot cover it.
+      # scales with the pool rather than with one request — the global 30s cannot cover it. The
+      # weekly recap also waits on the answering service once per user, which is what makes the
+      # pool a ceiling here and not merely a cost.
       Timeout: 300
       Policies:
         - DynamoDBCrudPolicy:

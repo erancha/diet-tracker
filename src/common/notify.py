@@ -11,7 +11,6 @@ parameter."""
 
 import html
 import json
-import re
 import urllib.request
 
 from common.log import get_logger
@@ -32,25 +31,24 @@ def violation_text(violations) -> str:
     return "התראות תזונה:\n" + "\n".join(f"• {v.message}" for v in violations)
 
 
-# A bullet's opening label, up to and including its colon — "דורש תשומת לב:" and its kin. Bounded
-# so a colon deeper in the sentence, or one inside a clock time, cannot swallow the whole line.
-_BULLET_LABEL = re.compile(r"^(• [^:]{1,30}:)(.*)$")
+_BODY_FONT_PX = 15
+
+# A bullet is one finding under the line that sums them up, so it sits a step below it in size.
+_BULLET_FONT_PX = _BODY_FONT_PX - 1
+_BULLET = "• "
 
 
 def _line_html(line, first) -> str:
-    """One body line as HTML, with the reader's two landmarks in bold: the opening line, which
-    every message this app sends leads with, and the label a recap bullet opens with. Escaping
-    first means a line can only ever contribute text, never markup of its own."""
+    """One body line as HTML: the opening line in bold — every message this app sends leads with
+    what it came to — and a bullet a size smaller. Escaping first means a line can only ever
+    contribute text, never markup of its own."""
     escaped = html.escape(line)
     if first:
         return f"<strong>{escaped}</strong>"
-    label = _BULLET_LABEL.match(escaped)
-    if label is None:
-        return escaped
-    return f"<strong>{label.group(1)}</strong>{label.group(2)}"
+    if line.startswith(_BULLET):
+        return f'<span style="font-size: {_BULLET_FONT_PX}px">{escaped}</span>'
+    return escaped
 
-
-_BODY_FONT_PX = 15
 
 # The mute footnote closes the mail a step below the body, so it reads as a note about the mail
 # rather than part of the message.

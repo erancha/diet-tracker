@@ -22,10 +22,18 @@ def chat_title(week_start: str) -> str:
 
 
 # Where the week's own numbers are, once the recap has said how many days asked for attention.
-_TRENDS = "הגרפים והטבלה של השבוע במסך המגמות באפליקציה:"
+# It closes the message because notify.send_email sets the app's address under it; the chat the
+# app stores shows the line by itself, so it ends as a sentence rather than pointing at a link.
+_TRENDS = "הגרפים והטבלה של השבוע במסך המגמות באפליקציה."
+
+# What the app asks the answering service on the user's behalf once the recap is written, sent as
+# a follow-up on the recap itself so the findings below are what retrieval reads.
+INSIGHTS_QUESTION = "מהן התובנות לשבוע הבא?"
+_INSIGHTS_TITLE = "תובנות לשבוע הבא:"
 
 
-def text(questionnaire, history: dict, excluded: dict, treat_weekday: str) -> str:
+def text(questionnaire, history: dict, excluded: dict, treat_weekday: str,
+         insights: str | None = None) -> str:
     """The week as the app shows it: how much of it was closed, then one line per bound a day
     crossed, counted day by day the way the charts redden a dot and the table a cell.
 
@@ -34,7 +42,11 @@ def text(questionnaire, history: dict, excluded: dict, treat_weekday: str) -> st
 
     Flours and sugars are counted apart, against the program's own week: points spent on them are
     a finding on the six days meant to stay clear of them, and are what the treat day is for on the
-    seventh, so that day never counts."""
+    seventh, so that day never counts.
+
+    The answering service's reading of the week rides under the findings when there is one — the
+    email carries it, the recap the app stores does not, because the follow-up that asks for it
+    turns that stored recap into the conversation the reading answers."""
     if not history:
         return "לא נסגרו ימים השבוע"
     lines = [f"{TITLE} — נסגרו {len(history)} מתוך 7 ימים"]
@@ -49,6 +61,8 @@ def text(questionnaire, history: dict, excluded: dict, treat_weekday: str) -> st
     if unclean:
         lines.append(f"• קמחים וסוכרים {_days(unclean)} שאינם יום פינוק" if unclean > 1
                      else "• קמחים וסוכרים ביום אחד שאינו יום פינוק")
+    if insights is not None:
+        lines += ["", _INSIGHTS_TITLE, insights]
     return "\n".join(lines + ["", _TRENDS])
 
 

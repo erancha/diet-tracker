@@ -43,7 +43,7 @@ def test_flours_and_sugars_are_counted_off_the_treat_day_only():
 
 def test_the_recap_ends_by_pointing_at_the_trends_screen():
     text = weekly_recap.text(questionnaire(), {WEDNESDAY: CLEAN}, {}, "FRI")
-    assert text.endswith("הגרפים והטבלה של השבוע במסך המגמות באפליקציה:")
+    assert text.endswith("הגרפים והטבלה של השבוע במסך המגמות באפליקציה.")
 
 
 def test_the_chat_title_names_the_sunday_its_week_opened_on():

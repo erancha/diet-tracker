@@ -210,28 +210,38 @@ Scheduled jobs (EventBridge Scheduler, Asia/Jerusalem) run alongside the tracker
 - **Threshold alerts** — fire over consecutive days violating the configured thresholds, by email
   plus Telegram when a bot token is configured (see
   [Development & deployment](development.md#telegram-optional)).
-- **Weekly recap** — reports the seven days ending yesterday. It fires late on the weigh-in
-  night, so the week it reports closes the day before the weighing and the recap reads that
-  morning's weight as the freshest one; the last day it counts had its final chance to be closed
-  that same morning, at `day_close.close_until`. The window stops at yesterday because today is
-  still open, and counting it would report six closed days out of seven however diligent the user
-  was.
+- **Weekly recap** — reports seven days ending on the user's last closed day of today and
+  yesterday. It fires late on the weigh-in night, when the day is over in practice but may still be
+  open in the tracker: a day the user has closed by then belongs to the week it ends and is counted;
+  one still open would be reported as missing however diligent the user was, so the window ends the
+  day before it instead — that day had its final chance to be closed that morning, at
+  `day_close.close_until`. Each user's own days decide, so the same run reports one user's week
+  through Thursday and another's through Wednesday. Either way the recap reads the weigh-in
+  morning's weight as the freshest one.
 
-  The email opens with one line — how many of the seven days were closed, and how many of those
-  broke a rule, since the breaches are what asks to be acted on. Under it come three to four
-  one-sentence bullets from the answering service: what went well, how many days ask for
-  attention and why, and a suggestion for the week ahead. Dates, single days' values and every
-  weekly average stay in the app, a tap away, rather than spending the email's few lines. Each
-  bullet opens with a short label, which the HTML rendering sets in bold along with the opening
-  line, so the two things worth reading first are the two that stand out. The question carries
-  the week's closed days and the latest weigh-ins beside the target weight, the same weight block
-  a chat question attaches; when it outgrows the length the service accepts, the oldest days go
-  first and the weight block last.
+  The email opens with one line — how many of the seven days were closed — and under it one
+  bullet per bound a day crossed, counted day by day the way the trend chart reddens a dot and the
+  history table a cell, in the wording the chart legend gives that bound. Flours and sugars are
+  counted apart, over the six days the program means to keep clear of them; the treat day is what
+  they are for, so a day of it is never a finding. A week inside every bound says so in its one
+  line. Dates, single days' values and every weekly average stay in the app, a tap away, where the
+  closing line points, rather than spending the email's few lines.
 
-  The answered recap is stored as one of the user's chats, titled with the recap's name and the
-  day its week opened on, so a transcript accumulating one a week is not a column of identical
-  rows. It lists and follows up like any answered chat. An unreachable answering service costs
-  only the bullets: the opening line still goes out, and no chat is stored.
+  Those findings are the app's own arithmetic. What follows them is the answering service's
+  reading of the week: the job stores the findings as a chat of the user's and asks that chat a
+  follow-up — "מהן התובנות לשבוע הבא?" — over the path a follow-up the user types takes
+  (`src/common/chat_question.py`), the asker's recent tracked data attached as the context block,
+  weight measurements and target included. Retrieval embeds the question alone, and the question
+  carries the week's findings, so what comes back is guidance about what this week did rather than
+  about the program at large.
+
+  The answer replaces the chat it extends, so the week leaves one chat holding the whole exchange,
+  titled with the recap's name and the day its week opened on — a transcript accumulating one a
+  week is not a column of identical rows. It lists, follows up and summarizes like any other chat.
+  The reading is the only part that can go missing: a deployment configuring no answering service,
+  and one that fails to answer, both still mail the findings and still leave the recap in the
+  transcript for the user to follow up themselves. It is asked outside the daily chat quota, which
+  counts the questions the user chose to spend — this one they did not ask.
 - **Weigh-in reminder** — a weekly prompt to step on the scale, skipped for anyone who already
   recorded a weight on the weigh-in day itself, on the same channels as the alerts above.
 - **Trend chart** — a 10-day trend chart after each closed day.

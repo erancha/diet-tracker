@@ -6,12 +6,13 @@ the pool who has not opted out of notifications. NudgeEnv gathers all AWS-derive
 job logic stays pure and testable."""
 
 import os
+import urllib.error
 from dataclasses import dataclass
 
 import boto3
 
-from common import (appconfig, chat_history, derive, notify, rules, undelivered, users,
-                    weekly_recap, weight)
+from common import (appconfig, chat, chat_history, chat_question, derive, notify, rules,
+                    undelivered, users, weekly_recap, weight)
 from common.dates import days_before, today
 from common.log import get_logger
 from common.rules import LOOKBACK_DAYS
@@ -27,6 +28,12 @@ REMINDER_TEXT = "עדיין לא רשמת ארוחות היום 🌙"
 OPEN_DAY_SUBJECT = "תזכורת — היום עדיין פתוח"
 OPEN_DAY_TEXT = "רשמת היום ארוחות ולא סגרת את היום 🌙 אפשר לסגור אותו עכשיו ביומן"
 
+# How long the weekly recap waits for its reading of the week: just under the 60s the answering
+# service's API Gateway and the Lambda behind it both allow. The follow-up carries the whole recap
+# in its question, and composing the reading runs past the client's default wait. No browser waits
+# on this job; the budget it spends is the NudgeFunction timeout, across the whole pool.
+RECAP_TIMEOUT_SECONDS = 55
+
 @dataclass(frozen=True)
 class NudgeEnv:
     store: object
@@ -39,6 +46,8 @@ class NudgeEnv:
     treat_weekday: str  # the week's treat day, left out of the recap's clean-day count
     sender: str
     app_url: str  # the deployed frontend, cited in every email's mute footnote
+    rag_url: str  # empty when the deployment configures no answering service
+    rag_key: str | None  # None exactly when rag_url is empty
 
 
 def handler(event, context):
@@ -64,6 +73,9 @@ def _build_env() -> NudgeEnv:
     store = Store(os.environ["DAYS_TABLE"], os.environ["MEALS_TABLE"], os.environ["STATE_TABLE"],
                   os.environ["WEIGHTS_TABLE"])
     config = appconfig.load(os.environ["APP_CONFIG_PATH"])
+    # Only the weekly recap's follow-up asks the answering service; every other job runs whether
+    # or not the deployment configures one.
+    rag_url = os.environ["RAG_API_URL"]
     return NudgeEnv(
         store=store,
         questionnaire=config.questionnaire,
@@ -76,6 +88,9 @@ def _build_env() -> NudgeEnv:
         chat_history=dynamodb.Table(os.environ["CHAT_HISTORY_TABLE"]),
         sender=os.environ["SES_SENDER"],
         app_url=os.environ["APP_URL"],
+        rag_url=rag_url,
+        rag_key=chat.api_key(ssm, os.environ["RAG_API_KEY_PARAM"])
+                if chat.configured(rag_url) else None,
     )
 
 
@@ -146,14 +161,17 @@ def _rules_job(env):
 
 
 def _weekly(env):
-    """The seven days ending yesterday.
+    """The seven days ending on the user's last closed day of today and yesterday.
 
-    The schedule fires late on the weigh-in night, so the week reported closes the day before the
-    weighing. The window ends yesterday because today is still open: counting it would report six
-    closed days out of seven however diligent the user was."""
+    The schedule fires late on the weigh-in night, when the day is over in practice but may still
+    be open in the tracker. A day closed by then belongs to the week it ends, so the window takes
+    it; one still open would be counted as missing however diligent the user was, so the window
+    ends the day before it instead. Each user's own days decide, so the week reported is whatever
+    seven days they have most recently had the chance to close."""
     day = today()
-    week_start, week_end = days_before(day, 7), days_before(day, 1)
     for user in env.users:
+        week_end = day if env.store.has_day(user.sub, day) else days_before(day, 1)
+        week_start = days_before(week_end, 6)
         history = env.store.get_days_range(user.sub, week_start, week_end)
         # The clean-day count reads the meals themselves: what a day cost in flours and sugars is
         # derived on read, never stored with the day.
@@ -164,17 +182,45 @@ def _weekly(env):
 
 
 def _weekly_body(env, user, history, excluded, week_start) -> str:
-    """The week's recap line, also stored as a chat of the user's under the recap's short title —
-    so it lists and follows up like any other chat, and a follow-up is where a question reaches
-    the answering service, carrying the asker's data fresh.
+    """The week's findings, and under them the answering service's reading of them.
 
-    A week with no closed day has nothing to recap and is not stored."""
-    text = weekly_recap.text(env.questionnaire, history, excluded, env.treat_weekday)
+    The findings are stored as a chat of the user's under the recap's short title, and the reading
+    is asked for as a follow-up on that chat — the same path the user's own follow-up takes, so the
+    service is asked in the shape a user asks in and the answered conversation lands in the
+    transcript ready to be continued. Retrieval reads the question, which now carries the week's
+    actual findings, so the guidance that comes back is about what the week did.
+
+    A week with no closed day has nothing to recap, and is neither stored nor asked about."""
+    findings = weekly_recap.text(env.questionnaire, history, excluded, env.treat_weekday)
     if not history:
-        return text
-    chat_history.append(env.chat_history, user.sub, weekly_recap.chat_title(week_start), text, [],
-                        app=True)
-    return text
+        return findings
+    at = chat_history.append(env.chat_history, user.sub, weekly_recap.chat_title(week_start),
+                             findings, [], app=True)
+    insights = _insights(env, user, week_start, findings, at)
+    if insights is None:
+        return findings
+    return weekly_recap.text(env.questionnaire, history, excluded, env.treat_weekday, insights)
+
+
+def _insights(env, user, week_start, findings, at) -> str | None:
+    """The answering service's reading of the week, or None when there is none to be had — a
+    deployment configuring no service, or a service that failed to answer.
+
+    A failed call costs only the reading: the findings are the app's own and go out either way,
+    and the stored recap stays the chat it was, so the user can ask the same follow-up in the app.
+    The wait is spent once per user inside the job's own budget."""
+    if not chat.configured(env.rag_url):
+        return None
+    question = chat_history.follow_up(weekly_recap.chat_title(week_start), findings,
+                                      weekly_recap.INSIGHTS_QUESTION)
+    try:
+        return chat_question.answer(env.rag_url, env.rag_key, env.store, env.questionnaire,
+                                    env.chat_history, user.sub, question, at=at, app=True,
+                                    timeout=RECAP_TIMEOUT_SECONDS)["answer"]
+    except (urllib.error.URLError, TimeoutError):
+        logger.warning("weekly insights failed for %s; sending the findings alone", user.email,
+                       exc_info=True)
+        return None
 
 
 def _weigh_in(env):

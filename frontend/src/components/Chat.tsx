@@ -31,8 +31,9 @@ const FOLLOW_UP_HINT =
 const SUMMARIZE_HINT =
   "החלפת השיחה בסיכום קצר של מה שנשאל והוסק. השאלות, התשובות והמקורות שבה נמחקים ולא ניתן לשחזר אותם.";
 
-// handlers/chat.py mirrors these to take a chain apart when summarizing it, so the wording is a
-// cross-runtime contract rather than presentation.
+// common/chat_history.py mirrors these: it composes the same chain for the weekly recap's
+// follow-up and takes one apart when summarizing, so the wording is a cross-runtime contract
+// rather than presentation.
 const ORIGINAL_LABEL = "השאלה המקורית:";
 const ANSWER_LABEL = "התשובה:";
 const FOLLOW_UP_LABEL = "שאלת המשך:";

@@ -12,6 +12,7 @@
 # Simulations:
 #   --rejected <email>      Show that user a message as one SES refused to deliver
 #   --weekly-recap <email>  Run the weekly recap job for that user now, rather than on its schedule
+#                           (asks the answering service for real; only sending and storing are not)
 #
 # Real actions:
 #   --verify <email>        Ask SES to mail that address its verification request again
@@ -103,8 +104,10 @@ rejected() {
 # account — so what a rule or config edit will send can be read before it is deployed. The AWS
 # inputs come from the deployed NudgeFunction's environment, leaving the questionnaire as the only
 # thing read from the working tree. Without --send both delivery channels and the transcript write
-# are replaced by prints and nothing leaves the machine; with it, the recap lands in that user's
-# mail and chat list, where it can be followed up and deleted like any other chat.
+# are replaced by prints, but the answering service is still asked — its reading of the week is
+# most of what there is to preview, and it cannot be had without the call. With --send, the recap
+# lands in that user's mail and chat list, where it can be followed up and deleted like any other
+# chat.
 weekly_recap() {
   [ -x .venv/bin/python ] \
     || { echo "no .venv — run scripts/test.sh once to create it" >&2; exit 1; }
@@ -168,7 +171,8 @@ PY
     echo "Sent the weekly recap to $EMAIL and stored it as a chat; open the app's chat list to"
     echo "read it, follow it up, or delete it."
   else
-    echo "Dry run — nothing was sent or stored. Add --send to do it for real."
+    echo "Dry run — nothing was sent or stored, though the answering service was asked."
+    echo "Add --send to do it for real."
   fi
 }
 

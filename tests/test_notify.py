@@ -91,21 +91,16 @@ def test_every_email_carries_a_right_to_left_html_body_beside_its_text():
     assert captured["Message"]["Body"]["Text"]["Data"] == "שורה\nשורה שנייה"
 
 
-def test_html_body_sets_the_opening_line_and_each_bullet_label_in_bold():
-    # The two things a reader should catch first: what the week came to, and what each bullet is
-    # about. The plain-text part carries neither mark, so Telegram is unaffected.
-    body = "סיכום שבועי — 5 מהם עם חריגה\n\n• מגמה: שתייה טובה\n• דורש תשומת לב: 4 ימים"
+def test_html_body_sets_the_opening_line_in_bold_and_the_bullets_a_size_smaller():
+    # What the message came to is the one thing a reader should catch first; the findings under
+    # it sit a step below. The plain-text part carries neither mark, so Telegram is unaffected.
+    body = ("סיכום שבועי — נסגרו 7 מתוך 7 ימים\n• ציון יומי — חריגה (מעל 12) ב-2 ימים\n\n"
+            "הגרפים והטבלה של השבוע במסך המגמות באפליקציה.")
     html = notify.rtl_html(body)
-    assert "<strong>סיכום שבועי — 5 מהם עם חריגה</strong>" in html
-    assert "<strong>• מגמה:</strong> שתייה טובה" in html
-    assert "<strong>• דורש תשומת לב:</strong> 4 ימים" in html
-
-
-def test_a_bullet_without_a_label_is_left_unbolded():
-    # The label is bounded, so a colon deep in a sentence — or a clock time — cannot bold a line
-    # that was never labelled.
-    html = notify.rtl_html("שורה ראשונה\n• משפט ארוך בלי תווית שמסתיים כאן ואז מופיע 07:20 בתוכו")
+    assert "<strong>סיכום שבועי — נסגרו 7 מתוך 7 ימים</strong>" in html
     assert html.count("<strong>") == 1
+    assert '<span style="font-size: 14px">• ציון יומי — חריגה (מעל 12) ב-2 ימים</span>' in html
+    assert html.count("<span") == 1
 
 
 def test_html_body_escapes_the_text_it_renders():

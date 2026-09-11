@@ -5,8 +5,10 @@ without spending; the day's first refusal is emailed to the admin.
 
 The caller's identity comes exclusively from the JWT claims the API Gateway authorizer
 verified — the request body never names a user. That verified identity is also what selects
-the asker's own tracked data, sent upstream as a context block beside the question
-(common.chat_context) so answers can ground in it without the data steering retrieval.
+the asker's own tracked data, sent upstream as a context block beside the question, so answers can
+ground in it without the data steering retrieval. Asking and storing the reply is
+common.chat_question, shared with the weekly recap's follow-up; what stays here is the quota and
+the HTTP shape.
 
 Each answered chat is stored per user (common.chat_history) and served back by GET /chat, so
 it survives reloads and follows the user across devices. A POST naming a stored chat's
@@ -29,19 +31,13 @@ import urllib.error
 
 import boto3
 
-from common import appconfig, chat, chat_context, chat_history, notify, quota
+from common import appconfig, chat, chat_history, chat_question, notify, quota
 from common.dates import today
 from common.log import get_logger
 from common.store import Store
 from common.webapi import response
 
 logger = get_logger(__name__)
-
-# The labels a followed-up conversation is chained under. Chat.tsx composes the chain and the
-# summary request takes it apart again, so the labels are mirrored across the two runtimes the way
-# the quota refusal and appTitle.ts are.
-ORIGINAL_QUESTION_LABEL = "השאלה המקורית:"
-ANSWER_LABEL = "התשובה:"
 
 # Asks the answering service for the digest rather than an answer; the conversation itself rides
 # as the request's context block.
@@ -113,24 +109,18 @@ def _ask(sub, email, body):
     if refusal is not None:
         return refusal
 
-    # The asker's tracked data goes upstream only as the request's context field; the stored
-    # chat keeps the bare question, so the transcript stays readable and a follow-up re-attaches
-    # fresh data instead of accumulating stale copies in the chain.
     store = Store(os.environ["DAYS_TABLE"], os.environ["MEALS_TABLE"], os.environ["STATE_TABLE"],
                   os.environ["WEIGHTS_TABLE"])
     questionnaire = appconfig.load(os.environ["APP_CONFIG_PATH"]).questionnaire
-    context = chat_context.user_context(store, questionnaire, sub, today())
-    key = _rag_key()
     try:
-        answer = chat.ask(_rag_url(), key, question.strip(), context)
+        stored = chat_question.answer(_rag_url(), _rag_key(), store, questionnaire,
+                                      _history_table(), sub, question.strip(),
+                                      at=at, app=app)
     except (urllib.error.URLError, TimeoutError) as error:
         return _upstream_unavailable(error)
-    try:
-        at = chat_history.append(_history_table(), sub, question.strip(), answer["answer"],
-                                 answer["sources"], at=at, app=app)
     except KeyError:
         return response(404, {"error": f"no turn stored at {at}"})
-    return response(200, {"answer": answer["answer"], "sources": answer["sources"], "at": at})
+    return response(200, stored)
 
 
 def _source_url(body):
@@ -202,14 +192,10 @@ def _summarize(sub, email, at):
 
 
 def _conversation(turn):
-    """A stored chat as the labeled question-and-answer text the digest is made from. A
-    followed-up chat's question already carries the chain; a standalone one gets the same opening
-    label so both read alike upstream. The text stays within the service's context cap because
-    every follow-up that grew the chain was itself sent under the smaller question cap."""
-    chain = turn["question"]
-    if not chain.startswith(ORIGINAL_QUESTION_LABEL):
-        chain = f"{ORIGINAL_QUESTION_LABEL} {chain}"
-    return f"{chain}\n{ANSWER_LABEL} {turn['answer']}"
+    """A stored chat as the text the digest is made from. It stays within the service's context
+    cap because every follow-up that grew the chain was itself sent under the smaller question
+    cap."""
+    return chat_history.conversation(turn["question"], turn["answer"])
 
 
 def _original_question(question):
@@ -217,10 +203,10 @@ def _original_question(question):
     without the opening label, or the whole question of a chat that was never followed up. The
     answer label ends the opening rather than the first newline, so a question asked over several
     lines survives summarizing whole."""
-    if not question.startswith(ORIGINAL_QUESTION_LABEL):
+    if not question.startswith(chat_history.ORIGINAL_QUESTION_LABEL):
         return question
-    opening = question.split(f"\n{ANSWER_LABEL}", 1)[0]
-    return opening[len(ORIGINAL_QUESTION_LABEL):].strip()
+    opening = question.split(f"\n{chat_history.ANSWER_LABEL}", 1)[0]
+    return opening[len(chat_history.ORIGINAL_QUESTION_LABEL):].strip()
 
 
 def _notify_admin_quota_reached(email, limit):

@@ -17,6 +17,28 @@ from boto3.dynamodb.conditions import Key
 
 from common.paging import query_all
 
+# The labels a conversation is chained under inside the stored question. Chat.tsx composes the
+# same chain when the user follows a chat up, so the wording is a cross-runtime contract rather
+# than presentation.
+ORIGINAL_QUESTION_LABEL = "השאלה המקורית:"
+ANSWER_LABEL = "התשובה:"
+FOLLOW_UP_LABEL = "שאלת המשך:"
+
+
+def conversation(question, answer) -> str:
+    """One stored chat as the labeled question-and-answer text a further request carries it in.
+    An already-chained question keeps the chain it holds; a standalone one gets the opening label,
+    so both read alike upstream."""
+    chain = (question if question.startswith(ORIGINAL_QUESTION_LABEL)
+             else f"{ORIGINAL_QUESTION_LABEL} {question}")
+    return f"{chain}\n{ANSWER_LABEL} {answer}"
+
+
+def follow_up(question, answer, asked) -> str:
+    """The question text a follow-up on a stored chat is sent as: the chat's conversation so far,
+    then the new question under its own label."""
+    return f"{conversation(question, answer)}\n{FOLLOW_UP_LABEL} {asked}"
+
 
 def append(table, sub, question, answer, sources, at=None, app=False):
     """Stores one answered chat for the user, stamped now (UTC), and returns that stamp — the

@@ -230,3 +230,21 @@ def test_a_chat_stored_before_the_mark_existed_reads_as_the_users_own(table):
 
     (turn,) = chat_history.turns(table, "u1")
     assert turn["app"] is False
+
+
+def test_a_follow_up_labels_a_standalone_question_as_the_conversations_opening():
+    chained = chat_history.follow_up("מה זה יום פינוק?", "יום אחד בשבוע", "ואיך מתכוננים אליו?")
+    assert chained == ("השאלה המקורית: מה זה יום פינוק?\n"
+                       "התשובה: יום אחד בשבוע\n"
+                       "שאלת המשך: ואיך מתכוננים אליו?")
+
+
+def test_a_second_follow_up_keeps_the_chain_it_extends():
+    """The chain grows by one exchange per follow-up; only a question that never opened one gets
+    the opening label, so a conversation names its original question once."""
+    first = chat_history.follow_up("מה זה יום פינוק?", "יום אחד בשבוע", "ואיך מתכוננים אליו?")
+
+    second = chat_history.follow_up(first, "מקדימים ארוחה", "ומה עם למחרת?")
+
+    assert second.count("השאלה המקורית:") == 1
+    assert second.endswith("התשובה: מקדימים ארוחה\nשאלת המשך: ומה עם למחרת?")
