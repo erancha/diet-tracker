@@ -237,7 +237,7 @@ Scheduled jobs (EventBridge Scheduler, Asia/Jerusalem) run alongside the tracker
 - **Trend chart** — a 10-day trend chart after each closed day.
 
 Every job above reads its audience from the pool minus the accounts that have opted out, so one
-switch silences all of them — the unconditional weekly digest included. The switch is the account
+switch silences all of them — the unconditional weekly recap included. The switch is the account
 menu's second item, beside the sign-out it sits with because leaving is when a user decides they
 are done being reminded; it toggles, so the same item subscribes again. Opting out changes nothing
 inside the app: a muted account still sees its own violations on closing a day and in the header

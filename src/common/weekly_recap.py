@@ -1,7 +1,7 @@
-"""Renders the weekly Hebrew digest — one line counting the week's closed days and how many of
-them broke a rule — and composes the request that asks the answering service for the bulleted
-recap printed under it: a question naming the subjects a recap may speak about, and a context block
-carrying how to answer and the week itself.
+"""Renders the weekly Hebrew recap: one line counting the week's closed days and how many of them
+broke a rule, and the request that asks the answering service for the bulleted advice printed under
+that line — a question naming the subjects the advice may speak about, and a context block carrying
+how to answer and the week itself.
 
 Every number a week produces is already in the app, so the email carries the count alone and
 leaves the space to the part that asks for attention."""
@@ -11,9 +11,9 @@ import json
 from common import weight
 from common.chat import MAX_CONTEXT_CHARS
 
-# Names the recap wherever it surfaces: the numeric digest's heading, the email subject, and the
+# Names the recap wherever it surfaces: the numeric line's heading, the email subject, and the
 # title the stored chat carries in the transcript.
-RECAP_TITLE = "סיכום שבועי"
+TITLE = "סיכום שבועי"
 
 _DAYS = "ימי השבוע"
 
@@ -29,7 +29,7 @@ _DAYS = "ימי השבוע"
 #
 # Composing time tracks the words asked for and varies run to run, so the bullet count and the
 # per-bullet cap are what keep the answer inside the wait the weekly job allows it.
-SUMMARY_INSTRUCTION = (
+INSTRUCTION = (
     "לפניך נתוני מעקב תזונה של משתמש מהשבוע האחרון (JSON). "
     "ענה בעברית ב-3 עד 4 תבליטים בלבד, כל תבליט משפט אחד קצר בשורה הפותחת ב-• , "
     "בלי כותרות, בלי הקדמה ובלי סימוני עיצוב, "
@@ -47,18 +47,18 @@ SUMMARY_INSTRUCTION = (
 # The only field the service embeds to choose which program documents ground the recap, so it names
 # the subjects a weekly recap may speak about. The same text every week: a clean week draws on the
 # same guidance as a week that went wrong.
-SUMMARY_QUESTION = (
+QUESTION = (
     "מהן הנחיות התזונה בנושאים שסיכום שבועי עשוי לגעת בהם: קמחים וסוכרים ויום פינוק, "
     "חלון אכילה, כמות ירקות, שתייה, מספר ארוחות ונשנושים, דרגות הפחמימות ומגמת המשקל מול היעד?"
 )
 
 
-def recap_chat_title(week_start: str) -> str:
+def chat_title(week_start: str) -> str:
     """The title the stored recap chat carries: the recap's name and the day its week opened on,
     written the way the app writes dates. A transcript accumulates one recap a week, and the date
     is what tells them apart in the chat list."""
     year, month, day = week_start.split("-")
-    return f"{RECAP_TITLE} {day}/{month}/{year}"
+    return f"{TITLE} {day}/{month}/{year}"
 
 
 def _violates_any(questionnaire, answers: dict) -> bool:
@@ -69,7 +69,7 @@ def _violates_any(questionnaire, answers: dict) -> bool:
     )
 
 
-def weekly_text(questionnaire, history: dict) -> str:
+def text(questionnaire, history: dict) -> str:
     """The week in one line: how many of its seven days were closed, and how many of those broke
     a rule — the count worth acting on, so it is the one named. A week that broke none says so
     rather than counting to zero."""
@@ -77,8 +77,8 @@ def weekly_text(questionnaire, history: dict) -> str:
         return "לא נסגרו ימים השבוע"
     violating = sum(1 for answers in history.values() if _violates_any(questionnaire, answers))
     if violating == 0:
-        return f"{RECAP_TITLE} — נסגרו {len(history)} מתוך 7 ימים, כולם ללא חריגה"
-    return f"{RECAP_TITLE} — נסגרו {len(history)} מתוך 7 ימים, {violating} מהם עם חריגה"
+        return f"{TITLE} — נסגרו {len(history)} מתוך 7 ימים, כולם ללא חריגה"
+    return f"{TITLE} — נסגרו {len(history)} מתוך 7 ימים, {violating} מהם עם חריגה"
 
 
 def labeled_history(questionnaire, history: dict) -> dict:
@@ -89,7 +89,7 @@ def labeled_history(questionnaire, history: dict) -> dict:
             for date, answers in history.items()}
 
 
-def weekly_summary_context(questionnaire, history: dict, weights: dict, target) -> str:
+def context(questionnaire, history: dict, weights: dict, target) -> str:
     """How to answer, followed by the week the recap is asked about: the closed days' labeled
     answers beside the latest weigh-ins and the target — the same weight block the chat context
     sends, so both senders describe the trend in one vocabulary.
@@ -105,7 +105,7 @@ def weekly_summary_context(questionnaire, history: dict, weights: dict, target) 
     sheds = [lambda d=date: days.pop(d) for date in sorted(days)]
     sheds.append(lambda: data.pop(weight.LABEL))
     while True:
-        context = f"{SUMMARY_INSTRUCTION}\n{json.dumps(data, ensure_ascii=False)}"
-        if len(context) <= MAX_CONTEXT_CHARS:
-            return context
+        block = f"{INSTRUCTION}\n{json.dumps(data, ensure_ascii=False)}"
+        if len(block) <= MAX_CONTEXT_CHARS:
+            return block
         sheds.pop(0)()

@@ -106,7 +106,7 @@ def test_rules_job_evaluates_as_of_latest_submitted_day(env):
     assert any("חלון אכילה" in text for _, _, text in sent)
 
 
-def test_weekly_sends_digest_to_every_user(env):
+def test_weekly_sends_the_recap_to_every_user(env):
     e, sent = env
     e.store.put_day("u1", days_before(today(), 1), CLEAN, 1, "t")
     nudge._weekly(e)
@@ -128,7 +128,7 @@ def test_weekly_reports_the_week_that_ended_yesterday_not_the_day_it_runs_in(env
     assert "נסגרו 7 מתוך 7 ימים" in body
 
 
-def test_weekly_appends_the_llm_summary_after_the_numeric_digest(env, monkeypatch):
+def test_weekly_appends_the_llm_summary_after_the_numeric_line(env, monkeypatch):
     e, sent = env
     asked = []
 
@@ -140,11 +140,11 @@ def test_weekly_appends_the_llm_summary_after_the_numeric_digest(env, monkeypatc
     yesterday = days_before(today(), 1)
     e.store.put_day("u1", yesterday, CLEAN, 1, "t")
     nudge._weekly(e)
-    expected_context = nudge.digest.weekly_summary_context(e.questionnaire, {yesterday: CLEAN},
+    expected_context = nudge.weekly_recap.context(e.questionnaire, {yesterday: CLEAN},
                                                            {}, None)
     # The subjects question is what the service embeds to retrieve; the week and the formatting
     # instruction ride beside it.
-    assert asked == [("https://rag.example", "K", nudge.digest.SUMMARY_QUESTION,
+    assert asked == [("https://rag.example", "K", nudge.weekly_recap.QUESTION,
                       expected_context)]
     body = next(text for _, target, text in sent if target == "a@gmail.com")
     assert body.index("נסגרו") < body.index("היה שבוע מאוזן")
@@ -183,7 +183,7 @@ def test_weekly_stores_the_recap_as_a_chat_titled_for_the_transcript(env, monkey
     # The title names the week the recap covers — the Sunday it opened on — so a transcript of
     # weekly recaps is not a column of identical rows.
     week_start = days_before(today(), 7)
-    assert [turn["question"] for turn in stored] == [nudge.digest.recap_chat_title(week_start)]
+    assert [turn["question"] for turn in stored] == [nudge.weekly_recap.chat_title(week_start)]
     assert stored[0]["answer"] == "היה שבוע מאוזן"
     assert stored[0]["sources"] == [{"fileName": "f", "score": 0.4}]
     # The recap is the app's own writing, not a question the user asked.
@@ -210,7 +210,7 @@ def test_weekly_skips_the_llm_for_an_empty_week(env, monkeypatch):
     assert all("לא נסגרו ימים השבוע" in text for _, _, text in sent)
 
 
-def test_weekly_falls_back_to_the_plain_digest_when_the_llm_call_fails(env, monkeypatch, caplog):
+def test_weekly_falls_back_to_the_plain_line_when_the_llm_call_fails(env, monkeypatch, caplog):
     e, sent = env
 
     def failing_ask(url, key, question, context, timeout):
@@ -369,7 +369,7 @@ def test_muted_users_are_dropped_from_every_jobs_audience(env):
     assert nudge._notifiable(e.store, e.users) == [User("u2", "b@gmail.com")]
 
 
-def test_weekly_sends_the_plain_digest_when_no_answering_service_is_configured(env, monkeypatch):
+def test_weekly_sends_the_plain_line_when_no_answering_service_is_configured(env, monkeypatch):
     e, sent = env
     e = dataclasses.replace(e, rag_url="", rag_key=None)
     monkeypatch.setattr(nudge.chat, "ask", lambda url, key, question, context, timeout:

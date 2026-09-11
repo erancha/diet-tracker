@@ -59,7 +59,7 @@ def test_repo_config_loads_with_numeric_choices_and_threshold_rules():
 
 
 def test_repo_config_orders_questions_like_the_day_dashboard_with_carbs_last():
-    # Question order drives the history table columns, the day-end form, and the digest;
+    # Question order drives the history table columns, the day-end form, and the weekly recap;
     # it must match the day dashboard's order, with the carbs score closing the list.
     q = appconfig.load(APP_CONFIG).questionnaire
     assert [question.id for question in q.questions] == [

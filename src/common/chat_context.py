@@ -16,7 +16,7 @@ from common import weight
 from common.chat import MAX_CONTEXT_CHARS
 from common.dates import days_before
 from common.derive import derive
-from common.digest import labeled_history
+from common.weekly_recap import labeled_history
 
 SUMMARY_DAYS = 7
 

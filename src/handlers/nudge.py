@@ -1,4 +1,4 @@
-"""Scheduled nudge jobs: the night's last call, nightly rule evaluation, weekly digest,
+"""Scheduled nudge jobs: the night's last call, nightly rule evaluation, weekly recap,
 weekly weigh-in.
 
 EventBridge Scheduler invokes this handler with {"job": ...}; each job iterates every user in
@@ -11,7 +11,7 @@ from dataclasses import dataclass
 
 import boto3
 
-from common import (appconfig, chat, chat_history, digest, notify, rules, undelivered, users,
+from common import (appconfig, chat, chat_history, notify, rules, undelivered, users, weekly_recap,
                     weight)
 from common.dates import days_before, today
 from common.log import get_logger
@@ -63,7 +63,7 @@ def _notifiable(store, pool) -> list:
     """The pool members a job may message: everyone who has not opted out.
 
     The opt-out is account-wide, so narrowing the audience once here is what silences every job
-    for a muted user — including the weekly digest, which is otherwise unconditional."""
+    for a muted user — including the weekly recap, which is otherwise unconditional."""
     return [user for user in pool if not store.get_nudge_state(user.sub)["muted"]]
 
 
@@ -72,7 +72,7 @@ def _build_env() -> NudgeEnv:
     dynamodb = boto3.resource("dynamodb")
     store = Store(os.environ["DAYS_TABLE"], os.environ["MEALS_TABLE"], os.environ["STATE_TABLE"],
                   os.environ["WEIGHTS_TABLE"])
-    # Every job builds this — last call, nightly rules, the weekly digest and the weigh-in — so
+    # Every job builds this — last call, nightly rules, the weekly recap and the weigh-in — so
     # nothing here may require the chat's answering service.
     rag_url = os.environ["RAG_API_URL"]
     return NudgeEnv(
@@ -169,34 +169,35 @@ def _weekly(env):
     week_start = days_before(day, 7)
     for user in env.users:
         history = env.store.get_days_range(user.sub, week_start, days_before(day, 1))
-        _send(env, user, f"{digest.RECAP_TITLE} — {notify.APP_NAME}",
+        _send(env, user, f"{weekly_recap.TITLE} — {notify.APP_NAME}",
               _weekly_body(env, user, history, week_start))
 
 
 def _weekly_body(env, user, history, week_start) -> str:
-    """The numeric digest, followed for a submitted week by an LLM-written recap and tips.
+    """The numeric line, followed for a submitted week by an LLM-written recap and tips.
 
-    The recap is an optional garnish: when the RAG service is unreachable or slow the
-    plain digest still goes out, because losing the whole weekly send over it would be worse.
+    The advice is an optional garnish: when the RAG service is unreachable or slow the
+    numeric line still goes out alone, because losing the whole weekly send over it would be worse.
     An empty week has nothing to recap, and a deployment configuring no answering service has
     nothing to ask, so in both cases the service is not called.
 
     An answered recap is also stored as a chat of the user's, under the recap's short title rather
     than the question the service was asked with — the shape the chat endpoint stores, so the
     recap lists and follows up like any answered chat, its data re-attached fresh on follow-up."""
-    text = digest.weekly_text(env.questionnaire, history)
+    text = weekly_recap.text(env.questionnaire, history)
     if not history or not chat.configured(env.rag_url):
         return text
-    context = digest.weekly_summary_context(env.questionnaire, history,
-                                            env.store.get_weights(user.sub),
-                                            env.store.get_target(user.sub))
+    context = weekly_recap.context(env.questionnaire, history,
+                                   env.store.get_weights(user.sub),
+                                   env.store.get_target(user.sub))
     try:
-        answer = chat.ask(env.rag_url, env.rag_key, digest.SUMMARY_QUESTION, context,
+        answer = chat.ask(env.rag_url, env.rag_key, weekly_recap.QUESTION, context,
                           timeout=RECAP_TIMEOUT_SECONDS)
     except (urllib.error.URLError, TimeoutError):
-        logger.warning("weekly summary generation failed; sending the plain digest", exc_info=True)
+        logger.warning("weekly summary generation failed; sending the numeric line alone",
+                       exc_info=True)
         return text
-    chat_history.append(env.chat_history, user.sub, digest.recap_chat_title(week_start),
+    chat_history.append(env.chat_history, user.sub, weekly_recap.chat_title(week_start),
                         answer["answer"], answer["sources"], app=True)
     return f"{text}\n\n{answer['answer']}"
 

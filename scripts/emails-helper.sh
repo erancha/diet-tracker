@@ -132,7 +132,7 @@ from handlers import nudge
 
 send = bool(os.environ["SEND"])
 
-# The recap is a garnish the job drops when the answering service fails: the numeric digest still
+# The recap is a garnish the job drops when the answering service fails: the numeric line still
 # goes out, and nothing is stored. Recording the write is what lets this run report which of the
 # two happened.
 stored = []
@@ -171,7 +171,7 @@ if not audience:
                      "or notifications muted in the account menu")
 nudge._weekly(dataclasses.replace(env, users=audience))
 if not stored:
-    raise SystemExit("The answering service did not answer — the numeric digest alone "
+    raise SystemExit("The answering service did not answer — the numeric line alone "
                      f"{'went out' if send else 'would go out'}, and no recap was stored. "
                      "The warning above carries the reason.")
 PY
