@@ -79,16 +79,6 @@ def test_nudge_function_can_store_the_weekly_recap_in_the_transcript():
     assert {"DynamoDBWritePolicy": {"TableName": "ChatHistoryTable"}} in policies
 
 
-def test_the_nudge_lambda_outlives_the_recap_calls_it_makes():
-    # The weekly job waits RECAP_TIMEOUT_SECONDS per user inside one invocation, so a Lambda
-    # timeout near that ceiling would kill the run partway through the pool — some users emailed,
-    # the rest silently not.
-    from handlers.nudge import RECAP_TIMEOUT_SECONDS
-
-    timeout = _load_template()["Resources"]["NudgeFunction"]["Properties"]["Timeout"]
-    assert timeout >= RECAP_TIMEOUT_SECONDS * 5
-
-
 def test_weigh_in_schedule_defaults_agree_with_the_app_config():
     # deploy.sh passes config/app.json's weigh-in slot as parameter overrides, so the template's
     # own defaults never reach a deployed stack. Left to drift they would still mislead anyone

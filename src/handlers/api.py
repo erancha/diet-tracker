@@ -20,7 +20,7 @@ import boto3
 
 from common import appconfig, chat_history, notify, rules, ses_identity, undelivered, users, weight
 from common.dates import clock_time, days_before, now_iso, today
-from common.derive import derive, excluded_points
+from common.derive import derive, excluded_by_day, excluded_points
 from common.log import get_logger
 from common.rules import LOOKBACK_DAYS
 from common.store import Store
@@ -172,15 +172,6 @@ def _delete_day(sub, chosen):
     return _response(200, {"date": chosen})
 
 
-def _excluded_by_day(questionnaire, meals_by_day) -> dict:
-    """The excluded part of each day's carb score, keyed by day, over the meals of a range."""
-    return {day: excluded_points(meals, questionnaire.carb_weights(),
-                                 questionnaire.addition_values(), questionnaire.amounts(),
-                                 questionnaire.portions(), questionnaire.second_source(),
-                                 questionnaire.excluded())
-            for day, meals in meals_by_day.items()}
-
-
 def _history(sub, email):
     store = _store()
     questionnaire = _questionnaire()
@@ -190,7 +181,7 @@ def _history(sub, email):
     history = store.get_days_range(sub, start, day)
     # Derived on read rather than written with the day: every recorded day charts its subtotal
     # without a stored one to backfill.
-    excluded = _excluded_by_day(questionnaire, store.get_meals_range(sub, start, day))
+    excluded = excluded_by_day(questionnaire, store.get_meals_range(sub, start, day))
     today_payload = _day_payload(store, questionnaire, sub, day)
     yesterday_payload = _day_payload(store, questionnaire, sub, yesterday)
     nudge_state = store.get_nudge_state(sub)

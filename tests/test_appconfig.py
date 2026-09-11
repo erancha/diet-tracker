@@ -24,6 +24,7 @@ def write(tmp_path, weight, meals=LEGAL_MEALS, day_close=LEGAL_DAY_CLOSE):
         "weight": weight,
         "meals": meals,
         "day_close": day_close,
+        "treat_day": {"weekday": "FRI"},
     }
     path = tmp_path / "app.json"
     path.write_text(json.dumps(raw), encoding="utf-8")
@@ -111,3 +112,9 @@ def test_missing_keys_surface_instead_of_defaulting(tmp_path):
     path = write(tmp_path, {"weigh_in": {"weekday": "THU", "hour": 8}})
     with pytest.raises(KeyError):
         appconfig.load(path)
+
+
+def test_repo_config_names_the_treat_day_the_recap_counts_around():
+    from conftest import APP_CONFIG
+
+    assert appconfig.load(APP_CONFIG).treat_day.weekday == "FRI"

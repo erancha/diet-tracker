@@ -69,11 +69,22 @@ class DayCloseConfig:
 
 
 @dataclass(frozen=True)
+class TreatDayConfig:
+    """The weekday the program aims its treat meal at, in the three-letter form the config writes.
+
+    Nothing enforces it: no day is scored differently and no recorded day is marked as one. It
+    names the day the weekly recap never counts as a flours-and-sugars finding, and the column the
+    trend chart frames."""
+    weekday: str
+
+
+@dataclass(frozen=True)
 class AppConfig:
     questionnaire: Questionnaire
     weight: WeightConfig
     meals: MealsConfig
     day_close: DayCloseConfig
+    treat_day: TreatDayConfig
 
 
 def _parse_weight(raw: dict) -> WeightConfig:
@@ -125,7 +136,15 @@ def _parse_day_close(raw: dict) -> DayCloseConfig:
     return config
 
 
+def _parse_treat_day(raw: dict) -> TreatDayConfig:
+    weekday = raw["weekday"]
+    if weekday not in WEEKDAYS:
+        raise ValueError(f"treat_day weekday {weekday!r} is not one of {list(WEEKDAYS)}")
+    return TreatDayConfig(weekday=weekday)
+
+
 def load(path) -> AppConfig:
     raw = json.loads(Path(path).read_text(encoding="utf-8"))
     return AppConfig(questionnaire=parse(raw["questionnaire"]), weight=_parse_weight(raw["weight"]),
-                     meals=_parse_meals(raw["meals"]), day_close=_parse_day_close(raw["day_close"]))
+                     meals=_parse_meals(raw["meals"]), day_close=_parse_day_close(raw["day_close"]),
+                     treat_day=_parse_treat_day(raw["treat_day"]))

@@ -407,9 +407,8 @@ Resources:
     Properties:
       CodeUri: ../build/lambda
       Handler: handlers/nudge.handler
-      # The weekly job asks the answering service for a per-user recap, and each call may run up
-      # to RECAP_TIMEOUT_SECONDS in handlers/nudge.py — the global 30s budget cannot cover a loop
-      # over the user pool, and this holds that ceiling several times over.
+      # Every job loops the whole user pool inside one invocation, sending per user, so the budget
+      # scales with the pool rather than with one request — the global 30s cannot cover it.
       Timeout: 300
       Policies:
         - DynamoDBCrudPolicy:

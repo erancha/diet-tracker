@@ -6,13 +6,12 @@ the pool who has not opted out of notifications. NudgeEnv gathers all AWS-derive
 job logic stays pure and testable."""
 
 import os
-import urllib.error
 from dataclasses import dataclass
 
 import boto3
 
-from common import (appconfig, chat, chat_history, notify, rules, undelivered, users, weekly_recap,
-                    weight)
+from common import (appconfig, chat_history, derive, notify, rules, undelivered, users,
+                    weekly_recap, weight)
 from common.dates import days_before, today
 from common.log import get_logger
 from common.rules import LOOKBACK_DAYS
@@ -28,13 +27,6 @@ REMINDER_TEXT = "עדיין לא רשמת ארוחות היום 🌙"
 OPEN_DAY_SUBJECT = "תזכורת — היום עדיין פתוח"
 OPEN_DAY_TEXT = "רשמת היום ארוחות ולא סגרת את היום 🌙 אפשר לסגור אותו עכשיו ביומן"
 
-# How long the weekly recap waits for its answer: just under the 60s the answering service's API
-# Gateway and the Lambda behind it both allow. Composing the bullets runs to about half a minute
-# and varies widely. No browser waits on this job; the budget it spends is the NudgeFunction
-# timeout, across the whole pool.
-RECAP_TIMEOUT_SECONDS = 55
-
-
 @dataclass(frozen=True)
 class NudgeEnv:
     store: object
@@ -43,11 +35,10 @@ class NudgeEnv:
     telegram: tuple | None  # (bot_token, chat_map) when the Telegram channel is active, else None
     ses: object
     undelivered: object  # table the messages SES refuses are kept in, for the app to show
-    chat_history: object  # transcript table the weekly recap is stored in, as an answered chat
+    chat_history: object  # transcript table the weekly recap is stored in, as a chat the app wrote
+    treat_weekday: str  # the week's treat day, left out of the recap's clean-day count
     sender: str
     app_url: str  # the deployed frontend, cited in every email's mute footnote
-    rag_url: str  # empty when the deployment configures no answering service
-    rag_key: str | None  # None exactly when rag_url is empty
 
 
 def handler(event, context):
@@ -72,12 +63,11 @@ def _build_env() -> NudgeEnv:
     dynamodb = boto3.resource("dynamodb")
     store = Store(os.environ["DAYS_TABLE"], os.environ["MEALS_TABLE"], os.environ["STATE_TABLE"],
                   os.environ["WEIGHTS_TABLE"])
-    # Every job builds this — last call, nightly rules, the weekly recap and the weigh-in — so
-    # nothing here may require the chat's answering service.
-    rag_url = os.environ["RAG_API_URL"]
+    config = appconfig.load(os.environ["APP_CONFIG_PATH"])
     return NudgeEnv(
         store=store,
-        questionnaire=appconfig.load(os.environ["APP_CONFIG_PATH"]).questionnaire,
+        questionnaire=config.questionnaire,
+        treat_weekday=config.treat_day.weekday,
         users=_notifiable(store, users.list_users(boto3.client("cognito-idp"),
                                                   os.environ["USER_POOL_ID"])),
         telegram=notify.telegram_config(ssm, os.environ["BOT_TOKEN_PARAM"], os.environ["CHAT_MAP_PARAM"]),
@@ -86,9 +76,6 @@ def _build_env() -> NudgeEnv:
         chat_history=dynamodb.Table(os.environ["CHAT_HISTORY_TABLE"]),
         sender=os.environ["SES_SENDER"],
         app_url=os.environ["APP_URL"],
-        rag_url=rag_url,
-        rag_key=chat.api_key(ssm, os.environ["RAG_API_KEY_PARAM"])
-                if chat.configured(rag_url) else None,
     )
 
 
@@ -162,44 +149,32 @@ def _weekly(env):
     """The seven days ending yesterday.
 
     The schedule fires late on the weigh-in night, so the week reported closes the day before the
-    weighing and the recap reads that morning's weight as the freshest one. The window ends
-    yesterday because today is still open: counting it would report six closed days out of seven
-    however diligent the user was."""
+    weighing. The window ends yesterday because today is still open: counting it would report six
+    closed days out of seven however diligent the user was."""
     day = today()
-    week_start = days_before(day, 7)
+    week_start, week_end = days_before(day, 7), days_before(day, 1)
     for user in env.users:
-        history = env.store.get_days_range(user.sub, week_start, days_before(day, 1))
+        history = env.store.get_days_range(user.sub, week_start, week_end)
+        # The clean-day count reads the meals themselves: what a day cost in flours and sugars is
+        # derived on read, never stored with the day.
+        excluded = derive.excluded_by_day(
+            env.questionnaire, env.store.get_meals_range(user.sub, week_start, week_end))
         _send(env, user, f"{weekly_recap.TITLE} — {notify.APP_NAME}",
-              _weekly_body(env, user, history, week_start))
+              _weekly_body(env, user, history, excluded, week_start))
 
 
-def _weekly_body(env, user, history, week_start) -> str:
-    """The numeric line, followed for a submitted week by an LLM-written recap and tips.
+def _weekly_body(env, user, history, excluded, week_start) -> str:
+    """The week's recap line, also stored as a chat of the user's under the recap's short title —
+    so it lists and follows up like any other chat, and a follow-up is where a question reaches
+    the answering service, carrying the asker's data fresh.
 
-    The advice is an optional garnish: when the RAG service is unreachable or slow the
-    numeric line still goes out alone, because losing the whole weekly send over it would be worse.
-    An empty week has nothing to recap, and a deployment configuring no answering service has
-    nothing to ask, so in both cases the service is not called.
-
-    An answered recap is also stored as a chat of the user's, under the recap's short title rather
-    than the question the service was asked with — the shape the chat endpoint stores, so the
-    recap lists and follows up like any answered chat, its data re-attached fresh on follow-up."""
-    text = weekly_recap.text(env.questionnaire, history)
-    if not history or not chat.configured(env.rag_url):
+    A week with no closed day has nothing to recap and is not stored."""
+    text = weekly_recap.text(env.questionnaire, history, excluded, env.treat_weekday)
+    if not history:
         return text
-    context = weekly_recap.context(env.questionnaire, history,
-                                   env.store.get_weights(user.sub),
-                                   env.store.get_target(user.sub))
-    try:
-        answer = chat.ask(env.rag_url, env.rag_key, weekly_recap.QUESTION, context,
-                          timeout=RECAP_TIMEOUT_SECONDS)
-    except (urllib.error.URLError, TimeoutError):
-        logger.warning("weekly summary generation failed; sending the numeric line alone",
-                       exc_info=True)
-        return text
-    chat_history.append(env.chat_history, user.sub, weekly_recap.chat_title(week_start),
-                        answer["answer"], answer["sources"], app=True)
-    return f"{text}\n\n{answer['answer']}"
+    chat_history.append(env.chat_history, user.sub, weekly_recap.chat_title(week_start), text, [],
+                        app=True)
+    return text
 
 
 def _weigh_in(env):

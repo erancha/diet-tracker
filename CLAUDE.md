@@ -26,7 +26,7 @@ means the shell didn't source that file — not an expired session. The aws CLI 
   `--rejected <email>` writes a message into the deployed undelivered table so the header's alarm
   bell shows it, the only way to see that surface on an account whose address SES has verified
   (dismissing it in the app deletes the row). `--weekly-recap <email>` runs the weekly recap job
-  now, on the working tree's code against the deployed data, printing the question, the email and
-  the chat it would store; `--send` delivers and stores them for that one user. `--verify <email>`
+  now, on the working tree's code against the deployed data, printing the email and the chat it
+  would store; `--send` delivers and stores them for that one user. `--verify <email>`
   really asks SES to mail the address its verification request again — the only way back for an
   address whose 24-hour link expired, since sign-up requests it once and never resends.

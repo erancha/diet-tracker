@@ -123,3 +123,12 @@ def excluded_points(meals: list, weights: dict, addition_values: dict, amounts, 
     from one that spent the same points on sugar and flour."""
     return sum(weighed.excluded for weighed in meal_weights(
         meals, weights, addition_values, amounts, portions, second_source, excluded))
+
+
+def excluded_by_day(questionnaire, meals_by_day: dict) -> dict:
+    """excluded_points for every day of a range at once, keyed by day."""
+    return {day: excluded_points(meals, questionnaire.carb_weights(),
+                                 questionnaire.addition_values(), questionnaire.amounts(),
+                                 questionnaire.portions(), questionnaire.second_source(),
+                                 questionnaire.excluded())
+            for day, meals in meals_by_day.items()}

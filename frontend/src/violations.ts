@@ -44,7 +44,8 @@ export function questionRule(questionnaire: Questionnaire, questionId: string): 
 
 // The configured bound of a question's rule, phrased for display beside the red violation
 // marks. Read from the live rules so the shown limit can never drift from what isViolating
-// paints; undefined where no rule bounds the question.
+// paints; undefined where no rule bounds the question. Mirrored by bound_label in
+// src/common/rules.py, which quotes the same bound in the weekly recap.
 export function ruleBoundLabel(questionnaire: Questionnaire, questionId: string): string | undefined {
   const rule = questionRule(questionnaire, questionId);
   if (rule === undefined) return undefined;

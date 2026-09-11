@@ -54,3 +54,20 @@ def mark_alerted(state: dict, violations: list, as_of: str) -> dict:
     for violation in violations:
         rules_state[violation.rule_id] = {"last_alert_for": as_of}
     return {**state, "rules": rules_state}
+
+
+def violating_days(rule, history: dict) -> int:
+    """How many days in `history` crossed the rule's bound on their own — the per-day test the
+    trend chart's red dots and the history table's red cells apply, with no streak required."""
+    return sum(1 for answers in history.values()
+               if rule.question_id in answers and rule.violates(answers[rule.question_id]))
+
+
+def bound_label(rule) -> str:
+    """The rule's bound as the app names it beside a violation. Mirrors ruleBoundLabel in
+    frontend/src/violations.ts, so a chart legend and the weekly recap quote one bound alike —
+    an at_least rule reads as `מעל` there too, and the wording is what both surfaces show."""
+    over = rule.at_least if rule.at_least is not None else rule.above
+    if over is not None:
+        return f"מעל {over:g}"
+    return f"פחות מ-{rule.below:g}"

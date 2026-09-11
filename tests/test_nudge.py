@@ -5,7 +5,7 @@ import urllib.error
 import boto3
 import pytest
 
-from conftest import APP_CONFIG
+from conftest import APP_CONFIG, meal
 
 from common import appconfig, chat_history, undelivered
 from common.dates import days_before, today
@@ -23,9 +23,6 @@ def env(monkeypatch, ddb):
     monkeypatch.setattr(nudge.notify, "send_telegram", lambda token, chat, text: sent.append(("tg", chat, text)))
     monkeypatch.setattr(nudge.notify, "send_email",
                         lambda ses, sender, to, subject, body, app_url: sent.append(("mail", to, body)))
-    monkeypatch.setattr(nudge.chat, "ask",
-                        lambda url, key, question, context, timeout: {"answer": "תובנה",
-                                                                      "sources": []})
     monkeypatch.setenv("AWS_DEFAULT_REGION", "eu-central-1")
     monkeypatch.setenv("DAYS_TABLE", "days")
     monkeypatch.setenv("MEALS_TABLE", "meals")
@@ -34,6 +31,7 @@ def env(monkeypatch, ddb):
     e = nudge.NudgeEnv(
         store=Store("days", "meals", "state", "weights"),
         questionnaire=appconfig.load(APP_CONFIG).questionnaire,
+        treat_weekday=appconfig.load(APP_CONFIG).treat_day.weekday,
         users=[User("u1", "a@gmail.com"), User("u2", "b@gmail.com")],
         telegram=("TOKEN", {"a@gmail.com": "111", "b@gmail.com": "222"}),
         # A real (mocked) SES client, not a stub: _send classifies a refusal by the client's own
@@ -42,7 +40,6 @@ def env(monkeypatch, ddb):
         undelivered=ddb.Table("undelivered"),
         chat_history=ddb.Table("chat_history"),
         sender="me@x.com", app_url="https://app.example",
-        rag_url="https://rag.example", rag_key="K",
     )
     return e, sent
 
@@ -128,55 +125,8 @@ def test_weekly_reports_the_week_that_ended_yesterday_not_the_day_it_runs_in(env
     assert "נסגרו 7 מתוך 7 ימים" in body
 
 
-def test_weekly_appends_the_llm_summary_after_the_numeric_line(env, monkeypatch):
+def test_weekly_stores_the_recap_as_a_chat_titled_for_the_transcript(env):
     e, sent = env
-    asked = []
-
-    def fake_ask(url, key, question, context, timeout):
-        asked.append((url, key, question, context))
-        return {"answer": "היה שבוע מאוזן", "sources": []}
-
-    monkeypatch.setattr(nudge.chat, "ask", fake_ask)
-    yesterday = days_before(today(), 1)
-    e.store.put_day("u1", yesterday, CLEAN, 1, "t")
-    nudge._weekly(e)
-    expected_context = nudge.weekly_recap.context(e.questionnaire, {yesterday: CLEAN},
-                                                           {}, None)
-    # The subjects question is what the service embeds to retrieve; the week and the formatting
-    # instruction ride beside it.
-    assert asked == [("https://rag.example", "K", nudge.weekly_recap.QUESTION,
-                      expected_context)]
-    body = next(text for _, target, text in sent if target == "a@gmail.com")
-    assert body.index("נסגרו") < body.index("היה שבוע מאוזן")
-
-
-def test_weekly_context_carries_the_asking_user_own_weigh_ins_and_target(env, monkeypatch):
-    e, sent = env
-    asked = []
-
-    def fake_ask(url, key, question, context, timeout):
-        asked.append(context)
-        return {"answer": "א", "sources": []}
-
-    monkeypatch.setattr(nudge.chat, "ask", fake_ask)
-    e.store.put_day("u1", days_before(today(), 1), CLEAN, 1, "t")
-    e.store.put_day("u2", days_before(today(), 1), CLEAN, 1, "t")
-    e.store.put_weight("u1", days_before(today(), 7), 84, "07:20")
-    e.store.put_weight("u1", today(), 83.2, "07:20")
-    e.store.put_target("u1", 78)
-    e.store.put_weight("u2", today(), 61, "07:20")
-    nudge._weekly(e)
-    assert "83.2" in asked[0] and '"יעד": 78' in asked[0]
-    # Each user's recap sees only their own measurements.
-    assert "83.2" not in asked[1] and "61" in asked[1]
-
-
-def test_weekly_stores_the_recap_as_a_chat_titled_for_the_transcript(env, monkeypatch):
-    e, sent = env
-    monkeypatch.setattr(nudge.chat, "ask",
-                        lambda url, key, question, context, timeout: {
-                            "answer": "היה שבוע מאוזן",
-                            "sources": [{"fileName": "f", "score": 0.4}]})
     e.store.put_day("u1", days_before(today(), 1), CLEAN, 1, "t")
     nudge._weekly(e)
     stored = chat_history.turns(e.chat_history, "u1")
@@ -184,45 +134,12 @@ def test_weekly_stores_the_recap_as_a_chat_titled_for_the_transcript(env, monkey
     # weekly recaps is not a column of identical rows.
     week_start = days_before(today(), 7)
     assert [turn["question"] for turn in stored] == [nudge.weekly_recap.chat_title(week_start)]
-    assert stored[0]["answer"] == "היה שבוע מאוזן"
-    assert stored[0]["sources"] == [{"fileName": "f", "score": 0.4}]
+    # The chat holds what the email carried, so the transcript and the inbox read alike.
+    assert stored[0]["answer"] == next(text for _, target, text in sent
+                                       if target == "a@gmail.com")
+    assert stored[0]["sources"] == []
     # The recap is the app's own writing, not a question the user asked.
     assert stored[0]["app"] is True
-
-
-def test_weekly_stores_no_chat_when_the_llm_call_fails(env, monkeypatch):
-    e, sent = env
-
-    def failing_ask(url, key, question, context, timeout):
-        raise urllib.error.URLError("service down")
-
-    monkeypatch.setattr(nudge.chat, "ask", failing_ask)
-    e.store.put_day("u1", days_before(today(), 1), CLEAN, 1, "t")
-    nudge._weekly(e)
-    assert chat_history.turns(e.chat_history, "u1") == []
-
-
-def test_weekly_skips_the_llm_for_an_empty_week(env, monkeypatch):
-    e, sent = env
-    monkeypatch.setattr(nudge.chat, "ask", lambda url, key, question, context, timeout:
-                        pytest.fail("asked the LLM with no data"))
-    nudge._weekly(e)
-    assert all("לא נסגרו ימים השבוע" in text for _, _, text in sent)
-
-
-def test_weekly_falls_back_to_the_plain_line_when_the_llm_call_fails(env, monkeypatch, caplog):
-    e, sent = env
-
-    def failing_ask(url, key, question, context, timeout):
-        raise urllib.error.URLError("service down")
-
-    monkeypatch.setattr(nudge.chat, "ask", failing_ask)
-    e.store.put_day("u1", days_before(today(), 1), CLEAN, 1, "t")
-    with caplog.at_level(logging.WARNING):
-        nudge._weekly(e)
-    body = next(text for _, target, text in sent if target == "a@gmail.com")
-    assert "נסגרו 1 מתוך 7 ימים" in body
-    assert "weekly summary" in caplog.text
 
 
 def test_weigh_in_targets_only_users_who_have_not_weighed_on_the_day(env):
@@ -369,34 +286,36 @@ def test_muted_users_are_dropped_from_every_jobs_audience(env):
     assert nudge._notifiable(e.store, e.users) == [User("u2", "b@gmail.com")]
 
 
-def test_weekly_sends_the_plain_line_when_no_answering_service_is_configured(env, monkeypatch):
+def test_weekly_names_the_days_that_cost_flours_and_sugars(env):
     e, sent = env
-    e = dataclasses.replace(e, rag_url="", rag_key=None)
-    monkeypatch.setattr(nudge.chat, "ask", lambda url, key, question, context, timeout:
-                        pytest.fail("asked the LLM with no service configured"))
-    e.store.put_day("u1", days_before(today(), 1), CLEAN, 1, "t")
+    for back in (1, 2, 3):
+        e.store.put_day("u1", days_before(today(), back), CLEAN, 1, "t")
+    # Grade 7 is flour and sugar, which the program's six non-treat days leave out; grade 2 is not.
+    e.store.add_meal("u1", days_before(today(), 1),
+                     meal(f"{days_before(today(), 1)}T12:00:00+03:00", "carb_grade_7"))
+    e.store.add_meal("u1", days_before(today(), 2),
+                     meal(f"{days_before(today(), 2)}T12:00:00+03:00", "carb_grade_2"))
+
     nudge._weekly(e)
+
     body = next(text for _, target, text in sent if target == "a@gmail.com")
-    assert "נסגרו 1 מתוך 7 ימים" in body
+    assert "• קמחים וסוכרים ביום אחד שאינו יום פינוק" in body
+
+
+def test_a_week_inside_every_bound_names_no_finding(env):
+    e, sent = env
+    e.store.put_day("u1", days_before(today(), 1), CLEAN, 1, "t")
+
+    nudge._weekly(e)
+
+    body = next(text for _, target, text in sent if target == "a@gmail.com")
+    assert body.startswith("סיכום שבועי — נסגרו 1 מתוך 7 ימים")
+    assert "חריגה" not in body
+
+
+def test_an_empty_week_stores_no_chat(env):
+    e, sent = env
+
+    nudge._weekly(e)
+
     assert chat_history.turns(e.chat_history, "u1") == []
-
-
-def test_build_env_reads_no_rag_key_when_no_answering_service_is_configured(monkeypatch, ddb):
-    monkeypatch.setenv("AWS_DEFAULT_REGION", "eu-central-1")
-    for name in ("DAYS_TABLE", "MEALS_TABLE", "STATE_TABLE", "WEIGHTS_TABLE"):
-        monkeypatch.setenv(name, name.split("_")[0].lower())
-    monkeypatch.setenv("APP_CONFIG_PATH", str(APP_CONFIG))
-    monkeypatch.setenv("USER_POOL_ID", "pool")
-    monkeypatch.setenv("BOT_TOKEN_PARAM", "/bot")
-    monkeypatch.setenv("CHAT_MAP_PARAM", "/map")
-    monkeypatch.setenv("UNDELIVERED_TABLE", "undelivered")
-    monkeypatch.setenv("CHAT_HISTORY_TABLE", "chat_history")
-    monkeypatch.setenv("SES_SENDER", "me@x.com")
-    monkeypatch.setenv("APP_URL", "https://app.example")
-    monkeypatch.setenv("RAG_API_URL", "")
-    monkeypatch.setenv("RAG_API_KEY_PARAM", "/diet-tracker/rag/api-key")
-    monkeypatch.setattr(nudge.users, "list_users", lambda client, pool: [])
-    monkeypatch.setattr(nudge.notify, "telegram_config", lambda ssm, token, chat_map: None)
-    monkeypatch.setattr(nudge.chat, "api_key", lambda ssm, param:
-                        pytest.fail("read the RAG key with no service configured"))
-    assert nudge._build_env().rag_key is None

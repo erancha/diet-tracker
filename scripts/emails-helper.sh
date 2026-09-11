@@ -100,13 +100,11 @@ rejected() {
 }
 
 # Runs the scheduled job's own code, from the working tree, with its audience narrowed to the one
-# account — so what a config or prompt edit will send can be read before it is deployed. The AWS
+# account — so what a rule or config edit will send can be read before it is deployed. The AWS
 # inputs come from the deployed NudgeFunction's environment, leaving the questionnaire as the only
-# thing read from the working tree. Without --send the answering service, both delivery channels
-# and the transcript write are replaced by prints and nothing leaves the machine; with it, the
-# recap costs one call to the answering service and lands in that user's mail and chat list, where
-# it can be followed up and deleted like any answered chat. The daily chat quota is untouched
-# either way — the weekly job never counted against it.
+# thing read from the working tree. Without --send both delivery channels and the transcript write
+# are replaced by prints and nothing leaves the machine; with it, the recap lands in that user's
+# mail and chat list, where it can be followed up and deleted like any other chat.
 weekly_recap() {
   [ -x .venv/bin/python ] \
     || { echo "no .venv — run scripts/test.sh once to create it" >&2; exit 1; }
@@ -132,9 +130,8 @@ from handlers import nudge
 
 send = bool(os.environ["SEND"])
 
-# The recap is a garnish the job drops when the answering service fails: the numeric line still
-# goes out, and nothing is stored. Recording the write is what lets this run report which of the
-# two happened.
+# A week with no closed day has nothing to recap and stores no chat. Recording the write is what
+# lets this run report whether the week produced one.
 stored = []
 store_chat = nudge.chat_history.append
 
@@ -150,14 +147,6 @@ def append(table, sub, question, answer, sources, **marks):
 nudge.chat_history.append = append
 
 if not send:
-    # Standing in for the answering service, so it takes the job's whole call — the context block
-    # and the timeout it budgets for the wait included — and prints what would be sent.
-    def ask(url, key, question, context=None, **_):
-        print(f"--- question to {url} ---\n{question}\n")
-        print(f"--- context ---\n{context}\n")
-        return {"answer": "<כאן תיכתב תשובת שירות המענה>", "sources": []}
-
-    nudge.chat.ask = ask
     nudge.notify.send_telegram = lambda token, chat, text: print(f"--- would telegram {chat} ---\n")
     nudge.notify.send_email = lambda ses, sender, to, subject, body, app_url: print(
         f"--- would email {to} — {subject} ---\n{body}\n")
@@ -171,9 +160,8 @@ if not audience:
                      "or notifications muted in the account menu")
 nudge._weekly(dataclasses.replace(env, users=audience))
 if not stored:
-    raise SystemExit("The answering service did not answer — the numeric line alone "
-                     f"{'went out' if send else 'would go out'}, and no recap was stored. "
-                     "The warning above carries the reason.")
+    raise SystemExit("No day was closed in the week, so the opening line alone "
+                     f"{'went out' if send else 'would go out'} and no chat was stored.")
 PY
 
   if [ -n "$SEND" ]; then

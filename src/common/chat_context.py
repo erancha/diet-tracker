@@ -16,7 +16,6 @@ from common import weight
 from common.chat import MAX_CONTEXT_CHARS
 from common.dates import days_before
 from common.derive import derive
-from common.weekly_recap import labeled_history
 
 SUMMARY_DAYS = 7
 
@@ -110,9 +109,17 @@ def _tracking_scope(questionnaire) -> dict:
     }
 
 
+def _labeled_history(questionnaire, history: dict) -> dict:
+    """The submitted answers keyed by date, each value under its question's Hebrew day-scope
+    heading — the vocabulary the answering LLM reads instead of internal question ids."""
+    return {date: {questionnaire.question(question_id).day_heading: value
+                   for question_id, value in answers.items()}
+            for date, answers in history.items()}
+
+
 def _summaries(store, questionnaire, sub, day) -> dict:
     """The user's submitted answers over the summary window, in the shared Hebrew-labeled shape."""
-    return labeled_history(
+    return _labeled_history(
         questionnaire, store.get_days_range(sub, days_before(day, SUMMARY_DAYS - 1), day))
 
 

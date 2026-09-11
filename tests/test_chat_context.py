@@ -1,7 +1,7 @@
 import json
 
 import pytest
-from conftest import APP_CONFIG
+from conftest import APP_CONFIG, meal
 
 from common import appconfig, chat_context
 from common.store import Store
@@ -18,12 +18,6 @@ def store(ddb):
 @pytest.fixture
 def questionnaire():
     return appconfig.load(APP_CONFIG).questionnaire
-
-
-def meal(at, choice="carb_grade_2", **overrides):
-    base = {"at": at, "carbs_choice": choice, "vegetables": False, "fruit": False,
-            "additions": [], "portion": None, "second_source": None}
-    return {**base, **overrides}
 
 
 def data_of(context):

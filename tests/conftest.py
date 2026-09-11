@@ -44,6 +44,12 @@ class FakeSes:
         self.verification_requested.append(EmailAddress)
 
 
+def meal(at, choice="carb_grade_2", **overrides):
+    """One recorded meal in the shape the API stores, with only what a test cares about named."""
+    return {"at": at, "carbs_choice": choice, "vegetables": False, "fruit": False,
+            "additions": [], "portion": None, "second_source": None, **overrides}
+
+
 def _table(ddb, name, with_sort_key=True):
     key_schema = [{"AttributeName": "pk", "KeyType": "HASH"}]
     attrs = [{"AttributeName": "pk", "AttributeType": "S"}]
