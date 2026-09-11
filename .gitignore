@@ -17,6 +17,10 @@ docs/superpowers/*
 # Regenerable knowledge-graph output the /graphify skill derives from the repo
 graphify-out/
 
+# Scratch folder for simulated requests to the answering service: real tracked data of whoever
+# the simulation named, regenerated on demand
+/tmp/
+
 # Session AWS credentials — tracked only as aws-config.example.sh
 /scripts/aws-config.sh
 /scripts/params.sh
