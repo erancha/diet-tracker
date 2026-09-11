@@ -504,7 +504,7 @@ describe("Chat", () => {
     expect(screen.getByPlaceholderText("שאלת המשך…")).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "ביטול שאלת ההמשך" }));
-    expect(screen.getByPlaceholderText("שאלה על סבא בכושר 👴…")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("שאלה על סבא חטוב 👴…")).toBeInTheDocument();
   });
 
   it("cancels a follow-up from its header, sending the next question as standalone", async () => {

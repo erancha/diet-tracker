@@ -796,6 +796,9 @@ main:not(.intro-0, .intro-1, .intro-2, .intro-3, .intro-4) .weight .section-togg
 .chat .composer textarea { flex: 1; padding: 0.3rem 0.4rem; padding-inline-end: 2.2rem;
                            font: inherit; resize: none; field-sizing: content;
                            min-height: 2lh; max-height: 6lh; }
+/* Lighter than the browser default, which sits close enough to typed text that a prompt reads as
+   a question already written. */
+.chat .composer textarea::placeholder { color: #bdbdbd; opacity: 1; }
 .chat .clear-draft { position: absolute; inset-inline-end: 0.2rem; top: 50%; transform: translateY(-50%); }
 /* Heads the relocated composer while a reply is in progress, carrying its cancel control. */
 .chat .reply-chip { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.35rem;

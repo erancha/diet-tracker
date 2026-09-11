@@ -450,6 +450,7 @@ body {
 .screen .chat .composer { flex: 1; position: relative; display: flex; }
 .screen .chat .composer textarea { flex: 1; padding: 0.3rem 0.4rem; padding-inline-end: 2.2rem;
                                    font: inherit; resize: none; min-height: 2lh; }
+.screen .chat .composer textarea::placeholder { color: #bdbdbd; opacity: 1; }
 .screen .more-toggle { --btn-bg: transparent; --btn-fg: var(--accent); --btn-border: transparent;
                        display: block; padding: 0; margin-top: 0.35rem; border-radius: 0;
                        font-size: 0.8rem; text-decoration: underline; }
@@ -1756,7 +1757,7 @@ const DEMO_CHAT = {
 
 function chatSectionHtml() {
   let html = '<section class="chat-section" data-t="chat">' +
-    "<h2><button type=\"button\" class=\"disclosure section-toggle\" aria-expanded=\"true\">שאלות על סבא בכושר 👴</button></h2>" +
+    "<h2><button type=\"button\" class=\"disclosure section-toggle\" aria-expanded=\"true\">שאלות על סבא חטוב 👴</button></h2>" +
     '<div class="chat">' +
       '<div class="chat-samples" data-t="chat-samples">' +
         CHAT_SAMPLES.map(sample =>
@@ -1790,7 +1791,7 @@ function chatSectionHtml() {
   }
 
   html += '<form><div class="composer">' +
-      '<textarea rows="2" tabindex="-1" placeholder="שאלה על סבא בכושר 👴…" data-t="composer">' +
+      '<textarea rows="2" tabindex="-1" placeholder="שאלה על סבא חטוב 👴…" data-t="composer">' +
       esc(state.chatDraft) + "</textarea>" +
       (state.chatDraft === "" ? "" :
         '<button type="button" class="glyph clear-draft">' + icon("close") + "</button>") +
