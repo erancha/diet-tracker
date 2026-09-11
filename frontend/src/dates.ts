@@ -133,12 +133,25 @@ export function beforeDailyCutoff(now: Date, cutoff: string): boolean {
 
 const MS_PER_HOUR = 3_600_000;
 
+// Milliseconds from the latest recorded meal to the clock. Meals are dated, not ordered, so the
+// latest is found by time. Requires at least one meal.
+function sinceLastMeal(now: Date, meals: readonly { at: string }[]): number {
+  return now.getTime() - Math.max(...meals.map((m) => Date.parse(m.at)));
+}
+
 // A meal is overdue in two ways: a day still empty by firstMealHour, or a most recent meal
 // mealGapHours or more behind the clock — measured from when it was eaten, so a stale meal is
-// overdue however early in the day. Meals are dated, not ordered, so the latest is found by time.
+// overdue however early in the day.
 export function mealOverdue(now: Date, firstMealHour: number, mealGapHours: number,
                             meals: readonly { at: string }[]): boolean {
   if (meals.length === 0) return now.getHours() >= firstMealHour;
-  const lastMeal = Math.max(...meals.map((m) => Date.parse(m.at)));
-  return now.getTime() - lastMeal >= mealGapHours * MS_PER_HOUR;
+  return sinceLastMeal(now, meals) >= mealGapHours * MS_PER_HOUR;
+}
+
+// Whether the latest recorded meal is still under minGapHours behind the clock — the next one
+// would come sooner than the program's meals are meant to be spaced. A day with nothing recorded
+// has no meal to be too soon after.
+export function mealTooSoon(now: Date, minGapHours: number,
+                            meals: readonly { at: string }[]): boolean {
+  return meals.length > 0 && sinceLastMeal(now, meals) < minGapHours * MS_PER_HOUR;
 }

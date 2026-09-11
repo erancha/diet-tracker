@@ -489,6 +489,11 @@ td.view-day { cursor: pointer; }
 /* While the first-visit intro's flashes run, the add-meal toggle keeps quiet — the overdue-meal
    nudge would otherwise blink alongside the sequence and muddle it. It resumes when they end. */
 :is(.intro-0, .intro-1, .intro-2, .intro-3, .intro-4) .meal-form .section-toggle { animation: none; }
+/* The folded add-meal toggle wears the app's accent — the title's green — so the invitation to
+   record stands out from the card's text once a meal is due. Too soon after the last meal it
+   stands greyed instead: a caution against recording, where the nudge above is a call to. */
+.meal-form:not(.meal-form-open) .section-toggle { --btn-fg: var(--accent); }
+.meal-form.meal-add-early .section-toggle { --btn-fg: var(--viz-muted); }
 /* A dip-and-return pulse rather than an on/off square wave: the label stays legible at the
    bottom of the dip, and never sits dimmed waiting for the next cycle. */
 @keyframes nudge-blink { 50% { opacity: 0.45; } }
@@ -543,10 +548,9 @@ main:not(.intro-0, .intro-1, .intro-2, .intro-3, .intro-4) .weight .section-togg
 /* A fresh day renders the actions row and meal list with nothing in them; hiding them keeps
    their margins from deepening the card's bottom gap past its top padding. */
 .form-actions:empty, .meal-list:empty { display: none; }
-/* Ends the tracker card on a line of its own, pushed to the row's far end so it reads as a
-   quiet setting under the day's contents rather than as one of their controls. */
-.label-density { display: flex; justify-content: flex-end; margin-top: 0.75rem; font-size: 0.8rem; }
-.label-density button { white-space: nowrap; }
+/* Sits at the far end of the day's heading row, small against the title so it reads as a quiet
+   setting on the log rather than as one of its controls. */
+.label-density { font-size: 0.8rem; white-space: nowrap; }
 /* A carb source is its grade group plus the helping that qualifies it, so the two travel as one
    block: the fieldset gives up its own bottom margin and the block carries the gap instead,
    leaving the helping box tucked under the grade it belongs to. */

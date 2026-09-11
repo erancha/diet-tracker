@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { clockTimeOf, mealOverdue, parseIsoDate } from "../dates";
+import { clockTimeOf, mealOverdue, mealTooSoon, parseIsoDate } from "../dates";
 import { carbsScales, deriveDay, portionOffered } from "../derive";
 import { mayDiscardEdits } from "../edits";
 import { isViolating } from "../violations";
@@ -30,6 +30,10 @@ const SECOND_SOURCE_REMOVE = "הסרת מקור פחמימה נוסף";
 // moves to rather than the state it is in.
 const EXPAND_LABELS = "הרחבת שמות";
 const COLLAPSE_LABELS = "צמצום שמות";
+
+// The least the program spaces meals apart: until this long after the last one, the add-meal
+// toggle reads greyed, a quieter caution than the overdue nudge on the far side of the gap.
+const MIN_MEAL_GAP_HOURS = 3.5;
 
 // What the closed day's one control asks before undoing the close: adding a meal to a closed
 // day means deleting its record — the same deletion the history table offers — and closing again
@@ -210,6 +214,10 @@ export function DayTracker({ questionnaire, day, isToday = true, closed = false,
   const nudging = isToday && !atCap && formCollapsed
     && mealOverdue(new Date(), firstMealHour, mealGapHours, day.meals);
 
+  // The opposite caution: a meal that would land too close after the last one greys the folded
+  // toggle. Open inputs are already recording, so the shade lifts with them.
+  const tooSoon = formCollapsed && mealTooSoon(new Date(), MIN_MEAL_GAP_HOURS, day.meals);
+
   // The panel opens below the day's meal list, past the fold more often than not, so it walks
   // into view and hands focus to its first water choice rather than waiting to be found.
   const closePanel = useRef<HTMLDivElement>(null);
@@ -343,6 +351,21 @@ export function DayTracker({ questionnaire, day, isToday = true, closed = false,
                         onToggle={() => setSectionCollapsed((c) => !c)}
                         summary={
       <DayDashboard questionnaire={questionnaire} derived={derived} />
+    }
+                        headerAside={
+      /* Governs every grade name in the card — the pickers' and the meal rows' alike, the closed
+         day's read-only rows included — from the far end of the day's heading row, where it
+         reads as a setting on the whole log rather than as one of its controls. Offered only
+         while a meal row or the open inputs put a grade name on screen for it to act on; the
+         density lives outside the component, so withholding the switch keeps the reading.
+         Withheld as an empty aside rather than none, so the heading keeps its row — and the
+         focus of whoever just pressed it — instead of remounting as the switch comes and goes. */
+      !sectionCollapsed && (day.meals.length > 0 || !formCollapsed)
+        ? <button type="button" className="secondary compact label-density"
+                  onClick={() => setExpandLabels(!expandLabels)}>
+            {expandLabels ? COLLAPSE_LABELS : EXPAND_LABELS}
+          </button>
+        : null
     }>
       {closed ? (
         <>
@@ -375,7 +398,8 @@ export function DayTracker({ questionnaire, day, isToday = true, closed = false,
         <p className="meal-cap-note">{`הושלמו ${maxMealsPerDay} ארוחות היום`}</p>
       ) : (
       <CollapsibleSection className={"meal-form"
-                            + (formCollapsed ? (nudging ? ` nudge-${nudgePhase}` : "") : " meal-form-open")}
+                            + (formCollapsed ? (nudging ? ` nudge-${nudgePhase}` : "") : " meal-form-open")
+                            + (tooSoon ? " meal-add-early" : "")}
                           headingLevel={3}
                           title={editing !== undefined ? "עדכון ארוחה" : addMealTitle}
                           collapsed={formCollapsed}
@@ -517,18 +541,6 @@ export function DayTracker({ questionnaire, day, isToday = true, closed = false,
         </div>
       )}
         </>
-      )}
-      {/* Governs every grade name above it — the pickers' and the meal rows' alike, the closed
-          day's read-only rows included — sitting outside either branch. It closes the card as a
-          quiet setting rather than leading it as if it were the day's first control, and only
-          while a meal row or the open inputs put a grade name on screen for it to act on. The
-          density lives outside the component, so withholding the switch keeps the reading. */}
-      {(day.meals.length > 0 || !formCollapsed) && (
-        <div className="label-density">
-          <button type="button" className="secondary compact" onClick={() => setExpandLabels(!expandLabels)}>
-            {expandLabels ? COLLAPSE_LABELS : EXPAND_LABELS}
-          </button>
-        </div>
       )}
     </CollapsibleSection>
   );

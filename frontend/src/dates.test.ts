@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { beforeDailyCutoff, dayLabel, daysBefore, daysSince, ddmmLabel, instantLabel, mealOverdue, expandWeightSection, isWeighInDay, isoDate, lastDays, parseIsoDate, weekdayDdmmLabel, weekdayLabel, weekdayLetter } from "./dates";
+import { beforeDailyCutoff, dayLabel, daysBefore, daysSince, ddmmLabel, instantLabel, mealOverdue, mealTooSoon, expandWeightSection, isWeighInDay, isoDate, lastDays, parseIsoDate, weekdayDdmmLabel, weekdayLabel, weekdayLetter } from "./dates";
 
 describe("isoDate", () => {
   it("formats a local date as YYYY-MM-DD with zero padding", () => {
@@ -201,5 +201,22 @@ describe("expandWeightSection", () => {
 
   it("stays folded on every other day, weighed or not", () => {
     expect(expandWeightSection(WEDNESDAY, "THU", [])).toBe(false);
+  });
+});
+
+describe("mealTooSoon", () => {
+  const eleven = new Date(2026, 7, 18, 11, 0);
+  const mealAt = (hour: number, minute = 0) => ({ at: new Date(2026, 7, 18, hour, minute).toISOString() });
+
+  it("never too soon on a day with nothing recorded", () => {
+    expect(mealTooSoon(eleven, 3.5, [])).toBe(false);
+  });
+
+  it("too soon while the latest meal is younger than the gap, whatever order the meals arrive in", () => {
+    expect(mealTooSoon(eleven, 3.5, [mealAt(7, 31), mealAt(6)])).toBe(true);
+  });
+
+  it("no longer too soon once the gap is reached", () => {
+    expect(mealTooSoon(eleven, 3.5, [mealAt(7, 30)])).toBe(false);
   });
 });

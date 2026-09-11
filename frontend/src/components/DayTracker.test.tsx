@@ -62,7 +62,7 @@ const NO_NUDGE_GAP_HOURS = Infinity;
 // recording inputs away.
 const NO_CAP_MEALS = Infinity;
 
-// The meal-form section, read off its toggle: where the nudge classes land.
+// The meal-form section, read off its toggle: where the nudge and too-soon classes land.
 const mealFormSection = () =>
   screen.getByRole("button", { name: "הוספת ארוחה" }).closest("section")!;
 
@@ -347,6 +347,21 @@ describe("DayTracker", () => {
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     expect(screen.getByRole("button", { name: "הרחבת שמות" })).toBeInTheDocument();
+  });
+
+  it("seats the density switch on the day's heading row and folds it away with the tracker", () => {
+    atLocalTime(19, 5);
+    render(<DayTracker maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={trackedDay}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    const heading = screen.getByRole("button", { name: "יומן היום" });
+    expect(screen.getByRole("button", { name: "הרחבת שמות" }).closest(".section-header"))
+      .toContainElement(heading);
+    // Folded, the tracker puts no grade name on screen, so the switch goes with the rows.
+    fireEvent.click(heading);
+    expect(screen.queryByRole("button", { name: "הרחבת שמות" })).toBeNull();
   });
 
   it("offers a second source only beside a light primary, over every grade but the plain no-carb one", () => {
@@ -734,7 +749,7 @@ describe("DayTracker", () => {
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     expect(screen.getByRole("button", { name: "הוספת ארוחה" }))
       .toHaveAttribute("aria-expanded", "false");
-    expect(mealFormSection()).toHaveClass("meal-form", { exact: true });
+    expect(mealFormSection().className).not.toMatch(/nudge/);
   });
 
   it("keeps the inputs folded but blinks the toggle once the gap since the last meal passed", () => {
@@ -749,6 +764,26 @@ describe("DayTracker", () => {
     expect(mealFormSection()).toHaveClass("nudge-0");
   });
 
+  it("greys the add-meal toggle while the last meal is under three and a half hours old", () => {
+    render(<DayTracker maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={4}
+                       day={dayWithMealHoursAgo(3)}
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    expect(mealFormSection()).toHaveClass("meal-add-early");
+  });
+
+  it("gives the toggle its colour back once three and a half hours have passed", () => {
+    render(<DayTracker maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={4}
+                       day={dayWithMealHoursAgo(3.5)}
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    expect(mealFormSection()).not.toHaveClass("meal-add-early");
+  });
+
   it("stops the nudge once a fresh meal lands in the day's list", () => {
     const props = { questionnaire, firstMealHour: NO_NUDGE_HOUR, mealGapHours: 4,
                     onAddMeal: vi.fn(), onUpdateMeal: vi.fn(), onDeleteMeal: vi.fn(),
@@ -758,7 +793,7 @@ describe("DayTracker", () => {
 
     rerender(<DayTracker maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} {...props} day={dayWithMealHoursAgo(1)} />);
 
-    expect(mealFormSection()).toHaveClass("meal-form", { exact: true });
+    expect(mealFormSection().className).not.toMatch(/nudge/);
   });
 
   it("blinks the toggle from the first-meal hour on a day with nothing recorded", () => {
@@ -780,7 +815,7 @@ describe("DayTracker", () => {
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
-    expect(mealFormSection()).toHaveClass("meal-form", { exact: true });
+    expect(mealFormSection().className).not.toMatch(/nudge/);
   });
 
   it("keeps the toggle quiet past the hour once the day has a recorded meal", () => {
@@ -790,7 +825,7 @@ describe("DayTracker", () => {
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
-    expect(mealFormSection()).toHaveClass("meal-form", { exact: true });
+    expect(mealFormSection().className).not.toMatch(/nudge/);
   });
 
   it("pauses the nudge while the inputs are open and resumes it when they fold again", () => {
