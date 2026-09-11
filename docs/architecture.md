@@ -29,6 +29,13 @@ graph LR
     NUDGE --> UND
     NUDGE --> SES[SES email]
     NUDGE -.optional.-> TG[Telegram bot]
+    NUDGE --> Q[(SQS<br/>weekly recap)]
+    Q --> RECAP[weekly-recap Lambda]
+    RECAP --> DB
+    RECAP --> CDB
+    RECAP --> UND
+    RECAP --> RAG
+    RECAP --> SES
 ```
 
 ## The doors
@@ -45,7 +52,12 @@ graph LR
   because it talks to a service outside this stack. It reads its API key per request from SSM
   Parameter Store, so rotating the key needs no redeploy.
 - **nudge** — woken by the clock rather than by a request. It sends the day's last call, the
-  weekly weigh-in reminder, the threshold alerts and the weekly recap.
+  weekly weigh-in reminder and the threshold alerts, and queues the weekly recap, one message per
+  user, returning in seconds whatever the pool size.
+- **weekly-recap** — answers one queued user at a time: reads their week, asks the answering
+  service for its reading of it, and sends the email. Each user has an invocation of their own,
+  so a slow reading delays no one else, and a crash parks that one user's message in a
+  dead-letter queue instead of dropping everyone queued behind them.
 
 ## Scoring lives in two languages
 

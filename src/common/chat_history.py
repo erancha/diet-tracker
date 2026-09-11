@@ -75,6 +75,17 @@ def append(table, sub, question, answer, sources, at=None, app=False):
     return sk
 
 
+def find(table, sub, title) -> str | None:
+    """The stamp of the user's chat opened under title — stored as that question, or since
+    answered as the original question of a follow-up on it — or None when the transcript holds
+    none. The oldest such chat when the transcript holds several."""
+    opening = f"{ORIGINAL_QUESTION_LABEL} {title}\n"
+    for item in query_all(table, KeyConditionExpression=Key("pk").eq(sub)):
+        if item["question"] == title or item["question"].startswith(opening):
+            return item["sk"]
+    return None
+
+
 def get(table, sub, at):
     """One stored chat of the user's, by its timestamp; raises KeyError when the user holds no
     such chat — including a timestamp that exists only for another user."""

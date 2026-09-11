@@ -15,7 +15,8 @@ means the shell didn't source that file — not an expired session. The aws CLI 
 - `aws-helper.sh` — resolves stable Lambda targets to the deployed resources and works with
   their CloudWatch logs; `--help` lists targets and options. Fastest health check of a function:
   `scripts/aws-helper.sh --logs <target> --errors --since 1d`. Targets are aliases (api, nudge,
-  presignup, rag — Summaries.AI's RAG lambda serving the in-app chat) or `<stack>:<logical-id>`
+  recap — the weekly recap's per-user consumer, presignup, rag — Summaries.AI's RAG lambda
+  serving the in-app chat) or `<stack>:<logical-id>`
   for any Lambda the credentials can describe.
 - `test.sh [pytest args]` — venv + pytest wrapper; creates and populates `.venv` on first run.
 - `deploy.sh` / `sync-frontend.sh` — full stack deploy vs frontend-only publish. `config/app.json`

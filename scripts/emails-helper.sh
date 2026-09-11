@@ -126,7 +126,6 @@ for name, value in json.load(sys.stdin).items():
   export APP_CONFIG_PATH=config/app.json
 
   EMAIL="$EMAIL" SEND="$SEND" PYTHONPATH=src .venv/bin/python - <<'PY'
-import dataclasses
 import os
 
 from handlers import nudge
@@ -154,14 +153,16 @@ if not send:
     nudge.notify.send_email = lambda ses, sender, to, subject, body, app_url: print(
         f"--- would email {to} — {subject} ---\n{body}\n")
 
-env = nudge._build_env()
+env = nudge._build_env(nudge._notifiable_pool)
 # The job's own audience, so an address that is muted or absent from the pool is reported as the
 # reason nothing happened rather than silently producing an empty run.
 audience = [user for user in env.users if user.email == os.environ["EMAIL"]]
 if not audience:
     raise SystemExit(f"{os.environ['EMAIL']} is not in the notifiable pool — unknown address, "
                      "or notifications muted in the account menu")
-nudge._weekly(dataclasses.replace(env, users=audience))
+# The recap is produced in this process, as the consumer produces it off the queue, so the
+# preview's prints and --send's delivery both happen here.
+nudge._recap(env, audience[0], nudge.today())
 if not stored:
     raise SystemExit("No day was closed in the week, so the opening line alone "
                      f"{'went out' if send else 'would go out'} and no chat was stored.")

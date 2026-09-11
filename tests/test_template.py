@@ -72,11 +72,45 @@ def test_chat_function_reads_every_table_the_context_block_queries():
         assert {"DynamoDBReadPolicy": {"TableName": table}} in policies
 
 
-def test_nudge_function_can_store_the_weekly_recap_in_the_transcript():
-    # The weekly job writes its recap into the chat transcript; a missing grant surfaces only as a
-    # failed weekly run on a deployed stack, after the email has already gone out.
-    policies = _load_template()["Resources"]["NudgeFunction"]["Properties"]["Policies"]
-    assert {"DynamoDBWritePolicy": {"TableName": "ChatHistoryTable"}} in policies
+def test_the_recap_consumer_is_granted_every_table_and_service_one_recap_touches():
+    # A recap reads the user's days, meals and weights, replaces its own chat in the transcript
+    # with the answered follow-up (a delete and a put in one transaction), and keeps a refused
+    # email for the app; a missing grant surfaces only as a dead-lettered user on a deployed
+    # stack, after the scheduler has long returned.
+    policies = _load_template()["Resources"]["WeeklyRecapFunction"]["Properties"]["Policies"]
+    for table in ("DaysTable", "MealsTable", "WeightsTable"):
+        assert {"DynamoDBReadPolicy": {"TableName": table}} in policies
+    assert {"DynamoDBCrudPolicy": {"TableName": "ChatHistoryTable"}} in policies
+    assert {"DynamoDBWritePolicy": {"TableName": "UndeliveredTable"}} in policies
+    assert "NotifyPolicy" in policies
+    assert "ListUsersPolicy" not in policies
+
+
+def test_the_weekly_recap_is_fanned_out_one_user_per_invocation():
+    # The weekly job queues one message per user and a consumer answers each in its own
+    # invocation. The pieces that keep that true — one message per invocation, a crash going
+    # straight to the dead-letter queue, the consumer's wait fitting inside the queue's
+    # visibility window, the scheduler's right to queue — fail only on a deployed stack.
+    from handlers import nudge
+
+    template = _load_template()
+    resources = template["Resources"]
+    consumer = resources["WeeklyRecapFunction"]["Properties"]
+    assert getattr(nudge, consumer["Handler"].split(".")[-1])
+    (event,) = consumer["Events"].values()
+    assert event["Type"] == "SQS"
+    assert event["Properties"]["Queue"] == "WeeklyRecapQueue.Arn"
+    assert event["Properties"]["BatchSize"] == 1
+    assert event["Properties"]["ScalingConfig"]["MaximumConcurrency"] == 2
+    queue = resources["WeeklyRecapQueue"]["Properties"]
+    assert queue["RedrivePolicy"] == {"deadLetterTargetArn": "WeeklyRecapDeadLetterQueue.Arn",
+                                      "maxReceiveCount": 1}
+    assert queue["VisibilityTimeout"] >= 6 * consumer["Timeout"]
+    assert consumer["Timeout"] > nudge.RECAP_TIMEOUT_SECONDS
+    nudge_policies = resources["NudgeFunction"]["Properties"]["Policies"]
+    assert {"SQSSendMessagePolicy": {"QueueName": "WeeklyRecapQueue.QueueName"}} in nudge_policies
+    shared_variables = template["Globals"]["Function"]["Environment"]["Variables"]
+    assert shared_variables["WEEKLY_RECAP_QUEUE_URL"] == "WeeklyRecapQueue"
 
 
 def test_weigh_in_schedule_defaults_agree_with_the_app_config():

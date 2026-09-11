@@ -248,3 +248,22 @@ def test_a_second_follow_up_keeps_the_chain_it_extends():
 
     assert second.count("השאלה המקורית:") == 1
     assert second.endswith("התשובה: מקדימים ארוחה\nשאלת המשך: ומה עם למחרת?")
+
+
+def test_find_returns_the_stamp_of_the_chat_opened_under_a_title(table):
+    at = chat_history.append(table, "u1", "סיכום שבועי 04/09/2026", "ממצאים", [], app=True)
+    chat_history.append(table, "u1", "שאלה אחרת", "ת", [])
+    assert chat_history.find(table, "u1", "סיכום שבועי 04/09/2026") == at
+
+
+def test_find_sees_the_chat_through_the_follow_up_answered_on_it(table):
+    at = chat_history.append(table, "u1", "סיכום שבועי 04/09/2026", "ממצאים", [], app=True)
+    question = chat_history.follow_up("סיכום שבועי 04/09/2026", "ממצאים", "מהן התובנות?")
+    answered = chat_history.append(table, "u1", question, "תובנות", [], at=at, app=True)
+    assert chat_history.find(table, "u1", "סיכום שבועי 04/09/2026") == answered
+
+
+def test_find_returns_none_for_another_week_or_another_user(table):
+    chat_history.append(table, "u1", "סיכום שבועי 28/08/2026", "ממצאים", [], app=True)
+    chat_history.append(table, "u2", "סיכום שבועי 04/09/2026", "ממצאים", [], app=True)
+    assert chat_history.find(table, "u1", "סיכום שבועי 04/09/2026") is None

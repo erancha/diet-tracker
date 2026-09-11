@@ -98,6 +98,7 @@ Globals:
         CHAT_DAILY_LIMIT_OVERRIDES: !Ref ChatDailyLimitOverrides
         RAG_API_URL: !Ref RagApiUrl
         RAG_API_KEY_PARAM: !Ref RagApiKeyParam
+        WEEKLY_RECAP_QUEUE_URL: !Ref WeeklyRecapQueue
 
 Resources:
   DaysTable:
@@ -409,8 +410,7 @@ Resources:
       Handler: handlers/nudge.handler
       # Every job loops the whole user pool inside one invocation, sending per user, so the budget
       # scales with the pool rather than with one request — the global 30s cannot cover it. The
-      # weekly recap also waits on the answering service once per user, which is what makes the
-      # pool a ceiling here and not merely a cost.
+      # weekly job only queues, one message per user; its waits are spent by WeeklyRecapFunction.
       Timeout: 300
       Policies:
         - DynamoDBCrudPolicy:
@@ -421,14 +421,80 @@ Resources:
             TableName: !Ref NudgeStateTable
         - DynamoDBCrudPolicy:
             TableName: !Ref WeightsTable
-        # Write-only: the job keeps a message SES refused, and stores the weekly recap as a
-        # chat, and reads neither back.
+        # Write-only: the job keeps a message SES refused and never reads one back.
         - DynamoDBWritePolicy:
             TableName: !Ref UndeliveredTable
-        - DynamoDBWritePolicy:
-            TableName: !Ref ChatHistoryTable
+        - SQSSendMessagePolicy:
+            QueueName: !GetAtt WeeklyRecapQueue.QueueName
         - !Ref NotifyPolicy
         - !Ref ListUsersPolicy
+
+  # The weekly job's hand-off: one message per pool member, answered by WeeklyRecapFunction in an
+  # invocation of its own, so a slow reading of one user's week delays no one else and a crash
+  # takes one user with it.
+  WeeklyRecapQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      # How long a received message stays hidden from every other receiver. It has to outlast the
+      # gap between Lambda's receive and its delete — the poller's own invoke retries while the
+      # function is at its concurrency cap, then the run itself — or a second invocation would
+      # start on the same user mid-run; six times the consumer's timeout is AWS's margin for
+      # that. A failed message reappears when it runs out, so it is also the wait before the
+      # next attempt.
+      VisibilityTimeout: 540
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt WeeklyRecapDeadLetterQueue.Arn
+        # A crash is a bug to look at, not a transient to retry through: the consumer already
+        # absorbs a failed reading and a failed send. So the message goes straight to the
+        # dead-letter queue, where the user's sub and night wait to be redriven by hand once the
+        # cause is fixed; the rerun finds the chat the crashed run stored and answers it.
+        maxReceiveCount: 1
+
+  # Holds a crashed user's message for the two weeks SQS allows at most — long enough that the
+  # following week's run has made it moot.
+  WeeklyRecapDeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      MessageRetentionPeriod: 1209600
+
+  WeeklyRecapFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../build/lambda
+      Handler: handlers/nudge.recap_handler
+      # One user's recap: the answering service's wait (RECAP_TIMEOUT_SECONDS, 55s) plus the
+      # reads and the send around it.
+      Timeout: 90
+      Events:
+        Recap:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt WeeklyRecapQueue.Arn
+            # One user per invocation, so a crash requeues no one else and no partial-batch
+            # bookkeeping is needed.
+            BatchSize: 1
+            # Two readings in flight at most, the lowest SQS allows: the answering service's API
+            # key admits one request a second with a burst of five, and each reading holds its
+            # request for seconds.
+            ScalingConfig:
+              MaximumConcurrency: 2
+      Policies:
+        # A recap reads the user's week and the tracked data the question's context block
+        # carries: days, meals, weights and target.
+        - DynamoDBReadPolicy:
+            TableName: !Ref DaysTable
+        - DynamoDBReadPolicy:
+            TableName: !Ref MealsTable
+        - DynamoDBReadPolicy:
+            TableName: !Ref WeightsTable
+        # Storing the answered follow-up replaces the recap chat in one transaction, a delete and
+        # a put, so the grant is the full CRUD template.
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ChatHistoryTable
+        # Write-only: a message SES refuses is kept for the app and never read back.
+        - DynamoDBWritePolicy:
+            TableName: !Ref UndeliveredTable
+        - !Ref NotifyPolicy
 
   # The right to enumerate the user pool, shared by the nudge job (its recipients) and the API's
   # admin activity listing.

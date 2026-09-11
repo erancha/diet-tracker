@@ -217,7 +217,8 @@ Scheduled jobs (EventBridge Scheduler, Asia/Jerusalem) run alongside the tracker
   day before it instead — that day had its final chance to be closed that morning, at
   `day_close.close_until`. Each user's own days decide, so the same run reports one user's week
   through Thursday and another's through Wednesday. Either way the recap reads the weigh-in
-  morning's weight as the freshest one.
+  morning's weight as the freshest one. Each user's recap is produced in an invocation of its
+  own, so one slow reading of a week delays no one else's email.
 
   The email opens with one line — how many of the seven days were closed — and under it one
   bullet per bound a day crossed, counted day by day the way the trend chart reddens a dot and the
