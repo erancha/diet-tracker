@@ -839,6 +839,10 @@ main:not(.intro-0, .intro-1, .intro-2, .intro-3, .intro-4) .weight .section-togg
 .chat .reply-chip { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.35rem;
                     font-size: 0.85rem; opacity: 0.85; }
 .chat .reply-chip span { flex: 1; }
+/* The offer under the composer to open a chat already asked instead of asking again. */
+.chat .existing-chat { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem;
+                       margin-top: 0.35rem; font-size: 0.9rem; }
+.chat .existing-chat p { flex-basis: 100%; margin: 0; }
 /* The answer's foot carries the two controls that act on the chat — a follow-up and a summary,
    each spending a question from the day's allowance and rewriting the stored chat — beside a
    closing one, so a long chat folds from where reading ends. All worded rather than glyph-based

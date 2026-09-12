@@ -375,3 +375,10 @@ export interface ChatCount {
   own_shared: number;
   public_total: number;
 }
+
+// The chats already opened with a question, looked up before it is sent: the reader's own newest
+// one, and the newest another user shared, each null when there is none.
+export interface ExistingChat {
+  own: { at: string } | null;
+  shared: { at: string; email: string } | null;
+}

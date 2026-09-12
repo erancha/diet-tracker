@@ -4,8 +4,8 @@
 import { isUnexpired, reauthenticate, type Tokens } from "./auth";
 import type { AppConfig } from "./config";
 import type { AdminActivity, AnswerValue, ChatAnswer, ChatCount, ChatTranscript, ChatTurn,
-  ChatVisibility, DayPayload, HistoryResponse, LoadedHistory, NewMeal, NotificationSettings,
-  PublicChats, SubmitResult, WeightPayload } from "./types";
+  ChatVisibility, DayPayload, ExistingChat, HistoryResponse, LoadedHistory, NewMeal,
+  NotificationSettings, PublicChats, SubmitResult, WeightPayload } from "./types";
 
 /** Backend request rejected; the message keeps the method, path, status, and body for diagnosis. */
 export class ApiError extends Error {
@@ -54,6 +54,7 @@ export interface Api {
   clearChatVisibility(at: string): Promise<{ at: string; visibility: null }>;
   getPublicChats(): Promise<PublicChats>;
   getChatCount(): Promise<ChatCount>;
+  findExistingChat(question: string): Promise<ExistingChat>;
   sourceUrl(fileName: string): Promise<{ url: string }>;
 }
 
@@ -138,6 +139,8 @@ export function createApi(
     clearChatVisibility: (at) => request("DELETE", `/chat/${encodeURIComponent(at)}/visibility`),
     getPublicChats: () => request("GET", "/chat/public"),
     getChatCount: () => request("GET", "/chat/count"),
+    findExistingChat: (question) =>
+      request("GET", `/chat/existing?${new URLSearchParams({ question })}`),
     // A link to open one cited document, minted for this press and good for minutes only, which
     // is why it is asked for at press time rather than kept with the chat.
     sourceUrl: (fileName) => request("POST", "/chat/source-url", { fileName }),

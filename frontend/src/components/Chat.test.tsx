@@ -9,7 +9,7 @@ import type { ChatTurn } from "../types";
 import { Chat } from "./Chat";
 
 type ChatApi = Pick<Api, "ask" | "getChatTranscript" | "deleteChatTurn" | "summarizeChatTurn" | "sourceUrl"
-  | "setChatVisibility" | "clearChatVisibility" | "getPublicChats" | "getChatCount">;
+  | "setChatVisibility" | "clearChatVisibility" | "getPublicChats" | "getChatCount" | "findExistingChat">;
 
 function api(overrides: Partial<ChatApi> = {}): ChatApi {
   return {
@@ -22,6 +22,7 @@ function api(overrides: Partial<ChatApi> = {}): ChatApi {
     clearChatVisibility: vi.fn(),
     getPublicChats: vi.fn().mockResolvedValue({ chats: [] }),
     getChatCount: vi.fn().mockResolvedValue({ own_total: 0, own_app: 0, own_shared: 0, public_total: 0 }),
+    findExistingChat: vi.fn().mockResolvedValue({ own: null, shared: null }),
     ...overrides,
   };
 }
@@ -1230,5 +1231,123 @@ describe("Chat", () => {
       "השאלה המקורית: שאלה 2\nהתשובה: תשובה 2\nשאלת המשך: ומה עוד?", turn(2).at, true);
     await userEvent.selectOptions(screen.getByRole("combobox", { name: "סינון הצ'אטים" }), "app");
     expect(screen.getAllByText(/^השאלה המקורית/)).toHaveLength(1);
+  });
+  // The lookup that precedes a standalone question, answering that the user asked it before
+  // (own), that another user asked and shared it (shared), or both.
+  function existing(own: string | null, shared: string | null) {
+    return vi.fn().mockResolvedValue({
+      own: own === null ? null : { at: own },
+      shared: shared === null ? null : { at: shared, email: "other@gmail.com" },
+    });
+  }
+
+  it("asks whether the question was asked before, and sends it when it was not", async () => {
+    const chatApi = api({ ask: vi.fn().mockResolvedValue({ answer: "תשובה", sources: [] }) });
+    render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} />);
+
+    await ask("מה מותר בערב?");
+
+    expect(chatApi.findExistingChat).toHaveBeenCalledWith("מה מותר בערב?");
+    expect(chatApi.ask).toHaveBeenCalledWith("מה מותר בערב?", undefined, false);
+    expect(await screen.findByText("תשובה")).toBeInTheDocument();
+  });
+
+  it("offers the user's own earlier chat instead of asking again, and opens it on request", async () => {
+    const chatApi = api({
+      getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(2) }),
+      getChatCount: counted(2),
+      findExistingChat: existing(turn(1).at, OTHERS.chats[0].at),
+    });
+    render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} defaultTranscriptFolded />);
+    await screen.findByRole("button", { name: /צ'אטים קודמים שלי/ });
+
+    await ask("שאלה 1");
+
+    expect(chatApi.ask).not.toHaveBeenCalled();
+    expect(screen.getByText("כבר שאלת את השאלה הזו")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "להציג את הצ'אט הקיים" }));
+
+    expect(await screen.findByText("תשובה 1")).toBeInTheDocument();
+    expect(screen.queryByText("תשובה 2")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "שאלה 1" })).toHaveFocus();
+    expect(screen.queryByText("כבר שאלת את השאלה הזו")).not.toBeInTheDocument();
+    expect(chatApi.getPublicChats).not.toHaveBeenCalled();
+    expect(screen.getByRole("textbox")).toHaveValue("");
+  });
+
+  it("offers another user's shared chat, and opens it in the others' list on request", async () => {
+    const chatApi = withOthers(OTHERS.chats, { findExistingChat: existing(null, OTHERS.chats[1].at) });
+    render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} />);
+    await screen.findByRole("button", { name: /של משתמשים אחרים/ });
+
+    await ask("כמה מים?");
+
+    expect(chatApi.ask).not.toHaveBeenCalled();
+    expect(screen.getByText("השאלה הזו כבר נשאלה ושותפה על ידי other@gmail.com")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "להציג את הצ'אט הקיים" }));
+
+    expect(await screen.findByText("שלושה ליטר")).toBeInTheDocument();
+    expect(screen.queryByText("ירקות וחלבון")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "כמה מים?" })).toHaveFocus();
+  });
+
+  it("asks anyway on request", async () => {
+    const chatApi = api({ ask: vi.fn().mockResolvedValue({ answer: "תשובה חדשה", sources: [] }),
+                          findExistingChat: existing("2026-09-01T10:00:01", null) });
+    render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} />);
+
+    await ask("שאלה 1");
+    await userEvent.click(screen.getByRole("button", { name: "לשאול בכל זאת" }));
+
+    expect(chatApi.ask).toHaveBeenCalledWith("שאלה 1", undefined, false);
+    expect(await screen.findByText("תשובה חדשה")).toBeInTheDocument();
+    expect(screen.queryByText("כבר שאלת את השאלה הזו")).not.toBeInTheDocument();
+  });
+
+  it("drops the offer once the question is edited", async () => {
+    const chatApi = api({ findExistingChat: existing("2026-09-01T10:00:01", null) });
+    render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} />);
+    await ask("שאלה 1");
+    expect(screen.getByText("כבר שאלת את השאלה הזו")).toBeInTheDocument();
+
+    await userEvent.type(screen.getByRole("textbox"), " ועוד");
+
+    expect(screen.queryByText("כבר שאלת את השאלה הזו")).not.toBeInTheDocument();
+    expect(screen.getByRole("textbox")).toHaveValue("שאלה 1 ועוד");
+  });
+
+  it("sends a follow-up without looking for an earlier chat", async () => {
+    const chatApi = api({
+      getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(1) }),
+      ask: vi.fn().mockResolvedValue({ answer: "תשובה", sources: [], at: "2026-09-01T11:00:00" }),
+    });
+    render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} />);
+    await userEvent.click(await screen.findByRole("button", { name: "שאלה 1" }));
+    await userEvent.click(screen.getByRole("button", { name: "שאלת המשך על שאלה 1" }));
+
+    await ask("ומה עוד?");
+
+    expect(chatApi.findExistingChat).not.toHaveBeenCalled();
+    expect(chatApi.ask).toHaveBeenCalledTimes(1);
+  });
+
+  it("sends a commanded question without looking for an earlier chat", async () => {
+    const chatApi = api({ ask: vi.fn().mockResolvedValue({ answer: "תשובה", sources: [], at: "2026-09-01T10:00:00" }) });
+    render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} askCommand="שאלה מבחוץ"
+                 onAskCommandTaken={vi.fn()} />);
+
+    expect(await screen.findByText("תשובה")).toBeInTheDocument();
+    expect(chatApi.findExistingChat).not.toHaveBeenCalled();
+  });
+
+  it("shows what failed when the lookup fails, keeping the question unsent", async () => {
+    const chatApi = api({ findExistingChat: vi.fn().mockRejectedValue(new ApiError(502, "GET /chat/existing → 502")) });
+    render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} />);
+
+    await ask("שאלה");
+
+    expect(await screen.findByText(/בדיקת הצ'אטים הקודמים נכשלה/)).toBeInTheDocument();
+    expect(chatApi.ask).not.toHaveBeenCalled();
+    expect(screen.getByRole("textbox")).toHaveValue("שאלה");
   });
 });

@@ -5,7 +5,7 @@ import { storeChatFilter, storedChatFilter, type ChatFilter } from "../chatFilte
 import { storePublicCount, storedPublicCount } from "../publicCount";
 import { instantLabel } from "../dates";
 import { dropped, flipped } from "../setToggle";
-import type { ChatCount, ChatSampleQuestion, ChatTurn, PublicChat } from "../types";
+import type { ChatCount, ChatSampleQuestion, ChatTurn, ExistingChat, PublicChat } from "../types";
 import { ChatAnswer } from "./ChatAnswer";
 import { Icon } from "./Icon";
 import { PublicChatList } from "./PublicChats";
@@ -55,6 +55,11 @@ function composeFollowUp(target: ChatTurn, question: string): string {
 // and handed back through onAskCommandTaken, so a remount cannot ask twice; a follow-up inherits
 // the side and the visibility of the chat it extends.
 //
+// A standalone typed question is first looked up: when the user, or another user who shared the
+// chat, already asked it, an offer under the composer opens that chat — loading and unfolding
+// its list as needed — or sends the question anyway. Follow-ups and commanded questions skip
+// the lookup, being meant for a fresh answer.
+//
 // An open answer's foot offers reply, summarize, share and close. Reply moves the composer under
 // the answer and the answered chat re-keys to the top. Summarizing trades the chain for a digest
 // for good, so it confirms first and shows a waiting indicator; a digest offers it disabled.
@@ -67,7 +72,8 @@ export function Chat({ email, api, sampleQuestions, defaultTranscriptFolded = fa
   // The signed-in address, keying what this account's last visit saw of the others' chats.
   email: string;
   api: Pick<Api, "ask" | "getChatTranscript" | "deleteChatTurn" | "summarizeChatTurn" | "sourceUrl"
-    | "setChatVisibility" | "clearChatVisibility" | "getPublicChats" | "getChatCount">;
+    | "setChatVisibility" | "clearChatVisibility" | "getPublicChats" | "getChatCount"
+    | "findExistingChat">;
   sampleQuestions: ChatSampleQuestion[];
   defaultTranscriptFolded?: boolean;
   askCommand?: string | null;
@@ -97,6 +103,13 @@ export function Chat({ email, api, sampleQuestions, defaultTranscriptFolded = fa
   const [othersFolded, setOthersFolded] = useState(true);
   // Other users' shared chats, or null until first unfolded; folding keeps what was loaded.
   const [others, setOthers] = useState<PublicChat[] | null>(null);
+  // The chats already opened with the draft, offered instead of sending it; null while no offer
+  // stands. Editing the draft withdraws the offer.
+  const [existing, setExisting] = useState<ExistingChat | null>(null);
+  // The own chat to open and focus once the transcript renders it, or null.
+  const [revealAt, setRevealAt] = useState<string | null>(null);
+  // The shared chat the others' list is to open and focus once it renders, or null.
+  const [revealOthersAt, setRevealOthersAt] = useState<string | null>(null);
   useGlobalFold(setTranscriptFolded);
   useEffect(() => {
     if (transcriptFolded) setExpanded(new Set());
@@ -194,12 +207,67 @@ export function Chat({ email, api, sampleQuestions, defaultTranscriptFolded = fa
     }
   };
 
-  const sendDraft = () => {
+  // A standalone question is sent only once the lookup finds no chat opened with it; otherwise
+  // the offer stands and the draft stays for the user's decision.
+  const sendDraft = async () => {
     const question = draft.trim();
     if (!question) return;
-    setDraft("");
-    void send(question, replyTo);
+    if (replyTo !== null) {
+      setDraft("");
+      void send(question, replyTo);
+      return;
+    }
+    setError(null);
+    let found: ExistingChat;
+    try {
+      found = await api.findExistingChat(question);
+    } catch (thrown) {
+      setError(`בדיקת הצ'אטים הקודמים נכשלה (${(thrown as Error).message})`);
+      return;
+    }
+    if (found.own === null && found.shared === null) {
+      setDraft("");
+      void send(question, null);
+      return;
+    }
+    setExisting(found);
   };
+
+  const askAnyway = () => {
+    const question = draft.trim();
+    setExisting(null);
+    setDraft("");
+    void send(question, null);
+  };
+
+  // Opens the offered chat: the user's own when there is one, else the shared one. Either list
+  // is unfolded, and loaded if it never was, so the chat is focused only once rendered.
+  const reveal = () => {
+    const found = existing!;
+    setExisting(null);
+    setDraft("");
+    if (found.own !== null) {
+      setFilter("all");
+      setTranscriptFolded(false);
+      setRevealAt(found.own.at);
+    } else {
+      setOthersGrew(false);
+      setOthersFolded(false);
+      setRevealOthersAt(found.shared!.at);
+    }
+  };
+
+  useEffect(() => {
+    if (revealAt === null || turns === null || transcriptFolded) return;
+    setRevealAt(null);
+    const question = questionRefs.current.get(revealAt);
+    if (question === undefined) {
+      setError("הצ'אט הקודם כבר אינו בתמלול");
+      return;
+    }
+    setExpanded((current) => new Set(current).add(revealAt));
+    question.focus();
+  }, [revealAt, turns, transcriptFolded]);
 
   useEffect(() => {
     if (askCommand === null) return;
@@ -288,12 +356,15 @@ export function Chat({ email, api, sampleQuestions, defaultTranscriptFolded = fa
             onClick={() => setReplyTo(null)}><Icon name="close" /></button>
         </div>
       )}
-      <form onSubmit={(event) => { event.preventDefault(); sendDraft(); }}>
+      <form onSubmit={(event) => { event.preventDefault(); void sendDraft(); }}>
         <div className="composer">
           <textarea
             rows={2}
             value={draft}
-            onChange={(event) => setDraft(event.target.value)}
+            onChange={(event) => {
+              setDraft(event.target.value);
+              setExisting(null);
+            }}
             placeholder={replyTo === null ? "שאלה על סבא חטוב 👴…" : "שאלת המשך…"}
             aria-label="שאלה"
           />
@@ -304,6 +375,14 @@ export function Chat({ email, api, sampleQuestions, defaultTranscriptFolded = fa
         </div>
         <button type="submit" className="primary" disabled={draft.trim() === ""}>שליחה</button>
       </form>
+      {existing !== null && (
+        <div className="existing-chat">
+          <p>{existing.own !== null ? "כבר שאלת את השאלה הזו"
+            : `השאלה הזו כבר נשאלה ושותפה על ידי ${existing.shared!.email}`}</p>
+          <button type="button" className="secondary compact" onClick={reveal}>להציג את הצ'אט הקיים</button>
+          <button type="button" className="secondary compact" onClick={askAnyway}>לשאול בכל זאת</button>
+        </div>
+      )}
     </>
   );
 
@@ -457,7 +536,8 @@ export function Chat({ email, api, sampleQuestions, defaultTranscriptFolded = fa
         </div>
       )}
       {!othersFolded && (others === null ? <p>טוען…</p>
-        : <PublicChatList chats={others} api={api} onError={setError} />)}
+        : <PublicChatList chats={others} api={api} onError={setError} reveal={revealOthersAt}
+                          onRevealed={() => setRevealOthersAt(null)} />)}
     </div>
   );
 }

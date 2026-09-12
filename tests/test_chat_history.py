@@ -368,3 +368,31 @@ def test_count_public_counts_other_users_shared_chats_alone(table):
     assert chat_history.count_public(table, "u1") == 1
     assert chat_history.count_public(table, "u2") == 1
     assert chat_history.count_public(table, "u3") == 2
+
+
+def test_find_prefers_the_newest_of_several_chats_opened_alike(table):
+    chat_history.append(table, "u1", "מה מותר בערב?", "ת1", [])
+    newest = chat_history.append(table, "u1", "מה מותר בערב?", "ת2", [])
+    assert chat_history.find(table, "u1", "מה מותר בערב?") == newest
+
+
+def test_find_reads_past_whitespace_differences(table):
+    at = chat_history.append(table, "u1", "מה  מותר\nבערב?", "ת", [])
+    assert chat_history.find(table, "u1", " מה מותר בערב? ") == at
+
+
+def test_find_public_returns_the_newest_other_users_public_chat_opened_alike(table):
+    own = chat_history.append(table, "u1", "מה מותר בערב?", "ת", [])
+    chat_history.set_visibility(table, "u1", own, chat_history.PUBLIC)
+    chat_history.append(table, "u2", "מה מותר בערב?", "פרטית", [])
+    older = chat_history.append(table, "u2", "מה מותר בערב?", "ת1", [])
+    chat_history.set_visibility(table, "u2", older, chat_history.PUBLIC)
+    question = chat_history.follow_up("מה מותר בערב?", "ת2", "ובבוקר?")
+    newer = chat_history.append(table, "u3", question, "ת3", [])
+    chat_history.set_visibility(table, "u3", newer, chat_history.PUBLIC)
+    other = chat_history.append(table, "u3", "שאלה אחרת", "ת", [])
+    chat_history.set_visibility(table, "u3", other, chat_history.PUBLIC)
+
+    assert chat_history.find_public(table, "u1", "מה מותר בערב?") == {"sub": "u3", "at": newer}
+    assert chat_history.find_public(table, "u1", "ובבוקר?") is None
+    assert chat_history.find_public(table, "u3", "מה מותר בערב?") == {"sub": "u2", "at": older}

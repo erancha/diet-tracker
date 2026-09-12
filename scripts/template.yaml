@@ -427,6 +427,12 @@ Resources:
             ApiId: !Ref Api
             Method: GET
             Path: /chat/count
+        ChatExisting:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref Api
+            Method: GET
+            Path: /chat/existing
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref ChatQuotaTable

@@ -6,6 +6,7 @@ import pytest
 from conftest import APP_CONFIG, FakeSes, _table, signed_up, user_pool
 
 from common import chat as chat_client
+from common import chat_history
 from common.dates import today
 from common.store import Store
 from handlers import chat as chat_handler
@@ -674,3 +675,45 @@ def test_the_count_covers_the_transcript_by_side_and_what_others_shared(env, mon
 
     assert response["statusCode"] == 200
     assert body_of(response) == {"own_total": 2, "own_app": 1, "own_shared": 1, "public_total": 1}
+
+
+def existing_request(question, sub="u1"):
+    event = {
+        "routeKey": "GET /chat/existing",
+        "requestContext": {"authorizer": {"jwt": {"claims": {"sub": sub, "email": "a@gmail.com"}}}},
+    }
+    if question is not None:
+        event["queryStringParameters"] = {"question": question}
+    return chat_handler.handler(event, None)
+
+
+def test_an_existing_chat_is_found_in_the_askers_transcript_and_among_shared_chats(env, pool,
+                                                                                    monkeypatch):
+    mine = pool("a@gmail.com")
+    other = pool("other@gmail.com")
+    monkeypatch.setattr(chat_handler.chat, "ask", lambda api_url, key, question, context=None, timeout=None:
+                        {"answer": "תשובה", "sources": []})
+    own = body_of(chat_handler.handler(request({"question": "מה מותר בערב?"}, sub=mine), None))["at"]
+    theirs = body_of(chat_handler.handler(request({"question": "מה מותר בערב?"}, sub=other), None))["at"]
+    chat_handler.handler(visibility_request("PUT", theirs, {"visibility": "public"}, sub=other), None)
+
+    response = existing_request("מה מותר  בערב?", sub=mine)
+
+    assert response["statusCode"] == 200
+    assert body_of(response) == {"own": {"at": own},
+                                 "shared": {"at": theirs, "email": "other@gmail.com"}}
+
+
+def test_a_question_nobody_asked_has_no_existing_chat_and_spends_no_quota(env, ddb):
+    chat_history.append(ddb.Table("chat_history"), "u1", "שאלה אחרת", "ת", [])
+
+    response = existing_request("מה מותר בערב?")
+
+    assert response["statusCode"] == 200
+    assert body_of(response) == {"own": None, "shared": None}
+    assert ddb.Table("chat_quota").scan()["Items"] == []
+
+
+def test_an_existing_chat_lookup_without_a_question_is_400(env):
+    assert existing_request(None)["statusCode"] == 400
+    assert existing_request("  ")["statusCode"] == 400

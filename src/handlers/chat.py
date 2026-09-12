@@ -7,7 +7,9 @@ with `app`, marked as the app's own question); GET /chat serves the transcript; 
 /chat/{at}/summary replaces a chat with its digest; DELETE /chat/{at} removes one. PUT and
 DELETE /chat/{at}/visibility share a chat with every user and take it back; GET /chat/public
 lists what others shared, each under its asker's address, and GET /chat/count sizes both lists
-without reading a chat. POST /chat/source-url mints a short-lived link to a cited document.
+without reading a chat. GET /chat/existing?question= finds the chats already opened with a
+question, so the app can offer one instead of asking again. POST /chat/source-url mints a
+short-lived link to a cited document.
 
 Every route that asks upstream spends quota first and is refused past the limit without
 spending; the day's first refusal is emailed to the admin. Source links and the transcript
@@ -63,6 +65,8 @@ def handler(event, context):
         return _public_chats(sub)
     if route == "GET /chat/count":
         return _count(sub)
+    if route == "GET /chat/existing":
+        return _existing(sub, event.get("queryStringParameters", {}))
     raise ValueError(f"unhandled route {route!r}")
 
 
@@ -186,7 +190,7 @@ def _summarize(sub, email, at):
     except (urllib.error.URLError, TimeoutError) as error:
         return _upstream_unavailable(error)
 
-    question = _original_question(turn["question"])
+    question = chat_history.original_question(turn["question"])
     chat_history.summarize(table, sub, at, question, digest["answer"])
     return response(200, {"question": question, "answer": digest["answer"], "sources": [],
                           "summarized": True, "app": turn["app"],
@@ -198,17 +202,6 @@ def _conversation(turn):
     cap because every follow-up that grew the chain was itself sent under the smaller question
     cap."""
     return chat_history.conversation(turn["question"], turn["answer"])
-
-
-def _original_question(question):
-    """The question a conversation opened with: everything a chain holds before its first answer,
-    without the opening label, or the whole question of a chat that was never followed up. The
-    answer label ends the opening rather than the first newline, so a question asked over several
-    lines survives summarizing whole."""
-    if not question.startswith(chat_history.ORIGINAL_QUESTION_LABEL):
-        return question
-    opening = question.split(f"\n{chat_history.ANSWER_LABEL}", 1)[0]
-    return opening[len(chat_history.ORIGINAL_QUESTION_LABEL):].strip()
 
 
 def _notify_admin_quota_reached(email, limit):
@@ -270,10 +263,30 @@ def _public_chats(sub):
     """Every other user's public chats, newest first, each under its asker's address. An asker
     the pool no longer holds is an operational error that surfaces, not a row to skip."""
     listed = chat_history.public(_history_table(), sub)
-    emails = {user.sub: user.email
-              for user in users.list_users(boto3.client("cognito-idp"), os.environ["USER_POOL_ID"])}
+    emails = _emails_by_sub()
     # The address replaces the sub; the visibility is dropped, every listed chat being public.
     return response(200, {"chats": [
         {"email": emails[chat["sub"]],
          **{key: value for key, value in chat.items() if key not in ("sub", "visibility")}}
         for chat in listed]})
+
+
+def _existing(sub, query):
+    """The caller's newest chat opened with the question and the newest one another user shared
+    under it, each null when there is none — what the app offers before spending a question on
+    wording the transcript already answers."""
+    question = query.get("question")
+    if not isinstance(question, str) or not question.strip():
+        return response(400, {"error": "question is required"})
+    table = _history_table()
+    own = chat_history.find(table, sub, question)
+    shared = chat_history.find_public(table, sub, question)
+    if shared is not None:
+        shared = {"at": shared["at"], "email": _emails_by_sub()[shared["sub"]]}
+    return response(200, {"own": None if own is None else {"at": own}, "shared": shared})
+
+
+def _emails_by_sub():
+    """Every signed-up user's address by sub, the names shared chats are listed under."""
+    return {user.sub: user.email
+            for user in users.list_users(boto3.client("cognito-idp"), os.environ["USER_POOL_ID"])}

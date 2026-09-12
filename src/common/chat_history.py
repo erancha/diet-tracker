@@ -85,14 +85,48 @@ def append(table, sub, question, answer, sources, at=None, app=False):
 
 
 def find(table, sub, title) -> str | None:
-    """The stamp of the user's chat opened under title — stored as that question, or since
+    """The stamp of the user's newest chat opened under title — stored as that question, or since
     answered as the original question of a follow-up on it — or None when the transcript holds
-    none. The oldest such chat when the transcript holds several."""
-    opening = f"{ORIGINAL_QUESTION_LABEL} {title}\n"
-    for item in query_all(table, KeyConditionExpression=Key("pk").eq(sub)):
-        if item["question"] == title or item["question"].startswith(opening):
+    none."""
+    for item in query_all(table, KeyConditionExpression=Key("pk").eq(sub),
+                          ScanIndexForward=False):
+        if opened_with(item["question"], title):
             return item["sk"]
     return None
+
+
+def find_public(table, reader_sub, question) -> dict | None:
+    """The newest chat another user shared as public that was opened with question, as its
+    asker's sub and stamp, or None when nobody else shared one."""
+    items = query_all(table, IndexName=VISIBILITY_INDEX,
+                      KeyConditionExpression=Key("visibility").eq(PUBLIC),
+                      ScanIndexForward=False)
+    for item in items:
+        if item["pk"] != reader_sub and opened_with(item["question"], question):
+            return {"sub": item["pk"], "at": item["sk"]}
+    return None
+
+
+def opened_with(stored, question) -> bool:
+    """Whether a stored chat opened with the question. Whitespace runs and line breaks are read
+    alike on both sides, so the same wording typed with a different layout still counts as the
+    same question."""
+    return _squeezed(original_question(stored)) == _squeezed(question)
+
+
+def original_question(stored) -> str:
+    """The question a stored chat opened with: everything a chain holds before its first answer,
+    without the opening label, or the whole question of a chat that was never followed up. The
+    answer label ends the opening rather than the first newline, so a question asked over several
+    lines is read whole."""
+    if not stored.startswith(ORIGINAL_QUESTION_LABEL):
+        return stored
+    opening = stored.split(f"\n{ANSWER_LABEL}", 1)[0]
+    return opening[len(ORIGINAL_QUESTION_LABEL):].strip()
+
+
+def _squeezed(text) -> str:
+    return " ".join(text.split())
 
 
 def get(table, sub, at):
