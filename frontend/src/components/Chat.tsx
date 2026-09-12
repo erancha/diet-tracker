@@ -49,10 +49,11 @@ function composeFollowUp(target: ChatTurn, question: string): string {
 // visit (publicCount), until the list is unfolded. The filter choice outlives the visit
 // (chatFilter);
 // an arriving answer widens it back to every chat. The menu's condensed/full command folds the
-// transcript, the condensed sign-in starts it folded, and sending always reveals it. A question
-// commanded from elsewhere (askCommand) is sent at once on the app's side of the filter and
-// handed back through onAskCommandTaken, so a remount cannot ask twice; a follow-up inherits the
-// side and the visibility of the chat it extends.
+// transcript, the condensed sign-in starts it folded, and sending always reveals it. Folding
+// either list closes every answer open in it, so it reopens with only the questions in view. A
+// question commanded from elsewhere (askCommand) is sent at once on the app's side of the filter
+// and handed back through onAskCommandTaken, so a remount cannot ask twice; a follow-up inherits
+// the side and the visibility of the chat it extends.
 //
 // An open answer's foot offers reply, summarize, share and close. Reply moves the composer under
 // the answer and the answered chat re-keys to the top. Summarizing trades the chain for a digest
@@ -97,6 +98,9 @@ export function Chat({ email, api, sampleQuestions, defaultTranscriptFolded = fa
   // Other users' shared chats, or null until first unfolded; folding keeps what was loaded.
   const [others, setOthers] = useState<PublicChat[] | null>(null);
   useGlobalFold(setTranscriptFolded);
+  useEffect(() => {
+    if (transcriptFolded) setExpanded(new Set());
+  }, [transcriptFolded]);
   // Question buttons by timestamp, for handing focus back when a chat folds from its answer's
   // foot or its digest replaces the answer that held it.
   const questionRefs = useRef(new Map<string, HTMLButtonElement>());

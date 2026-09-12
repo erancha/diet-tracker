@@ -472,13 +472,14 @@ td.view-day { cursor: pointer; }
    citations expander. Sized together and under the text around them, since no block of their own
    sets their type. */
 :is(.section-summary, .transcript-toggle, .others-toggle, .more-toggle) { font-size: 0.85rem; }
-:is(.section-summary, .transcript-toggle, .others-toggle) { padding-bottom: 0.4rem; }
+.section-summary { padding-bottom: 0.4rem; }
 /* The previous-chats count and the filter choosing which chats it counts share one line, the
-   count taking the width so the filter settles against the far edge. The count keeps the
-   padding that spaces it from the list below, so the row's items align on their text. */
-/* Each toggle row stands off from what precedes it — the composer above the own transcript, the
-   last own chat above the others' — so the row reads as a heading for what it unfolds. */
-.transcript-head { display: flex; align-items: baseline; gap: 0.5rem; margin-top: 1rem; }
+   count taking the width so the filter settles against the far edge. Each toggle row stands off
+   from what precedes it — the composer above the own transcript, the last own chat above the
+   others' — so the row reads as a heading for what it unfolds. The space to the list below is
+   the row's margin, not the toggle's padding, so two folded rows in a row sit as far apart as
+   the composer and the first: margins collapse where padding would add. */
+.transcript-head { display: flex; align-items: baseline; gap: 0.5rem; margin: 1rem 0 0.4rem; }
 .transcript-head :is(.transcript-toggle, .others-toggle) { flex: 1; text-align: start; }
 /* A count that grew since the last visit: green on yellow, the way an unread badge reads. */
 .count-new { color: var(--accent); background: #fff3b0; border-radius: 4px; padding: 0 0.25em; }

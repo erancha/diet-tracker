@@ -908,6 +908,45 @@ describe("Chat", () => {
     expect(screen.queryByText("שאלה 1")).toBeNull();
   });
 
+  it("folds every open answer with the transcript, so it reopens with all of them collapsed",
+     async () => {
+    render(<Chat email="a@gmail.com" api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(2) }),
+                            getChatCount: counted(2) })}
+                 sampleQuestions={[]} />);
+    await userEvent.click(await screen.findByRole("button", { name: "שאלה 1", expanded: false }));
+    await userEvent.click(screen.getByRole("button", { name: "שאלה 2", expanded: false }));
+    expect(screen.getByText("תשובה 1")).toBeInTheDocument();
+    expect(screen.getByText("תשובה 2")).toBeInTheDocument();
+
+    const toggle = screen.getByRole("button", { name: "2 צ'אטים קודמים שלי" });
+    await userEvent.click(toggle);
+    await userEvent.click(toggle);
+
+    expect(screen.getByRole("button", { name: "שאלה 1" })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByRole("button", { name: "שאלה 2" })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByText("תשובה 1")).toBeNull();
+    expect(screen.queryByText("תשובה 2")).toBeNull();
+  });
+
+  it("folds every open answer of others' chats with their list, so it reopens all collapsed",
+     async () => {
+    render(<Chat email="a@gmail.com" api={withOthers(OTHERS.chats)} sampleQuestions={[]} />);
+    const toggle = await screen.findByRole("button", { name: "2 צ'אטים של משתמשים אחרים" });
+    await userEvent.click(toggle);
+    await userEvent.click(await screen.findByRole("button", { name: "מה מותר בערב?", expanded: false }));
+    await userEvent.click(screen.getByRole("button", { name: "כמה מים?", expanded: false }));
+    expect(screen.getByText("ירקות וחלבון")).toBeInTheDocument();
+    expect(screen.getByText("שלושה ליטר")).toBeInTheDocument();
+
+    await userEvent.click(toggle);
+    await userEvent.click(toggle);
+
+    expect(screen.getByRole("button", { name: "מה מותר בערב?" })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByRole("button", { name: "כמה מים?" })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByText("ירקות וחלבון")).toBeNull();
+    expect(screen.queryByText("שלושה ליטר")).toBeNull();
+  });
+
   it("walks the transcript into view when its toggle opens it, and only then", async () => {
     const scrollIntoView = vi.spyOn(Element.prototype, "scrollIntoView")
       .mockImplementation(() => {});
