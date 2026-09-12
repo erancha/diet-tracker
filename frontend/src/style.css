@@ -481,8 +481,11 @@ td.view-day { cursor: pointer; }
    the composer and the first: margins collapse where padding would add. */
 .transcript-head { display: flex; align-items: baseline; gap: 0.5rem; margin: 1rem 0 0.4rem; }
 .transcript-head :is(.transcript-toggle, .others-toggle) { flex: 1; text-align: start; }
+/* A toggle's count keeps the badge's inset whether highlighted or not, so the wording after it
+   starts at the same place on both rows. */
+.count { padding: 0 0.25em; }
 /* A count that grew since the last visit: green on yellow, the way an unread badge reads. */
-.count-new { color: var(--accent); background: #fff3b0; border-radius: 4px; padding: 0 0.25em; }
+.count-new { color: var(--accent); background: #fff3b0; border-radius: 4px; }
 /* How many chats the filter is holding back, in the muted tone the app's asides take: the count
    beside it names what is listed, and this names what is not, so neither reads as the total. */
 .transcript-filtered-out { font-size: 0.85rem; color: #8a8a84; }

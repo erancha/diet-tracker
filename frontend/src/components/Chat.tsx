@@ -321,7 +321,7 @@ export function Chat({ email, api, sampleQuestions, defaultTranscriptFolded = fa
   // A toggle's figure, bold; the others' one is highlighted while it stands for chats added
   // since the last visit.
   const figure = (text: string, grew = false) =>
-    <strong className={grew ? "count-new" : undefined}>{text}</strong>;
+    <strong className={grew ? "count count-new" : "count"}>{text}</strong>;
 
   return (
     <div className="chat">
