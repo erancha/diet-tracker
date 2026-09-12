@@ -313,8 +313,8 @@
     },
     "chart_months": 3,
     "limits": {
-      "min_kg": 20,
-      "max_kg": 400
+      "min_kg": 40,
+      "max_kg": 200
     }
   },
   "chat": {

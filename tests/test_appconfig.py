@@ -40,7 +40,7 @@ def test_repo_config_carries_every_section():
     assert config.weight.weigh_in.weekday == "THU"
     assert config.weight.weigh_in.hour == 8
     assert config.weight.chart_months == 3
-    assert (config.weight.limits.min_kg, config.weight.limits.max_kg) == (20, 400)
+    assert (config.weight.limits.min_kg, config.weight.limits.max_kg) == (40, 200)
     assert config.meals.max_per_day == 5
     assert config.day_close.close_until == "02:00"
     assert config.day_close.delete_until == "01:30"
