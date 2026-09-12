@@ -82,7 +82,7 @@ export function Landing({ onSignIn, chatAvailable }: {
         {chatAvailable && (
           <p className="landing-condensed">
             יש גם <strong>עוזר AI</strong> — צ'אט בתוך האפליקציה שעונה על שאלות על התוכנית (ישירות מתוך מסמכי
-            המקור שלה) ואיך להשתמש באפליקציה. צ'אט אפשר לשתף עם כל המשתמשים, ולקרוא צ'אטים שאחרים שיתפו עם כולם.
+            המקור שלה) ואיך להשתמש באפליקציה. צ'אט אפשר לשתף עם כל המשתמשים, ולקרוא צ'אטים שאחרים <strong>שיתפו</strong> עם כולם.
           </p>
         )}
         <p className="landing-condensed">
