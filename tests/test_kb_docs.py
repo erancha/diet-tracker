@@ -176,3 +176,11 @@ def test_mail_confirmation_section_names_the_senders_a_user_must_look_for():
     params = (ROOT / "scripts" / "params.example.sh").read_text()
     sender = next(line for line in params.splitlines() if line.startswith("export SES_SENDER="))
     assert sender.split("=", 1)[1].strip('"') in section
+
+
+def test_the_guide_states_the_tracking_scope_as_a_design_choice():
+    """The guide names the tracking boundary as deliberate, protein by name, so the chat cannot
+    present it as a deduction from the meal fields."""
+    section = _doc_section("1. רישום ארוחה")
+    assert "חלבון" in section
+    assert "בכוונה תחילה" in section

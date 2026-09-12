@@ -55,7 +55,7 @@ def test_today_and_yesterday_meals_are_detailed_with_hebrew_labels(store, questi
     today_detail = data["היום"]
     assert today_detail["ציון יומי"] == 3.5  # grade 2 + a small sweet, 3 at 50%
     (entry,) = today_detail["ארוחות"]
-    assert entry["שעה"] == "12:30"
+    assert entry["שעת הארוחה"] == "12:30"
     assert entry["מקור פחמימה"] == "דרגה 2"
     assert entry["תוספות"] == ["כולל מתוק (מעט)"]
     assert entry["ירקות"] is True
@@ -76,11 +76,11 @@ def test_a_tight_cap_sheds_meal_detail_before_day_summaries(store, questionnaire
         store.add_meal("u1", TODAY, meal(f"{TODAY}T{10 + i // 6:02}:{i % 6}0:00+03:00",
                                          additions=[{"id": "sweet", "amount": "little"}],
                                      vegetables=True))
-    monkeypatch.setattr(chat_context, "MAX_CONTEXT_CHARS", 1200)
+    monkeypatch.setattr(chat_context, "MAX_CONTEXT_CHARS", 1300)
 
     context = chat_context.user_context(store, questionnaire, "u1", TODAY)
 
-    assert len(context) <= 1200
+    assert len(context) <= 1300
     data = data_of(context)
     assert "2026-08-28" in data["סיכום ימים אחרונים"]
     assert "היום" not in data
@@ -99,9 +99,12 @@ def test_the_tracking_scope_of_the_app_rides_in_the_context(store, questionnaire
     assert 'שכפ"צ - שתיה (ליטר)' in scope["במעקב היומי"]
     assert "כולל מתוק (כמות)" in scope["ברישום ארוחה"]
     assert "מקור פחמימה" in scope["ברישום ארוחה"]
+    assert "שעת הארוחה" in scope["ברישום ארוחה"]
     assert "משקל" in scope["בנוסף"]
-    assert scope["הערה"] == ("אלה כל שדות ההזנה באפליקציה. נושא שאינו ברשימה אין לו שדה "
-                             "באפליקציה, ולכן היעדרו מהנתונים אינו מעיד שהמשתמש לא צרך אותו.")
+    assert scope["הערה"] == ("אלה כל שדות ההזנה באפליקציה, והיא עוקבת רק אחריהם בכוונה תחילה. "
+                             "נושא שאינו ברשימה — כמו חלבון או קלוריות — אינו במעקב האפליקציה "
+                             "מעצם תכנונה, לא כמסקנה מהנתונים; היעדרו מהנתונים אינו מעיד "
+                             "שהמשתמש לא צרך אותו.")
 
 
 def test_a_tight_cap_keeps_the_tracking_scope_and_grade_examples(store, questionnaire, monkeypatch):

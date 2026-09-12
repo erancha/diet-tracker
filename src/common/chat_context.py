@@ -23,7 +23,7 @@ _HEADER = "נתוני המעקב של השואל (JSON):\n"
 
 # Meal-entry field names, shared between the per-meal entries and the tracking-scope statement
 # so the scope always names the exact vocabulary the data uses.
-_TIME = "שעה"
+_TIME = "שעת הארוחה"
 _CARB_SOURCE = "מקור פחמימה"
 _SECOND_SOURCE = "מקור פחמימה נוסף"
 _PORTION = "גודל המנה"
@@ -94,8 +94,9 @@ def _grade_ladder(questionnaire) -> dict:
 
 def _tracking_scope(questionnaire) -> dict:
     """Every field the app can record, in the vocabulary the data block uses, closed by a note
-    that the list is exhaustive — so the LLM answers "the app has no such field" instead of
-    reading an untracked subject as an unrecorded one."""
+    that the list is exhaustive by design — so the LLM answers "the app leaves that out on
+    purpose" instead of reading an untracked subject as an unrecorded one, or the app's scope as
+    something it deduced from the data."""
     carbs = questionnaire.question("carbs")
     return {
         # Each addition names the amount scale it is recorded on, so a quantified addition in
@@ -104,8 +105,10 @@ def _tracking_scope(questionnaire) -> dict:
         + [f"{addition.label} ({_AMOUNT})" for addition in carbs.additions],
         "במעקב היומי": [question.day_heading for question in questionnaire.questions],
         "בנוסף": [weight.LABEL],
-        "הערה": "אלה כל שדות ההזנה באפליקציה. נושא שאינו ברשימה אין לו שדה באפליקציה, "
-                "ולכן היעדרו מהנתונים אינו מעיד שהמשתמש לא צרך אותו.",
+        "הערה": "אלה כל שדות ההזנה באפליקציה, והיא עוקבת רק אחריהם בכוונה תחילה. "
+                "נושא שאינו ברשימה — כמו חלבון או קלוריות — אינו במעקב האפליקציה "
+                "מעצם תכנונה, לא כמסקנה מהנתונים; היעדרו מהנתונים אינו מעיד "
+                "שהמשתמש לא צרך אותו.",
     }
 
 
