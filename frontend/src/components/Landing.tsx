@@ -75,18 +75,18 @@ export function Landing({ onSignIn, chatAvailable }: {
         {/* Each habit's bold initial spells the acronym in place, the way the full view's table
             opens its rows. */}
         <p className="landing-condensed">
-          תזונה בלי לספור קלוריות: רושמים כל ארוחה, רק את אופייה ובלי לפרט מה וכמה בדיוק נאכל,
-          והאפליקציה עוזרת לשמור על ארבעה הרגלים פשוטים — שכפ"צ (<strong>ש</strong>תיה, <strong>כ</strong>מות ירקות,{" "}
-          <strong>פ</strong>תיחת חלון אכילה, <strong>צ</strong>מצום ארוחות).
+          תזונה <strong>בלי לספור קלוריות</strong>: רושמים תיאור <strong>כללי</strong> של כל ארוחה,
+          והאפליקציה עוזרת לשמור על <strong>ארבעה הרגלים פשוטים</strong> — שכפ"צ (<strong>ש</strong>תיה,{" "}
+          <strong>כ</strong>מות ירקות, <strong>פ</strong>תיחת חלון אכילה, <strong>צ</strong>מצום ארוחות).
         </p>
         {chatAvailable && (
           <p className="landing-condensed">
-            יש גם עוזר AI — צ'אט בתוך האפליקציה שעונה על שאלות על התוכנית, ישירות מתוך מסמכי
-            המקור שלה.
+            יש גם <strong>עוזר AI</strong> — צ'אט בתוך האפליקציה שעונה על שאלות על התוכנית (ישירות מתוך מסמכי
+            המקור שלה) ואיך להשתמש באפליקציה.
           </p>
         )}
         <p className="landing-condensed">
-          וההתקדמות נראית לעין: גרפים לאורך זמן ומעקב משקל שבועי מול היעד.
+          וההתקדמות נראית לעין: <strong>גרפים</strong> לאורך זמן ו<strong>מעקב משקל</strong> שבועי מול היעד.
         </p>
         {toggleButton}
         {signInButton}
@@ -123,8 +123,7 @@ export function Landing({ onSignIn, chatAvailable }: {
         </li>
         <li>
           תזכורות והתראות נשלחות במייל (מומלץ לוודא שהן לא מגיעות לתיקיית הספאם), ואופציונלית
-          גם בטלגרם: תזכורת כשדיווח של יום חסר, תזכורת שקילה שבועית, התראה כשהציון היומי חורג
-          כמה ימים ברצף וסיכום שבועי
+          גם בטלגרם: תזכורת כשדיווח של יום חסר, תזכורת שקילה שבועית וסיכום שבועי
         </li>
         {chatAvailable && (
           <li>

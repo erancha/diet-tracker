@@ -1,6 +1,6 @@
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Text, Tooltip, usePlotArea, XAxis, YAxis } from "recharts";
 import type { Day, DayPayload, Question, Questionnaire, TreatDaySettings } from "../types";
-import { dayLabel, lastDays } from "../dates";
+import { dayLabel, fallsOn, lastDays } from "../dates";
 import { domainFor, liveTrendDay, ticksFor, treatDayColumns } from "../trend";
 import { isViolating, panelTitle, ruleBoundLabel, scoreLabel, trendPanels, valueLabel } from "../violations";
 
@@ -30,18 +30,21 @@ interface PanelPoint {
   excluded: number | null;
   choiceLabel: string | null;
   violating: boolean;
+  // A crossing on the treat day: marked like any other, painted softer.
+  softened: boolean;
 }
 
-function panelData(questionnaire: Questionnaire, question: Question, dayStrs: string[], dayByDate: Map<string, Day>, decomposed: boolean): PanelPoint[] {
+function panelData(questionnaire: Questionnaire, treatDay: TreatDaySettings, question: Question, dayStrs: string[], dayByDate: Map<string, Day>, decomposed: boolean): PanelPoint[] {
   return dayStrs.map((date) => {
     const gap: PanelPoint = { date, label: dayLabel(date), value: null, excluded: null,
-                              choiceLabel: null, violating: false };
+                              choiceLabel: null, violating: false, softened: false };
     const day = dayByDate.get(date);
     if (!day || !(question.id in day.answers)) return gap;
     const value = day.answers[question.id];
+    const violating = isViolating(questionnaire, question.id, value);
     return { ...gap, value, excluded: decomposed ? day.excluded : null,
-             choiceLabel: valueLabel(question, value),
-             violating: isViolating(questionnaire, question.id, value) };
+             choiceLabel: valueLabel(question, value), violating,
+             softened: violating && fallsOn(date, treatDay.weekday) };
   });
 }
 
@@ -92,8 +95,9 @@ function DateTick({ treatLabels, className, x, y, payload, textAnchor, verticalA
 
 function PanelDot({ cx, cy, payload, color }: { cx?: number; cy?: number; payload?: PanelPoint; color: string }) {
   if (cx == null || cy == null || payload!.value == null) return null;
-  const violating = payload!.violating;
-  return <circle cx={cx} cy={cy} r={violating ? 4.5 : 4} fill={violating ? "var(--viz-critical)" : color} />;
+  const { violating, softened } = payload!;
+  const fill = softened ? "var(--viz-treat-breach)" : violating ? "var(--viz-critical)" : color;
+  return <circle cx={cx} cy={cy} r={violating ? 4.5 : 4} fill={fill} />;
 }
 
 function PanelTooltip({ active, payload }: { active?: boolean; payload?: { payload: PanelPoint }[] }) {
@@ -121,7 +125,7 @@ function TrendPanel({ questionnaire, question, dayStrs, dayByDate, index, showXA
   // The excluded subtotal is a decomposition of the carb score alone, so it is that panel that
   // gains the second line and the treat day the score is read against.
   const decomposed = question.id === "carbs";
-  const data = panelData(questionnaire, question, dayStrs, dayByDate, decomposed);
+  const data = panelData(questionnaire, treatDay, question, dayStrs, dayByDate, decomposed);
   const domain = domainFor(questionnaire, question, data.map((d) => d.value));
   const boundLabel = ruleBoundLabel(questionnaire, question.id);
   const treatColumns = treatDayColumns(dayStrs, treatDay.weekday);

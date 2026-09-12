@@ -44,7 +44,7 @@ export const fixtureQuestionnaire: Questionnaire = {
     },
   ],
   rules: [
-    { id: "r_drink", question_id: "drinking", below: 2.5, consecutive_days: 2, message: "m1" },
+    { id: "r_drink", question_id: "drinking", below: 2.5 },
   ],
 };
 
@@ -89,8 +89,8 @@ export const trackerQuestionnaire: Questionnaire = {
                 { id: "carb_grade_7", label: "דרגה 7", examples: "קמח לבן", value: 7 }] },
   ],
   rules: [
-    { id: "heavy_day", question_id: "carbs", at_least: 8, consecutive_days: 2, message: "m" },
-    { id: "many_meals", question_id: "meals", at_least: 4, consecutive_days: 2, message: "m2" },
+    { id: "heavy_day", question_id: "carbs", at_least: 8 },
+    { id: "many_meals", question_id: "meals", at_least: 4 },
   ],
 };
 

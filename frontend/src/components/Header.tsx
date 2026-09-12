@@ -29,14 +29,11 @@ const ACCOUNT_HINTS = {
   signOut: "יציאה מהחשבון",
 };
 
-// App chrome: the title, the account menu, and — while anything is still awaiting the user — an
-// alarm that survives reloads, unlike the transient post-submit banner. The alarm starts closed
-// so the presence of notices is visible without leading every visit with their full texts.
-//
-// It holds two kinds at once, counted together but never styled alike: rule violations, which
-// are alarming and read red, and messages the app failed to email, which are only what the inbox
-// should have carried and read as plain notes, each dated by the attempt that failed and
-// dismissable once read.
+// App chrome: the title, the account menu, and — while a message the app failed to email is
+// still awaiting the user — an alarm that survives reloads, unlike the transient post-submit
+// banner. The alarm starts closed so the presence of notices is visible without leading every
+// visit with their full texts. Each message is what the inbox should have carried and reads as a
+// plain note, dated by the attempt that failed and dismissable once read.
 //
 // The account menu names the signed-in address and holds the account-level actions — signing
 // out, the reminder subscription, and the WhatsApp invite — plus the one page-wide control, the
@@ -45,7 +42,7 @@ const ACCOUNT_HINTS = {
 // being reminded, so the opt-out is offered alongside the exit; it reads as a toggle, so the
 // same menu is also the way back.
 export function Header({ email, muted, isAdmin, onSignOut, onSetMuted, onFoldAll,
-                         nextViewCondensed, activeViolations, undelivered, emailVerified,
+                         nextViewCondensed, undelivered, emailVerified,
                          onDismissUndelivered }: {
   email: string; muted: boolean;
   // Picks the invite's opening voice: the admin invites as the app's developer.
@@ -54,7 +51,6 @@ export function Header({ email, muted, isAdmin, onSignOut, onSetMuted, onFoldAll
   onFoldAll: () => void;
   // The view a press of the item will switch to, naming the item for what the press does.
   nextViewCondensed: boolean;
-  activeViolations: string[];
   undelivered: UndeliveredMessage[];
   emailVerified: boolean;
   onDismissUndelivered: (at: string) => void;
@@ -79,7 +75,7 @@ export function Header({ email, muted, isAdmin, onSignOut, onSetMuted, onFoldAll
   }, [menuOpen]);
 
   const choose = (action: () => void) => () => { setMenuOpen(false); action(); };
-  const noticeCount = activeViolations.length + undelivered.length;
+  const noticeCount = undelivered.length;
   return (
     <>
       <header>
@@ -132,9 +128,6 @@ export function Header({ email, muted, isAdmin, onSignOut, onSetMuted, onFoldAll
       </header>
       {alarmOpen && (
         <>
-          {activeViolations.map((message) => (
-            <div key={message} className="alert">{message}</div>
-          ))}
           {undelivered.length > 0 && (
             <p className="undelivered-aside">{UNDELIVERED_LEAD}</p>
           )}

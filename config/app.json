@@ -196,7 +196,7 @@
           {
             "id": "no_carbs",
             "label": "ללא מקור פחמימה",
-            "examples": "ירקות, חלבון, שומן",
+            "examples": "ירקות | חלבון | שומן",
             "value": 0
           },
           {
@@ -208,19 +208,19 @@
           {
             "id": "carb_grade_2",
             "label": "דרגה 2",
-            "examples": "קינואה, כוסמת, שיבולת שועל עבה, ארטישוק ירושלמי",
+            "examples": "קינואה | כוסמת | שיבולת שועל עבה | ארטישוק ירושלמי",
             "value": 2
           },
           {
             "id": "carb_grade_3",
             "label": "דרגה 3",
-            "examples": "אורז מלא, תפוח אדמה",
+            "examples": "אורז מלא | תפוח אדמה",
             "value": 3
           },
           {
             "id": "carb_grade_4",
             "label": "דרגה 4",
-            "examples": "אורז לבן, בטטה, סלק, תירס",
+            "examples": "אורז לבן | בטטה | סלק | תירס",
             "value": 4
           },
           {
@@ -232,13 +232,13 @@
           {
             "id": "carb_grade_6",
             "label": "דרגה 6",
-            "examples": "קמח מלא, שיבולת שועל דקה",
+            "examples": "קמח מלא | שיבולת שועל דקה",
             "value": 6
           },
           {
             "id": "carb_grade_7",
             "label": "דרגה 7",
-            "examples": "קמח לבן, סוכר ודומיו",
+            "examples": "קמח לבן | סוכר ודומיו",
             "value": 7
           }
         ],
@@ -271,37 +271,27 @@
       {
         "id": "low_drinking",
         "question_id": "drinking",
-        "below": 2.5,
-        "consecutive_days": 2,
-        "message": "פחות מ-{value} ליטר שתיה {days} ימים ברצף"
+        "below": 2.5
       },
       {
         "id": "no_vegetables",
         "question_id": "vegetables",
-        "below": 1,
-        "consecutive_days": 2,
-        "message": "אף ארוחה עם ירקות {days} ימים ברצף"
+        "below": 1
       },
       {
         "id": "long_eating_window",
         "question_id": "eating_window",
-        "above": 12,
-        "consecutive_days": 3,
-        "message": "חלון אכילה מעל 12 שעות {days} ימים ברצף"
+        "above": 12
       },
       {
         "id": "too_many_meals",
         "question_id": "meals",
-        "at_least": 4,
-        "consecutive_days": 2,
-        "message": "מעל 3 ארוחות או נשנושים {days} ימים ברצף"
+        "at_least": 4
       },
       {
         "id": "heavy_day",
         "question_id": "carbs",
-        "at_least": 12,
-        "consecutive_days": 2,
-        "message": "ציון יומי {value} ומעלה {days} ימים ברצף"
+        "at_least": 12
       }
     ]
   },
@@ -334,8 +324,12 @@
         "question": "מהם עקרונות התוכנית?"
       },
       {
-        "label": "ירקות מנקים",
+        "label": "ירקות",
         "question": "אילו ירקות נחשבים ירקות מנקים ולמה הם עוזרים?"
+      },
+      {
+        "label": "חלבון",
+        "question": "כמה חלבון מומלץ לצרוך ביום? והאם האפליקציה עוקבת אחרי צריכת החלבון?"
       },
       {
         "label": "חלון אכילה",
@@ -348,10 +342,6 @@
       {
         "label": "חשקים",
         "question": "מה גורם לחשקים ואיך אפשר להפחית אותם?"
-      },
-      {
-        "label": "חלבון",
-        "question": "כמה חלבון מומלץ לצרוך ביום?"
       },
       {
         "label": "שינה",

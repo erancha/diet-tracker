@@ -4,10 +4,6 @@ measurements and the target the chart reads them against — the account's own o
 being notified at all, the dismissal of a message SES refused to deliver, and the admin's
 per-user activity overview.
 
-Submission reports the day's tripped rules in the reply for the UI alone; outbound alerting
-belongs exclusively to the nightly rules job, so a violating day raises at most one message,
-at the job's scheduled hour.
-
 The caller's identity comes exclusively from the JWT claims the API Gateway authorizer
 verified — the request body never names a user."""
 
@@ -18,15 +14,17 @@ from datetime import date, datetime, timedelta
 
 import boto3
 
-from common import appconfig, chat_history, notify, rules, ses_identity, undelivered, users, weight
+from common import appconfig, chat_history, notify, ses_identity, undelivered, users, weight
 from common.dates import clock_time, days_before, now_iso, today
 from common.derive import derive, excluded_by_day, excluded_points
 from common.log import get_logger
-from common.rules import LOOKBACK_DAYS
 from common.store import Store
 from common.webapi import response as _response
 
 logger = get_logger(__name__)
+
+# Days of history the history endpoint serves.
+LOOKBACK_DAYS = 30
 
 # How long a stored SES verification reading stands before the address is asked about again.
 _VERIFICATION_MAX_AGE = timedelta(minutes=1)
@@ -149,14 +147,7 @@ def _submit(sub, body):
             return _response(400, {
                 "error": f"{field} ({answers[field]}) is below the tracked floor ({floor})"})
     store.put_day(sub, chosen, answers, questionnaire.version, now_iso())
-    history = store.get_days_range(sub, days_before(chosen, LOOKBACK_DAYS), chosen)
-    # The alerted-state stays untouched here: the nightly rules job owns both the outbound
-    # message and the mark_alerted write, so submitting never suppresses the day's one alert.
-    violations = rules.due_alerts(questionnaire, history, chosen, store.get_nudge_state(sub))
-    return _response(200, {
-        "date": chosen,
-        "violations": [{"rule_id": v.rule_id, "message": v.message} for v in violations],
-    })
+    return _response(200, {"date": chosen})
 
 
 def _delete_day(sub, chosen):
@@ -412,7 +403,7 @@ def _set_target(sub, body):
 
 def _delete_weight(sub, chosen):
     """Removes one measurement, at any date. Unlike a day record or a meal, a weight feeds no
-    derivation and no rule streak, so removing an old one restates nothing."""
+    derivation and no rule judgment, so removing an old one restates nothing."""
     rejection = _reject_malformed_date(chosen)
     if rejection is not None:
         return rejection

@@ -2,6 +2,11 @@
   --accent: #2e7d32;
   --accent-border: #b6d0b8;
   --danger: #c62828;
+  /* A bound crossed on the treat day: still a crossing, painted amber rather than red because
+     what that day costs is what it is for. */
+  --treat-breach: #9a6b00;
+  --treat-breach-ground: #fff8e1;
+  --viz-treat-breach: #e0a100;
   --viz-series-1: #2a78d6;
   --viz-series-2: #1baf7a;
   --viz-series-3: #4a3aa7;
@@ -381,6 +386,7 @@ th { vertical-align: top; font-size: calc(var(--cell-font-size) - 1pt); }
    section opens the page and needs no such separation. */
 .trends h2 { margin-top: calc(0.83em + 1rem); }
 td.violation { background: #ffebee; color: var(--danger); }
+td.violation.treat-day { background: var(--treat-breach-ground); color: var(--treat-breach); }
 /* An answer under its question's warn floor: red text alone, a day-by-day nudge milder than the
    background a rule crossing earns. */
 td.shortfall { color: var(--danger); }
@@ -392,6 +398,7 @@ td.off-norm { font-weight: bold; }
    than the whole item, so the alarm sits on the number its label merely names, and its
    specificity outranks the green that figure otherwise carries. */
 td.heavy-day, .tracker-dashboard .heavy-day .score, .meal-list .heavy-meal { color: var(--danger); }
+td.heavy-day.treat-day, .tracker-dashboard .heavy-day.treat-day .score { color: var(--treat-breach); }
 /* The bin is lifted out of the cell's line and pinned to the cell's far edge, so it holds one
    position down the column rather than trailing whatever the row's score happens to measure.
    Out of flow it contributes no width, so the cell reserves its footprint as padding instead: the
@@ -597,6 +604,7 @@ main:not(.intro-0, .intro-1, .intro-2, .intro-3, .intro-4) .weight .section-togg
    so an all-green line means the day is on track. */
 .tracker-dashboard .value { color: var(--accent); }
 .tracker-dashboard .value.breach { color: var(--danger); }
+.tracker-dashboard .value.breach.treat-day { color: var(--treat-breach); }
 /* The score's label matches its figure's weight, so the pair stands out of the semibold line
    as one item. */
 .tracker-dashboard strong { font-weight: 800; }

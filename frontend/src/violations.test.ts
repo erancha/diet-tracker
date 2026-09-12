@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { activeViolations, crossesThreshold, headedValue, isHeavyMeal, isViolating, panelTitle, questionTitle, ruleBoundLabel, trendPanels, valueLabel, violates } from "./violations";
-import type { AnsweredDay, Question, Questionnaire, Rule } from "./types";
+import { crossesThreshold, headedValue, isHeavyMeal, isViolating, panelTitle, questionTitle, ruleBoundLabel, trendPanels, valueLabel, violates } from "./violations";
+import type { Question, Questionnaire, Rule } from "./types";
 
 const carbs: Question = {
   id: "carbs", type: "points", text: "פחמימות", max: 30, heavy_meal: 4, panel_title: "ציון פחמימות",
@@ -14,9 +14,9 @@ const meals: Question = {
   id: "meals", type: "single", text: "ארוחות",
   choices: [{ id: "m2", label: "2 ארוחות", value: 2 }, { id: "m3", label: "3 ארוחות", value: 3 }],
 };
-const heavy: Rule = { id: "heavy", question_id: "carbs", at_least: 8, consecutive_days: 2, message: "x {days}" };
-const few: Rule = { id: "few", question_id: "meals", below: 3, consecutive_days: 2, message: "y {days}" };
-const long: Rule = { id: "long", question_id: "meals", above: 12, consecutive_days: 2, message: "z {days}" };
+const heavy: Rule = { id: "heavy", question_id: "carbs", at_least: 8 };
+const few: Rule = { id: "few", question_id: "meals", below: 3 };
+const long: Rule = { id: "long", question_id: "meals", above: 12 };
 const questionnaire: Questionnaire = { version: 3, questions: [carbs, meals], rules: [heavy, few] };
 
 describe("violates", () => {
@@ -78,86 +78,6 @@ describe("crossesThreshold", () => {
 
   it("is false when every submitted value respects every bound", () => {
     expect(crossesThreshold(questionnaire, { carbs: 2, meals: 3 })).toBe(false);
-  });
-});
-
-describe("activeViolations", () => {
-  const today = "2026-08-23";
-  const yesterday = "2026-08-22";
-  // Newest first, matching the API's day ordering.
-  const history = (entries: Array<[string, Record<string, number>]>): AnsweredDay[] =>
-    entries.map(([date, answers]) => ({ date, answers }));
-
-  it("reports every rule whose violating streak at the newest day reaches its required length", () => {
-    const days = history([
-      [today, { carbs: 9, meals: 2 }],
-      [yesterday, { carbs: 8, meals: 2 }],
-    ]);
-    expect(activeViolations(questionnaire, days, today, yesterday)).toEqual(["x 2", "y 2"]);
-  });
-
-  it("formats {value} with the rule threshold and {days} with the actual streak length", () => {
-    const valued: Questionnaire = {
-      ...questionnaire,
-      rules: [{ id: "heavy", question_id: "carbs", at_least: 8, consecutive_days: 2,
-                message: "ציון {value} ומעלה {days} ימים" }],
-    };
-    const days = history([
-      [today, { carbs: 9 }],
-      [yesterday, { carbs: 10 }],
-      ["2026-08-21", { carbs: 8 }],
-    ]);
-    expect(activeViolations(valued, days, today, yesterday)).toEqual(["ציון 8 ומעלה 3 ימים"]);
-  });
-
-  it("does not report a streak shorter than the rule's required length", () => {
-    const days = history([[today, { carbs: 9, meals: 3 }]]);
-    expect(activeViolations(questionnaire, days, today, yesterday)).toEqual([]);
-  });
-
-  it("does not report past violations once the newest day is clean", () => {
-    const days = history([
-      [today, { carbs: 0, meals: 3 }],
-      [yesterday, { carbs: 9, meals: 3 }],
-      ["2026-08-21", { carbs: 9, meals: 3 }],
-    ]);
-    expect(activeViolations(questionnaire, days, today, yesterday)).toEqual([]);
-  });
-
-  it("ends the streak at a calendar gap", () => {
-    const days = history([
-      [today, { carbs: 9, meals: 3 }],
-      ["2026-08-21", { carbs: 9, meals: 3 }],
-    ]);
-    expect(activeViolations(questionnaire, days, today, yesterday)).toEqual([]);
-  });
-
-  it("ends the streak at a day missing the rule's question", () => {
-    const days = history([
-      [today, { carbs: 9, meals: 3 }],
-      [yesterday, { meals: 3 }],
-    ]);
-    expect(activeViolations(questionnaire, days, today, yesterday)).toEqual([]);
-  });
-
-  it("evaluates as of yesterday while today is not yet submitted", () => {
-    const days = history([
-      [yesterday, { carbs: 9, meals: 3 }],
-      ["2026-08-21", { carbs: 9, meals: 3 }],
-    ]);
-    expect(activeViolations(questionnaire, days, today, yesterday)).toEqual(["x 2"]);
-  });
-
-  it("reports nothing when the newest day is older than yesterday", () => {
-    const days = history([
-      ["2026-08-21", { carbs: 9, meals: 3 }],
-      ["2026-08-20", { carbs: 9, meals: 3 }],
-    ]);
-    expect(activeViolations(questionnaire, days, today, yesterday)).toEqual([]);
-  });
-
-  it("reports nothing for an empty history", () => {
-    expect(activeViolations(questionnaire, [], today, yesterday)).toEqual([]);
   });
 });
 

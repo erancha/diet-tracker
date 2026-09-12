@@ -11,7 +11,7 @@ import { Icon } from "./Icon";
 // leaving the unit as chrome. The weekday and the value each carry their own span so the
 // stylesheet can pad them to a common width, which is what holds the columns straight.
 //
-// Deletion is offered at every date, however old. A weight feeds no day score and no rule streak,
+// Deletion is offered at every date, however old. A weight feeds no day score and no rule judgment,
 // so removing one restates nothing; a measurement logged against the wrong day would otherwise
 // have no way out of the chart.
 export function WeightEntries({ entries, target, onDelete }: {

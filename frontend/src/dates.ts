@@ -62,6 +62,10 @@ export function weekdayIndexOf(weekday: string): number {
   return index;
 }
 
+export function fallsOn(dateStr: string, weekday: string): boolean {
+  return parseIsoDate(dateStr).getDay() === weekdayIndexOf(weekday);
+}
+
 export function isWeighInDay(now: Date, weekday: string): boolean {
   return now.getDay() === weekdayIndexOf(weekday);
 }

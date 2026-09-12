@@ -20,15 +20,8 @@ logger = get_logger(__name__)
 # The frontend states the product name independently in frontend/src/appTitle.ts.
 APP_NAME = "מעקב תזונה AI"
 
-ALERT_SUBJECT = f"התראת תזונה — {APP_NAME}"
-
 # Names the same account-menu action the frontend renders in Header.tsx.
 MUTE_FOOTNOTE = 'להפסקת ההתראות: בתפריט החשבון באפליקציה בחרו "ביטול התראות"'
-
-
-def violation_text(violations) -> str:
-    """Render tripped rules as the message body."""
-    return "התראות תזונה:\n" + "\n".join(f"• {v.message}" for v in violations)
 
 
 _BODY_FONT_PX = 15

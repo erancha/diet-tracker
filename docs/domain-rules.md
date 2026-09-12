@@ -83,9 +83,13 @@ day's stored answer rather than judging one.
 The two are set so that a day of heavy meals is a heavy day: three meals at the meal bound reach
 the day bound exactly, matching the three meals the `meals` question treats as the day's norm.
 
-The day bound carries two readings of one statement. The tracker and the history table redden a
-day the moment it reaches the bound, and the `heavy_day` rule nudges once the day repeats for its
-`consecutive_days` — so the red predicts the nudge instead of competing with it.
+Every rule is judged day by day, the treat day included. The tracker, the history table and the
+trend chart mark a day the moment it reaches a bound, and the weekly recap counts how many of the
+week's days did; no surface reads a day against the day before it. A crossing that falls on the
+treat day keeps its mark and is painted amber instead of red: what that day costs is what it is
+for, so a high treat day is expected rather than alarming, and a treat day inside every bound
+stays green like any other. The frontend's `isViolating` and the backend's `violating_days` are
+the two readings of that one statement.
 
 ## Day lifecycle
 
@@ -145,7 +149,7 @@ lockstep.
 ## Weight
 
 The weight log runs beside the day tracker rather than inside it. A weight is measured, not
-judged: it enters no day score, no derived floor, and no threshold alert, so a climbing
+judged: it enters no day score, no derived floor, and no weekly finding, so a climbing
 weight is something the chart shows rather than a nudge that fires.
 
 - **One measurement per calendar day**, in kilograms, recorded for today, carrying the wall-clock
@@ -182,7 +186,7 @@ weight is something the chart shows rather than a nudge that fires.
 
 `config/app.json` is the app's single versioned config. Its `questionnaire` element holds the
 questions, their numeric choice values (the carb meal-point weights among them), and the threshold
-alert rules; its `version` is stamped on every closed day, so it tracks the questions and their
+rules; its `version` is stamped on every closed day, so it tracks the questions and their
 values alone. Its `day_close` element holds the closing rules: the minimum eating window
 (`min_window_hours`), and the small-hours grace bounds — `close_until`, up to which an unclosed
 yesterday may still be closed and its meals written, and the never-later `delete_until`, up to
@@ -207,9 +211,6 @@ Scheduled jobs (EventBridge Scheduler, Asia/Jerusalem) run alongside the tracker
   whose day remains open, and tells one whose meals are already logged that the day awaits its
   closing rather than its meals: everything but the water is recorded, and the tracker's close
   button is what seals it. A day carrying no meals gets the plain record-your-meals reminder.
-- **Threshold alerts** — fire over consecutive days violating the configured thresholds, by email
-  plus Telegram when a bot token is configured (see
-  [Development & deployment](development.md#telegram-optional)).
 - **Weekly recap** — reports seven days ending on the user's last closed day of today and
   yesterday. It fires late on the weigh-in night, when the day is over in practice but may still be
   open in the tracker: a day the user has closed by then belongs to the week it ends and is counted;
@@ -244,14 +245,11 @@ Scheduled jobs (EventBridge Scheduler, Asia/Jerusalem) run alongside the tracker
   transcript for the user to follow up themselves. It is asked outside the daily chat quota, which
   counts the questions the user chose to spend — this one they did not ask.
 - **Weigh-in reminder** — a weekly prompt to step on the scale, skipped for anyone who already
-  recorded a weight on the weigh-in day itself, on the same channels as the alerts above.
+  recorded a weight on the weigh-in day itself, on the same channels as the last call above.
 - **Trend chart** — a 10-day trend chart after each closed day.
 
 Every job above reads its audience from the pool minus the accounts that have opted out, so one
 switch silences all of them — the unconditional weekly recap included. The switch is the account
 menu's second item, beside the sign-out it sits with because leaving is when a user decides they
 are done being reminded; it toggles, so the same item subscribes again. Opting out changes nothing
-inside the app: a muted account still sees its own violations on closing a day and in the header
-alarm,
-and its day is left unrecorded as alerted, so a streak still live when notifications resume raises
-one then.
+inside the app: a muted account still sees its own red marks on closing a day and in the table.

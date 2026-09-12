@@ -66,15 +66,13 @@ day's score opens that day's meal log, read-only.
 [Excluded points and the treat day](domain-rules.md#shared-derivation) specify how the subtotal
 and the framed weekday are derived.
 
-## Reminders, alerts and the weekly recap
+## Reminders and the weekly recap
 
 Messages reach you by email, and by Telegram where a bot token is configured:
 
 - **A last call** for a day still unclosed, late enough that the day is over in practice and still
   inside it.
 - **A weekly weigh-in reminder**, which skips anyone who already weighed in that day.
-- **A threshold alert** when a principle or the daily score stays past its limit several days
-  running.
 - **A weekly recap** of the week that just ended: a line counting the days that were closed, then
   one bullet per bound a day crossed — the findings the trend chart reddens — and flours and sugars
   on any day but the treat day. Under them comes the answering service's reading of that week,

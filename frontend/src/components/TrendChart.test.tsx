@@ -36,8 +36,7 @@ const withCarbsPanel: Questionnaire = {
   ...fixtureQuestionnaire,
   questions: [...fixtureQuestionnaire.questions, carbsPanel],
   rules: [...fixtureQuestionnaire.rules,
-          { id: "heavy_day", question_id: "carbs", at_least: 12,
-            consecutive_days: 2, message: "m {days}" }],
+          { id: "heavy_day", question_id: "carbs", at_least: 12 }],
 };
 
 describe("TrendChart", () => {
@@ -171,5 +170,20 @@ describe("TrendChart", () => {
     for (const row of container.querySelectorAll(".trend-panel-title")) {
       expect(row.getAttribute("dir")).toBe("rtl");
     }
+  });
+
+  it("paints a crossing day's dot red, and amber when the crossing falls on the treat day", () => {
+    // The 14th is the Friday the treat day is set to; the 13th is a Thursday. Both cross the
+    // score bound.
+    const span = ["2026-08-10", "2026-08-11", "2026-08-12", "2026-08-13", "2026-08-14",
+                  "2026-08-15", "2026-08-16", "2026-08-17", "2026-08-18", "2026-08-19"]
+      .map((date) => ({ date, answers: { carbs: date < "2026-08-13" || date > "2026-08-14" ? 9 : 14 }, excluded: 0 }));
+    const { container } = render(<TrendChart questionnaire={withCarbsPanel} days={span} today={emptyToday} endDate="2026-08-19" treatDay={TREAT_DAY} loadedInMs={0} />);
+    const panel = container.querySelector(".trend-panel")!;
+    const dots = [...panel.querySelectorAll(".recharts-line-dots")].at(-1)!.querySelectorAll("circle");
+    const fills = [...dots].map((dot) => dot.getAttribute("fill"));
+    expect(fills[3]).toBe("var(--viz-critical)");
+    expect(fills[4]).toBe("var(--viz-treat-breach)");
+    expect(fills.filter((fill) => fill === "var(--viz-critical)")).toHaveLength(1);
   });
 });

@@ -4,9 +4,7 @@ its days crossed — the same findings the trend charts redden, counted over the
 Every number a week produces is already in the app, so the recap names only what asks for attention
 and points at the trends screen for the rest."""
 
-from datetime import date
-
-from common import appconfig, rules
+from common import rules
 
 # Names the recap wherever it surfaces: its opening line, the email subject, and the title the
 # stored chat carries in the transcript.
@@ -57,19 +55,13 @@ def text(questionnaire, history: dict, excluded: dict, treat_weekday: str,
             name = question.day_title or question.panel_title or question.day_heading
             lines.append(f"• {name} — חריגה ({rules.bound_label(rule)}) {_days(days)}")
     unclean = sum(1 for day, points in excluded.items()
-                  if points > 0 and not _falls_on(day, treat_weekday))
+                  if points > 0 and not rules.falls_on(day, treat_weekday))
     if unclean:
         lines.append(f"• קמחים וסוכרים {_days(unclean)} שאינם יום פינוק" if unclean > 1
                      else "• קמחים וסוכרים ביום אחד שאינו יום פינוק")
     if insights is not None:
         lines += ["", _INSIGHTS_TITLE, insights]
     return "\n".join(lines + ["", _TRENDS])
-
-
-def _falls_on(day: str, weekday: str) -> bool:
-    """Whether a date falls on the named weekday. WEEKDAYS is indexed Sunday-first, as the
-    schedules and the frontend both read it; isoweekday() counts Monday as 1 and Sunday as 7."""
-    return appconfig.WEEKDAYS[date.fromisoformat(day).isoweekday() % 7] == weekday
 
 
 def _days(count: int) -> str:

@@ -12,8 +12,7 @@ const carbs: Question = {
 };
 const carbsQuestionnaire: Questionnaire = {
   version: 1, questions: [carbs],
-  rules: [{ id: "heavy_day", question_id: "carbs", at_least: 12,
-            consecutive_days: 2, message: "m {days}" }],
+  rules: [{ id: "heavy_day", question_id: "carbs", at_least: 12 }],
 };
 
 describe("ticksFor", () => {

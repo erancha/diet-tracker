@@ -1,4 +1,4 @@
-import type { DayPayload, Questionnaire } from "../types";
+import type { DayPayload, Questionnaire, TreatDaySettings } from "../types";
 import { weekdayDdmmLabel } from "../dates";
 import { useExpandedGradeLabels } from "../gradeLabels";
 import { DayDashboard } from "./DayDashboard";
@@ -7,8 +7,9 @@ import { MealList } from "./MealList";
 
 // Read-only look at a submitted day's tracker: the derived-values dashboard and the meal list. A day
 // without recorded meals says so explicitly instead of showing an all-zero dashboard.
-export function DayView({ questionnaire, day, onClose }: {
+export function DayView({ questionnaire, treatDay, day, onClose }: {
   questionnaire: Questionnaire;
+  treatDay: TreatDaySettings;
   day: DayPayload;
   onClose: () => void;
 }) {
@@ -27,7 +28,8 @@ export function DayView({ questionnaire, day, onClose }: {
         <p>לא נרשמו ארוחות ביום זה</p>
       ) : (
         <>
-          <DayDashboard questionnaire={questionnaire} derived={day.derived} />
+          <DayDashboard questionnaire={questionnaire} treatDay={treatDay} date={day.date}
+                        derived={day.derived} />
           <MealList questionnaire={questionnaire} meals={day.meals} expandLabels={expandLabels} />
         </>
       )}

@@ -48,3 +48,8 @@ def test_the_recap_ends_by_pointing_at_the_trends_screen():
 
 def test_the_chat_title_names_the_sunday_its_week_opened_on():
     assert weekly_recap.chat_title("2026-09-06") == "סיכום שבועי 06/09/2026"
+
+
+def test_the_treat_day_is_judged_like_any_other_day():
+    text = weekly_recap.text(questionnaire(), {THURSDAY: CLEAN, FRIDAY: HEAVY}, {}, "FRI")
+    assert "• ציון יומי — חריגה (מעל 12) ביום אחד" in text

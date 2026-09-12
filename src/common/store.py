@@ -228,24 +228,24 @@ class Store:
             raise KeyError(meal_id)
 
     def get_nudge_state(self, user_sub) -> dict:
-        """The user's notification state: which rules have already been alerted for, and whether
-        the account has opted out of being notified at all.
+        """The user's notification state: whether the account has opted out of being notified
+        at all, and the SES verification reading the API caches beside it.
 
         State written before the opt-out existed legally carries no flag and reads as subscribed,
         the same allowance the meal and weight attributes above are read under. Defaulting it here
         rather than at each call site is what lets every reader index the key directly."""
         response = self._state.get_item(Key={"pk": user_sub})
         if "Item" not in response:
-            # A user who has never been alerted is a legal initial state.
-            return {"rules": {}, "muted": False}
+            # A user with no state yet is a legal initial state.
+            return {"muted": False}
         return {"muted": False, **response["Item"]["state"]}
 
     def put_nudge_state(self, user_sub, state) -> None:
         self._state.put_item(Item={"pk": user_sub, "state": state})
 
     def set_muted(self, user_sub, muted) -> None:
-        """Sets the account's notification opt-out, keeping the alert record beside it so muting
-        and unmuting never rewrite which days were already alerted for."""
+        """Sets the account's notification opt-out, keeping the rest of the state beside it so
+        muting and unmuting never drop the cached verification reading."""
         self.put_nudge_state(user_sub, {**self.get_nudge_state(user_sub), "muted": muted})
 
     def put_weight(self, user_sub, day, kg, at) -> None:

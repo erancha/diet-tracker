@@ -1,64 +1,21 @@
-"""Evaluates alert rules over per-day numeric answer history.
-
-A rule fires when its question's value violated its threshold for at least `consecutive_days`
-days ending at the evaluation date. Alerts repeat daily while the streak holds, but at most once
-per (rule, date) — `mark_alerted` records the date so a re-run of the nightly job (the only
-alerter) never double-alerts the same day.
+"""Judges per-day numeric answers against the questionnaire's rules: which days crossed a bound,
+and how a bound is named beside the mark.
 """
 
-from dataclasses import dataclass
-from datetime import date, timedelta
+from datetime import date
 
-# Window both the synchronous submit path and the nightly job evaluate streaks over.
-LOOKBACK_DAYS = 30
+from common import appconfig
 
 
-@dataclass(frozen=True)
-class Violation:
-    rule_id: str
-    streak: int
-    message: str
-
-
-def streak(rule, history: dict, as_of: str) -> int:
-    day = date.fromisoformat(as_of)
-    count = 0
-    while True:
-        answers = history.get(day.isoformat())
-        if answers is None:
-            break
-        if rule.question_id not in answers:
-            # Answers predating the question's introduction are legal; they end the streak.
-            break
-        if not rule.violates(answers[rule.question_id]):
-            break
-        count += 1
-        day -= timedelta(days=1)
-    return count
-
-
-def due_alerts(questionnaire, history: dict, as_of: str, state: dict) -> list:
-    violations = []
-    for rule in questionnaire.rules:
-        current = streak(rule, history, as_of)
-        # A rule with no alert history is a legal state for new users and new rules.
-        already = state["rules"].get(rule.id, {}).get("last_alert_for")
-        if current >= rule.consecutive_days and already != as_of:
-            violations.append(Violation(rule.id, current,
-                                        rule.message.format(days=current, value=rule.threshold)))
-    return violations
-
-
-def mark_alerted(state: dict, violations: list, as_of: str) -> dict:
-    rules_state = dict(state["rules"])
-    for violation in violations:
-        rules_state[violation.rule_id] = {"last_alert_for": as_of}
-    return {**state, "rules": rules_state}
+def falls_on(day: str, weekday: str) -> bool:
+    """Whether a date falls on the named weekday. WEEKDAYS is indexed Sunday-first, as the
+    schedules and the frontend both read it; isoweekday() counts Monday as 1 and Sunday as 7."""
+    return appconfig.WEEKDAYS[date.fromisoformat(day).isoweekday() % 7] == weekday
 
 
 def violating_days(rule, history: dict) -> int:
     """How many days in `history` crossed the rule's bound on their own — the per-day test the
-    trend chart's red dots and the history table's red cells apply, with no streak required."""
+    trend chart's red dots and the history table's red cells apply, the treat day included."""
     return sum(1 for answers in history.values()
                if rule.question_id in answers and rule.violates(answers[rule.question_id]))
 

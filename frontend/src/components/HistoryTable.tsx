@@ -1,6 +1,6 @@
 import { useState, type KeyboardEvent } from "react";
-import type { AnsweredDay, Questionnaire } from "../types";
-import { daysBefore, weekdayDdmmLabel } from "../dates";
+import type { AnsweredDay, Questionnaire, TreatDaySettings } from "../types";
+import { daysBefore, fallsOn, weekdayDdmmLabel } from "../dates";
 import { headedValue, isBoundValue, isViolating, questionTitle } from "../violations";
 import { Icon } from "./Icon";
 
@@ -11,6 +11,9 @@ type Range = (typeof RANGES)[number];
 
 interface Props {
   questionnaire: Questionnaire;
+  // The weekday whose crossings paint softer: judged like any day, but what it costs is what it
+  // is for.
+  treatDay: TreatDaySettings;
   days: AnsweredDay[];
   // Anchors the visible window: rows are kept from this date back over the chosen range. It is
   // today rather than the newest recorded date, so a stretch with nothing recorded reads as the
@@ -79,7 +82,7 @@ function RangePicker({ ranges, value, onChange }: {
   );
 }
 
-export function HistoryTable({ questionnaire, days, today, deletableDates, viewedDate, onDelete, onView }: Props) {
+export function HistoryTable({ questionnaire, treatDay, days, today, deletableDates, viewedDate, onDelete, onView }: Props) {
   const [range, setRange] = useState<Range>(RANGES[0]);
   const cellText = (questionId: string, value: number) =>
     headedValue(questionnaire.questions.find((q) => q.id === questionId)!, value);
@@ -116,6 +119,7 @@ export function HistoryTable({ questionnaire, days, today, deletableDates, viewe
                   const value = day.answers[q.id];
                   const viewable = q.type === "points";
                   const violating = isViolating(questionnaire, q.id, value);
+                  const softened = violating && fallsOn(day.date, treatDay.weekday);
                   // A bound label is truncated to the row's single-line height by the stylesheet,
                   // so its cell carries the full wording in its title.
                   const bound = q.type !== "points" && isBoundValue(q, value);
@@ -129,6 +133,7 @@ export function HistoryTable({ questionnaire, days, today, deletableDates, viewe
                          q.warn_below !== undefined && value < q.warn_below && "shortfall",
                          q.norm !== undefined && value !== q.norm && "off-norm",
                          bound && "bound"]),
+                    softened && "treat-day",
                     deleteClass,
                   ].filter(Boolean).join(" ");
                   return (

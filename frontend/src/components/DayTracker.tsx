@@ -5,7 +5,7 @@ import { mayDiscardEdits } from "../edits";
 import { isViolating } from "../violations";
 import { useExpandedGradeLabels } from "../gradeLabels";
 import type { CarbSource, DayPayload, Meal, MealAddition, NewMeal, Question,
-              Questionnaire } from "../types";
+              Questionnaire, TreatDaySettings } from "../types";
 import { ChoiceFieldset } from "./ChoiceFieldset";
 import { CollapsibleSection } from "./CollapsibleSection";
 import { DayDashboard } from "./DayDashboard";
@@ -51,11 +51,13 @@ const NUDGE_ESCALATION_MS = 10_000;
 // open for its late meals, its closing or its reopening. The dashboard and
 // close-day values come from the vector-pinned client derivation twin, so they always agree with
 // the meal list rendered beside them — the server re-derives on submit and stays the authority.
-export function DayTracker({ questionnaire, day, isToday = true, closed = false, firstMealHour,
+export function DayTracker({ questionnaire, treatDay, day, isToday = true, closed = false, firstMealHour,
                              mealGapHours, maxMealsPerDay, closeMinWindowHours, onAddMeal,
                              onUpdateMeal, onDeleteMeal, deletingMealId, savingMeal, onCloseDay,
                              onReopenDay }: {
   questionnaire: Questionnaire;
+  // The weekday whose breaches the dashboard paints softer.
+  treatDay: TreatDaySettings;
   day: DayPayload;
   // False during the small-hours grace window, when the payload is the previous day's: the day
   // is over, so recorded times may run to its end, the overdue-meal nudge stays quiet, and the
@@ -350,7 +352,7 @@ export function DayTracker({ questionnaire, day, isToday = true, closed = false,
                         collapsed={sectionCollapsed}
                         onToggle={() => setSectionCollapsed((c) => !c)}
                         summary={
-      <DayDashboard questionnaire={questionnaire} derived={derived} />
+      <DayDashboard questionnaire={questionnaire} treatDay={treatDay} date={day.date} derived={derived} />
     }
                         headerAside={
       /* Governs every grade name in the card — the pickers' and the meal rows' alike, the closed

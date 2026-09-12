@@ -57,7 +57,7 @@ def test_grade_scale_span_and_rows():
     assert f"בסולם של {min(values)} עד {max(values)}" in DOC
     for choice in CARBS["choices"]:
         row = _doc_row(choice["value"])
-        for example in choice["examples"].split(", "):
+        for example in choice["examples"].split(" | "):
             assert example in row, f"grade {choice['value']} row is missing {example!r}"
 
 
@@ -99,22 +99,32 @@ def test_score_bounds():
     assert f"**{RULES['heavy_day']['at_least']} ומעלה**" in DOC
 
 
-def test_alert_thresholds_and_cadences():
+# Hebrew day names for the scheduler weekday tokens the config declares, so a retargeted treat
+# day fails here rather than leaving the guide naming the wrong day.
+WEEKDAY_NAMES = {"SUN": "ראשון", "MON": "שני", "TUE": "שלישי", "WED": "רביעי", "THU": "חמישי",
+                 "FRI": "שישי", "SAT": "שבת"}
+
+
+def test_bounds_are_judged_day_by_day_with_no_streak():
     rows = {
-        "heavy_day": "ציון יומי גבוה",
+        "heavy_day": "ציון יומי",
         "low_drinking": f"פחות מ־{RULES['low_drinking']['below']} ליטר",
         "no_vegetables": "אף ארוחה עם ירקות",
         "long_eating_window": f"מעל {RULES['long_eating_window']['above']} שעות",
         "too_many_meals": f"מעל {RULES['too_many_meals']['at_least'] - 1} ארוחות",
     }
-    for rule_id, fragment in rows.items():
-        assert f"| {RULES[rule_id]['consecutive_days']} |" in _doc_line(fragment)
+    section = _doc_section("ימים חריגים ויום הפינוק")
+    for fragment in rows.values():
+        assert fragment in section
+    # A streak is not a concept the app has: no day is read against the day before it.
+    assert "ברצף" not in DOC and "רצופים" not in DOC
 
 
-# Hebrew day names for the scheduler weekday tokens the config declares, so a retargeted treat
-# day fails here rather than leaving the guide naming the wrong day.
-WEEKDAY_NAMES = {"SUN": "ראשון", "MON": "שני", "TUE": "שלישי", "WED": "רביעי", "THU": "חמישי",
-                 "FRI": "שישי", "SAT": "שבת"}
+def test_the_treat_day_is_judged_like_any_day_and_marked_softer():
+    weekday = WEEKDAY_NAMES[CONFIG["treat_day"]["weekday"]]
+    section = _doc_section("ימים חריגים ויום הפינוק")
+    assert f"יום הפינוק (יום {weekday}) נשפט לפי אותם ספים" in section
+    assert "בכתום" in section
 
 
 def test_trend_chart_excluded_line():

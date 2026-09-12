@@ -579,18 +579,6 @@ Resources:
         RoleArn: !GetAtt SchedulerRole.Arn
         Input: '{"job": "last_call"}'
 
-  NightlyRulesSchedule:
-    Type: AWS::Scheduler::Schedule
-    Properties:
-      ScheduleExpression: 'cron(30 23 * * ? *)'
-      ScheduleExpressionTimezone: Asia/Jerusalem
-      FlexibleTimeWindow:
-        Mode: 'OFF'
-      Target:
-        Arn: !GetAtt NudgeFunction.Arn
-        RoleArn: !GetAtt SchedulerRole.Arn
-        Input: '{"job": "rules"}'
-
   # Fires on the weigh-in night so the recap reads the morning's fresh weight. The job reads the
   # seven days ending yesterday, so the week it reports closes the day before the weighing, and
   # that last day's own close window (day_close.close_until, 02:00) shut this morning.

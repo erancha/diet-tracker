@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { alertMessage, type Api } from "../api";
-import { activeViolations, crossesThreshold } from "../violations";
+import { crossesThreshold } from "../violations";
 import type { AppConfigFile, NewMeal, WeightPayload } from "../types";
 import { beforeDailyCutoff, expandWeightSection, isoDate, yesterdayOf } from "../dates";
 import { TARGET_UNSET_NOTICE } from "../weight";
@@ -130,19 +130,15 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, c
   const submitMutation = useMutation({
     mutationFn: api.submitDay,
     onSuccess: (result, { answers }) => {
-      // A violated day is still a saved day, so the confirmation leads either way — the closed
+      // A crossing day is still a saved day, so the confirmation leads either way — the closed
       // tracker would otherwise be the only sign the figures went through.
       const saved = `נשמר לתאריך ${result.date}!`;
       // A bound crossed today is painted red in the table beside the banner, so a clean-day claim
-      // there reads as a contradiction; the banner names the crossing instead, as a notice — a
-      // crossing is not yet the consecutive-days violation the alert rules watch for.
-      setAlerts(result.violations.length > 0
+      // there reads as a contradiction; the banner names the crossing instead, as a notice.
+      setAlerts(crossesThreshold(configQuery.data!.questionnaire, answers)
         ? [{ kind: "ok", message: saved },
-           ...result.violations.map((v) => ({ kind: "alert" as const, message: v.message }))]
-        : crossesThreshold(configQuery.data!.questionnaire, answers)
-          ? [{ kind: "ok", message: saved },
-             { kind: "notice", message: "היום חצה סף (מסומן באדום בטבלה) — עדיין אין חריגה של ימים רצופים" }]
-          : [{ kind: "ok", message: `${saved} אין חריגות היום ✔` }]);
+           { kind: "notice", message: "היום חצה סף (מסומן באדום בטבלה)" }]
+        : [{ kind: "ok", message: `${saved} אין חריגות היום ✔` }]);
       queryClient.invalidateQueries({ queryKey: ["days"] });
     },
     onError: errorAlert("שמירת היום נכשלה"),
@@ -275,7 +271,6 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, c
               // The item names the view a press will switch to, read off the last command rather
               // than the sections' scattered states — hand-toggling sections does not rename it.
               nextViewCondensed={!foldAll.collapsed}
-              activeViolations={activeViolations(questionnaire, data.days, todayStr, yesterdayStr)}
               undelivered={data.undelivered}
               emailVerified={data.email_verified}
               onDismissUndelivered={(at) => dismissUndeliveredMutation.mutate(at)} />
@@ -301,6 +296,7 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, c
         />
         <DayTracker
             questionnaire={questionnaire}
+            treatDay={configQuery.data.treat_day}
             day={activeDay}
             isToday={!targetsYesterday}
             closed={activeDaySubmitted}
@@ -348,11 +344,13 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, c
           {viewedDate !== null && (
             viewedDayQuery.isPending ? <p>טוען…</p>
             : viewedDayQuery.isError ? <div className="alert">{alertMessage("טעינת היום נכשלה", viewedDayQuery.error)}</div>
-            : <DayView questionnaire={questionnaire} day={viewedDayQuery.data}
+            : <DayView questionnaire={questionnaire} treatDay={configQuery.data.treat_day}
+                       day={viewedDayQuery.data}
                        onClose={() => setViewedDate(null)} />
           )}
           <HistoryTable
             questionnaire={questionnaire}
+            treatDay={configQuery.data.treat_day}
             days={data.days}
             today={todayStr}
             deletableDates={deletableDates}

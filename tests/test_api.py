@@ -72,27 +72,14 @@ def test_handler_logs_route_and_caller(env, caplog):
     assert "u1" in caplog.text
 
 
-def test_submit_stores_numeric_answers_and_reports_no_violations(env):
+def test_submit_stores_numeric_answers_and_replies_with_the_day(env):
     response = api.handler(request("POST /days", {"answers": ANSWERS}), None)
     assert response["statusCode"] == 200
-    payload = body_of(response)
-    assert payload["date"] == today() and payload["violations"] == []
+    assert body_of(response) == {"date": today()}
     history = body_of(api.handler(request("GET /days"), None))
     # A day closed with nothing recorded excludes nothing: the chart's second line rests on the
     # baseline while the score line plots the answers.
     assert history["days"][0] == {"date": today(), "answers": ANSWERS, "excluded": 0}
-
-
-def test_submit_reports_violations_but_leaves_alerting_to_the_nightly_job(env):
-    from common.store import Store
-    store = Store("days", "meals", "state", "weights")
-    for offset in (2, 1):
-        store.put_day("u1", days_before(today(), offset), ANSWERS, 3, "t")
-    payload = body_of(api.handler(request("POST /days", {"answers": ANSWERS}), None))
-    # The reply shows the violations for the UI; the day stays unmarked as alerted, so the
-    # nightly rules job raises the single daily outbound alert.
-    assert [v["rule_id"] for v in payload["violations"]] == ["long_eating_window"]
-    assert store.get_nudge_state("u1")["rules"] == {}
 
 
 def test_submit_rejects_non_numeric_answers(env):

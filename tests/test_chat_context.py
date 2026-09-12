@@ -153,5 +153,5 @@ def test_the_whole_grade_ladder_rides_in_the_context(store, questionnaire):
     ladder = data_of(chat_context.user_context(
         store, questionnaire, "u1", TODAY))[chat_context._GRADE_LADDER]
 
-    assert ladder["דרגה 2"] == "קינואה, כוסמת, שיבולת שועל עבה, ארטישוק ירושלמי"
+    assert ladder["דרגה 2"] == "קינואה | כוסמת | שיבולת שועל עבה | ארטישוק ירושלמי"
     assert set(ladder) == {choice.label for choice in questionnaire.question("carbs").choices}

@@ -1,5 +1,4 @@
-"""Scheduled nudge jobs: the night's last call, nightly rule evaluation, weekly recap,
-weekly weigh-in.
+"""Scheduled nudge jobs: the night's last call, weekly recap, weekly weigh-in.
 
 Two entry points, each deployed as a Lambda function of its own from this one module. The nudge
 function's handler is invoked by EventBridge Scheduler with {"job": ...}, and the named job
@@ -16,11 +15,10 @@ from dataclasses import dataclass
 
 import boto3
 
-from common import (appconfig, chat, chat_history, chat_question, derive, notify, rules,
-                    undelivered, users, weekly_recap, weight)
+from common import (appconfig, chat, chat_history, chat_question, derive, notify, undelivered,
+                    users, weekly_recap, weight)
 from common.dates import days_before, today
 from common.log import get_logger
-from common.rules import LOOKBACK_DAYS
 from common.store import Store
 
 logger = get_logger(__name__)
@@ -57,8 +55,7 @@ class NudgeEnv:
 
 
 def handler(event, context):
-    jobs = {"last_call": _last_call, "rules": _rules_job,
-            "weekly": _weekly, "weigh_in": _weigh_in}
+    jobs = {"last_call": _last_call, "weekly": _weekly, "weigh_in": _weigh_in}
     env = _build_env(_notifiable_pool)
     logger.info("job=%s starting users=%d", event["job"], len(env.users))
     jobs[event["job"]](env)
@@ -170,23 +167,6 @@ def _last_call(env):
             _send(env, user, OPEN_DAY_SUBJECT, OPEN_DAY_TEXT)
         else:
             _send(env, user, REMINDER_SUBJECT, REMINDER_TEXT)
-
-
-def _rules_job(env):
-    day = today()
-    for user in env.users:
-        history = env.store.get_days_range(user.sub, days_before(day, LOOKBACK_DAYS), day)
-        if not history:
-            # A user who never submitted in the window has nothing to evaluate;
-            # the reminder job owns that situation.
-            continue
-        as_of = max(history)
-        state = env.store.get_nudge_state(user.sub)
-        violations = rules.due_alerts(env.questionnaire, history, as_of, state)
-        # An alert counts as raised only once delivered; a failed send leaves it pending so the
-        # next nightly run retries instead of deduplicating it away.
-        if violations and _send(env, user, notify.ALERT_SUBJECT, notify.violation_text(violations)):
-            env.store.put_nudge_state(user.sub, rules.mark_alerted(state, violations, as_of))
 
 
 def _weekly(env):

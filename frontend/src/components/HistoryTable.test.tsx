@@ -11,7 +11,7 @@ const days = [
 // Every date used below falls inside the default 7-day window ending on this day, so only the
 // range tests have to think about the window.
 const defaults = {
-  today: "2026-08-21",
+  today: "2026-08-21", treatDay: { weekday: "FRI" },
   deletableDates: new Set<string>(), viewedDate: null, onDelete: () => {}, onView: () => {},
 };
 // A row offers deletion only where both conditions hold: the date is still deletable and its day
@@ -234,5 +234,34 @@ describe("HistoryTable", () => {
     const low = screen.getByRole("button", { name: "הצגת היומן של 2026-08-15" });
     expect(low).not.toHaveClass("heavy-day");
     expect(low).not.toHaveClass("violation");
+  });
+
+  it("judges the treat day like any other, softening its heavy-day mark", () => {
+    // 2026-08-21 is the Friday the treat day is set to; the 20th is an ordinary Thursday.
+    render(<HistoryTable questionnaire={trackerQuestionnaire}
+      days={[{ date: "2026-08-21", answers: { carbs: 8, drinking: 3 } },
+             { date: "2026-08-20", answers: { carbs: 8, drinking: 3 } }]} {...defaults} />);
+    const treat = screen.getByRole("button", { name: "הצגת היומן של 2026-08-21" });
+    expect(treat).toHaveClass("heavy-day");
+    expect(treat).toHaveClass("treat-day");
+    const ordinary = screen.getByRole("button", { name: "הצגת היומן של 2026-08-20" });
+    expect(ordinary).toHaveClass("heavy-day");
+    expect(ordinary).not.toHaveClass("treat-day");
+  });
+
+  it("softens a treat-day answer's violation mark without dropping it", () => {
+    render(<HistoryTable questionnaire={fixtureQuestionnaire}
+      days={[{ date: "2026-08-21", answers: { drinking: 2 } }]} {...defaults} />);
+    const cell = screen.getByText("פחות מ-2.5 ליטר !!");
+    expect(cell).toHaveClass("violation");
+    expect(cell).toHaveClass("treat-day");
+  });
+
+  it("leaves a treat day inside every bound unmarked", () => {
+    render(<HistoryTable questionnaire={trackerQuestionnaire}
+      days={[{ date: "2026-08-21", answers: { carbs: 5, drinking: 3 } }]} {...defaults} />);
+    const cell = screen.getByRole("button", { name: "הצגת היומן של 2026-08-21" });
+    expect(cell).not.toHaveClass("heavy-day");
+    expect(cell).not.toHaveClass("treat-day");
   });
 });

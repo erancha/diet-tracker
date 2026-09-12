@@ -53,8 +53,8 @@ export interface Question {
   // names. The trend chart plots the part of each day score they account for beside the score.
   excluded_grade?: number;
   excluded_additions?: string[];
-  // Display floor: history answers below it redden on their own, day by day — unlike a rule's
-  // bound, which alarms only after its consecutive-days streak.
+  // Display floor: history answers below it redden as a shortfall, day by day, without the
+  // background a rule crossing earns.
   warn_below?: number;
   // The day value the plan treats as routine: a history cell holding any other value is bolded,
   // so deviations to either side stand out down the column while routine days recede.
@@ -79,8 +79,6 @@ export interface Rule {
   at_least?: number;
   above?: number;
   below?: number;
-  consecutive_days: number;
-  message: string;
 }
 
 export interface Questionnaire {
@@ -241,8 +239,8 @@ export interface HistoryResponse {
   days: Day[];
   today: DayPayload;
   yesterday: DayPayload;
-  // Whether the account has opted out of the reminders, alerts and digests it would otherwise be
-  // sent. The app itself is unaffected — a muted account still sees its own violations here.
+  // Whether the account has opted out of the reminders and recaps it would otherwise be sent.
+  // The app itself is unaffected — a muted account still sees its own red marks here.
   muted: boolean;
   // Newest first. Rides along with muted because both feed the header alone.
   undelivered: UndeliveredMessage[];
@@ -296,13 +294,8 @@ export interface NewMeal {
   second_source: CarbSource | null;
 }
 
-export interface Violation {
-  message: string;
-}
-
 export interface SubmitResult {
   date: string;
-  violations: Violation[];
 }
 
 export interface WeightEntry {

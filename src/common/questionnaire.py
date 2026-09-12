@@ -1,6 +1,6 @@
 """Parses and validates the questionnaire element of the app config — the single source of truth
-for questions, numeric choice values (meal-point weights for carbs), and threshold alert rules
-shared by the API, the nudge jobs, and the frontend. Reading the file is appconfig's job."""
+for questions, numeric choice values (meal-point weights for carbs), and the threshold rules the
+frontend's red marks and the weekly recap judge days by. Reading the file is appconfig's job."""
 
 from dataclasses import dataclass
 from numbers import Number
@@ -183,8 +183,6 @@ class Rule:
     at_least: float | None
     above: float | None
     below: float | None
-    consecutive_days: int
-    message: str
 
     def violates(self, value) -> bool:
         if self.at_least is not None:
@@ -350,8 +348,7 @@ def parse(raw: dict) -> Questionnaire:
         if len(comparators) != 1:
             raise ValueError(f"rule {r['id']!r} must set exactly one of at_least/above/below")
         rules.append(Rule(id=r["id"], question_id=r["question_id"],
-                          at_least=r.get("at_least"), above=r.get("above"), below=r.get("below"),
-                          consecutive_days=r["consecutive_days"], message=r["message"]))
+                          at_least=r.get("at_least"), above=r.get("above"), below=r.get("below")))
     rules = tuple(rules)
     question_ids = [q.id for q in questions]
     if len(set(question_ids)) != len(question_ids):
@@ -359,8 +356,6 @@ def parse(raw: dict) -> Questionnaire:
     for rule in rules:
         if all(q.id != rule.question_id for q in questions):
             raise ValueError(f"rule {rule.id!r} references unknown question {rule.question_id!r}")
-        if "{days}" not in rule.message:
-            raise ValueError(f"rule {rule.id!r} message must contain {{days}}")
     # A points question's day-scope bound lives on its rule (heavy_meal covers the meal scope),
     # and the frontend trend panel grids its y-axis at multiples of that limit
     # (frontend/src/trend.ts), so an at_least/above rule must exist.

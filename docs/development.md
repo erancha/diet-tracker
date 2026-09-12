@@ -59,5 +59,5 @@ before running any script.
 ## Telegram (optional)
 
 Store a bot token at SSM parameter `/diet-tracker/telegram/bot-token`, plus a per-user chat-id map
-at `/diet-tracker/telegram/chat-map`. While the token parameter is absent, alert delivery is
-email-only.
+at `/diet-tracker/telegram/chat-map`. While the token parameter is absent, the reminders and the
+weekly recap go by email only.

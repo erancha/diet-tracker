@@ -1,40 +1,12 @@
-// Threshold-rule checks, violating-streak evaluation, and numeric-value labeling against the
-// questionnaire config. All functions take the questionnaire explicitly so they stay pure and
-// independently testable.
+// Threshold-rule checks and numeric-value labeling against the questionnaire config. All
+// functions take the questionnaire explicitly so they stay pure and independently testable.
 
-import type { AnsweredDay, AnswerValue, Choice, Question, Questionnaire, Rule } from "./types";
-import { isoDate, parseIsoDate, yesterdayOf } from "./dates";
+import type { AnswerValue, Choice, Question, Questionnaire, Rule } from "./types";
 
 export function violates(rule: Rule, value: number): boolean {
   if (rule.at_least !== undefined) return value >= rule.at_least;
   if (rule.above !== undefined) return value > rule.above;
   return value < rule.below!;
-}
-
-// Formatted messages of the rules whose violating streak is still running — the client-side
-// mirror of the backend's streak walk (src/common/rules.py), reading the same rules the chart's
-// red dots use, so the alarm and the chart always agree. A streak is
-// counted over consecutive calendar days ending at the newest submitted day; a gap day or a day
-// predating the rule's question ends it. A newest day older than yesterday is stale, not a
-// reminder: the streak may have already been broken by the unsubmitted days, so nothing reports.
-export function activeViolations(questionnaire: Questionnaire, days: AnsweredDay[],
-                                 todayStr: string, yesterdayStr: string): string[] {
-  const newest = days[0];
-  if (newest === undefined || (newest.date !== todayStr && newest.date !== yesterdayStr)) return [];
-  const answersByDate = new Map(days.map((d) => [d.date, d.answers]));
-  return questionnaire.rules.flatMap((rule) => {
-    let day = parseIsoDate(newest.date);
-    let streak = 0;
-    for (;;) {
-      const value = answersByDate.get(isoDate(day))?.[rule.question_id];
-      if (value === undefined || !violates(rule, value)) break;
-      streak += 1;
-      day = yesterdayOf(day);
-    }
-    if (streak < rule.consecutive_days) return [];
-    const threshold = rule.at_least ?? rule.above ?? rule.below!;
-    return [rule.message.replaceAll("{days}", String(streak)).replaceAll("{value}", String(threshold))];
-  });
 }
 
 // The rule bounding a question, or undefined where none does and nothing ever marks red.
@@ -53,6 +25,8 @@ export function ruleBoundLabel(questionnaire: Questionnaire, questionId: string)
   return over !== undefined ? `מעל ${over}` : `פחות מ-${rule.below}`;
 }
 
+// Every day is judged alike, the treat day included, mirroring violating_days in
+// src/common/rules.py; a treat-day crossing is softened only in how the surfaces paint it.
 export function isViolating(questionnaire: Questionnaire, questionId: string, value: number): boolean {
   return questionnaire.rules.some((rule) => rule.question_id === questionId && violates(rule, value));
 }
@@ -68,10 +42,9 @@ export function breachesLimit(questionnaire: Questionnaire, questionId: string,
     || (question?.warn_below !== undefined && value < question.warn_below);
 }
 
-// Whether any answer of one submitted day crosses its rule's bound on its own — the same per-day
-// signal the history table paints red. The submit banner reads it so a saved day is declared
-// clean only when nothing crossed a bound; a crossing short of its consecutive-days run is named
-// as such instead of masquerading as a clean day.
+// Whether any answer of one submitted day crosses its rule's bound — the same per-day signal the
+// history table paints red. The submit banner reads it so a saved day is declared clean only
+// when nothing crossed a bound.
 export function crossesThreshold(questionnaire: Questionnaire,
                                  answers: Record<string, AnswerValue>): boolean {
   return Object.entries(answers).some(([questionId, value]) =>

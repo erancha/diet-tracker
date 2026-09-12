@@ -2,7 +2,7 @@
 weigh-in reminder says, and how measurements reach an answering LLM.
 
 Weight is measured, not scored. It enters no day derivation, no questionnaire floor, and no
-threshold alert, so this module holds no evaluation — only the check against the configured bounds,
+weekly finding, so this module holds no evaluation — only the check against the configured bounds,
 the text the reminder carries, and the labeled block both LLM-facing senders share."""
 
 from common.notify import APP_NAME

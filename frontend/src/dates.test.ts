@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { beforeDailyCutoff, dayLabel, daysBefore, daysSince, ddmmLabel, instantLabel, mealOverdue, mealTooSoon, expandWeightSection, isWeighInDay, isoDate, lastDays, parseIsoDate, weekdayDdmmLabel, weekdayLabel, weekdayLetter } from "./dates";
+import { fallsOn, beforeDailyCutoff, dayLabel, daysBefore, daysSince, ddmmLabel, instantLabel, mealOverdue, mealTooSoon, expandWeightSection, isWeighInDay, isoDate, lastDays, parseIsoDate, weekdayDdmmLabel, weekdayLabel, weekdayLetter } from "./dates";
 
 describe("isoDate", () => {
   it("formats a local date as YYYY-MM-DD with zero padding", () => {
@@ -218,5 +218,13 @@ describe("mealTooSoon", () => {
 
   it("no longer too soon once the gap is reached", () => {
     expect(mealTooSoon(eleven, 3.5, [mealAt(7, 30)])).toBe(false);
+  });
+});
+
+describe("fallsOn", () => {
+  it("tells whether a date falls on the configured weekday token", () => {
+    // 2026-08-21 is a Friday.
+    expect(fallsOn("2026-08-21", "FRI")).toBe(true);
+    expect(fallsOn("2026-08-20", "FRI")).toBe(false);
   });
 });

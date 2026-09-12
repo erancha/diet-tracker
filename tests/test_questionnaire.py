@@ -14,8 +14,7 @@ def minimal(**overrides):
             "choices": [{"id": "no_carbs", "label": "none", "value": 0},
                         {"id": "grade3", "label": "g3", "value": 3}],
         }],
-        "rules": [{"id": "heavy", "question_id": "carbs", "at_least": 8,
-                   "consecutive_days": 2, "message": "heavy {days}"}],
+        "rules": [{"id": "heavy", "question_id": "carbs", "at_least": 8}],
     }
     raw.update(overrides)
     return raw
@@ -163,8 +162,7 @@ def test_excluded_missing_from_config_raises():
 def test_points_question_without_an_over_rule_is_rejected():
     with pytest.raises(ValueError, match="at_least or above"):
         parse(minimal(rules=[]))
-    raw = minimal(rules=[{"id": "low", "question_id": "carbs", "below": 2,
-                          "consecutive_days": 1, "message": "low {days}"}])
+    raw = minimal(rules=[{"id": "low", "question_id": "carbs", "below": 2}])
     with pytest.raises(ValueError, match="at_least or above"):
         parse(raw)
 
@@ -178,31 +176,26 @@ def test_rule_violates_compares_numerically():
 
 def test_below_rule_violates_under_threshold():
     raw = minimal()
-    raw["rules"].append({"id": "low", "question_id": "carbs", "below": 2,
-                         "consecutive_days": 1, "message": "low {days}"})
+    raw["rules"].append({"id": "low", "question_id": "carbs", "below": 2})
     rule = parse(raw).rules[1]
     assert rule.violates(1.9) and not rule.violates(2)
 
 
 def test_above_rule_violates_strictly_over_threshold():
-    raw = minimal(rules=[{"id": "long", "question_id": "carbs", "above": 12,
-                          "consecutive_days": 1, "message": "long {days}"}])
+    raw = minimal(rules=[{"id": "long", "question_id": "carbs", "above": 12}])
     rule = parse(raw).rules[0]
     assert rule.violates(12.5) and not rule.violates(12)
     assert rule.threshold == 12
 
 
 def test_rule_must_have_exactly_one_comparator():
-    raw = minimal(rules=[{"id": "bad", "question_id": "carbs", "at_least": 8, "below": 2,
-                          "consecutive_days": 1, "message": "x {days}"}])
+    raw = minimal(rules=[{"id": "bad", "question_id": "carbs", "at_least": 8, "below": 2}])
     with pytest.raises(ValueError, match="exactly one"):
         parse(raw)
-    raw = minimal(rules=[{"id": "bad", "question_id": "carbs", "at_least": 8, "above": 12,
-                          "consecutive_days": 1, "message": "x {days}"}])
+    raw = minimal(rules=[{"id": "bad", "question_id": "carbs", "at_least": 8, "above": 12}])
     with pytest.raises(ValueError, match="exactly one"):
         parse(raw)
-    raw = minimal(rules=[{"id": "bad", "question_id": "carbs",
-                          "consecutive_days": 1, "message": "x {days}"}])
+    raw = minimal(rules=[{"id": "bad", "question_id": "carbs"}])
     with pytest.raises(ValueError, match="exactly one"):
         parse(raw)
 
@@ -294,8 +287,8 @@ def test_value_label_maps_single_choices_but_keeps_points_scores_numeric():
 def test_repo_config_carries_the_grade_ladders_example_foods():
     q = appconfig.load(APP_CONFIG).questionnaire
     examples = {choice.label: choice.examples for choice in q.question("carbs").choices}
-    assert examples["דרגה 4"] == "אורז לבן, בטטה, סלק, תירס"
-    assert examples["ללא מקור פחמימה"] == "ירקות, חלבון, שומן"
+    assert examples["דרגה 4"] == "אורז לבן | בטטה | סלק | תירס"
+    assert examples["ללא מקור פחמימה"] == "ירקות | חלבון | שומן"
     # Only the grade ladder names foods; a daily question's choices are quantities of their own
     # unit, and nothing exemplifies them.
     assert all(choice.examples is None for choice in q.question("drinking").choices)

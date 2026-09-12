@@ -2,7 +2,7 @@
 // point, and the treat day's column.
 
 import { carbsScales, excludedPoints } from "./derive";
-import { parseIsoDate, weekdayIndexOf } from "./dates";
+import { fallsOn } from "./dates";
 import type { Day, DayPayload, Question, Questionnaire } from "./types";
 import { questionRule } from "./violations";
 
@@ -29,8 +29,7 @@ export function liveTrendDay(questionnaire: Questionnaire, today: DayPayload, da
 // lets the two treat days be compared. A span that holds none is a caller fault, not a day the
 // chart may quietly leave unframed.
 export function treatDayColumns(dayStrs: string[], weekday: string): number[] {
-  const target = weekdayIndexOf(weekday);
-  const columns = dayStrs.flatMap((d, i) => (parseIsoDate(d).getDay() === target ? [i] : []));
+  const columns = dayStrs.flatMap((d, i) => (fallsOn(d, weekday) ? [i] : []));
   if (columns.length === 0) throw new Error(`no ${weekday} among the charted days ${dayStrs.join(", ")}`);
   return columns;
 }

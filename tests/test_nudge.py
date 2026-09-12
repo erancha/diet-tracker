@@ -8,7 +8,7 @@ import pytest
 
 from conftest import APP_CONFIG, meal
 
-from common import appconfig, chat_history, undelivered
+from common import appconfig, chat_history, rules, undelivered
 from common.dates import days_before, today
 from common.store import Store
 from common.users import User
@@ -96,41 +96,6 @@ def test_last_call_sends_only_email_when_telegram_disabled(env):
     e = dataclasses.replace(e, telegram=None)
     nudge._last_call(e)
     assert [kind for kind, _, _ in sent] == ["mail", "mail"]
-
-
-def test_rules_job_alerts_on_streak_and_dedups(env):
-    e, sent = env
-    for offset in (2, 1, 0):
-        e.store.put_day("u1", days_before(today(), offset), VIOLATING, 1, "t")
-    nudge._rules_job(e)
-    assert {target for _, target, _ in sent} == {"111", "a@gmail.com"}
-    sent.clear()
-    nudge._rules_job(e)
-    assert sent == []
-
-
-def test_rules_job_sends_the_shared_alert_subject_and_body(env, monkeypatch):
-    e, _ = env
-    mails = []
-    monkeypatch.setattr(nudge.notify, "send_email",
-                        lambda ses, sender, to, subject, body, app_url: mails.append((subject, body)))
-    for offset in (2, 1, 0):
-        e.store.put_day("u1", days_before(today(), offset), VIOLATING, 1, "t")
-
-    nudge._rules_job(e)
-
-    subject, body = mails[0]
-    assert subject == nudge.notify.ALERT_SUBJECT
-    assert body.startswith("התראות תזונה:\n•")
-
-
-def test_rules_job_evaluates_as_of_latest_submitted_day(env):
-    e, sent = env
-    # Streak completed yesterday; today unsubmitted. The nightly job must still catch it.
-    for offset in (3, 2, 1):
-        e.store.put_day("u1", days_before(today(), offset), VIOLATING, 1, "t")
-    nudge._rules_job(e)
-    assert any("חלון אכילה" in text for _, _, text in sent)
 
 
 def test_weekly_queues_one_recap_per_user_and_sends_nothing_itself(env):
@@ -440,24 +405,6 @@ def test_a_transient_failure_keeps_no_message(env, monkeypatch):
     assert undelivered.messages(e.undelivered, "u1") == []
 
 
-def test_rules_job_keeps_the_alert_pending_when_delivery_fails(env, monkeypatch):
-    e, sent = env
-    for offset in (2, 1, 0):
-        e.store.put_day("u1", days_before(today(), offset), VIOLATING, 1, "t")
-
-    def failing_send(ses, sender, to, subject, body, app_url):
-        raise RuntimeError("connection reset")
-
-    monkeypatch.setattr(nudge.notify, "send_email", failing_send)
-    nudge._rules_job(e)
-    sent.clear()
-
-    monkeypatch.setattr(nudge.notify, "send_email",
-                        lambda ses, sender, to, subject, body, app_url: sent.append(("mail", to, body)))
-    nudge._rules_job(e)
-    assert [target for kind, target, _ in sent if kind == "mail"] == ["a@gmail.com"]
-
-
 def test_muted_users_are_dropped_from_every_jobs_audience(env):
     e, _ = env
     e.store.set_muted("u1", True)
@@ -469,10 +416,11 @@ def test_weekly_names_the_days_that_cost_flours_and_sugars(env):
     for back in (1, 2, 3):
         e.store.put_day("u1", days_before(today(), back), CLEAN, 1, "t")
     # Grade 7 is flour and sugar, which the program's six non-treat days leave out; grade 2 is not.
-    e.store.add_meal("u1", days_before(today(), 1),
-                     meal(f"{days_before(today(), 1)}T12:00:00+03:00", "carb_grade_7"))
-    e.store.add_meal("u1", days_before(today(), 2),
-                     meal(f"{days_before(today(), 2)}T12:00:00+03:00", "carb_grade_2"))
+    # Whichever weekday the test runs on, the flour lands on a day that is not the treat day.
+    flour_day, plain_day = [day for day in (days_before(today(), back) for back in (1, 2, 3))
+                            if not rules.falls_on(day, e.treat_weekday)][:2]
+    e.store.add_meal("u1", flour_day, meal(f"{flour_day}T12:00:00+03:00", "carb_grade_7"))
+    e.store.add_meal("u1", plain_day, meal(f"{plain_day}T12:00:00+03:00", "carb_grade_2"))
 
     _run_weekly(e)
 
