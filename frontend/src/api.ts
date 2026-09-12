@@ -3,8 +3,9 @@
 
 import { isUnexpired, reauthenticate, type Tokens } from "./auth";
 import type { AppConfig } from "./config";
-import type { AdminActivity, AnswerValue, ChatAnswer, ChatTranscript, ChatTurn, DayPayload,
-  HistoryResponse, LoadedHistory, NewMeal, NotificationSettings, SubmitResult, WeightPayload } from "./types";
+import type { AdminActivity, AnswerValue, ChatAnswer, ChatCount, ChatTranscript, ChatTurn,
+  ChatVisibility, DayPayload, HistoryResponse, LoadedHistory, NewMeal, NotificationSettings,
+  PublicChats, SubmitResult, WeightPayload } from "./types";
 
 /** Backend request rejected; the message keeps the method, path, status, and body for diagnosis. */
 export class ApiError extends Error {
@@ -49,6 +50,10 @@ export interface Api {
   getChatTranscript(): Promise<ChatTranscript>;
   deleteChatTurn(at: string): Promise<{ at: string }>;
   summarizeChatTurn(at: string): Promise<ChatTurn>;
+  setChatVisibility(at: string, visibility: ChatVisibility): Promise<{ at: string; visibility: ChatVisibility }>;
+  clearChatVisibility(at: string): Promise<{ at: string; visibility: null }>;
+  getPublicChats(): Promise<PublicChats>;
+  getChatCount(): Promise<ChatCount>;
   sourceUrl(fileName: string): Promise<{ url: string }>;
 }
 
@@ -126,6 +131,13 @@ export function createApi(
     // Returns the chat as the summary leaves it: the conversation's original question, the
     // digest as its answer, and the same timestamp it was already stored under.
     summarizeChatTurn: (at) => request("POST", `/chat/${encodeURIComponent(at)}/summary`),
+    // The visibility is a sub-resource of the chat: PUT states its whole new value and DELETE
+    // returns the chat to private.
+    setChatVisibility: (at, visibility) =>
+      request("PUT", `/chat/${encodeURIComponent(at)}/visibility`, { visibility }),
+    clearChatVisibility: (at) => request("DELETE", `/chat/${encodeURIComponent(at)}/visibility`),
+    getPublicChats: () => request("GET", "/chat/public"),
+    getChatCount: () => request("GET", "/chat/count"),
     // A link to open one cited document, minted for this press and good for minutes only, which
     // is why it is asked for at press time rather than kept with the chat.
     sourceUrl: (fileName) => request("POST", "/chat/source-url", { fileName }),

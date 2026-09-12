@@ -367,7 +367,7 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, c
                               title={<>שאלות על <span className="app-name">סבא חטוב</span> 👴</>}
                               collapsed={chatCollapsed}
                               onToggle={() => setChatCollapsed((c) => !c)}>
-            <Chat api={api} sampleQuestions={configQuery.data.chat.sample_questions}
+            <Chat email={email} api={api} sampleQuestions={configQuery.data.chat.sample_questions}
                   defaultTranscriptFolded={openedCondensed}
                   askCommand={askCommand} onAskCommandTaken={() => setAskCommand(null)} />
           </CollapsibleSection>

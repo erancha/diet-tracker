@@ -159,7 +159,10 @@ Resources:
         Enabled: true
 
   # One item per answered chat turn, keyed by user sub with the answer's UTC timestamp as the
-  # sort key. No TTL: the transcript is deliberately kept indefinitely.
+  # sort key. No TTL: the transcript is deliberately kept indefinitely. A shared chat carries a
+  # visibility attribute ("public" so far) that the index is keyed by over the same timestamp,
+  # so the chats under one visibility are one query across every user; private chats carry
+  # none and never enter it.
   ChatHistoryTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -174,6 +177,17 @@ Resources:
           AttributeType: S
         - AttributeName: sk
           AttributeType: S
+        - AttributeName: visibility
+          AttributeType: S
+      GlobalSecondaryIndexes:
+        - IndexName: ChatsByVisibility
+          KeySchema:
+            - AttributeName: visibility
+              KeyType: HASH
+            - AttributeName: sk
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
 
   # One item per message SES refused to deliver, keyed by the recipient's sub with the UTC
   # timestamp of the refusal as the sort key. No TTL: an item lives until its recipient dismisses
@@ -389,11 +403,38 @@ Resources:
             ApiId: !Ref Api
             Method: POST
             Path: /chat/source-url
+        ChatShare:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref Api
+            Method: PUT
+            Path: /chat/{at}/visibility
+        ChatUnshare:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref Api
+            Method: DELETE
+            Path: /chat/{at}/visibility
+        ChatPublic:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref Api
+            Method: GET
+            Path: /chat/public
+        ChatCount:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref Api
+            Method: GET
+            Path: /chat/count
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref ChatQuotaTable
+        # The grant covers the table's indexes, which the public listing queries.
         - DynamoDBCrudPolicy:
             TableName: !Ref ChatHistoryTable
+        # The public listing names each asker by the address the pool holds.
+        - !Ref ListUsersPolicy
         # Read-only: the chat only attaches the asker's tracked data to the upstream question.
         - DynamoDBReadPolicy:
             TableName: !Ref DaysTable

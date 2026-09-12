@@ -3,11 +3,13 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError, type Api } from "../api";
 import { STORAGE_KEY as FILTER_KEY } from "../chatFilter";
+import { storageKey as publicCountKey } from "../publicCount";
 import { instantLabel } from "../dates";
 import type { ChatTurn } from "../types";
 import { Chat } from "./Chat";
 
-type ChatApi = Pick<Api, "ask" | "getChatTranscript" | "deleteChatTurn" | "summarizeChatTurn" | "sourceUrl">;
+type ChatApi = Pick<Api, "ask" | "getChatTranscript" | "deleteChatTurn" | "summarizeChatTurn" | "sourceUrl"
+  | "setChatVisibility" | "clearChatVisibility" | "getPublicChats" | "getChatCount">;
 
 function api(overrides: Partial<ChatApi> = {}): ChatApi {
   return {
@@ -16,13 +18,22 @@ function api(overrides: Partial<ChatApi> = {}): ChatApi {
     deleteChatTurn: vi.fn(),
     summarizeChatTurn: vi.fn(),
     sourceUrl: vi.fn(),
+    setChatVisibility: vi.fn(),
+    clearChatVisibility: vi.fn(),
+    getPublicChats: vi.fn().mockResolvedValue({ chats: [] }),
+    getChatCount: vi.fn().mockResolvedValue({ own_total: 0, own_app: 0, public_total: 0 }),
     ...overrides,
   };
 }
 
-function turn(index: number, app = false): ChatTurn {
+// The count the server reports, which the toggles show before either list is loaded.
+function counted(ownTotal: number, ownApp = 0, publicTotal = 0) {
+  return vi.fn().mockResolvedValue({ own_total: ownTotal, own_app: ownApp, public_total: publicTotal });
+}
+
+function turn(index: number, app = false, visibility: ChatTurn["visibility"] = null): ChatTurn {
   return { question: `שאלה ${index}`, answer: `תשובה ${index}`, sources: [], summarized: false,
-           app, at: `2026-09-01T10:00:${String(index).padStart(2, "0")}` };
+           app, visibility, at: `2026-09-01T10:00:${String(index).padStart(2, "0")}` };
 }
 
 // Newest first, mirroring the order the server returns.
@@ -40,14 +51,209 @@ function mixedTurns(): ChatTurn[] {
   return [turn(3), turn(2, true), turn(1)];
 }
 
+// What other users shared, newest first, as the server lists it.
+const OTHERS = { chats: [
+  { email: "other@gmail.com", question: "מה מותר בערב?", answer: "ירקות וחלבון",
+    sources: [{ fileName: "מדריך.pdf", score: 0.5 }], summarized: false, app: false,
+    at: "2026-09-01T10:00:02+00:00" },
+  { email: "third@gmail.com", question: "כמה מים?", answer: "שלושה ליטר", sources: [],
+    summarized: true, app: false, at: "2026-09-01T10:00:01+00:00" },
+] };
+
+// An api whose others' listing holds the given chats, counted for the toggle.
+function withOthers(chats: typeof OTHERS.chats, overrides: Partial<ChatApi> = {}): ChatApi {
+  return api({ getPublicChats: vi.fn().mockResolvedValue({ chats }),
+               getChatCount: counted(0, 0, chats.length), ...overrides });
+}
+
 describe("Chat", () => {
   afterEach(() => window.localStorage.clear());
+
+  it("reads the counts on mount and loads the transcript only when it is unfolded", async () => {
+    const chatApi = api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(2) }),
+                          getChatCount: counted(2) });
+    render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} defaultTranscriptFolded />);
+
+    const toggle = await screen.findByRole("button", { name: "2 צ'אטים קודמים שלי" });
+    expect(chatApi.getChatTranscript).not.toHaveBeenCalled();
+
+    await userEvent.click(toggle);
+
+    expect(await screen.findByText("שאלה 2")).toBeInTheDocument();
+    expect(chatApi.getChatTranscript).toHaveBeenCalledTimes(1);
+  });
+
+  it("filters by the server's figures while the transcript is still unloaded", async () => {
+    const chatApi = api({ getChatCount: counted(3, 1) });
+    render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} defaultTranscriptFolded />);
+    await screen.findByRole("button", { name: "3 צ'אטים קודמים שלי" });
+
+    await userEvent.selectOptions(screen.getByRole("combobox", { name: "סינון הצ'אטים" }), "app");
+    expect(screen.getByRole("button", { name: "צ'אט קודם אחד שלי" })).toBeInTheDocument();
+    expect(screen.getByText("2 מסוננים")).toBeInTheDocument();
+
+    await userEvent.selectOptions(screen.getByRole("combobox", { name: "סינון הצ'אטים" }), "mine");
+    expect(screen.getByRole("button", { name: "2 צ'אטים קודמים שלי" })).toBeInTheDocument();
+    expect(chatApi.getChatTranscript).not.toHaveBeenCalled();
+  });
+
+  it("lands a question sent before the transcript loaded atop the transcript it then loads", async () => {
+    const chatApi = api({
+      getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(1) }),
+      getChatCount: counted(1),
+      ask: vi.fn().mockResolvedValue({ answer: "תשובה חדשה", sources: [], at: "2026-09-05T10:00:00" }),
+    });
+    render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} defaultTranscriptFolded />);
+    await screen.findByRole("button", { name: "צ'אט קודם אחד שלי" });
+
+    await ask("שאלה חדשה");
+
+    expect(await screen.findByText("תשובה חדשה")).toBeInTheDocument();
+    expect(screen.getByText("שאלה 1")).toBeInTheDocument();
+    expect(chatApi.getChatTranscript).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("button", { name: "2 צ'אטים קודמים שלי" })).toBeInTheDocument();
+  });
+
+  it("highlights the others' count when it grew since the last visit, and remembers the new one", async () => {
+    window.localStorage.setItem(publicCountKey("a@gmail.com"), "1");
+    render(<Chat email="a@gmail.com" api={withOthers(OTHERS.chats)} sampleQuestions={[]} />);
+
+    const toggle = await screen.findByRole("button", { name: "2 צ'אטים של משתמשים אחרים" });
+    expect(toggle.querySelector(".count-new")).toHaveTextContent("2");
+    expect(window.localStorage.getItem(publicCountKey("a@gmail.com"))).toBe("2");
+
+    await userEvent.click(toggle);
+    expect(toggle.querySelector(".count-new")).toBeNull();
+  });
+
+  it("keeps another account's last visit apart", async () => {
+    window.localStorage.setItem(publicCountKey("b@gmail.com"), "1");
+    render(<Chat email="a@gmail.com" api={withOthers(OTHERS.chats)} sampleQuestions={[]} />);
+
+    const toggle = await screen.findByRole("button", { name: "2 צ'אטים של משתמשים אחרים" });
+    expect(toggle.querySelector(".count-new")).toBeNull();
+    expect(window.localStorage.getItem(publicCountKey("b@gmail.com"))).toBe("1");
+  });
+
+  it("leaves the others' count plain when it did not grow", async () => {
+    window.localStorage.setItem(publicCountKey("a@gmail.com"), "2");
+    render(<Chat email="a@gmail.com" api={withOthers(OTHERS.chats)} sampleQuestions={[]} />);
+
+    const toggle = await screen.findByRole("button", { name: "2 צ'אטים של משתמשים אחרים" });
+    expect(toggle.querySelector(".count-new")).toBeNull();
+  });
+
+  it("counts others' chats on their toggle before they are loaded", async () => {
+    const chatApi = withOthers(OTHERS.chats);
+    render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} />);
+
+    expect(await screen.findByRole("button", { name: "2 צ'אטים של משתמשים אחרים" })).toBeInTheDocument();
+    expect(chatApi.getPublicChats).not.toHaveBeenCalled();
+  });
+
+  it("offers others' shared chats beside the own-transcript toggle, asking only once unfolded", async () => {
+    const chatApi = withOthers(OTHERS.chats,
+                               { getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(1) }) });
+    render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} />);
+    await screen.findByRole("button", { name: "צ'אט קודם אחד שלי" });
+    expect(chatApi.getPublicChats).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByRole("button", { name: "2 צ'אטים של משתמשים אחרים" }));
+
+    expect(await screen.findByText("מה מותר בערב?")).toBeInTheDocument();
+    expect(screen.getByText("כמה מים?")).toBeInTheDocument();
+    expect(chatApi.getPublicChats).toHaveBeenCalledTimes(1);
+  });
+
+  it("lists the own transcript above the others'-chats toggle, and their chats below it", async () => {
+    render(<Chat email="a@gmail.com" api={withOthers(OTHERS.chats,
+                                 { getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(1) }) })}
+                 sampleQuestions={[]} />);
+    const own = await screen.findByRole("button", { name: "שאלה 1" });
+    const toggle = screen.getByRole("button", { name: "2 צ'אטים של משתמשים אחרים" });
+    expect(own.compareDocumentPosition(toggle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    await userEvent.click(toggle);
+
+    const theirs = await screen.findByRole("button", { name: "מה מותר בערב?" });
+    expect(toggle.compareDocumentPosition(theirs) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("offers others' shared chats even before the user has a chat of their own", async () => {
+    render(<Chat email="a@gmail.com" api={withOthers(OTHERS.chats)} sampleQuestions={[]} />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "2 צ'אטים של משתמשים אחרים" }));
+
+    expect(await screen.findByText("מה מותר בערב?")).toBeInTheDocument();
+  });
+
+  it("lists each shared chat under its asker and date, the answer behind the question", async () => {
+    render(<Chat email="a@gmail.com" api={withOthers(OTHERS.chats)} sampleQuestions={[]} />);
+    await userEvent.click(await screen.findByRole("button", { name: "2 צ'אטים של משתמשים אחרים" }));
+    const question = await screen.findByRole("button", { name: "מה מותר בערב?" });
+    const row = question.closest("li")!;
+
+    expect(row.textContent).toContain("other@gmail.com");
+    expect(row.textContent).toContain(instantLabel("2026-09-01T10:00:02+00:00"));
+    expect(screen.queryByText("ירקות וחלבון")).not.toBeInTheDocument();
+
+    await userEvent.click(question);
+
+    expect(screen.getByText("ירקות וחלבון")).toBeInTheDocument();
+  });
+
+  it("offers no way to change another user's chat", async () => {
+    render(<Chat email="a@gmail.com" api={withOthers(OTHERS.chats)} sampleQuestions={[]} />);
+    await userEvent.click(await screen.findByRole("button", { name: "2 צ'אטים של משתמשים אחרים" }));
+    await userEvent.click(await screen.findByRole("button", { name: "מה מותר בערב?" }));
+
+    for (const name of [/מחיקת/, /סיכום/, /שאלת המשך/, /שיתוף/]) {
+      expect(screen.queryByRole("button", { name })).not.toBeInTheDocument();
+    }
+  });
+
+  it("bolds the chain labels of a shared chat that was followed up, as it does in the own transcript", async () => {
+    const chained = { ...OTHERS.chats[0],
+      question: "השאלה המקורית: מה מותר בערב?\nהתשובה: ירקות\nשאלת המשך: וגם פרי?" };
+    render(<Chat email="a@gmail.com" api={withOthers([chained])} sampleQuestions={[]} />);
+    await userEvent.click(await screen.findByRole("button", { name: "צ'אט אחד של משתמשים אחרים" }));
+    await screen.findByText(/וגם פרי/);
+
+    const labels = [...document.querySelectorAll(".chat-question strong")].map((el) => el.textContent);
+    expect(labels).toEqual(["השאלה המקורית:", "התשובה:", "שאלת המשך:"]);
+  });
+
+  it("offers a shared chat's sources and opens a cited PDF, as the own transcript does", async () => {
+    const tab = fakeTab();
+    const chatApi = withOthers(OTHERS.chats,
+                               { sourceUrl: vi.fn().mockResolvedValue({ url: "https://bucket.s3/doc.pdf?sig" }) });
+    render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} />);
+    await userEvent.click(await screen.findByRole("button", { name: "2 צ'אטים של משתמשים אחרים" }));
+    await userEvent.click(await screen.findByRole("button", { name: "מה מותר בערב?" }));
+    await userEvent.click(screen.getByRole("button", { name: "מקורות והתאמה" }));
+
+    const rows = within(screen.getByRole("table")).getAllByRole("row");
+    expect(within(rows[1]).getAllByRole("cell").map((cell) => cell.textContent))
+      .toEqual(["מדריך.pdf", "50%"]);
+
+    await userEvent.click(within(rows[1]).getByRole("button", { name: "מדריך.pdf" }));
+    expect(chatApi.sourceUrl).toHaveBeenCalledWith("מדריך.pdf");
+    await vi.waitFor(() => expect(tab.location.href).toBe("https://bucket.s3/doc.pdf?sig"));
+  });
+
+  it("offers nothing to unfold while no one has shared a chat", async () => {
+    const chatApi = api();
+    render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} />);
+
+    expect(await screen.findByRole("button", { name: "אין צ'אטים של משתמשים אחרים" })).toBeDisabled();
+    expect(chatApi.getPublicChats).not.toHaveBeenCalled();
+  });
 
   it("sends a question commanded from outside the composer and hands the command back", async () => {
     const client = api({ ask: vi.fn().mockResolvedValue({ answer: "תשובה", sources: [],
                                                             at: "2026-09-01T10:00:00" }) });
     const onAskCommandTaken = vi.fn();
-    const { rerender } = render(<Chat api={client} sampleQuestions={[]} askCommand="שאלה מבחוץ"
+    const { rerender } = render(<Chat email="a@gmail.com" api={client} sampleQuestions={[]} askCommand="שאלה מבחוץ"
                                       onAskCommandTaken={onAskCommandTaken} />);
 
     expect(await screen.findByText("תשובה")).toBeInTheDocument();
@@ -55,7 +261,7 @@ describe("Chat", () => {
     expect(onAskCommandTaken).toHaveBeenCalledTimes(1);
 
     // The parent clears the command once taken, so a remount does not ask again.
-    rerender(<Chat api={client} sampleQuestions={[]} askCommand={null}
+    rerender(<Chat email="a@gmail.com" api={client} sampleQuestions={[]} askCommand={null}
                    onAskCommandTaken={onAskCommandTaken} />);
     expect(client.ask).toHaveBeenCalledTimes(1);
   });
@@ -65,7 +271,7 @@ describe("Chat", () => {
       answer: "מותר עד 4 נקודות פחמימה",
       sources: [{ fileName: "מדריך-פחמימות.pdf", score: 0.83 }],
     }) });
-    render(<Chat api={chatApi} sampleQuestions={[]} />);
+    render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} />);
 
     await ask("כמה פחמימות מותר ביום?");
 
@@ -77,7 +283,7 @@ describe("Chat", () => {
   });
 
   it("opens on the stored transcript, newest first", async () => {
-    render(<Chat api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(2) }) })}
+    render(<Chat email="a@gmail.com" api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(2) }) })}
                  sampleQuestions={[]} />);
 
     expect(await screen.findByText("שאלה 2")).toBeInTheDocument();
@@ -90,7 +296,7 @@ describe("Chat", () => {
       getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(1) }),
       ask: vi.fn().mockResolvedValue({ answer: "תשובה חדשה", sources: [] }),
     });
-    render(<Chat api={chatApi} sampleQuestions={[]} />);
+    render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} />);
     await screen.findByText("שאלה 1");
 
     await ask("שאלה חדשה");
@@ -101,7 +307,7 @@ describe("Chat", () => {
   });
 
   it("shows when each stored question was asked", async () => {
-    render(<Chat api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(2) }) })}
+    render(<Chat email="a@gmail.com" api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(2) }) })}
                  sampleQuestions={[]} />);
     await screen.findByText("שאלה 2");
 
@@ -110,7 +316,7 @@ describe("Chat", () => {
   });
 
   it("opens with every stored answer collapsed behind its question", async () => {
-    render(<Chat api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(2) }) })}
+    render(<Chat email="a@gmail.com" api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(2) }) })}
                  sampleQuestions={[]} />);
     await screen.findByText("שאלה 2");
 
@@ -119,7 +325,7 @@ describe("Chat", () => {
   });
 
   it("renders the whole transcript with no turn-count picker", async () => {
-    render(<Chat api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(25) }) })}
+    render(<Chat email="a@gmail.com" api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(25) }) })}
                  sampleQuestions={[]} />);
     await screen.findByText("שאלה 25");
 
@@ -131,7 +337,7 @@ describe("Chat", () => {
     const stored = { question: "שאלה", answer: "תשובה", at: "2026-09-01T10:00:00",
                      sources: [{ fileName: "מדריך.pdf", score: 0.83 }] };
     const chatApi = api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: [stored] }) });
-    render(<Chat api={chatApi} sampleQuestions={[]} />);
+    render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} />);
     const question = await screen.findByRole("button", { name: "שאלה", expanded: false });
 
     await userEvent.click(question);
@@ -146,7 +352,7 @@ describe("Chat", () => {
   });
 
   it("collapses an open answer from the control at its foot", async () => {
-    render(<Chat api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(1) }) })}
+    render(<Chat email="a@gmail.com" api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(1) }) })}
                  sampleQuestions={[]} />);
     await userEvent.click(await screen.findByRole("button", { name: "שאלה 1" }));
     expect(screen.getByText("תשובה 1")).toBeInTheDocument();
@@ -159,7 +365,7 @@ describe("Chat", () => {
   });
 
   it("returns focus to the folded chat's question when collapsed from the foot", async () => {
-    render(<Chat api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(1) }) })}
+    render(<Chat email="a@gmail.com" api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(1) }) })}
                  sampleQuestions={[]} />);
     await userEvent.click(await screen.findByRole("button", { name: "שאלה 1" }));
 
@@ -172,7 +378,7 @@ describe("Chat", () => {
     const stored = { question: "שאלה", answer: "תשובה", at: "2026-09-01T10:00:00",
                      sources: [{ fileName: "מדריך.pdf", score: 0.83 }] };
     const chatApi = api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: [stored] }) });
-    render(<Chat api={chatApi} sampleQuestions={[]} />);
+    render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} />);
     await userEvent.click(await screen.findByRole("button", { name: "שאלה" }));
 
     expect(screen.queryByText(/מדריך\.pdf/)).not.toBeInTheDocument();
@@ -190,7 +396,7 @@ describe("Chat", () => {
                      sources: [{ fileName: "מדריך.pdf", score: 0.83 },
                                { fileName: "תפריט.pdf", score: 0.705 }] };
     const chatApi = api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: [stored] }) });
-    render(<Chat api={chatApi} sampleQuestions={[]} />);
+    render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} />);
     await userEvent.click(await screen.findByRole("button", { name: "שאלה" }));
     await userEvent.click(screen.getByRole("button", { name: "מקורות והתאמה" }));
 
@@ -207,7 +413,7 @@ describe("Chat", () => {
 
   // The corpus mixes program PDFs with the app's own guide files; only a PDF is offered to open.
   async function openSourcesOf(chatApi: ChatApi) {
-    render(<Chat api={chatApi} sampleQuestions={[]} />);
+    render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} />);
     await userEvent.click(await screen.findByRole("button", { name: "שאלה" }));
     await userEvent.click(screen.getByRole("button", { name: "מקורות והתאמה" }));
     return screen.getByRole("table");
@@ -263,7 +469,7 @@ describe("Chat", () => {
   });
 
   it("omits the sources toggle when the answer cites nothing", async () => {
-    render(<Chat api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(1) }) })}
+    render(<Chat email="a@gmail.com" api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(1) }) })}
                  sampleQuestions={[]} />);
     await userEvent.click(await screen.findByRole("button", { name: "שאלה 1" }));
 
@@ -276,7 +482,7 @@ describe("Chat", () => {
       getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(1) }),
       ask: vi.fn().mockResolvedValue({ answer: "תשובה טרייה", sources: [], at: "2026-09-01T11:00:00" }),
     });
-    render(<Chat api={chatApi} sampleQuestions={[]} />);
+    render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} />);
     await screen.findByText("שאלה 1");
 
     await ask("שאלה טרייה");
@@ -287,14 +493,14 @@ describe("Chat", () => {
 
   it("shows what failed when the transcript cannot be loaded", async () => {
     const chatApi = api({ getChatTranscript: vi.fn().mockRejectedValue(new ApiError(502, "GET /chat → 502")) });
-    render(<Chat api={chatApi} sampleQuestions={[]} />);
+    render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} />);
 
     expect(await screen.findByText(/טעינת השיחה נכשלה/)).toBeInTheDocument();
   });
 
   it("shows the daily-quota refusal for a 429", async () => {
     const chatApi = api({ ask: vi.fn().mockRejectedValue(new ApiError(429, "POST /chat → 429")) });
-    render(<Chat api={chatApi} sampleQuestions={[]} />);
+    render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} />);
 
     await ask("שאלה");
 
@@ -303,7 +509,7 @@ describe("Chat", () => {
 
   it("shows what failed for any other error", async () => {
     const chatApi = api({ ask: vi.fn().mockRejectedValue(new ApiError(502, "POST /chat → 502")) });
-    render(<Chat api={chatApi} sampleQuestions={[]} />);
+    render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} />);
 
     await ask("שאלה");
 
@@ -316,7 +522,7 @@ describe("Chat", () => {
       getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(2) }),
       deleteChatTurn: vi.fn().mockResolvedValue({ at: turn(2).at }),
     });
-    render(<Chat api={chatApi} sampleQuestions={[]} />);
+    render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} />);
     await screen.findByText("שאלה 2");
 
     await userEvent.click(screen.getByRole("button", { name: "מחיקת השאלה שאלה 2" }));
@@ -326,10 +532,74 @@ describe("Chat", () => {
     expect(screen.getByText("שאלה 1")).toBeInTheDocument();
   });
 
+  it("shares a chat with everyone once the user confirms, and marks it shared", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    const chatApi = api({
+      getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(1) }),
+      setChatVisibility: vi.fn().mockResolvedValue({ at: turn(1).at, visibility: "public" }),
+    });
+    render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} />);
+    await userEvent.click(await screen.findByRole("button", { name: "שאלה 1" }));
+    expect(screen.queryByRole("img", { name: "צ'אט משותף לכולם" })).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "שיתוף הצ'אט על שאלה 1" }));
+
+    expect(chatApi.setChatVisibility).toHaveBeenCalledWith(turn(1).at, "public");
+    expect(await screen.findByRole("img", { name: "צ'אט משותף לכולם" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "ביטול שיתוף הצ'אט על שאלה 1" }))
+      .toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("keeps a chat private when sharing is not confirmed", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(false);
+    const chatApi = api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(1) }) });
+    render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} />);
+    await userEvent.click(await screen.findByRole("button", { name: "שאלה 1" }));
+
+    await userEvent.click(screen.getByRole("button", { name: "שיתוף הצ'אט על שאלה 1" }));
+
+    expect(chatApi.setChatVisibility).not.toHaveBeenCalled();
+    expect(screen.queryByRole("img", { name: "צ'אט משותף לכולם" })).not.toBeInTheDocument();
+  });
+
+  it("makes a shared chat private again without asking", async () => {
+    // A confirm that refuses would stop the unsharing if one were asked.
+    vi.spyOn(window, "confirm").mockReturnValue(false);
+    const chatApi = api({
+      getChatTranscript: vi.fn().mockResolvedValue({ turns: [turn(1, false, "public")] }),
+      clearChatVisibility: vi.fn().mockResolvedValue({ at: turn(1).at, visibility: null }),
+    });
+    render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} />);
+    expect(await screen.findByRole("img", { name: "צ'אט משותף לכולם" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "שאלה 1" }));
+
+    await userEvent.click(screen.getByRole("button", { name: "ביטול שיתוף הצ'אט על שאלה 1" }));
+
+    expect(chatApi.clearChatVisibility).toHaveBeenCalledWith(turn(1).at);
+    expect(screen.queryByRole("img", { name: "צ'אט משותף לכולם" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "שיתוף הצ'אט על שאלה 1" }))
+      .toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("a follow-up keeps the shared chat shared", async () => {
+    const chatApi = api({
+      getChatTranscript: vi.fn().mockResolvedValue({ turns: [turn(1, false, "public")] }),
+      ask: vi.fn().mockResolvedValue({ answer: "תשובת המשך", sources: [],
+                                       at: "2026-09-01T11:00:00" }),
+    });
+    render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} />);
+    await userEvent.click(await screen.findByRole("button", { name: "שאלה 1" }));
+    await userEvent.click(screen.getByRole("button", { name: "שאלת המשך על שאלה 1" }));
+    await ask("ולמה?");
+
+    expect(await screen.findByText("תשובת המשך")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "צ'אט משותף לכולם" })).toBeInTheDocument();
+  });
+
   it("keeps the turn when deletion is not confirmed", async () => {
     vi.spyOn(window, "confirm").mockReturnValue(false);
     const chatApi = api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(1) }) });
-    render(<Chat api={chatApi} sampleQuestions={[]} />);
+    render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} />);
     await screen.findByText("שאלה 1");
 
     await userEvent.click(screen.getByRole("button", { name: "מחיקת השאלה שאלה 1" }));
@@ -344,7 +614,7 @@ describe("Chat", () => {
       getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(1) }),
       deleteChatTurn: vi.fn().mockRejectedValue(new ApiError(502, "DELETE /chat → 502")),
     });
-    render(<Chat api={chatApi} sampleQuestions={[]} />);
+    render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} />);
     await screen.findByText("שאלה 1");
 
     await userEvent.click(screen.getByRole("button", { name: "מחיקת השאלה שאלה 1" }));
@@ -359,7 +629,7 @@ describe("Chat", () => {
       ask: vi.fn().mockResolvedValue({ answer: "תשובה", sources: [], at: "2026-09-01T11:00:00+00:00" }),
       deleteChatTurn: vi.fn().mockResolvedValue({ at: "2026-09-01T11:00:00+00:00" }),
     });
-    render(<Chat api={chatApi} sampleQuestions={[]} />);
+    render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} />);
     await ask("שאלה חדשה");
     await screen.findByText("תשובה");
 
@@ -370,7 +640,7 @@ describe("Chat", () => {
 
   it("explains the two controls under an answer, summarizing warning that it cannot be undone",
      async () => {
-    render(<Chat api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(1) }) })}
+    render(<Chat email="a@gmail.com" api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(1) }) })}
                  sampleQuestions={[]} />);
     await userEvent.click(await screen.findByRole("button", { name: "שאלה 1" }));
 
@@ -385,7 +655,7 @@ describe("Chat", () => {
   });
 
   it("moves the composer under the answer being replied to and marks the reply in progress", async () => {
-    render(<Chat api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(1) }) })}
+    render(<Chat email="a@gmail.com" api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(1) }) })}
                  sampleQuestions={[]} />);
     await userEvent.click(await screen.findByRole("button", { name: "שאלה 1" }));
 
@@ -406,7 +676,7 @@ describe("Chat", () => {
       getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(1) }),
       ask: vi.fn().mockReturnValue(new Promise(() => {})),
     });
-    render(<Chat api={chatApi} sampleQuestions={[]} />);
+    render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} />);
     await userEvent.click(await screen.findByRole("button", { name: "שאלה 1" }));
     await userEvent.click(screen.getByRole("button", { name: "שאלת המשך על שאלה 1" }));
 
@@ -421,7 +691,7 @@ describe("Chat", () => {
 
   it("withdraws the composer while a question awaits its answer", async () => {
     const chatApi = api({ ask: vi.fn().mockReturnValue(new Promise(() => {})) });
-    render(<Chat api={chatApi} sampleQuestions={[]} />);
+    render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} />);
 
     await ask("שאלה");
 
@@ -432,7 +702,7 @@ describe("Chat", () => {
 
   it("moves focus to the thinking indicator after sending", async () => {
     const chatApi = api({ ask: vi.fn().mockReturnValue(new Promise(() => {})) });
-    render(<Chat api={chatApi} sampleQuestions={[]} />);
+    render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} />);
 
     await ask("שאלה");
 
@@ -444,7 +714,7 @@ describe("Chat", () => {
       getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(2) }),
       ask: vi.fn().mockResolvedValue({ answer: "תשובת המשך", sources: [], at: "2026-09-01T12:00:00" }),
     });
-    render(<Chat api={chatApi} sampleQuestions={[]} />);
+    render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} />);
     await userEvent.click(await screen.findByRole("button", { name: "שאלה 1" }));
     await userEvent.click(screen.getByRole("button", { name: "שאלת המשך על שאלה 1" }));
 
@@ -467,7 +737,7 @@ describe("Chat", () => {
       ask: vi.fn().mockResolvedValue({ answer: "תשובת המשך", sources: [],
                                        at: "2026-09-02T18:30:00" }),
     });
-    render(<Chat api={chatApi} sampleQuestions={[]} />);
+    render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} />);
     await userEvent.click(await screen.findByRole("button", { name: "שאלה 1" }));
     await userEvent.click(screen.getByRole("button", { name: "שאלת המשך על שאלה 1" }));
 
@@ -486,7 +756,7 @@ describe("Chat", () => {
       getChatTranscript: vi.fn().mockResolvedValue({ turns: [stored] }),
       ask: vi.fn().mockResolvedValue({ answer: "ו", sources: [], at: stored.at }),
     });
-    render(<Chat api={chatApi} sampleQuestions={[]} />);
+    render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} />);
     await userEvent.click(await screen.findByRole("button", { name: /^השאלה המקורית/ }));
     await userEvent.click(screen.getByRole("button", { name: /^שאלת המשך על/ }));
 
@@ -496,7 +766,7 @@ describe("Chat", () => {
   });
 
   it("swaps the composer placeholder to follow-up wording while a reply is in progress", async () => {
-    render(<Chat api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(1) }) })}
+    render(<Chat email="a@gmail.com" api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(1) }) })}
                  sampleQuestions={[]} />);
     await userEvent.click(await screen.findByRole("button", { name: "שאלה 1" }));
     await userEvent.click(screen.getByRole("button", { name: "שאלת המשך על שאלה 1" }));
@@ -512,7 +782,7 @@ describe("Chat", () => {
       getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(1) }),
       ask: vi.fn().mockResolvedValue({ answer: "תשובה עצמאית", sources: [], at: "2026-09-01T11:00:00" }),
     });
-    render(<Chat api={chatApi} sampleQuestions={[]} />);
+    render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} />);
     await userEvent.click(await screen.findByRole("button", { name: "שאלה 1" }));
     await userEvent.click(screen.getByRole("button", { name: "שאלת המשך על שאלה 1" }));
 
@@ -528,7 +798,7 @@ describe("Chat", () => {
       getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(1) }),
       ask: vi.fn().mockResolvedValue({ answer: "תשובת המשך", sources: [], at: turn(1).at }),
     });
-    render(<Chat api={chatApi} sampleQuestions={[]} />);
+    render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} />);
     await userEvent.click(await screen.findByRole("button", { name: "שאלה 1" }));
     await userEvent.click(screen.getByRole("button", { name: "שאלת המשך על שאלה 1" }));
 
@@ -544,7 +814,7 @@ describe("Chat", () => {
       getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(1) }),
       deleteChatTurn: vi.fn().mockResolvedValue({ at: turn(1).at }),
     });
-    render(<Chat api={chatApi} sampleQuestions={[]} />);
+    render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} />);
     await userEvent.click(await screen.findByRole("button", { name: "שאלה 1" }));
     await userEvent.click(screen.getByRole("button", { name: "שאלת המשך על שאלה 1" }));
 
@@ -554,7 +824,7 @@ describe("Chat", () => {
   });
 
   it("offers each configured sample question as a link labeled by its short form", async () => {
-    render(<Chat api={api()} sampleQuestions={[
+    render(<Chat email="a@gmail.com" api={api()} sampleQuestions={[
       { label: "עקרונות", question: "מהם עקרונות התוכנית?" },
       { label: "חלבון", question: "כמה חלבון מומלץ לצרוך ביום?" },
     ]} />);
@@ -565,7 +835,7 @@ describe("Chat", () => {
 
   it("pastes a sample's full question into the composer without sending it", async () => {
     const chatApi = api();
-    render(<Chat api={chatApi} sampleQuestions={[
+    render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[
       { label: "חלבון", question: "כמה חלבון מומלץ לצרוך ביום?" },
     ]} />);
 
@@ -577,7 +847,7 @@ describe("Chat", () => {
   });
 
   it("disables sending until the composer holds a question", async () => {
-    render(<Chat api={api()} sampleQuestions={[]} />);
+    render(<Chat email="a@gmail.com" api={api()} sampleQuestions={[]} />);
 
     expect(screen.getByRole("button", { name: "שליחה" })).toBeDisabled();
 
@@ -586,7 +856,7 @@ describe("Chat", () => {
   });
 
   it("clears the composer from its inline clear control", async () => {
-    render(<Chat api={api()} sampleQuestions={[]} />);
+    render(<Chat email="a@gmail.com" api={api()} sampleQuestions={[]} />);
     await userEvent.type(screen.getByRole("textbox"), "שאלה שהתחרטתי עליה");
 
     await userEvent.click(screen.getByRole("button", { name: "ניקוי השאלה" }));
@@ -596,14 +866,14 @@ describe("Chat", () => {
   });
 
   it("hides the clear control while the composer is empty", async () => {
-    render(<Chat api={api()} sampleQuestions={[]} />);
+    render(<Chat email="a@gmail.com" api={api()} sampleQuestions={[]} />);
 
     expect(screen.queryByRole("button", { name: "ניקוי השאלה" })).not.toBeInTheDocument();
   });
 
   it("lets a question span multiple lines without submitting on Enter", async () => {
     const chatApi = api();
-    render(<Chat api={chatApi} sampleQuestions={[]} />);
+    render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} />);
 
     await userEvent.type(screen.getByRole("textbox"), "שורה ראשונה{enter}שורה שנייה");
 
@@ -613,7 +883,7 @@ describe("Chat", () => {
 
   it("ignores a blank question", async () => {
     const chatApi = api();
-    render(<Chat api={chatApi} sampleQuestions={[]} />);
+    render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} />);
 
     await userEvent.type(screen.getByRole("textbox"), "   ");
     await userEvent.click(screen.getByRole("button", { name: "שליחה" }));
@@ -623,10 +893,11 @@ describe("Chat", () => {
 
   it("counts the stored turns on a toggle and keeps them folded behind it when opened condensed",
      async () => {
-    render(<Chat api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(2) }) })}
+    render(<Chat email="a@gmail.com" api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(2) }),
+                            getChatCount: counted(2) })}
                  sampleQuestions={[]} defaultTranscriptFolded />);
 
-    const toggle = await screen.findByRole("button", { name: "2 צ'אטים קודמים", expanded: false });
+    const toggle = await screen.findByRole("button", { name: "2 צ'אטים קודמים שלי", expanded: false });
     expect(screen.queryByText("שאלה 1")).toBeNull();
 
     await userEvent.click(toggle);
@@ -640,9 +911,10 @@ describe("Chat", () => {
   it("walks the transcript into view when its toggle opens it, and only then", async () => {
     const scrollIntoView = vi.spyOn(Element.prototype, "scrollIntoView")
       .mockImplementation(() => {});
-    render(<Chat api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(2) }) })}
+    render(<Chat email="a@gmail.com" api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(2) }),
+                            getChatCount: counted(2) })}
                  sampleQuestions={[]} defaultTranscriptFolded />);
-    const toggle = await screen.findByRole("button", { name: "2 צ'אטים קודמים" });
+    const toggle = await screen.findByRole("button", { name: "2 צ'אטים קודמים שלי" });
     expect(scrollIntoView).not.toHaveBeenCalled();
 
     await userEvent.click(toggle);
@@ -655,16 +927,16 @@ describe("Chat", () => {
 
   it("shows the transcript open behind its toggle in the full view, singular for one turn",
      async () => {
-    render(<Chat api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(1) }) })}
+    render(<Chat email="a@gmail.com" api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(1) }) })}
                  sampleQuestions={[]} />);
 
     expect(await screen.findByText("שאלה 1")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "צ'אט קודם אחד" }))
+    expect(screen.getByRole("button", { name: "צ'אט קודם אחד שלי" }))
       .toHaveAttribute("aria-expanded", "true");
   });
 
   it("offers no transcript toggle before any turn exists", async () => {
-    render(<Chat api={api()} sampleQuestions={[]} defaultTranscriptFolded />);
+    render(<Chat email="a@gmail.com" api={api()} sampleQuestions={[]} defaultTranscriptFolded />);
 
     expect(await screen.findByRole("textbox")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /קודמים|קודם/ })).toBeNull();
@@ -674,10 +946,11 @@ describe("Chat", () => {
      async () => {
     const chatApi = api({
       getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(1) }),
+      getChatCount: counted(1),
       ask: vi.fn().mockResolvedValue({ answer: "תשובה חדשה", sources: [], at: "2026-09-05T10:00:00" }),
     });
-    render(<Chat api={chatApi} sampleQuestions={[]} defaultTranscriptFolded />);
-    await screen.findByRole("button", { name: "צ'אט קודם אחד" });
+    render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} defaultTranscriptFolded />);
+    await screen.findByRole("button", { name: "צ'אט קודם אחד שלי" });
 
     await ask("שאלה חדשה");
 
@@ -692,7 +965,7 @@ describe("Chat", () => {
       summarizeChatTurn: vi.fn().mockResolvedValue(
         { ...turn(1), answer: "סיכום השיחה", summarized: true }),
     });
-    render(<Chat api={chatApi} sampleQuestions={[]} />);
+    render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} />);
     await userEvent.click(await screen.findByRole("button", { name: "שאלה 1" }));
 
     await userEvent.click(screen.getByRole("button", { name: "סיכום הצ'אט על שאלה 1" }));
@@ -705,7 +978,7 @@ describe("Chat", () => {
   it("keeps the conversation when the summary is not confirmed", async () => {
     vi.spyOn(window, "confirm").mockReturnValue(false);
     const chatApi = api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(1) }) });
-    render(<Chat api={chatApi} sampleQuestions={[]} />);
+    render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} />);
     await userEvent.click(await screen.findByRole("button", { name: "שאלה 1" }));
 
     await userEvent.click(screen.getByRole("button", { name: "סיכום הצ'אט על שאלה 1" }));
@@ -720,7 +993,7 @@ describe("Chat", () => {
       getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(1) }),
       summarizeChatTurn: vi.fn().mockRejectedValue(new ApiError(502, "POST /chat/at/summary → 502")),
     });
-    render(<Chat api={chatApi} sampleQuestions={[]} />);
+    render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} />);
     await userEvent.click(await screen.findByRole("button", { name: "שאלה 1" }));
 
     await userEvent.click(screen.getByRole("button", { name: "סיכום הצ'אט על שאלה 1" }));
@@ -735,7 +1008,7 @@ describe("Chat", () => {
       summarizeChatTurn: vi.fn().mockResolvedValue(
         { ...turn(1), answer: "סיכום השיחה", summarized: true }),
     });
-    render(<Chat api={chatApi} sampleQuestions={[]} />);
+    render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} />);
     await userEvent.click(await screen.findByRole("button", { name: "שאלה 1" }));
     await userEvent.click(screen.getByRole("button", { name: "שאלת המשך על שאלה 1" }));
     expect(screen.getByText("שאלת המשך", { selector: "span" })).toBeInTheDocument();
@@ -751,7 +1024,7 @@ describe("Chat", () => {
       getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(1) }),
       summarizeChatTurn: vi.fn().mockReturnValue(new Promise(() => {})),
     });
-    render(<Chat api={chatApi} sampleQuestions={[]} />);
+    render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} />);
     await userEvent.click(await screen.findByRole("button", { name: "שאלה 1" }));
 
     await userEvent.click(screen.getByRole("button", { name: "סיכום הצ'אט על שאלה 1" }));
@@ -768,7 +1041,7 @@ describe("Chat", () => {
       summarizeChatTurn: vi.fn().mockResolvedValue(
         { ...turn(1), answer: "תמצית השיחה", summarized: true }),
     });
-    render(<Chat api={chatApi} sampleQuestions={[]} />);
+    render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} />);
     await userEvent.click(await screen.findByRole("button", { name: "שאלה 1" }));
 
     await userEvent.click(screen.getByRole("button", { name: "סיכום הצ'אט על שאלה 1" }));
@@ -779,7 +1052,7 @@ describe("Chat", () => {
 
   it("offers no second digest of a chat that has not moved on since its summary", async () => {
     const summarized = { ...turn(1), answer: "סיכום השיחה", summarized: true };
-    render(<Chat api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: [summarized] }) })}
+    render(<Chat email="a@gmail.com" api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: [summarized] }) })}
                  sampleQuestions={[]} />);
     await userEvent.click(await screen.findByRole("button", { name: "שאלה 1" }));
 
@@ -787,7 +1060,7 @@ describe("Chat", () => {
   });
 
   it("marks the chats the app wrote, and only those", async () => {
-    render(<Chat api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: mixedTurns() }) })}
+    render(<Chat email="a@gmail.com" api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: mixedTurns() }) })}
                  sampleQuestions={[]} />);
     await screen.findByText("שאלה 3");
 
@@ -797,26 +1070,26 @@ describe("Chat", () => {
   });
 
   it("lists every chat until the filter narrows it, and counts what it lists", async () => {
-    render(<Chat api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: mixedTurns() }) })}
+    render(<Chat email="a@gmail.com" api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: mixedTurns() }) })}
                  sampleQuestions={[]} />);
     await screen.findByText("שאלה 3");
     const filter = screen.getByRole("combobox", { name: "סינון הצ'אטים" });
-    expect(screen.getByRole("button", { name: "3 צ'אטים קודמים" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "3 צ'אטים קודמים שלי" })).toBeInTheDocument();
 
     await userEvent.selectOptions(filter, "mine");
 
     expect(screen.getAllByText(/^שאלה \d+$/).map((el) => el.textContent)).toEqual(
       ["שאלה 3", "שאלה 1"]);
-    expect(screen.getByRole("button", { name: "2 צ'אטים קודמים" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "2 צ'אטים קודמים שלי" })).toBeInTheDocument();
 
     await userEvent.selectOptions(filter, "app");
 
     expect(screen.getAllByText(/^שאלה \d+$/).map((el) => el.textContent)).toEqual(["שאלה 2"]);
-    expect(screen.getByRole("button", { name: "צ'אט קודם אחד" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "צ'אט קודם אחד שלי" })).toBeInTheDocument();
   });
 
   it("says how many chats the filter holds back, and only while it holds any", async () => {
-    render(<Chat api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: mixedTurns() }) })}
+    render(<Chat email="a@gmail.com" api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: mixedTurns() }) })}
                  sampleQuestions={[]} />);
     await screen.findByText("שאלה 3");
     const filter = screen.getByRole("combobox", { name: "סינון הצ'אטים" });
@@ -838,7 +1111,7 @@ describe("Chat", () => {
   it("reopens on the side the filter last chose", async () => {
     window.localStorage.setItem(FILTER_KEY, "app");
 
-    render(<Chat api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: mixedTurns() }) })}
+    render(<Chat email="a@gmail.com" api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: mixedTurns() }) })}
                  sampleQuestions={[]} />);
 
     expect(await screen.findByText("שאלה 2")).toBeInTheDocument();
@@ -846,7 +1119,7 @@ describe("Chat", () => {
   });
 
   it("stores the chosen side for the next visit", async () => {
-    render(<Chat api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: mixedTurns() }) })}
+    render(<Chat email="a@gmail.com" api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: mixedTurns() }) })}
                  sampleQuestions={[]} />);
     await screen.findByText("שאלה 3");
 
@@ -856,14 +1129,14 @@ describe("Chat", () => {
   });
 
   it("says a narrowed side holds no chats and offers nothing to unfold", async () => {
-    render(<Chat api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(2) }) })}
+    render(<Chat email="a@gmail.com" api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(2) }) })}
                  sampleQuestions={[]} />);
     await screen.findByText("שאלה 2");
 
     await userEvent.selectOptions(screen.getByRole("combobox", { name: "סינון הצ'אטים" }), "app");
 
     expect(screen.queryByText("שאלה 2")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "אין צ'אטים קודמים" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "אין צ'אטים קודמים שלי" })).toBeDisabled();
   });
 
   it("widens the filter back so an arriving answer is not hidden by it", async () => {
@@ -872,7 +1145,7 @@ describe("Chat", () => {
       getChatTranscript: vi.fn().mockResolvedValue({ turns: mixedTurns() }),
       ask: vi.fn().mockResolvedValue({ answer: "תשובה חדשה", sources: [], at: "2026-09-02T10:00:00" }),
     });
-    render(<Chat api={chatApi} sampleQuestions={[]} />);
+    render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} />);
     await screen.findByText("שאלה 2");
 
     await ask("שאלה חדשה");
@@ -887,7 +1160,7 @@ describe("Chat", () => {
       getChatTranscript: vi.fn().mockResolvedValue({ turns: mixedTurns() }),
       ask: vi.fn().mockResolvedValue({ answer: "תשובת המשך", sources: [], at: "2026-09-02T10:00:00" }),
     });
-    render(<Chat api={chatApi} sampleQuestions={[]} />);
+    render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} />);
     await userEvent.click(await screen.findByRole("button", { name: "שאלה 2" }));
     await userEvent.click(screen.getByRole("button", { name: "שאלת המשך על שאלה 2" }));
 

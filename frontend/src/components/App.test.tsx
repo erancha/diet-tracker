@@ -45,6 +45,7 @@ function api(days: Partial<Awaited<ReturnType<Api["getDays"]>>> = {}): Api {
     }),
     getWeight: vi.fn().mockResolvedValue({ target: null, entries: [] }),
     getChatTranscript: vi.fn().mockResolvedValue({ turns: [] }),
+    getChatCount: vi.fn().mockResolvedValue({ own_total: 0, own_app: 0, public_total: 0 }),
     // The admin listing loads on mount now that the section always opens expanded, so it is a
     // resolving read like the others.
     getAdminActivity: vi.fn().mockResolvedValue({ users: [] }),
@@ -52,7 +53,8 @@ function api(days: Partial<Awaited<ReturnType<Api["getDays"]>>> = {}): Api {
     updateMeal: vi.fn(), deleteMeal: vi.fn(), recordWeight: vi.fn(), setWeightTarget: vi.fn(),
     deleteWeight: vi.fn(), setMuted: vi.fn(), ask: vi.fn(),
     deleteChatTurn: vi.fn(), summarizeChatTurn: vi.fn(),
-  sourceUrl: vi.fn(), dismissUndelivered: vi.fn(),
+    setChatVisibility: vi.fn(), clearChatVisibility: vi.fn(), getPublicChats: vi.fn(),
+    sourceUrl: vi.fn(), dismissUndelivered: vi.fn(),
   };
 }
 
@@ -346,7 +348,7 @@ describe("App", () => {
     fireEvent.click(screen.getByRole("menuitem", { name: "תצוגה מצומצמת" }));
 
     expect(screen.queryByText("שאלה ישנה")).toBeNull();
-    expect(screen.getByRole("button", { name: "צ'אט קודם אחד" }))
+    expect(screen.getByRole("button", { name: "צ'אט קודם אחד שלי" }))
       .toHaveAttribute("aria-expanded", "false");
     expect(screen.getByRole("textbox", { name: "שאלה" })).toBeInTheDocument();
   });

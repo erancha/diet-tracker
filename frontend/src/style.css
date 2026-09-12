@@ -467,16 +467,21 @@ td.view-day { cursor: pointer; }
    Semibold rather than the heading's full bold, so a pressable title reads a shade lighter than
    one that is only a title. */
 :is(h2, h3) > .section-toggle { font-weight: 600; }
-/* Three quieter openers that preview rather than head: a folded section's at-a-glance line, the
-   chat transcript's previous-chats count, and an answer's citations expander. Sized together and
-   under the text around them, since no block of their own sets their type. */
-:is(.section-summary, .transcript-toggle, .more-toggle) { font-size: 0.85rem; }
-:is(.section-summary, .transcript-toggle) { padding-bottom: 0.4rem; }
+/* Quieter openers that preview rather than head: a folded section's at-a-glance line, the chat
+   transcript's previous-chats count and its sibling opening others' shared chats, and an answer's
+   citations expander. Sized together and under the text around them, since no block of their own
+   sets their type. */
+:is(.section-summary, .transcript-toggle, .others-toggle, .more-toggle) { font-size: 0.85rem; }
+:is(.section-summary, .transcript-toggle, .others-toggle) { padding-bottom: 0.4rem; }
 /* The previous-chats count and the filter choosing which chats it counts share one line, the
    count taking the width so the filter settles against the far edge. The count keeps the
    padding that spaces it from the list below, so the row's items align on their text. */
-.transcript-head { display: flex; align-items: baseline; gap: 0.5rem; }
-.transcript-head .transcript-toggle { flex: 1; text-align: start; }
+/* Each toggle row stands off from what precedes it — the composer above the own transcript, the
+   last own chat above the others' — so the row reads as a heading for what it unfolds. */
+.transcript-head { display: flex; align-items: baseline; gap: 0.5rem; margin-top: 1rem; }
+.transcript-head :is(.transcript-toggle, .others-toggle) { flex: 1; text-align: start; }
+/* A count that grew since the last visit: green on yellow, the way an unread badge reads. */
+.count-new { color: var(--accent); background: #fff3b0; border-radius: 4px; padding: 0 0.25em; }
 /* How many chats the filter is holding back, in the muted tone the app's asides take: the count
    beside it names what is listed, and this names what is not, so neither reads as the total. */
 .transcript-filtered-out { font-size: 0.85rem; color: #8a8a84; }
@@ -772,11 +777,17 @@ main:not(.intro-0, .intro-1, .intro-2, .intro-3, .intro-4) .weight .section-togg
 /* The question bubble carries its own delete control, riding at the bubble's end so the text
    keeps the leading edge; the timestamp wraps onto its own full-width row above the question. */
 .chat-user { align-self: flex-start; background: #e8f0e9; display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+/* Another user's chat keeps the bubbles' shapes and fills; both take a blue-grey outline heavier
+   than the answer's hairline, so whose chat it is reads at a glance on a phone. */
+.chat-messages li.chat-others { border: 2px solid #9fb0c8; }
 .chat-user p { flex: 1; }
 .chat-turn-at { flex-basis: 100%; font-size: 0.75rem; opacity: 0.7; font-variant-numeric: tabular-nums; }
-/* Marks a chat the app composed rather than the user asking it — the weekly recap, or a guided
-   question a panel put to the chat. */
-.chat-app-mark { color: var(--accent); display: flex; }
+/* Marks on a chat's row: one for a chat the app composed rather than the user asking it — the
+   weekly recap, or a guided question a panel put to the chat — and one for a chat its asker
+   shared with every user. */
+:is(.chat-app-mark, .chat-public-mark) { color: var(--accent); display: flex; }
+/* Whose chat a shared row is, leading its date. */
+.chat-asker { font-weight: 600; overflow-wrap: anywhere; }
 /* The question doubles as its answer's toggle: a text-styled button, so the bubble keeps reading
    as conversation while the whole row stays keyboard-reachable. */
 .chat-question { flex: 1; border-radius: 0; text-align: start; white-space: pre-wrap; }
@@ -834,9 +845,10 @@ main:not(.intro-0, .intro-1, .intro-2, .intro-3, .intro-4) .weight .section-togg
 /* Closing costs nothing and changes nothing, so it sits apart from the pair that spends a
    question and rewrites the chat. */
 .chat .close-turn { margin-inline-start: auto; }
-/* The pressed reply control keeps the question bubble's tint, tying the relocated composer below
-   back to the control that summoned it. */
-.chat .reply-turn[aria-pressed="true"] { --btn-bg: #e8f0e9; --btn-border: currentColor; }
+/* A pressed reply control keeps the question bubble's tint, tying the relocated composer below
+   back to the control that summoned it; a pressed share control reads the same way for the
+   shared state it holds the chat in. */
+.chat :is(.reply-turn, .share-turn)[aria-pressed="true"] { --btn-bg: #e8f0e9; --btn-border: currentColor; }
 /* The in-progress composer rides inside the transcript, under the answer it extends; a full-width
    row, shedding the message-bubble styling its list neighbors carry. */
 .chat-messages .chat-composer { max-width: 100%; align-self: stretch; background: none; padding: 0; }

@@ -44,8 +44,8 @@ def test_a_follow_up_replaces_the_turn_whole_under_a_fresh_key(table):
     assert returned > at
     (turn,) = chat_history.turns(table, "u1")
     assert turn == {"question": "שרשור מלא", "answer": "תשובה חדשה", "summarized": False,
-                    "app": False, "sources": [{"fileName": "מדריך.pdf", "score": 0.9}],
-                    "at": returned}
+                    "app": False, "visibility": None,
+                    "sources": [{"fileName": "מדריך.pdf", "score": 0.9}], "at": returned}
 
 
 def test_a_follow_up_moves_the_turn_to_the_top_of_the_transcript(table):
@@ -147,7 +147,7 @@ def test_get_returns_the_stored_turn(table):
 
     assert chat_history.get(table, "u1", at) == {"question": "שאלה?", "answer": "תשובה",
                                                  "sources": sources, "summarized": False,
-                                                 "app": False, "at": at}
+                                                 "app": False, "visibility": None, "at": at}
 
 
 def test_get_of_a_missing_turn_raises(table):
@@ -165,7 +165,8 @@ def test_summarize_replaces_the_chain_in_place_under_the_same_key(table):
 
     (turn,) = chat_history.turns(table, "u1")
     assert turn == {"question": "מה מותר?", "answer": "השיחה עסקה במה שמותר לאכול",
-                    "sources": [], "summarized": True, "app": False, "at": at}
+                    "sources": [], "summarized": True, "app": False, "visibility": None,
+                    "at": at}
 
 
 def test_summarize_of_a_missing_turn_raises_and_leaves_the_transcript_alone(table):
@@ -267,3 +268,93 @@ def test_find_returns_none_for_another_week_or_another_user(table):
     chat_history.append(table, "u1", "סיכום שבועי 28/08/2026", "ממצאים", [], app=True)
     chat_history.append(table, "u2", "סיכום שבועי 04/09/2026", "ממצאים", [], app=True)
     assert chat_history.find(table, "u1", "סיכום שבועי 04/09/2026") is None
+
+
+def test_a_chat_is_private_until_its_visibility_is_set(table):
+    at = chat_history.append(table, "u1", "שאלה", "ת", [])
+    assert chat_history.get(table, "u1", at)["visibility"] is None
+
+    chat_history.set_visibility(table, "u1", at, chat_history.PUBLIC)
+
+    assert chat_history.get(table, "u1", at)["visibility"] == "public"
+
+
+def test_clearing_visibility_makes_the_chat_private_again(table):
+    at = chat_history.append(table, "u1", "שאלה", "ת", [])
+    chat_history.set_visibility(table, "u1", at, chat_history.PUBLIC)
+
+    chat_history.clear_visibility(table, "u1", at)
+
+    assert chat_history.get(table, "u1", at)["visibility"] is None
+    assert chat_history.public(table, "u2") == []
+
+
+def test_visibility_of_a_missing_or_another_users_chat_raises(table):
+    at = chat_history.append(table, "u1", "שאלה", "ת", [])
+
+    with pytest.raises(KeyError):
+        chat_history.set_visibility(table, "u2", at, chat_history.PUBLIC)
+    with pytest.raises(KeyError):
+        chat_history.set_visibility(table, "u1", "2026-09-01T10:00:00+00:00", chat_history.PUBLIC)
+    with pytest.raises(KeyError):
+        chat_history.clear_visibility(table, "u2", at)
+
+    assert chat_history.get(table, "u1", at)["visibility"] is None
+
+
+def test_public_lists_other_users_public_chats_newest_first_with_their_askers(table):
+    mine = chat_history.append(table, "u1", "שלי", "ת", [])
+    chat_history.set_visibility(table, "u1", mine, chat_history.PUBLIC)
+    older = chat_history.append(table, "u2", "ישנה של אחר", "ת1", [{"fileName": "מדריך.pdf", "score": 0.5}])
+    chat_history.set_visibility(table, "u2", older, chat_history.PUBLIC)
+    chat_history.append(table, "u2", "פרטית של אחר", "ת", [])
+    newer = chat_history.append(table, "u3", "חדשה של שלישי", "ת2", [])
+    chat_history.set_visibility(table, "u3", newer, chat_history.PUBLIC)
+
+    listed = chat_history.public(table, "u1")
+
+    assert listed == [
+        {"sub": "u3", "question": "חדשה של שלישי", "answer": "ת2", "sources": [],
+         "summarized": False, "app": False, "visibility": "public", "at": newer},
+        {"sub": "u2", "question": "ישנה של אחר", "answer": "ת1",
+         "sources": [{"fileName": "מדריך.pdf", "score": 0.5}],
+         "summarized": False, "app": False, "visibility": "public", "at": older},
+    ]
+
+
+def test_a_follow_up_keeps_a_public_chat_public(table):
+    at = chat_history.append(table, "u1", "שאלה", "ת", [])
+    chat_history.set_visibility(table, "u1", at, chat_history.PUBLIC)
+
+    followed = chat_history.append(table, "u1", "שרשור", "ת2", [], at=at)
+
+    assert chat_history.get(table, "u1", followed)["visibility"] == "public"
+    assert [chat["at"] for chat in chat_history.public(table, "u2")] == [followed]
+
+
+def test_summarizing_leaves_a_public_chat_public(table):
+    at = chat_history.append(table, "u1", "שאלה", "ת", [])
+    chat_history.set_visibility(table, "u1", at, chat_history.PUBLIC)
+
+    chat_history.summarize(table, "u1", at, "שאלה", "תקציר")
+
+    assert chat_history.get(table, "u1", at)["visibility"] == "public"
+
+
+def test_count_app_counts_only_the_chats_the_app_wrote(table):
+    chat_history.append(table, "u1", "סיכום שבועי", "ת", [], app=True)
+    chat_history.append(table, "u1", "שאלה שלי", "ת", [])
+    chat_history.append(table, "u2", "סיכום של אחר", "ת", [], app=True)
+    assert chat_history.count_app(table, "u1") == 1
+    assert chat_history.count_app(table, "u3") == 0
+
+
+def test_count_public_counts_other_users_shared_chats_alone(table):
+    mine = chat_history.append(table, "u1", "שלי", "ת", [])
+    chat_history.set_visibility(table, "u1", mine, chat_history.PUBLIC)
+    theirs = chat_history.append(table, "u2", "של אחר", "ת", [])
+    chat_history.set_visibility(table, "u2", theirs, chat_history.PUBLIC)
+    chat_history.append(table, "u2", "פרטית של אחר", "ת", [])
+    assert chat_history.count_public(table, "u1") == 1
+    assert chat_history.count_public(table, "u2") == 1
+    assert chat_history.count_public(table, "u3") == 2

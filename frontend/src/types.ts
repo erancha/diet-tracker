@@ -328,6 +328,9 @@ export interface ChatAnswer {
   at: string;
 }
 
+// The visibilities a chat can be shared under: "public" is readable by every signed-in user.
+export type ChatVisibility = "public";
+
 // One stored exchange from the user's chat history: a question and its answer, or — once
 // summarized — a conversation's opening question and the digest standing for the whole of it.
 export interface ChatTurn {
@@ -341,6 +344,9 @@ export interface ChatTurn {
   // panel puts to the chat — rather than the user typing it. It follows the chat through
   // follow-ups and digests.
   app: boolean;
+  // Who besides the asker may read the chat; null while the asker has not shared it. Follows
+  // the chat through follow-ups and digests, like the app mark.
+  visibility: ChatVisibility | null;
   // UTC ISO timestamp of the chat's latest answer — the transcript's sort key.
   at: string;
 }
@@ -348,4 +354,22 @@ export interface ChatTurn {
 export interface ChatTranscript {
   // Newest first, the order the chat renders them in.
   turns: ChatTurn[];
+}
+
+// One chat another user shared with everyone, under its asker's address.
+export interface PublicChat extends Omit<ChatTurn, "visibility"> {
+  email: string;
+}
+
+export interface PublicChats {
+  // Newest first, across every user but the reader.
+  chats: PublicChat[];
+}
+
+// What the chat's toggles show before either list is loaded: the reader's transcript size, how
+// many of it the app wrote, and how many chats other users shared.
+export interface ChatCount {
+  own_total: number;
+  own_app: number;
+  public_total: number;
 }

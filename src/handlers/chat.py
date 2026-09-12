@@ -1,29 +1,17 @@
-"""Chat endpoint: answers knowledge-base questions by proxying to the external Summaries.AI
-RAG service behind a per-user daily quota. Chat is the only feature that spends money per use,
-so the quota is consumed before the upstream call and a request crossing the limit is refused
-without spending; the day's first refusal is emailed to the admin.
+"""Chat endpoint: the HTTP shape and the daily quota around common.chat_question, which asks the
+Summaries.AI RAG service and stores the reply in the caller's transcript (common.chat_history).
+The caller is the verified JWT claim alone; the body never names a user.
 
-The caller's identity comes exclusively from the JWT claims the API Gateway authorizer
-verified — the request body never names a user. That verified identity is also what selects
-the asker's own tracked data, sent upstream as a context block beside the question, so answers can
-ground in it without the data steering retrieval. Asking and storing the reply is
-common.chat_question, shared with the weekly recap's follow-up; what stays here is the quota and
-the HTTP shape.
+Routes: POST /chat asks (with `at`, as a follow-up replacing that chat under a fresh timestamp;
+with `app`, marked as the app's own question); GET /chat serves the transcript; POST
+/chat/{at}/summary replaces a chat with its digest; DELETE /chat/{at} removes one. PUT and
+DELETE /chat/{at}/visibility share a chat with every user and take it back; GET /chat/public
+lists what others shared, each under its asker's address, and GET /chat/count sizes both lists
+without reading a chat. POST /chat/source-url mints a short-lived link to a cited document.
 
-Each answered chat is stored per user (common.chat_history) and served back by GET /chat, so
-it survives reloads and follows the user across devices. A POST naming a stored chat's
-timestamp (`at`) is a follow-up: the answered chat replaces it under a fresh timestamp —
-one stored chat per conversation, risen to the top — and the response's `at` is the chat's
-new identity. A POST flagged `app` stores the chat as one the app composed rather than one the
-user typed, which is what the transcript's origin filter reads; a follow-up has to repeat the
-flag, since it rewrites the stored chat whole. POST /chat/{at}/summary replaces one chat with a
-digest of its conversation, answered by the same upstream service and so counted against the
-same quota. DELETE /chat/{at} permanently removes one of the caller's own chats by its
-timestamp; the quota already spent on its questions is unaffected.
-
-POST /chat/source-url fetches, at the moment a reader presses a cited source, a short-lived link
-to that document from the same upstream service. The link is never stored — a transcript keeps
-only the file names its answers cited — and no LLM runs, so the call is outside the quota."""
+Every route that asks upstream spends quota first and is refused past the limit without
+spending; the day's first refusal is emailed to the admin. Source links and the transcript
+routes spend none."""
 
 import json
 import os
@@ -31,7 +19,7 @@ import urllib.error
 
 import boto3
 
-from common import appconfig, chat, chat_history, chat_question, notify, quota
+from common import appconfig, chat, chat_history, chat_question, notify, quota, users
 from common.dates import today
 from common.log import get_logger
 from common.store import Store
@@ -67,6 +55,14 @@ def handler(event, context):
         return _source_url(json.loads(event["body"]))
     if route == "DELETE /chat/{at}":
         return _delete_turn(sub, event["pathParameters"]["at"])
+    if route == "PUT /chat/{at}/visibility":
+        return _set_visibility(sub, event["pathParameters"]["at"], json.loads(event["body"]))
+    if route == "DELETE /chat/{at}/visibility":
+        return _clear_visibility(sub, event["pathParameters"]["at"])
+    if route == "GET /chat/public":
+        return _public_chats(sub)
+    if route == "GET /chat/count":
+        return _count(sub)
     raise ValueError(f"unhandled route {route!r}")
 
 
@@ -119,7 +115,7 @@ def _ask(sub, email, body):
     except (urllib.error.URLError, TimeoutError) as error:
         return _upstream_unavailable(error)
     except KeyError:
-        return response(404, {"error": f"no turn stored at {at}"})
+        return _no_turn(at)
     return response(200, stored)
 
 
@@ -158,6 +154,11 @@ def _service_unconfigured():
     return response(503, {"error": "שירות המענה אינו מוגדר בגרסה הזו"})
 
 
+def _no_turn(at):
+    """The 404 for a timestamp the caller holds no chat at."""
+    return response(404, {"error": f"no turn stored at {at}"})
+
+
 def _upstream_unavailable(error):
     """The 502 an unreachable or hung answering service becomes, logged with what went wrong."""
     logger.error("rag service call failed: %s", error)
@@ -173,7 +174,7 @@ def _summarize(sub, email, at):
     try:
         turn = chat_history.get(table, sub, at)
     except KeyError:
-        return response(404, {"error": f"no turn stored at {at}"})
+        return _no_turn(at)
 
     refusal = _quota_refusal(sub, email)
     if refusal is not None:
@@ -188,7 +189,8 @@ def _summarize(sub, email, at):
     question = _original_question(turn["question"])
     chat_history.summarize(table, sub, at, question, digest["answer"])
     return response(200, {"question": question, "answer": digest["answer"], "sources": [],
-                          "summarized": True, "app": turn["app"], "at": at})
+                          "summarized": True, "app": turn["app"],
+                          "visibility": turn["visibility"], "at": at})
 
 
 def _conversation(turn):
@@ -229,5 +231,47 @@ def _delete_turn(sub, at):
     try:
         chat_history.delete(_history_table(), sub, at)
     except KeyError:
-        return response(404, {"error": f"no turn stored at {at}"})
+        return _no_turn(at)
     return response(200, {"at": at})
+
+
+def _set_visibility(sub, at, body):
+    """Shares one of the caller's chats; only the visibility the app offers is accepted."""
+    if body.get("visibility") != chat_history.PUBLIC:
+        return response(400, {"error": f"visibility must be {chat_history.PUBLIC!r}"})
+    try:
+        chat_history.set_visibility(_history_table(), sub, at, chat_history.PUBLIC)
+    except KeyError:
+        return _no_turn(at)
+    return response(200, {"at": at, "visibility": chat_history.PUBLIC})
+
+
+def _clear_visibility(sub, at):
+    """Makes one of the caller's chats private again."""
+    try:
+        chat_history.clear_visibility(_history_table(), sub, at)
+    except KeyError:
+        return _no_turn(at)
+    return response(200, {"at": at, "visibility": None})
+
+
+def _count(sub):
+    """The caller's transcript size, how many of it the app wrote, and how many chats other
+    users shared — what the chat's toggles show before either list is loaded."""
+    table = _history_table()
+    return response(200, {"own_total": chat_history.count(table, sub),
+                          "own_app": chat_history.count_app(table, sub),
+                          "public_total": chat_history.count_public(table, sub)})
+
+
+def _public_chats(sub):
+    """Every other user's public chats, newest first, each under its asker's address. An asker
+    the pool no longer holds is an operational error that surfaces, not a row to skip."""
+    listed = chat_history.public(_history_table(), sub)
+    emails = {user.sub: user.email
+              for user in users.list_users(boto3.client("cognito-idp"), os.environ["USER_POOL_ID"])}
+    # The address replaces the sub; the visibility is dropped, every listed chat being public.
+    return response(200, {"chats": [
+        {"email": emails[chat["sub"]],
+         **{key: value for key, value in chat.items() if key not in ("sub", "visibility")}}
+        for chat in listed]})

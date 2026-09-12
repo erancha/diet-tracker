@@ -3,7 +3,7 @@ import logging
 import urllib.error
 
 import pytest
-from conftest import APP_CONFIG, FakeSes, _table
+from conftest import APP_CONFIG, FakeSes, _table, signed_up, user_pool
 
 from common import chat as chat_client
 from common.dates import today
@@ -454,10 +454,12 @@ def test_a_summary_replaces_the_chat_with_its_original_question_and_the_digest(e
 
     assert response["statusCode"] == 200
     assert body_of(response) == {"question": "מה מותר?", "answer": "השיחה עסקה במה שמותר לאכול",
-                                 "sources": [], "summarized": True, "app": False, "at": at}
+                                 "sources": [], "summarized": True, "app": False,
+                                 "visibility": None, "at": at}
     (turn,) = transcript()
     assert turn == {"question": "מה מותר?", "answer": "השיחה עסקה במה שמותר לאכול",
-                    "sources": [], "summarized": True, "app": False, "at": at}
+                    "sources": [], "summarized": True, "app": False, "visibility": None,
+                    "at": at}
 
 
 def test_a_summary_keeps_every_line_of_a_multi_line_original_question(env, monkeypatch):
@@ -567,3 +569,107 @@ def test_an_unconfigured_service_still_serves_and_deletes_the_stored_transcript(
     assert [turn["question"] for turn in transcript()] == ["שאלה מקורית"]
     assert chat_handler.handler(delete_request(at), None)["statusCode"] == 200
     assert transcript() == []
+
+
+def visibility_request(method, at, body=None, sub="u1"):
+    event = {
+        "routeKey": f"{method} /chat/{{at}}/visibility",
+        "pathParameters": {"at": at},
+        "requestContext": {"authorizer": {"jwt": {"claims": {"sub": sub, "email": "a@gmail.com"}}}},
+    }
+    if body is not None:
+        event["body"] = json.dumps(body)
+    return event
+
+
+def public_chats(sub="u1"):
+    return chat_handler.handler({
+        "routeKey": "GET /chat/public",
+        "requestContext": {"authorizer": {"jwt": {"claims": {"sub": sub, "email": "a@gmail.com"}}}},
+    }, None)
+
+
+@pytest.fixture
+def pool(env, monkeypatch):
+    """Signs an address up to a mocked user pool and returns its sub."""
+    cognito, pool_id = user_pool(monkeypatch)
+    return lambda email: signed_up(cognito, pool_id, email)
+
+
+def test_a_chat_can_be_made_public_and_private_again_by_its_owner(env, monkeypatch):
+    at = stored_chat(monkeypatch)
+    assert transcript()[0]["visibility"] is None
+
+    response = chat_handler.handler(visibility_request("PUT", at, {"visibility": "public"}), None)
+    assert response["statusCode"] == 200
+    assert body_of(response) == {"at": at, "visibility": "public"}
+    assert transcript()[0]["visibility"] == "public"
+
+    response = chat_handler.handler(visibility_request("DELETE", at), None)
+    assert response["statusCode"] == 200
+    assert body_of(response) == {"at": at, "visibility": None}
+    assert transcript()[0]["visibility"] is None
+
+
+def test_only_the_one_visibility_the_app_offers_is_accepted(env, monkeypatch):
+    at = stored_chat(monkeypatch)
+    for body in ({"visibility": "friends"}, {"visibility": None}, {}):
+        assert chat_handler.handler(visibility_request("PUT", at, body), None)["statusCode"] == 400
+    assert transcript()[0]["visibility"] is None
+
+
+def test_a_user_cannot_set_the_visibility_of_another_users_chat(env, monkeypatch):
+    at = stored_chat(monkeypatch)
+    response = chat_handler.handler(visibility_request("PUT", at, {"visibility": "public"},
+                                                       sub="other"), None)
+    assert response["statusCode"] == 404
+    assert chat_handler.handler(visibility_request("DELETE", at, sub="other"), None)["statusCode"] == 404
+    assert transcript()[0]["visibility"] is None
+
+
+def test_public_chats_of_other_users_are_listed_with_their_askers(env, pool, monkeypatch):
+    mine = pool("a@gmail.com")
+    other = pool("other@gmail.com")
+    monkeypatch.setattr(chat_handler.chat, "ask", lambda api_url, key, question, context=None, timeout=None:
+                        {"answer": "תשובה", "sources": [{"fileName": "מדריך.pdf", "score": 0.5}]})
+    theirs = body_of(chat_handler.handler(request({"question": "שאלה של אחר"}, sub=other), None))["at"]
+    chat_handler.handler(visibility_request("PUT", theirs, {"visibility": "public"}, sub=other), None)
+    body_of(chat_handler.handler(request({"question": "פרטית של אחר"}, sub=other), None))
+    own = body_of(chat_handler.handler(request({"question": "שלי"}, sub=mine), None))["at"]
+    chat_handler.handler(visibility_request("PUT", own, {"visibility": "public"}, sub=mine), None)
+
+    response = public_chats(sub=mine)
+
+    assert response["statusCode"] == 200
+    assert body_of(response) == {"chats": [
+        {"email": "other@gmail.com", "question": "שאלה של אחר", "answer": "תשובה",
+         "sources": [{"fileName": "מדריך.pdf", "score": 0.5}], "summarized": False, "app": False,
+         "at": theirs}]}
+
+
+def test_a_summary_keeps_the_chats_visibility(env, monkeypatch):
+    at = stored_chat(monkeypatch)
+    chat_handler.handler(visibility_request("PUT", at, {"visibility": "public"}), None)
+    monkeypatch.setattr(chat_handler.chat, "ask", lambda api_url, key, question, context=None, timeout=None:
+                        {"answer": "תקציר", "sources": []})
+
+    response = chat_handler.handler(summary_request(at), None)
+
+    assert body_of(response)["visibility"] == "public"
+
+
+def test_the_count_covers_the_transcript_by_side_and_what_others_shared(env, monkeypatch):
+    stored_chat(monkeypatch, question="שאלה שלי")
+    monkeypatch.setattr(chat_handler.chat, "ask", lambda api_url, key, question, context=None, timeout=None:
+                        {"answer": "ת", "sources": []})
+    chat_handler.handler(request({"question": "סיכום", "app": True}), None)
+    theirs = body_of(chat_handler.handler(request({"question": "של אחר"}, sub="other"), None))["at"]
+    chat_handler.handler(visibility_request("PUT", theirs, {"visibility": "public"}, sub="other"), None)
+
+    response = chat_handler.handler({
+        "routeKey": "GET /chat/count",
+        "requestContext": {"authorizer": {"jwt": {"claims": {"sub": "u1", "email": "a@gmail.com"}}}},
+    }, None)
+
+    assert response["statusCode"] == 200
+    assert body_of(response) == {"own_total": 2, "own_app": 1, "public_total": 1}

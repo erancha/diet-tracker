@@ -110,6 +110,14 @@ before the upstream call, and the admin is notified when a user reaches it. Ever
 stored per user, so the transcript survives reloads and follows its user across devices, and a chat
 the app wrote — the weekly recap — is marked as such in the list.
 
+A chat is its asker's alone until they share it. Sharing a chat opens it to every signed-in user
+under the asker's own address — the question, the answer, and the email are what the others see,
+read-only and outlined apart from their own, behind a toggle below their own previous chats — and
+the asker can take it back at any time.
+Sharing is a choice to be read by name, which the confirm says before the chat leaves the asker's
+transcript; an answer may cite the asker's own tracked data, and sharing the chat shares that too.
+A follow-up on a shared chat stays shared, as does its digest.
+
 A deployment that configures no answering service withholds the chat surface entirely rather than
 offering a control that cannot answer.
 

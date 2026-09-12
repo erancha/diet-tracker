@@ -1,11 +1,10 @@
-"""Per-user chat transcript: one DynamoDB item per chat — the whole conversation in one item,
-its question text carrying the chain of questions and answers, its answer attribute the latest
-reply. A summarized chat holds a digest in place of that chain, under a mark that stands until a
-follow-up rewrites the item. A second mark records that the app wrote the chat rather than the
-user asking it, so a transcript can be read as one side or the other. The partition key is the
-user's sub and the sort key is the UTC ISO timestamp of the chat's last answer, so a key-ordered
-query reads the transcript newest activity first; a follow-up replaces the item whole with a
-fresh sort key, moving the chat to the top.
+"""Per-user chat transcript: one DynamoDB item per chat, keyed by the user's sub and the UTC
+timestamp of the last answer, so a key-ordered query reads newest first. The item holds the
+whole conversation — the question text carries the chain of questions and answers — and a
+follow-up replaces it whole under a fresh timestamp. Sparse marks record a digest in place of
+the chain (`summarized`), a chat the app wrote (`app`), and who else may read it
+(`visibility`, "public" so far); the visibility is the partition key of an index over the same
+timestamp, so the chats shared under one visibility are one query across every user.
 
 Source scores are floats, which the DynamoDB document layer refuses, so the sources list rides
 as a JSON string attribute and is parsed back on read."""
@@ -13,7 +12,7 @@ as a JSON string attribute and is parsed back on read."""
 import json
 from datetime import datetime, timezone
 
-from boto3.dynamodb.conditions import Key
+from boto3.dynamodb.conditions import Attr, Key
 
 from common.paging import query_all
 
@@ -23,6 +22,11 @@ from common.paging import query_all
 ORIGINAL_QUESTION_LABEL = "השאלה המקורית:"
 ANSWER_LABEL = "התשובה:"
 FOLLOW_UP_LABEL = "שאלת המשך:"
+
+# The visibility index, declared under this name in scripts/template.yaml.
+VISIBILITY_INDEX = "ChatsByVisibility"
+# The one visibility the app offers: every signed-in user may read the chat.
+PUBLIC = "public"
 
 
 def conversation(question, answer) -> str:
@@ -46,8 +50,8 @@ def append(table, sub, question, answer, sources, at=None, app=False):
     named chat with the fresh-stamped one, so the chat cannot be lost or doubled between the
     two writes; naming a missing chat raises KeyError rather than resurrecting a deleted one.
 
-    `app` marks a chat the app itself wrote. A follow-up writes the item whole, so it has to
-    re-state the mark to keep it."""
+    `app` marks a chat the app itself wrote; a follow-up writes the item whole, so it has to
+    re-state the mark. The replaced chat's visibility is read off it and carried over."""
     sk = datetime.now(timezone.utc).isoformat()
     item = {
         "pk": sub,
@@ -61,6 +65,11 @@ def append(table, sub, question, answer, sources, at=None, app=False):
     if at is None:
         table.put_item(Item=item)
         return sk
+    replaced = table.get_item(Key={"pk": sub, "sk": at})
+    if "Item" not in replaced:
+        raise KeyError(at)
+    if "visibility" in replaced["Item"]:
+        item["visibility"] = replaced["Item"]["visibility"]
     # The resource's client shares the table's plain-value document interface — values stay untyped.
     client = table.meta.client
     try:
@@ -102,18 +111,46 @@ def summarize(table, sub, at, question, summary):
     summarized chat keeps its place in the transcript. The digest mark it leaves behind stands
     until the chat moves on: a follow-up rewrites the item whole and so drops the mark with the
     digest it described. Raises KeyError when the user holds no chat at that timestamp."""
+    _update_own(table, sub, at,
+                UpdateExpression=("SET #question = :question, #answer = :answer, "
+                                  "#sources = :sources, #summarized = :summarized"),
+                ExpressionAttributeNames={"#question": "question", "#answer": "answer",
+                                          "#sources": "sources", "#summarized": "summarized"},
+                ExpressionAttributeValues={":question": question, ":answer": summary,
+                                           ":sources": "[]", ":summarized": True})
+
+
+def set_visibility(table, sub, at, visibility):
+    """Shares the user's chat at the given timestamp under the named visibility; raises
+    KeyError when the user holds no such chat."""
+    _update_own(table, sub, at, UpdateExpression="SET #visibility = :visibility",
+                ExpressionAttributeNames={"#visibility": "visibility"},
+                ExpressionAttributeValues={":visibility": visibility})
+
+
+def clear_visibility(table, sub, at):
+    """Makes the user's chat at the given timestamp private again, which drops it from the
+    visibility index; raises KeyError when the user holds no such chat."""
+    _update_own(table, sub, at, UpdateExpression="REMOVE #visibility",
+                ExpressionAttributeNames={"#visibility": "visibility"})
+
+
+def _update_own(table, sub, at, **update):
+    """One update conditioned on the user holding the chat, so another user's timestamp raises
+    KeyError instead of creating an item under the caller's key."""
     try:
-        table.update_item(
-            Key={"pk": sub, "sk": at},
-            UpdateExpression=("SET #question = :question, #answer = :answer, "
-                              "#sources = :sources, #summarized = :summarized"),
-            ExpressionAttributeNames={"#question": "question", "#answer": "answer",
-                                      "#sources": "sources", "#summarized": "summarized"},
-            ExpressionAttributeValues={":question": question, ":answer": summary, ":sources": "[]",
-                                       ":summarized": True},
-            ConditionExpression="attribute_exists(pk)")
+        table.update_item(Key={"pk": sub, "sk": at}, ConditionExpression="attribute_exists(pk)",
+                          **update)
     except table.meta.client.exceptions.ConditionalCheckFailedException:
         raise KeyError(at)
+
+
+def public(table, reader_sub) -> list:
+    """Every chat other users shared as public, newest first, each with its asker's sub."""
+    items = query_all(table, IndexName=VISIBILITY_INDEX,
+                      KeyConditionExpression=Key("visibility").eq(PUBLIC),
+                      ScanIndexForward=False)
+    return [{"sub": item["pk"], **_turn(item)} for item in items if item["pk"] != reader_sub]
 
 
 def delete(table, sub, at):
@@ -140,8 +177,19 @@ def count(table, sub) -> int:
     return _count(table, Key("pk").eq(sub))
 
 
-def _count(table, key_condition) -> int:
-    return table.query(Select="COUNT", KeyConditionExpression=key_condition)["Count"]
+def count_app(table, sub) -> int:
+    """The chats of the user's transcript that the app wrote, counted inside DynamoDB."""
+    return _count(table, Key("pk").eq(sub), FilterExpression=Attr("app").exists())
+
+
+def count_public(table, reader_sub) -> int:
+    """The chats other users shared as public, counted inside DynamoDB on the visibility index."""
+    return _count(table, Key("visibility").eq(PUBLIC), IndexName=VISIBILITY_INDEX,
+                  FilterExpression=Attr("pk").ne(reader_sub))
+
+
+def _count(table, key_condition, **query) -> int:
+    return table.query(Select="COUNT", KeyConditionExpression=key_condition, **query)["Count"]
 
 
 def turns(table, sub):
@@ -161,5 +209,7 @@ def _turn(item):
         # Likewise written only for a chat the app wrote, so one carrying no such attribute is
         # one the user asked.
         "app": "app" in item,
+        # Absent on a private chat.
+        "visibility": item["visibility"] if "visibility" in item else None,
         "at": item["sk"],
     }

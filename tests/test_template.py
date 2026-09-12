@@ -72,6 +72,23 @@ def test_chat_function_reads_every_table_the_context_block_queries():
         assert {"DynamoDBReadPolicy": {"TableName": table}} in policies
 
 
+def test_public_chats_are_indexed_by_visibility_and_the_chat_function_can_name_their_askers():
+    # An index, route or grant missing here surfaces only when the first public chat is opened
+    # on a deployed stack. The index name is read from code, so the query cannot drift from it.
+    from common import chat_history
+    template = _load_template()
+    (index,) = template["Resources"]["ChatHistoryTable"]["Properties"]["GlobalSecondaryIndexes"]
+    assert index["IndexName"] == chat_history.VISIBILITY_INDEX
+    assert [(key["AttributeName"], key["KeyType"]) for key in index["KeySchema"]] == [
+        ("visibility", "HASH"), ("sk", "RANGE")]
+    chat_function = template["Resources"]["ChatFunction"]["Properties"]
+    routes = {(e["Properties"]["Method"], e["Properties"]["Path"])
+              for e in chat_function["Events"].values() if e["Type"] == "HttpApi"}
+    assert {("PUT", "/chat/{at}/visibility"), ("DELETE", "/chat/{at}/visibility"),
+            ("GET", "/chat/public"), ("GET", "/chat/count")} <= routes
+    assert "ListUsersPolicy" in chat_function["Policies"]
+
+
 def test_the_recap_consumer_is_granted_every_table_and_service_one_recap_touches():
     # A recap reads the user's days, meals and weights, replaces its own chat in the transcript
     # with the answered follow-up (a delete and a put in one transaction), and keeps a refused

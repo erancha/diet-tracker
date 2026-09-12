@@ -5,7 +5,7 @@ from decimal import Decimal
 
 import boto3
 import pytest
-from conftest import APP_CONFIG, FakeSes
+from conftest import APP_CONFIG, FakeSes, signed_up, user_pool
 
 from common import appconfig, notify, undelivered
 from common.dates import days_before, today
@@ -639,19 +639,10 @@ def admin_env(env, monkeypatch):
     """The admin listing's environment on top of env: a mocked user pool the handler may list,
     the admin address the caller is recognized by, and the chat transcript table the listing
     counts questions from."""
-    cognito = boto3.client("cognito-idp", region_name="eu-central-1")
-    pool_id = cognito.create_user_pool(PoolName="p")["UserPool"]["Id"]
-    monkeypatch.setenv("USER_POOL_ID", pool_id)
+    cognito, pool_id = user_pool(monkeypatch)
     monkeypatch.setenv("ADMIN_EMAIL", "admin@gmail.com")
     monkeypatch.setenv("CHAT_HISTORY_TABLE", "chat_history")
     return cognito, pool_id
-
-
-def signed_up(cognito, pool_id, email):
-    created = cognito.admin_create_user(
-        UserPoolId=pool_id, Username=email,
-        UserAttributes=[{"Name": "email", "Value": email}])
-    return next(a["Value"] for a in created["User"]["Attributes"] if a["Name"] == "sub")
 
 
 def test_admin_activity_refuses_every_other_account(admin_env):

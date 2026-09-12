@@ -4,6 +4,7 @@ import boto3
 import pytest
 from moto import mock_aws
 
+from common import chat_history
 from common.questionnaire import parse
 
 # The repo's own app config, loaded by the tests that assert on what the app actually ships.
@@ -50,14 +51,43 @@ def meal(at, choice="carb_grade_2", **overrides):
             "additions": [], "portion": None, "second_source": None, **overrides}
 
 
-def _table(ddb, name, with_sort_key=True):
+def user_pool(monkeypatch):
+    """A mocked Cognito pool, its id in USER_POOL_ID; returns the client and the id for
+    signed_up. Needs the AWS mock the ddb fixture keeps active."""
+    cognito = boto3.client("cognito-idp", region_name="eu-central-1")
+    pool_id = cognito.create_user_pool(PoolName="p")["UserPool"]["Id"]
+    monkeypatch.setenv("USER_POOL_ID", pool_id)
+    return cognito, pool_id
+
+
+def signed_up(cognito, pool_id, email) -> str:
+    """Adds one account to the mocked pool and returns its sub."""
+    created = cognito.admin_create_user(
+        UserPoolId=pool_id, Username=email,
+        UserAttributes=[{"Name": "email", "Value": email}])
+    return next(a["Value"] for a in created["User"]["Attributes"] if a["Name"] == "sub")
+
+
+def _table(ddb, name, with_sort_key=True, index=None):
+    """Creates one app table under the shared pk/sk key shape; `index` is (name, partition
+    attribute) of a secondary index over that attribute and sk, as scripts/template.yaml
+    declares."""
     key_schema = [{"AttributeName": "pk", "KeyType": "HASH"}]
     attrs = [{"AttributeName": "pk", "AttributeType": "S"}]
     if with_sort_key:
         key_schema.append({"AttributeName": "sk", "KeyType": "RANGE"})
         attrs.append({"AttributeName": "sk", "AttributeType": "S"})
-    ddb.create_table(TableName=name, KeySchema=key_schema, AttributeDefinitions=attrs,
-                     BillingMode="PAY_PER_REQUEST")
+    table = {"TableName": name, "KeySchema": key_schema, "AttributeDefinitions": attrs,
+             "BillingMode": "PAY_PER_REQUEST"}
+    if index is not None:
+        index_name, partition = index
+        attrs.append({"AttributeName": partition, "AttributeType": "S"})
+        table["GlobalSecondaryIndexes"] = [{
+            "IndexName": index_name,
+            "KeySchema": [{"AttributeName": partition, "KeyType": "HASH"},
+                          {"AttributeName": "sk", "KeyType": "RANGE"}],
+            "Projection": {"ProjectionType": "ALL"}}]
+    ddb.create_table(**table)
 
 
 @pytest.fixture
@@ -71,7 +101,7 @@ def ddb():
         _table(resource, "meals")
         _table(resource, "state", with_sort_key=False)
         _table(resource, "weights")
-        _table(resource, "chat_history")
+        _table(resource, "chat_history", index=(chat_history.VISIBILITY_INDEX, "visibility"))
         _table(resource, "undelivered")
         yield resource
 

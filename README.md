@@ -35,7 +35,8 @@ closed from the tracker, and the week's trend over recorded history.
   material, with the documents each answer came from. The answering is done by a separate service,
   [Summaries.AI](https://github.com/erancha/Summaries.AI-public), and every question sends your own
   recent days and meals along with it so the answer can refer to them — which means that data
-  leaves this app.
+  leaves this app. A chat you can share with every user, under your own address, and the chats
+  other users have shared with everyone are yours to read.
 - The admin account sees a list of who has signed up and how much each has been tracking —
   counts and email addresses, never anyone's recorded meals or weights.
 
