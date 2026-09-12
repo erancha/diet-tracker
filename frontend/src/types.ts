@@ -367,9 +367,11 @@ export interface PublicChats {
 }
 
 // What the chat's toggles show before either list is loaded: the reader's transcript size, how
-// many of it the app wrote, and how many chats other users shared.
+// many of it the app wrote, how many of it the reader shared, and how many chats other users
+// shared.
 export interface ChatCount {
   own_total: number;
   own_app: number;
+  own_shared: number;
   public_total: number;
 }

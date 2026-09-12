@@ -21,14 +21,15 @@ function api(overrides: Partial<ChatApi> = {}): ChatApi {
     setChatVisibility: vi.fn(),
     clearChatVisibility: vi.fn(),
     getPublicChats: vi.fn().mockResolvedValue({ chats: [] }),
-    getChatCount: vi.fn().mockResolvedValue({ own_total: 0, own_app: 0, public_total: 0 }),
+    getChatCount: vi.fn().mockResolvedValue({ own_total: 0, own_app: 0, own_shared: 0, public_total: 0 }),
     ...overrides,
   };
 }
 
 // The count the server reports, which the toggles show before either list is loaded.
-function counted(ownTotal: number, ownApp = 0, publicTotal = 0) {
-  return vi.fn().mockResolvedValue({ own_total: ownTotal, own_app: ownApp, public_total: publicTotal });
+function counted(ownTotal: number, ownApp = 0, publicTotal = 0, ownShared = 0) {
+  return vi.fn().mockResolvedValue({ own_total: ownTotal, own_app: ownApp, own_shared: ownShared,
+                                     public_total: publicTotal });
 }
 
 function turn(index: number, app = false, visibility: ChatTurn["visibility"] = null): ChatTurn {
@@ -95,6 +96,25 @@ describe("Chat", () => {
     await userEvent.selectOptions(screen.getByRole("combobox", { name: "סינון הצ'אטים" }), "mine");
     expect(screen.getByRole("button", { name: "2 צ'אטים קודמים שלי" })).toBeInTheDocument();
     expect(chatApi.getChatTranscript).not.toHaveBeenCalled();
+  });
+
+  it("counts the chats the user shared, by the server's figure and then by the transcript", async () => {
+    const chatApi = api({
+      getChatTranscript: vi.fn().mockResolvedValue({ turns: [turn(3), turn(2, false, "public"), turn(1)] }),
+      getChatCount: counted(3, 0, 0, 1),
+    });
+    render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} defaultTranscriptFolded />);
+    await screen.findByRole("button", { name: "3 צ'אטים קודמים שלי" });
+
+    await userEvent.selectOptions(screen.getByRole("combobox", { name: "סינון הצ'אטים" }), "shared");
+    expect(screen.getByRole("button", { name: "צ'אט קודם אחד שלי" })).toBeInTheDocument();
+    expect(screen.getByText("2 מסוננים")).toBeInTheDocument();
+    expect(chatApi.getChatTranscript).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByRole("button", { name: "צ'אט קודם אחד שלי" }));
+    expect(await screen.findByText("שאלה 2")).toBeInTheDocument();
+    expect(screen.queryByText("שאלה 3")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "צ'אט קודם אחד שלי" })).toBeInTheDocument();
   });
 
   it("lands a question sent before the transcript loaded atop the transcript it then loads", async () => {

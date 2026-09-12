@@ -256,11 +256,13 @@ def _clear_visibility(sub, at):
 
 
 def _count(sub):
-    """The caller's transcript size, how many of it the app wrote, and how many chats other
-    users shared — what the chat's toggles show before either list is loaded."""
+    """The caller's transcript size, how many of it the app wrote, how many of it the caller
+    shared, and how many chats other users shared — what the chat's toggles show before either
+    list is loaded."""
     table = _history_table()
     return response(200, {"own_total": chat_history.count(table, sub),
                           "own_app": chat_history.count_app(table, sub),
+                          "own_shared": chat_history.count_shared(table, sub),
                           "public_total": chat_history.count_public(table, sub)})
 
 

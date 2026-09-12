@@ -308,14 +308,17 @@ export function Chat({ email, api, sampleQuestions, defaultTranscriptFolded = fa
   );
 
   // What the filter admits: the loaded chats once the transcript is in, the server's figures
-  // before — every chat, the app's, or the rest.
+  // before — every chat, the ones the user shared, the app's, or the rest.
   const listed = turns === null ? []
-    : filter === "all" ? turns : turns.filter((turn) => turn.app === (filter === "app"));
+    : filter === "all" ? turns
+    : filter === "shared" ? turns.filter((turn) => turn.visibility !== null)
+    : turns.filter((turn) => turn.app === (filter === "app"));
   const ownTotal = turns === null ? count?.own_total : turns.length;
   const listedCount = turns !== null ? listed.length
     : count === null ? undefined
     : filter === "all" ? count.own_total
-    : filter === "app" ? count.own_app : count.own_total - count.own_app;
+    : filter === "app" ? count.own_app
+    : filter === "shared" ? count.own_shared : count.own_total - count.own_app;
   const filteredOut = ownTotal === undefined || listedCount === undefined ? 0 : ownTotal - listedCount;
   const othersTotal = others === null ? count?.public_total : others.length;
   // A toggle's figure, bold; the others' one is highlighted while it stands for chats added
@@ -362,6 +365,7 @@ export function Chat({ email, api, sampleQuestions, defaultTranscriptFolded = fa
             <option value="all">הכול</option>
             <option value="mine">שלי</option>
             <option value="app">מהאפליקציה</option>
+            <option value="shared">ששיתפתי</option>
           </select>
         </div>
       )}

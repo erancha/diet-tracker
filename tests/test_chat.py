@@ -659,10 +659,11 @@ def test_a_summary_keeps_the_chats_visibility(env, monkeypatch):
 
 
 def test_the_count_covers_the_transcript_by_side_and_what_others_shared(env, monkeypatch):
-    stored_chat(monkeypatch, question="שאלה שלי")
+    mine = stored_chat(monkeypatch, question="שאלה שלי")
     monkeypatch.setattr(chat_handler.chat, "ask", lambda api_url, key, question, context=None, timeout=None:
                         {"answer": "ת", "sources": []})
     chat_handler.handler(request({"question": "סיכום", "app": True}), None)
+    chat_handler.handler(visibility_request("PUT", mine, {"visibility": "public"}), None)
     theirs = body_of(chat_handler.handler(request({"question": "של אחר"}, sub="other"), None))["at"]
     chat_handler.handler(visibility_request("PUT", theirs, {"visibility": "public"}, sub="other"), None)
 
@@ -672,4 +673,4 @@ def test_the_count_covers_the_transcript_by_side_and_what_others_shared(env, mon
     }, None)
 
     assert response["statusCode"] == 200
-    assert body_of(response) == {"own_total": 2, "own_app": 1, "public_total": 1}
+    assert body_of(response) == {"own_total": 2, "own_app": 1, "own_shared": 1, "public_total": 1}

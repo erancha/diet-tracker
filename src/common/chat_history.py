@@ -182,6 +182,12 @@ def count_app(table, sub) -> int:
     return _count(table, Key("pk").eq(sub), FilterExpression=Attr("app").exists())
 
 
+def count_shared(table, sub) -> int:
+    """The chats of the user's transcript they shared under any visibility, counted inside
+    DynamoDB."""
+    return _count(table, Key("pk").eq(sub), FilterExpression=Attr("visibility").exists())
+
+
 def count_public(table, reader_sub) -> int:
     """The chats other users shared as public, counted inside DynamoDB on the visibility index."""
     return _count(table, Key("visibility").eq(PUBLIC), IndexName=VISIBILITY_INDEX,

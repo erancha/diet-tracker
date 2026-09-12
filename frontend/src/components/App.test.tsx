@@ -45,7 +45,7 @@ function api(days: Partial<Awaited<ReturnType<Api["getDays"]>>> = {}): Api {
     }),
     getWeight: vi.fn().mockResolvedValue({ target: null, entries: [] }),
     getChatTranscript: vi.fn().mockResolvedValue({ turns: [] }),
-    getChatCount: vi.fn().mockResolvedValue({ own_total: 0, own_app: 0, public_total: 0 }),
+    getChatCount: vi.fn().mockResolvedValue({ own_total: 0, own_app: 0, own_shared: 0, public_total: 0 }),
     // The admin listing loads on mount now that the section always opens expanded, so it is a
     // resolving read like the others.
     getAdminActivity: vi.fn().mockResolvedValue({ users: [] }),

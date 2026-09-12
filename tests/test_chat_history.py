@@ -349,6 +349,16 @@ def test_count_app_counts_only_the_chats_the_app_wrote(table):
     assert chat_history.count_app(table, "u3") == 0
 
 
+def test_count_shared_counts_the_chats_the_user_shared(table):
+    shared = chat_history.append(table, "u1", "משותפת", "ת", [])
+    chat_history.set_visibility(table, "u1", shared, chat_history.PUBLIC)
+    chat_history.append(table, "u1", "פרטית", "ת", [])
+    theirs = chat_history.append(table, "u2", "של אחר", "ת", [])
+    chat_history.set_visibility(table, "u2", theirs, chat_history.PUBLIC)
+    assert chat_history.count_shared(table, "u1") == 1
+    assert chat_history.count_shared(table, "u3") == 0
+
+
 def test_count_public_counts_other_users_shared_chats_alone(table):
     mine = chat_history.append(table, "u1", "שלי", "ת", [])
     chat_history.set_visibility(table, "u1", mine, chat_history.PUBLIC)
