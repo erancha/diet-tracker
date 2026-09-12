@@ -329,6 +329,28 @@ describe("DayTracker", () => {
     expect(screen.getByLabelText("דרגה 4")).toBeInTheDocument();
   });
 
+  it("spells out the picked grade for a second in the picker while names are condensed", () => {
+    vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout"] });
+    vi.setSystemTime(new Date(2026, 7, 20, 19, 5));
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={trackedDay}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    openMealForm();
+
+    fireEvent.click(screen.getByLabelText("דרגה 2"));
+
+    expect(screen.getByLabelText("דרגה 2 (קינואה)")).toBeChecked();
+    // The other options, and the recorded rows, keep the condensed reading.
+    expect(screen.getByLabelText("דרגה 4")).toBeInTheDocument();
+    expect(screen.getAllByText("דרגה 4")).not.toHaveLength(0);
+
+    act(() => vi.advanceTimersByTime(1000));
+    expect(screen.getByLabelText("דרגה 2")).toBeChecked();
+    expect(screen.queryByText("דרגה 2 (קינואה)")).toBeNull();
+  });
+
   it("withholds the density switch while no grade name is on screen", () => {
     atLocalTime(19, 5);
     render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={emptyDay}
@@ -1034,7 +1056,8 @@ describe("DayTracker", () => {
     expect(confirmSpy).toHaveBeenCalledOnce();
     expect(screen.getByRole("button", { name: "הוספת ארוחה" }))
       .toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByLabelText("דרגה 4")).toBeChecked();
+    // Still spelled out from the pick a moment ago, or trimmed back: checked either way.
+    expect(screen.getByLabelText(/^דרגה 4( \(אורז לבן\))?$/)).toBeChecked();
   });
 
   it("resets a half-composed meal once the fold's dialog is confirmed", () => {

@@ -398,6 +398,10 @@ td.off-norm { font-weight: bold; }
    than the whole item, so the alarm sits on the number its label merely names, and its
    specificity outranks the green that figure otherwise carries. */
 td.heavy-day, .tracker-dashboard .heavy-day .score, .meal-list .heavy-meal { color: var(--danger); }
+/* The full name a just-picked grade shows for a moment reads as a flash, not a change of
+   density: it comes in highlighted and fades as the option settles. */
+.choice-revealed { animation: choice-reveal 1s ease-out; }
+@keyframes choice-reveal { from { background: #fff8e1; } to { background: transparent; } }
 td.heavy-day.treat-day, .tracker-dashboard .heavy-day.treat-day .score { color: var(--treat-breach); }
 /* The bin is lifted out of the cell's line and pinned to the cell's far edge, so it holds one
    position down the column rather than trailing whatever the row's score happens to measure.
@@ -536,6 +540,8 @@ main:not(.intro-0, .intro-1, .intro-2, .intro-3, .intro-4) .weight .section-togg
   .weight :is(.weight-latest, .weight-chart-toggle) { animation: none; }
   .weight .section-toggle::before { animation: none; }
   .section-waning, .section-folding { animation: none; }
+  /* The full name still shows for its moment; only the highlight's fade goes. */
+  .choice-revealed { animation: none; }
   /* The ring stays as a static mark of the wait. */
   .chat-pending::before { animation: none; }
 }

@@ -1,6 +1,11 @@
+import { useEffect, useState } from "react";
 import { choiceLabel } from "../gradeLabels";
 import type { Choice, Question } from "../types";
 import { questionTitle, valueLabel } from "../violations";
+
+// How long a choice just picked spells out what it covers while names are condensed, so
+// whoever picked it sees what the grade stands for before it trims back to the name alone.
+const PICK_REVEAL_MS = 1000;
 
 // The options a question offers: its configured choices, plus one synthesized option per value the
 // scale cannot express. Two such values arise, and they coincide whenever the tracker closed the
@@ -40,6 +45,9 @@ export function fieldsetChoices(question: Question, floor?: number, stored?: num
 // The required marking states the obligation to assistive tech; the browser's own enforcement is
 // never invoked, since its message speaks the browser's UI language rather than the app's Hebrew.
 // Enclosing forms check their own answers before submitting.
+//
+// With names condensed, the choice just picked reads in full for a moment, highlighted, then
+// trims back; a choice listing nothing reads the same throughout, so it is never revealed.
 export function ChoiceFieldset({ question, selectedId, floor, stored, scope = "day",
                                 expandLabels = true, onPick }: {
   question: Question;
@@ -55,22 +63,36 @@ export function ChoiceFieldset({ question, selectedId, floor, stored, scope = "d
   onPick: (choice: Choice) => void;
 }) {
   const choices = fieldsetChoices(question, floor, stored);
+  // The choice reading in full for its moment, or null.
+  const [revealedId, setRevealedId] = useState<string | null>(null);
+  useEffect(() => {
+    if (revealedId === null) return;
+    const timer = setTimeout(() => setRevealedId(null), PICK_REVEAL_MS);
+    return () => clearTimeout(timer);
+  }, [revealedId]);
+  const pick = (choice: Choice) => {
+    onPick(choice);
+    if (!expandLabels && choice.examples !== undefined) setRevealedId(choice.id);
+  };
   return (
     <fieldset>
       <legend>{questionTitle(question, scope)}</legend>
-      {choices.map((choice) => (
-        <label key={choice.id}>
-          <input
-            type="radio"
-            name={question.id}
-            required
-            disabled={floor !== undefined && choice.value < floor}
-            checked={selectedId === choice.id}
-            onChange={() => onPick(choice)}
-          />
-          {" "}{choiceLabel(choice, expandLabels)}
-        </label>
-      ))}
+      {choices.map((choice) => {
+        const revealed = choice.id === revealedId;
+        return (
+          <label key={choice.id} className={revealed ? "choice-revealed" : undefined}>
+            <input
+              type="radio"
+              name={question.id}
+              required
+              disabled={floor !== undefined && choice.value < floor}
+              checked={selectedId === choice.id}
+              onChange={() => pick(choice)}
+            />
+            {" "}{choiceLabel(choice, expandLabels || revealed)}
+          </label>
+        );
+      })}
     </fieldset>
   );
 }
