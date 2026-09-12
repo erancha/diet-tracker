@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ChartSpan, WeightPayload, WeightSettings } from "../types";
 import { isWeighInDay, isoDate } from "../dates";
 import { mayDiscardEdits } from "../edits";
-import { activeSpan, entriesWithin, kgLabel, offeredSpans, parseKg, rhythmReading, summarize,
-         targetChangePrompt, trendShape, WEIGH_IN_CADENCE_QUESTION, type TrendShape,
-         type WeightSummary } from "../weight";
+import { activeSpan, ceilingWarning, entriesWithin, floorWarning, kgLabel, offeredSpans, parseKg,
+         rhythmReading, summarize, targetChangePrompt, trendShape, WEIGH_IN_CADENCE_QUESTION,
+         type TrendShape, type WeightSummary } from "../weight";
 import { CollapsibleSection } from "./CollapsibleSection";
 import { Icon, type IconName } from "./Icon";
 import { useGlobalFold } from "./useFoldAll";
@@ -16,13 +16,36 @@ interface Limits {
   max_kg: number;
 }
 
-function KgInput({ value, limits, label, onChange }: {
-  value: string; limits: Limits; label: string; onChange: (value: string) => void;
+// One weight input's text and the warning standing beside it. The ceiling warns as the figure is
+// typed; the floor is read only when the figure is submitted, and its warning stands until the
+// text moves again. A figure past the ceiling parses to nothing, which is what disables the
+// submit beside the input.
+function useKgDraft(limits: Limits) {
+  const [text, setText] = useState("");
+  const [floorNotice, setFloorNotice] = useState<string | null>(null);
+  const kg = parseKg(text, limits);
+  const set = (next: string) => {
+    setText(next);
+    setFloorNotice(null);
+  };
+  const submit = (kg: number, act: (kg: number) => void) => {
+    const notice = floorWarning(kg, limits);
+    if (notice === null) act(kg); else setFloorNotice(notice);
+  };
+  return { text, set, kg, warning: ceilingWarning(text, limits) ?? floorNotice, submit };
+}
+
+function KgInput({ value, warning, limits, label, onChange }: {
+  value: string; warning: string | null; limits: Limits; label: string;
+  onChange: (value: string) => void;
 }) {
   return (
-    <input type="number" inputMode="decimal" step="0.1" aria-label={label}
-           min={limits.min_kg} max={limits.max_kg} value={value}
-           onChange={(e) => onChange(e.target.value)} />
+    <>
+      <input type="number" inputMode="decimal" step="0.1" aria-label={label}
+             min={limits.min_kg} max={limits.max_kg} value={value} aria-invalid={warning !== null}
+             onChange={(e) => onChange(e.target.value)} />
+      {warning !== null && <> <span className="weight-limit-warning" role="alert">{warning}</span></>}
+    </>
   );
 }
 
@@ -37,47 +60,88 @@ function KgInput({ value, limits, label, onChange }: {
 // header line, easy to walk past on the way to the weighing input below it — and a weighing with
 // no target behind it charts nothing to aim at.
 //
-// Committing asks for confirmation — replacing a standing target is not the same act as
-// discarding an untouched draft. Closing on a value that was actually typed raises the discard
-// guard the forms elsewhere share; an untouched input closes silently.
+// The check mark stands only once the input reads a different weight from the standing target,
+// so there is nothing to commit that would change nothing. Committing asks for confirmation —
+// replacing a standing target is not the same act as discarding an untouched draft. Closing on a
+// value that was actually typed raises the discard guard the forms elsewhere share; an untouched
+// input closes silently.
+//
+// A close glyph stands beside the input only while it holds a value. An empty input, the state a
+// never-set target opens in, closes instead on a press anywhere outside the line: the editor was
+// opened for the reader rather than by them, so carrying on with the page dismisses it.
 function TargetReading({ summary, limits, onSet }: {
   summary: WeightSummary; limits: Limits; onSet: (kg: number) => void;
 }) {
-  const [draft, setDraft] = useState<string | null>(summary.target === null ? "" : null);
-  const editing = draft !== null;
+  const [editing, setEditing] = useState(summary.target === null);
+  const draft = useKgDraft(limits);
   const opensOn = summary.target === null ? "" : String(summary.target);
-  const kg = editing ? parseKg(draft, limits) : null;
+  const kg = editing ? draft.kg : null;
+  const changed = kg !== summary.target;
+  const line = useRef<HTMLSpanElement>(null);
 
   const commit = () => {
     if (kg === null) return;
-    if (window.confirm(targetChangePrompt(kg, summary.target))) {
-      onSet(kg);
-      setDraft(null);
-    }
+    draft.submit(kg, (kg) => {
+      if (window.confirm(targetChangePrompt(kg, summary.target))) {
+        onSet(kg);
+        setEditing(false);
+      }
+    });
   };
 
-  const toggle = () => {
-    if (!editing) return setDraft(opensOn);
-    if (mayDiscardEdits(draft !== opensOn)) setDraft(null);
+  const open = () => {
+    draft.set(opensOn);
+    setEditing(true);
   };
+
+  const close = () => {
+    if (mayDiscardEdits(draft.text !== opensOn)) setEditing(false);
+  };
+
+  const toggle = () => (editing ? close() : open());
+
+  const dismissOnOutsidePress = editing && draft.text === "";
+  useEffect(() => {
+    if (!dismissOnOutsidePress) return;
+    const dismiss = (event: MouseEvent) => {
+      if (!line.current?.contains(event.target as Node)) setEditing(false);
+    };
+    document.addEventListener("mousedown", dismiss);
+    return () => document.removeEventListener("mousedown", dismiss);
+  }, [dismissOnOutsidePress]);
 
   return (
-    <span className="weight-summary">
+    <span className="weight-summary" ref={line}>
       {summary.latest !== null && <>· </>}
       {summary.gapKg !== null && <><span className="value weight-gap">{kgLabel(summary.gapKg)}</span>{" "}</>}
       {summary.prefix}
       <button type="button" className="disclosure in-text" aria-expanded={editing}
-              aria-label="עריכת יעד" onClick={toggle}>יעד</button>:{" "}
+              aria-label="עריכת יעד" onClick={toggle}>יעד</button>
       {editing ? (
         <>
-          <KgInput value={draft} limits={limits} label="משקל יעד" onChange={setDraft} />
-          <button type="button" className="glyph compact weight-target-commit" aria-label="אישור"
-                  disabled={kg === null} onClick={commit}><Icon name="check" /></button>
+          :{" "}
+          <KgInput value={draft.text} warning={draft.warning} limits={limits} label="משקל יעד"
+                   onChange={draft.set} />
+          {changed && (
+            <button type="button" className="glyph compact weight-target-commit" aria-label="אישור"
+                    disabled={kg === null} onClick={commit}><Icon name="check" /></button>
+          )}
+          {draft.text !== "" && (
+            <button type="button" className="glyph compact weight-target-close"
+                    aria-label="סגירת עריכת היעד" onClick={close}><Icon name="close" /></button>
+          )}
         </>
-      ) : summary.target === null ? (
-        <span className="weight-target-unset">טרם נקבע</span>
       ) : (
-        <><span className="value">{kgLabel(summary.target)}</span> ק״ג</>
+        <>
+          {" "}
+          {/* A second handle on the same fold for the pointer alone: the underlined word beside
+              it is the control assistive technology and the keyboard reach. */}
+          <button type="button" tabIndex={-1} aria-hidden="true" onClick={toggle}>
+            {summary.target === null
+              ? <>(<span className="weight-target-unset">טרם נקבע</span>)</>
+              : <>(<span className="value">{kgLabel(summary.target)}</span> ק״ג)</>}
+          </button>
+        </>
       )}
     </span>
   );
@@ -98,13 +162,15 @@ const TREND_ICONS: Record<TrendShape, IconName> = {
 function TodayRow({ recorded, limits, due, onRecord }: {
   recorded: number | null; limits: Limits; due: boolean; onRecord: (kg: number) => void;
 }) {
-  const [draft, setDraft] = useState("");
-  const kg = parseKg(draft, limits);
+  const draft = useKgDraft(limits);
+  const kg = draft.kg;
   return (
     <p className={due ? "weight-today weigh-in-due" : "weight-today"}>
       <span>המשקל היום:</span>
-      <KgInput value={draft} limits={limits} label="המשקל היום" onChange={setDraft} />
-      <button type="button" className="primary" disabled={kg === null} onClick={() => onRecord(kg!)}>
+      <KgInput value={draft.text} warning={draft.warning} limits={limits} label="המשקל היום"
+               onChange={draft.set} />
+      <button type="button" className="primary" disabled={kg === null}
+              onClick={() => draft.submit(kg!, onRecord)}>
         {recorded === null ? "שמירה" : "עדכון"}
       </button>
       {recorded !== null && <span className="weight-recorded">נרשם: {kgLabel(recorded)} ק״ג</span>}

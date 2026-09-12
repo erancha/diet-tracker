@@ -668,18 +668,30 @@ main:not(.intro-0, .intro-1, .intro-2, .intro-3, .intro-4) .weight .section-togg
 /* A target nobody has set yet is an absence, not a figure, so it reads as chrome rather than
    taking the accent the value carries. */
 .weight-target-unset { color: #5f5f5f; }
-/* Commits the target from inside the summary line. A worded button would push the line onto a
-   second row on a phone, which is the whole thing this arrangement avoids, so the confirmation is
-   a glyph seated on the text baseline. */
-.weight-target-commit { --btn-fg: var(--accent); margin-block: -0.15rem; }
-/* Both inputs hold the same kind of figure and stand the same height, so they share one box. */
+/* Commits or closes the target editor from inside the summary line. Worded buttons would push the
+   line onto a second row on a phone, which is the whole thing this arrangement avoids, so both are
+   glyphs centred on the line with the input; the close reads as chrome so the check stays the
+   action. The negative margin keeps their padded boxes from growing the line. */
+.weight-target-commit,
+.weight-target-close { margin-block: -0.15rem; vertical-align: middle; }
+.weight-target-commit { --btn-fg: var(--accent); }
+.weight-target-close { --btn-fg: #5f5f5f; }
+/* Both inputs hold the same kind of figure and stand the same height, so they share one frame,
+   sized to the widest weight the limits admit: three digits and a decimal. The spinner would eat
+   into that room on a desktop and steps a weight by nothing useful, so it is dropped. */
 .weight-today input,
-.weight-summary input { width: 5rem; padding: 0 0.4rem; font-size: 1rem;
-                        border: 1px solid #ccc; border-radius: 8px; }
+.weight-summary input { width: calc(5ch + 0.8rem); padding: 0 0.4rem; font-size: 1rem;
+                        border: 1px solid #ccc; border-radius: 8px; appearance: textfield; }
+.weight-today input::-webkit-inner-spin-button,
+.weight-summary input::-webkit-inner-spin-button { appearance: none; }
 /* The target's sits in running text rather than in a control row, so it is set back to the body
-   weight the surrounding line is not, and seated on that line's baseline. */
+   weight the surrounding line is not, and centred on that line, where the glyphs beside it sit;
+   on the baseline its taller box would hang below them. Its box is trimmed to the figure alone,
+   so the sentence holding it stays on one phone row. */
 .weight-summary input { height: var(--weight-input-height); font-weight: 400;
-                        vertical-align: baseline; }
+                        vertical-align: middle; width: calc(4.5ch + 0.5rem); padding: 0 0.25rem; }
+/* Names the bound a typed figure crossed, in the danger colour the section reserves for a miss. */
+.weight-limit-warning { font-size: 0.85rem; color: var(--danger); }
 /* Already-recorded is a statement about the day, not a second value to act on, so it reads as
    chrome beside the input that would replace it. */
 .weight-recorded { font-size: 0.85rem; color: #5f5f5f; }

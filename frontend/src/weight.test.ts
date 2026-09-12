@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { activeSpan, chartDomain, entriesWithin, kgLabel, offeredSpans, rhythmReading,
-         overTargetSeverity, summarize, targetChangePrompt, trendShape, usualHour } from "./weight";
+import { activeSpan, ceilingWarning, chartDomain, entriesWithin, floorWarning, kgLabel,
+         offeredSpans, overTargetSeverity, parseKg, rhythmReading, summarize, targetChangePrompt,
+         trendShape, usualHour } from "./weight";
 import type { WeightEntry } from "./types";
 
 const TODAY = new Date(2026, 7, 27); // 2026-08-27
@@ -152,6 +153,29 @@ describe("trendShape", () => {
     expect(trendShape(series(80, 79))).toBe("down");
     expect(trendShape(series(80))).toBeNull();
     expect(trendShape([])).toBeNull();
+  });
+});
+
+describe("weight limits", () => {
+  const limits = { min_kg: 20, max_kg: 200 };
+
+  it("parses a figure up to the ceiling, floor included, and nothing past or empty", () => {
+    expect(parseKg("200", limits)).toBe(200);
+    expect(parseKg("1", limits)).toBe(1);
+    expect(parseKg("200.1", limits)).toBeNull();
+    expect(parseKg("", limits)).toBeNull();
+  });
+
+  it("names the ceiling as soon as the figure passes it, and never the floor", () => {
+    expect(ceilingWarning("201", limits)).toBe("עד 200 ק״ג");
+    expect(ceilingWarning("200", limits)).toBeNull();
+    expect(ceilingWarning("1", limits)).toBeNull();
+    expect(ceilingWarning("", limits)).toBeNull();
+  });
+
+  it("names the floor only for a figure under it", () => {
+    expect(floorWarning(7.5, limits)).toBe("לפחות 20 ק״ג");
+    expect(floorWarning(20, limits)).toBeNull();
   });
 });
 

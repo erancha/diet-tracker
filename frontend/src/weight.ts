@@ -256,9 +256,26 @@ export function deleteWeightPrompt(entry: WeightEntry): string {
   return `למחוק את השקילה של ${ddmmLabel(entry.date)} (${kgLabel(entry.kg)} ק״ג)?`;
 }
 
-/** The weight a filled input holds, or null when it is empty or outside what the API accepts. */
-export function parseKg(text: string, limits: { min_kg: number; max_kg: number }): number | null {
+type Limits = { min_kg: number; max_kg: number };
+
+// The two bounds are read at different moments. The ceiling is read as the figure is typed: no
+// weight passes it on the way to a legal one. The floor is read only on submit, since a weight
+// is under it for its first digit or two, and flagging that would warn on every entry.
+
+/** The figure a filled input holds, or null when it is empty or past the ceiling. */
+export function parseKg(text: string, limits: Limits): number | null {
   const kg = Number(text);
   if (text.trim() === "" || !Number.isFinite(kg)) return null;
-  return kg >= limits.min_kg && kg <= limits.max_kg ? kg : null;
+  return kg <= limits.max_kg ? kg : null;
+}
+
+/** What to say beside an input whose figure has passed the ceiling, or null otherwise. */
+export function ceilingWarning(text: string, limits: Limits): string | null {
+  const kg = Number(text);
+  return Number.isFinite(kg) && kg > limits.max_kg ? `עד ${kgLabel(limits.max_kg)} ק״ג` : null;
+}
+
+/** What to say on submitting a figure under the floor, or null when it may be submitted. */
+export function floorWarning(kg: number, limits: Limits): string | null {
+  return kg < limits.min_kg ? `לפחות ${kgLabel(limits.min_kg)} ק״ג` : null;
 }

@@ -119,7 +119,7 @@ describe("target", () => {
     expect(toggle).toHaveTextContent("76.5 ק״ג");
     expect(toggle).toHaveAccessibleName("משקל: 76.5 ק״ג");
     // Beside it, only what follows the weight — the weight is not repeated.
-    expect(line().textContent!.replace(/\s+/g, " ")).toContain("· 4.5 מעל היעד: 72 ק״ג");
+    expect(line().textContent!.replace(/\s+/g, " ")).toContain("· 4.5 מעל היעד (72 ק״ג)");
     expect(line().textContent).not.toContain("76.5");
     expect(screen.getByRole("button", { name: "עריכת יעד" })).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByLabelText("משקל יעד")).toBeNull();
@@ -165,7 +165,7 @@ describe("target", () => {
   it("says so plainly once that editor is closed", () => {
     show({ entries: [{ date: TODAY, kg: 76.5, at: null }] });
     fireEvent.click(screen.getByRole("button", { name: "עריכת יעד" }));
-    expect(line().textContent!.replace(/\s+/g, " ")).toContain("היעד: טרם נקבע");
+    expect(line().textContent!.replace(/\s+/g, " ")).toContain("היעד (טרם נקבע)");
   });
 
   it("keeps a standing target's editor closed", () => {
@@ -234,7 +234,7 @@ describe("target", () => {
 
     expect(confirm).not.toHaveBeenCalled();
     expect(toggle).toHaveAttribute("aria-expanded", "false");
-    expect(line().textContent!.replace(/\s+/g, " ")).toContain("היעד: 75 ק״ג");
+    expect(line().textContent!.replace(/\s+/g, " ")).toContain("היעד (75 ק״ג)");
   });
 
   it("asks before closing on a value that was actually typed", () => {
@@ -252,11 +252,86 @@ describe("target", () => {
     expect(screen.getByLabelText("משקל יעד")).toHaveValue(72);
   });
 
-  it("blocks a target outside the range the API accepts", () => {
+  it("opens the editor from the reading itself, for a pointer that lands on the figure", () => {
+    show({ target: 75 });
+    fireEvent.click(screen.getByText("75"));
+    expect(screen.getByLabelText("משקל יעד")).toHaveValue(75);
+  });
+
+  it("offers the check only once the input reads a different weight from the standing target", () => {
     show({ target: 75 });
     fireEvent.click(screen.getByRole("button", { name: "עריכת יעד" }));
-    fireEvent.change(screen.getByLabelText("משקל יעד"), { target: { value: "7.5" } });
+    expect(screen.queryByRole("button", { name: "אישור" })).toBeNull();
+    fireEvent.change(screen.getByLabelText("משקל יעד"), { target: { value: "72" } });
+    expect(screen.getByRole("button", { name: "אישור" })).toBeEnabled();
+    fireEvent.change(screen.getByLabelText("משקל יעד"), { target: { value: "75" } });
+    expect(screen.queryByRole("button", { name: "אישור" })).toBeNull();
+  });
+
+  it("offers a close control once the input holds something", () => {
+    show({ target: 75 });
+    expect(screen.queryByRole("button", { name: "סגירת עריכת היעד" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "עריכת יעד" }));
+    expect(screen.getByRole("button", { name: "סגירת עריכת היעד" })).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("משקל יעד"), { target: { value: "" } });
+    expect(screen.queryByRole("button", { name: "סגירת עריכת היעד" })).toBeNull();
+  });
+
+  it("closes through that control, asking first on a value that was actually typed", () => {
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+    show({ target: 75 });
+    fireEvent.click(screen.getByRole("button", { name: "עריכת יעד" }));
+    fireEvent.change(screen.getByLabelText("משקל יעד"), { target: { value: "72" } });
+    fireEvent.click(screen.getByRole("button", { name: "סגירת עריכת היעד" }));
+    expect(confirm).toHaveBeenCalledWith(DISCARD_EDITS_PROMPT);
+    expect(screen.queryByLabelText("משקל יעד")).toBeNull();
+  });
+
+  it("closes an empty editor on a press anywhere outside it", () => {
+    show({ entries: [{ date: TODAY, kg: 76.5, at: null }] });
+    expect(screen.getByLabelText("משקל יעד")).toBeInTheDocument();
+    fireEvent.mouseDown(document.body);
+    expect(screen.queryByLabelText("משקל יעד")).toBeNull();
+    expect(line().textContent!.replace(/\s+/g, " ")).toContain("היעד (טרם נקבע)");
+  });
+
+  it("keeps an editor holding a value open through a press outside it", () => {
+    show({ target: 75 });
+    fireEvent.click(screen.getByRole("button", { name: "עריכת יעד" }));
+    fireEvent.mouseDown(document.body);
+    expect(screen.getByLabelText("משקל יעד")).toHaveValue(75);
+  });
+
+  it("warns as the figure passes the ceiling, and drops the warning once it is back", () => {
+    show({ target: 75 });
+    fireEvent.click(screen.getByRole("button", { name: "עריכת יעד" }));
+    fireEvent.change(screen.getByLabelText("משקל יעד"), { target: { value: "759" } });
+    expect(screen.getByRole("alert")).toHaveTextContent("עד 400 ק״ג");
+    expect(screen.getByLabelText("משקל יעד")).toHaveAttribute("aria-invalid", "true");
+    fireEvent.change(screen.getByLabelText("משקל יעד"), { target: { value: "75.9" } });
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("blocks a target past the ceiling before it is submitted", () => {
+    show({ target: 75 });
+    fireEvent.click(screen.getByRole("button", { name: "עריכת יעד" }));
+    fireEvent.change(screen.getByLabelText("משקל יעד"), { target: { value: "750" } });
     expect(screen.getByRole("button", { name: "אישור" })).toBeDisabled();
+  });
+
+  it("reads the floor only on submit, so a weight is not flagged on its first digit", () => {
+    const onSetTarget = vi.fn();
+    const confirm = vi.spyOn(window, "confirm");
+    show({ target: 75 }, { onSetTarget });
+    fireEvent.click(screen.getByRole("button", { name: "עריכת יעד" }));
+    fireEvent.change(screen.getByLabelText("משקל יעד"), { target: { value: "7" } });
+    expect(screen.queryByRole("alert")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "אישור" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("לפחות 20 ק״ג");
+    expect(confirm).not.toHaveBeenCalled();
+    expect(onSetTarget).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByLabelText("משקל יעד"), { target: { value: "72" } });
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 });
 
@@ -278,11 +353,20 @@ describe("today's weighing", () => {
     expect(screen.getByText("נרשם: 76.5 ק״ג")).toBeInTheDocument();
   });
 
-  it("cannot submit an empty or out-of-range input", () => {
+  it("cannot submit an empty input or one past the ceiling", () => {
     show();
     expect(screen.getByRole("button", { name: "שמירה" })).toBeDisabled();
     fireEvent.change(screen.getByLabelText("המשקל היום"), { target: { value: "765" } });
     expect(screen.getByRole("button", { name: "שמירה" })).toBeDisabled();
+  });
+
+  it("warns instead of recording a weight under the floor", () => {
+    const onRecord = vi.fn();
+    show({}, { onRecord });
+    fireEvent.change(screen.getByLabelText("המשקל היום"), { target: { value: "7.5" } });
+    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("לפחות 20 ק״ג");
+    expect(onRecord).not.toHaveBeenCalled();
   });
 });
 
@@ -292,10 +376,10 @@ describe("summary line", () => {
     const toggle = screen.getByRole("button", { name: /^משקל/ });
     const reading = () => `${toggle.textContent} ${line().textContent}`.replace(/\s+/g, " ");
     expect(toggle).toHaveAttribute("aria-expanded", "true");
-    expect(reading()).toContain("76.5 ק״ג · 4.5 מעל היעד: 72 ק״ג");
+    expect(reading()).toContain("76.5 ק״ג · 4.5 מעל היעד (72 ק״ג)");
     fireEvent.click(toggle);
     expect(toggle).toHaveAttribute("aria-expanded", "false");
-    expect(reading()).toContain("76.5 ק״ג · 4.5 מעל היעד: 72 ק״ג");
+    expect(reading()).toContain("76.5 ק״ג · 4.5 מעל היעד (72 ק״ג)");
   });
 
   it("marks today's row as due on the weigh-in day", () => {
