@@ -50,7 +50,10 @@ graph LR
   may claim.
 - **chat** — kept apart from `api` because it is the one feature that spends money per use, and
   because it talks to a service outside this stack. It reads its API key per request from SSM
-  Parameter Store, so rotating the key needs no redeploy.
+  Parameter Store, so rotating the key needs no redeploy. Its timeout is 60 seconds, twice what
+  the HTTP API holds a browser's request for, because the answering service may take that long:
+  when the gateway gives up on the request, the invocation keeps waiting and stores the answer,
+  and the app reads it from the transcript.
 - **nudge** — woken by the clock rather than by a request. It sends the day's last call and the
   weekly weigh-in reminder, and queues the weekly recap, one message per user, returning in
   seconds whatever the pool size.

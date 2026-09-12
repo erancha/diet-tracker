@@ -17,7 +17,7 @@ const CONFIG: AppConfigFile = {
   meals: { max_per_day: 4 },
   day_close: { close_until: "02:00", delete_until: "01:30", min_window_hours: 6 },
   treat_day: { weekday: "FRI" },
-  chat: { sample_questions: [] },
+  chat: { answer_poll_seconds: 3, sample_questions: [] },
 };
 
 function emptyDay(date: string): DayPayload {

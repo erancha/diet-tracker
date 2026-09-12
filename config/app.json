@@ -318,6 +318,7 @@
     }
   },
   "chat": {
+    "answer_poll_seconds": 3,
     "sample_questions": [
       {
         "label": "עקרונות",

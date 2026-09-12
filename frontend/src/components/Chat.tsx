@@ -5,15 +5,13 @@ import { storeChatFilter, storedChatFilter, type ChatFilter } from "../chatFilte
 import { storePublicCount, storedPublicCount } from "../publicCount";
 import { instantLabel } from "../dates";
 import { dropped, flipped } from "../setToggle";
-import type { ChatCount, ChatSampleQuestion, ChatTurn, ExistingChat, PublicChat } from "../types";
+import type { ChatAnswer as StoredAnswer, ChatCount, ChatSampleQuestion, ChatTurn, ExistingChat,
+  PublicChat } from "../types";
+import { fromUpstream } from "../upstream";
 import { ChatAnswer } from "./ChatAnswer";
 import { Icon } from "./Icon";
 import { PublicChatList } from "./PublicChats";
 import { useGlobalFold } from "./useFoldAll";
-
-// The server states the same refusal in handlers/chat.py; mirrored here because ApiError does
-// not surface the response body (the appTitle.ts precedent for cross-runtime strings).
-const QUOTA_MESSAGE = "מכסת השאלות היומית נוצלה — אפשר לשאול שוב מחר";
 
 // What the two controls under an answer do, which their labels name but do not explain: a
 // follow-up carries this chat's question and answer up with it, and summarizing is a one-way
@@ -32,6 +30,18 @@ const SHARE_CONFIRM =
 // A follow-up rides the same single-question API: the prior conversation is folded into the
 // question text as a labeled chain. An already-chained stored question only appends the
 // target's answer and the new question.
+// A stored chat's stamp is the server's clock and the ask's is the browser's; a chat this much
+// older than the ask still counts as its answer.
+const CLOCK_SKEW_MS = 60_000;
+
+// What a failed chat action tells: the server's own reason when it gave one — a refusal or an
+// outage in the server's words — else the failed action with the technical detail.
+function failureMessage(action: string, failure: Error): string {
+  return failure instanceof ApiError && failure.serverError !== null
+    ? failure.serverError
+    : `${action} (${failure.message})`;
+}
+
 function composeFollowUp(target: ChatTurn, question: string): string {
   const chain = target.question.startsWith(ORIGINAL_LABEL)
     ? target.question
@@ -67,14 +77,22 @@ function composeFollowUp(target: ChatTurn, question: string): string {
 // just goes. A shared chat carries a marker on its row. Closing hands focus back to the question.
 // While a question is in flight the composer withdraws behind the thinking indicator. Sample
 // questions only fill the input.
-export function Chat({ email, api, sampleQuestions, defaultTranscriptFolded = false,
-                       askCommand = null, onAskCommandTaken }: {
+//
+// An answer or a digest can take longer than the API's gateway waits. The request then fails
+// without a reason from the handler, and the ask or the summary is read from the transcript
+// instead (upstream.ts), its indicator saying so meanwhile; the stored chat is the one newer
+// than the ask under the asked question, the digest the chat marked summarized. A failure the
+// handler did give a reason for shows that reason alone.
+export function Chat({ email, api, sampleQuestions, answerPollSeconds,
+                       defaultTranscriptFolded = false, askCommand = null, onAskCommandTaken }: {
   // The signed-in address, keying what this account's last visit saw of the others' chats.
   email: string;
   api: Pick<Api, "ask" | "getChatTranscript" | "deleteChatTurn" | "summarizeChatTurn" | "sourceUrl"
     | "setChatVisibility" | "clearChatVisibility" | "getPublicChats" | "getChatCount"
     | "findExistingChat">;
   sampleQuestions: ChatSampleQuestion[];
+  // How often the transcript is read for a result the gateway gave up waiting for.
+  answerPollSeconds: number;
   defaultTranscriptFolded?: boolean;
   askCommand?: string | null;
   onAskCommandTaken?: () => void;
@@ -92,9 +110,14 @@ export function Chat({ email, api, sampleQuestions, defaultTranscriptFolded = fa
   // The question awaiting its answer, or null. Doubles as the pending flag: the composer is
   // withdrawn while it is set, so at most one question is in flight.
   const [pendingQuestion, setPendingQuestion] = useState<string | null>(null);
+  // Whether the pending question's answer is being read from the transcript, the gateway
+  // having given up on the request.
+  const [answerPolled, setAnswerPolled] = useState(false);
   // The chat whose digest is being made, or null. At most one summary is in flight, and the
   // chat's answer gives way to the waiting indicator while it is.
   const [summarizingAt, setSummarizingAt] = useState<string | null>(null);
+  // Whether that digest is being read from the transcript, likewise.
+  const [digestPolled, setDigestPolled] = useState(false);
   // The chat the next question follows up on, or null for a standalone question.
   const [replyTo, setReplyTo] = useState<ChatTurn | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -173,6 +196,22 @@ export function Chat({ email, api, sampleQuestions, defaultTranscriptFolded = fa
 
   // Sends the question, as a follow-up on target when one is given. `app` marks a question the
   // app composed; a follow-up keeps whichever mark the chat it extends already carries.
+  // The chat an ask stored, once the transcript holds one under the asked question that is
+  // newer than the ask; null until then.
+  const landedAnswer = async (asked: string, sentAt: number): Promise<StoredAnswer | null> => {
+    const { turns: stored } = await api.getChatTranscript();
+    const found = stored.find((turn) =>
+      turn.question === asked && Date.parse(turn.at) >= sentAt - CLOCK_SKEW_MS);
+    return found === undefined ? null : found;
+  };
+
+  // The chat once its digest replaced it; null until then.
+  const landedDigest = async (at: string): Promise<ChatTurn | null> => {
+    const { turns: stored } = await api.getChatTranscript();
+    const found = stored.find((turn) => turn.at === at);
+    return found !== undefined && found.summarized ? found : null;
+  };
+
   const send = async (question: string, target: ChatTurn | null, app = false) => {
     setError(null);
     setTranscriptFolded(false);
@@ -182,9 +221,14 @@ export function Chat({ email, api, sampleQuestions, defaultTranscriptFolded = fa
     try {
       const asked = target === null ? question : composeFollowUp(target, question);
       const authored = target === null ? app : target.app;
-      const reply = target === null
-        ? await api.ask(asked, undefined, authored)
-        : await api.ask(asked, target.at, authored);
+      const sentAt = Date.now();
+      const reply = await fromUpstream(
+        () => (target === null
+          ? api.ask(asked, undefined, authored)
+          : api.ask(asked, target.at, authored)),
+        () => landedAnswer(asked, sentAt),
+        answerPollSeconds * 1000,
+        () => setAnswerPolled(true));
       // An answered question is never a digest, so the freshly answered chat offers summarizing.
       // A follow-up stays shared as the chat it extends was; the server carries the mark over.
       const answered: ChatTurn = { question: asked, answer: reply.answer, sources: reply.sources,
@@ -198,12 +242,10 @@ export function Chat({ email, api, sampleQuestions, defaultTranscriptFolded = fa
       setExpanded((current) => new Set(current).add(reply.at));
       setReplyTo(null);
     } catch (thrown) {
-      const failure = thrown as Error;
-      setError(failure instanceof ApiError && failure.status === 429
-        ? QUOTA_MESSAGE
-        : `השאלה נכשלה (${failure.message})`);
+      setError(failureMessage("השאלה נכשלה", thrown as Error));
     } finally {
       setPendingQuestion(null);
+      setAnswerPolled(false);
     }
   };
 
@@ -300,14 +342,19 @@ export function Chat({ email, api, sampleQuestions, defaultTranscriptFolded = fa
     setError(null);
     setSummarizingAt(turn.at);
     try {
-      const summarized = await api.summarizeChatTurn(turn.at);
+      const summarized = await fromUpstream(
+        () => api.summarizeChatTurn(turn.at),
+        () => landedDigest(turn.at),
+        answerPollSeconds * 1000,
+        () => setDigestPolled(true));
       setTurns((current) => current!.map((kept) => (kept.at === turn.at ? summarized : kept)));
       // The chain a pending follow-up would have carried is gone, so the reply goes with it.
       setReplyTo((current) => (current?.at === turn.at ? null : current));
     } catch (thrown) {
-      setError(`סיכום השיחה נכשל (${(thrown as Error).message})`);
+      setError(failureMessage("סיכום השיחה נכשל", thrown as Error));
     } finally {
       setSummarizingAt(null);
+      setDigestPolled(false);
       // The indicator holding focus goes with the wait, so the chat's question button takes it
       // back — as it does when a chat folds from its answer's foot.
       questionRefs.current.get(turn.at)!.focus();
@@ -343,7 +390,9 @@ export function Chat({ email, api, sampleQuestions, defaultTranscriptFolded = fa
   const pendingExchange = pendingQuestion !== null && (
     <>
       <li className="chat-user"><p>{pendingQuestion}</p></li>
-      <li className="chat-assistant"><p className="chat-pending" tabIndex={-1} ref={pendingRef}>חושב…</p></li>
+      <li className="chat-assistant">
+        <p className="chat-pending" tabIndex={-1} ref={pendingRef}>{answerPolled ? "עדיין חושב…" : "חושב…"}</p>
+      </li>
     </>
   );
 
@@ -481,7 +530,9 @@ export function Chat({ email, api, sampleQuestions, defaultTranscriptFolded = fa
               {expanded.has(turn.at) && (
                 <li className="chat-assistant">
                   {summarizingAt === turn.at ? (
-                    <p className="chat-pending" tabIndex={-1} ref={summarizingRef}>מסכם…</p>
+                    <p className="chat-pending" tabIndex={-1} ref={summarizingRef}>
+                      {digestPolled ? "עדיין מסכם…" : "מסכם…"}
+                    </p>
                   ) : (
                     <>
                       <ChatAnswer answer={turn.answer} sources={turn.sources} api={api}

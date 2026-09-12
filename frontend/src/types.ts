@@ -109,6 +109,8 @@ export interface ChatSampleQuestion {
 // Frontend-only section of config/app.json — load() in src/common/appconfig.py picks out only
 // the keys it names, so this rides along without touching the Lambdas.
 export interface ChatSettings {
+  // How often the chat reads the transcript for an answer the API's gateway gave up waiting for.
+  answer_poll_seconds: number;
   sample_questions: ChatSampleQuestion[];
 }
 

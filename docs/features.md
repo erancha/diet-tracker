@@ -110,6 +110,13 @@ before the upstream call, and the admin is notified when a user reaches it. Ever
 stored per user, so the transcript survives reloads and follows its user across devices, and a chat
 the app wrote — the weekly recap — is marked as such in the list.
 
+An answer can take longer than the API holds a browser's request, which is 30 seconds. The chat
+keeps waiting on the answering service past that and stores the answer when it comes, so the app,
+its request having failed with no reason from the chat, reads the transcript every few seconds
+(`chat.answer_poll_seconds` in `config/app.json`) until the answer is there, saying "still
+thinking" meanwhile. A summary of a chat waits the same way. A failure the chat does give a reason
+for — the daily cap, the service being down — is shown in the chat's own words at once.
+
 A chat is its asker's alone until they share it. Sharing a chat opens it to every signed-in user
 under the asker's own address — the question, the answer, and the email are what the others see,
 read-only and outlined apart from their own, behind a toggle below their own previous chats — and

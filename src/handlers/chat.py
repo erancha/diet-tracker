@@ -13,10 +13,12 @@ short-lived link to a cited document.
 
 Every route that asks upstream spends quota first and is refused past the limit without
 spending; the day's first refusal is emailed to the admin. Source links and the transcript
-routes spend none."""
+routes spend none. An answer may take longer than the HTTP API holds the request; the
+invocation waits on regardless and stores it, and the app reads it from the transcript."""
 
 import json
 import os
+import time
 import urllib.error
 
 import boto3
@@ -39,6 +41,15 @@ SUMMARY_INSTRUCTION = ("סכם בעברית את השיחה המצורפת בה�
 # deployment without the service still serves and deletes what earlier ones stored.
 UPSTREAM_ROUTES = {"POST /chat", "POST /chat/{at}/summary", "POST /chat/source-url"}
 
+# How long the HTTP API holds the browser's request before answering it with a gateway error.
+# The invocation outlives that (template.yaml ChatFunction Timeout), so a slower answer is still
+# stored, and the app then reads it from the transcript instead of the response.
+GATEWAY_WAIT_SECONDS = 30
+
+# What a call keeps back from the invocation's remaining time: storing the answer happens after
+# the wait.
+WAIT_MARGIN_SECONDS = 1.5
+
 
 def handler(event, context):
     claims = event["requestContext"]["authorizer"]["jwt"]["claims"]
@@ -48,11 +59,11 @@ def handler(event, context):
     if route in UPSTREAM_ROUTES and not chat.configured(_rag_url()):
         return _service_unconfigured()
     if route == "POST /chat":
-        return _ask(sub, claims["email"], json.loads(event["body"]))
+        return _ask(sub, claims["email"], json.loads(event["body"]), context)
     if route == "GET /chat":
         return response(200, {"turns": chat_history.turns(_history_table(), sub)})
     if route == "POST /chat/{at}/summary":
-        return _summarize(sub, claims["email"], event["pathParameters"]["at"])
+        return _summarize(sub, claims["email"], event["pathParameters"]["at"], context)
     if route == "POST /chat/source-url":
         return _source_url(json.loads(event["body"]))
     if route == "DELETE /chat/{at}":
@@ -94,7 +105,23 @@ def _daily_limit(email):
     return int(os.environ["CHAT_DAILY_LIMIT"])
 
 
-def _ask(sub, email, body):
+def _from_upstream(context, call):
+    """Runs one call to the answering service — `call` takes the seconds it may wait — within
+    what the invocation has left, less the margin, so a hung service surfaces as a clean 502
+    instead of the invocation dying mid-request. An answer that outlasted the gateway's wait is
+    logged, since the browser's request is gone by then and the app reads it from the
+    transcript."""
+    budget = context.get_remaining_time_in_millis() / 1000 - WAIT_MARGIN_SECONDS
+    started = time.monotonic()
+    result = call(budget)
+    elapsed = time.monotonic() - started
+    if elapsed > GATEWAY_WAIT_SECONDS:
+        logger.warning("answer took %.1fs, past the gateway's %ds; the app reads it from the "
+                       "transcript", elapsed, GATEWAY_WAIT_SECONDS)
+    return result
+
+
+def _ask(sub, email, body, context):
     question = body.get("question")
     if not isinstance(question, str) or not question.strip():
         return response(400, {"error": "question is required"})
@@ -113,9 +140,9 @@ def _ask(sub, email, body):
                   os.environ["WEIGHTS_TABLE"])
     questionnaire = appconfig.load(os.environ["APP_CONFIG_PATH"]).questionnaire
     try:
-        stored = chat_question.answer(_rag_url(), _rag_key(), store, questionnaire,
-                                      _history_table(), sub, question.strip(),
-                                      at=at, app=app)
+        stored = _from_upstream(context, lambda budget: chat_question.answer(
+            _rag_url(), _rag_key(), store, questionnaire, _history_table(), sub,
+            question.strip(), at=at, app=app, timeout=budget))
     except (urllib.error.URLError, TimeoutError) as error:
         return _upstream_unavailable(error)
     except KeyError:
@@ -169,7 +196,7 @@ def _upstream_unavailable(error):
     return response(502, {"error": "שירות המענה אינו זמין כרגע — נסו שוב מאוחר יותר"})
 
 
-def _summarize(sub, email, at):
+def _summarize(sub, email, at, context):
     """Replaces one of the caller's chats with a digest of its conversation. The chat is read
     before the quota is spent, so naming a chat the caller does not hold costs nothing; the
     digest is written only once the service has answered, so a failed call leaves the
@@ -186,7 +213,8 @@ def _summarize(sub, email, at):
 
     key = _rag_key()
     try:
-        digest = chat.ask(_rag_url(), key, SUMMARY_INSTRUCTION, _conversation(turn))
+        digest = _from_upstream(context, lambda budget: chat.ask(
+            _rag_url(), key, SUMMARY_INSTRUCTION, _conversation(turn), timeout=budget))
     except (urllib.error.URLError, TimeoutError) as error:
         return _upstream_unavailable(error)
 

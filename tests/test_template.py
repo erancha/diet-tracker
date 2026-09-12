@@ -180,3 +180,12 @@ def test_every_parameter_a_schedule_reads_is_passed_on_deploy():
                                              resource["Properties"]["ScheduleExpression"])}
     deploy = DEPLOY.read_text()
     assert [name for name in sorted(read_by_a_cron) if f"{name}=" not in deploy] == []
+
+
+def test_the_chat_function_outlives_the_gateway_so_a_slow_answer_is_still_stored():
+    # The browser's request dies at the gateway's cap, but the invocation keeps waiting on the
+    # answering service and stores what it says; the app then reads it from the transcript.
+    from handlers import chat
+
+    chat_function = _load_template()["Resources"]["ChatFunction"]["Properties"]
+    assert chat_function["Timeout"] > chat.GATEWAY_WAIT_SECONDS

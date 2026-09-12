@@ -7,11 +7,29 @@ import type { AdminActivity, AnswerValue, ChatAnswer, ChatCount, ChatTranscript,
   ChatVisibility, DayPayload, ExistingChat, HistoryResponse, LoadedHistory, NewMeal,
   NotificationSettings, PublicChats, SubmitResult, WeightPayload } from "./types";
 
-/** Backend request rejected; the message keeps the method, path, status, and body for diagnosis. */
+/**
+ * Backend request rejected; the message keeps the method, path, status, and body for diagnosis,
+ * and serverError the body's own `error` text — the wording the server meant the user to read —
+ * or null when the body states none.
+ */
 export class ApiError extends Error {
-  constructor(readonly status: number, detail: string) {
+  constructor(readonly status: number, detail: string, readonly serverError: string | null = null) {
     super(detail);
   }
+}
+
+// The `error` text of a JSON error body, which is how the handlers state their failures. The
+// gateway's own rejections carry `message` instead, and a body that is not JSON states nothing;
+// both read as no server error.
+function serverError(body: string): string | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(body);
+  } catch {
+    return null;
+  }
+  const error = typeof parsed === "object" && parsed !== null ? (parsed as { error?: unknown }).error : undefined;
+  return typeof error === "string" ? error : null;
 }
 
 /**
@@ -86,7 +104,8 @@ export function createApi(
       return new Promise<T>(() => {});
     }
     if (!response.ok) {
-      throw new ApiError(response.status, `${method} ${path} → ${response.status}: ${await response.text()}`);
+      const body = await response.text();
+      throw new ApiError(response.status, `${method} ${path} → ${response.status}: ${body}`, serverError(body));
     }
     return response.json();
   }

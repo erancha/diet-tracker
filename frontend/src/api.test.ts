@@ -176,6 +176,30 @@ describe("createApi", () => {
     );
   });
 
+  it("carries the server's own error text when the rejected body states one", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
+      new Response('{"error": "שירות המענה אינו זמין כרגע"}', { status: 502 }),
+    ));
+
+    const err = await createApi(cfg, tokens).getDays().then(
+      () => { throw new Error("resolved instead of rejecting"); },
+      (e: unknown) => e,
+    );
+
+    expect((err as ApiError).serverError).toBe("שירות המענה אינו זמין כרגע");
+  });
+
+  it("carries no server error text when the rejected body is not a JSON error", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("Bad Gateway", { status: 502 })));
+
+    const err = await createApi(cfg, tokens).getDays().then(
+      () => { throw new Error("resolved instead of rejecting"); },
+      (e: unknown) => e,
+    );
+
+    expect((err as ApiError).serverError).toBeNull();
+  });
+
   it("reports how long the history request took, the wait the first chart sits behind", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response('{"days": []}')));
     vi.spyOn(performance, "now").mockReturnValueOnce(1_000).mockReturnValueOnce(1_150);

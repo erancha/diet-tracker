@@ -18,9 +18,10 @@ import urllib.request
 MAX_QUESTION_CHARS = 4000
 MAX_CONTEXT_CHARS = 8000
 
-# The default wait: below the 30s budget of the request-serving Lambdas, so a hung service
-# surfaces as an error they can map to a clean 502 — URLError while connecting, TimeoutError once
-# reading — instead of the Lambda dying mid-request. A caller with a longer budget passes its own.
+# The default wait, what the document-link call gets: under the 30s the HTTP API holds a
+# browser's request, so a hung service surfaces as an error the handler maps to a clean 502 —
+# URLError while connecting, TimeoutError once reading. The answering calls pass the budget of
+# their own invocation instead.
 TIMEOUT_SECONDS = 25
 
 
