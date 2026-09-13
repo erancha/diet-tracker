@@ -104,7 +104,7 @@ describe("Landing", () => {
   it("offers the walkthrough in both modes, above the invite it leads", async () => {
     render(<Landing onSignIn={() => {}} chatAvailable />);
 
-    const walkthrough = () => screen.getByRole("link", { name: "הדגמה: יום ביומן" });
+    const walkthrough = () => screen.getByRole("link", { name: "הדגמה" });
     expect(walkthrough()).toHaveAttribute("href", "demo.html");
     // The note rides beside the link rather than inside it, so the link's name stays the page's.
     expect(walkthrough().parentElement).toHaveTextContent("(ניתן להאט את ההדגמה, מומלץ לראות במסך מחשב)");

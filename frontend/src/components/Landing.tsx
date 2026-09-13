@@ -45,7 +45,7 @@ export function Landing({ onSignIn, chatAvailable }: {
   const walkthroughLink = (
     <p className="landing-walkthrough">
       <a href={WALKTHROUGH_PATH} target="_blank" rel="noreferrer">
-        הדגמה: יום ביומן
+        הדגמה
       </a>{" "}
       {/* The replay opens at double speed and draws a phone on a workbench beside its narration,
           so both notes sit with the link rather than waiting to be discovered on the page they
