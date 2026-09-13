@@ -1,7 +1,7 @@
 // Typed client for the authenticated backend API, bound to the signed-in user's tokens, plus the
 // Hebrew alert text the UI shows when a request fails.
 
-import { isUnexpired, reauthenticate, type Tokens } from "./auth";
+import { endSession, isUnexpired, type Tokens } from "./auth";
 import type { AppConfig } from "./config";
 import type { AdminActivity, AnswerValue, ChatAnswer, ChatCount, ChatTranscript, ChatTurn,
   ChatVisibility, DayPayload, ExistingChat, HistoryResponse, LoadedHistory, NewMeal,
@@ -79,7 +79,7 @@ export interface Api {
 export function createApi(
   cfg: AppConfig,
   tokens: Tokens,
-  onExpired: () => void = () => reauthenticate(cfg),
+  onExpired: () => void = () => endSession(cfg),
 ): Api {
   async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
     const response = await fetch(cfg.apiUrl + path, {
@@ -90,10 +90,9 @@ export function createApi(
       },
       body: body === undefined ? undefined : JSON.stringify(body),
     });
-    // The captured token has outlived its validity (the tab stayed open past expiry). The Cognito
-    // Hosted UI session cookie outlasts the ID token, so re-running the login redirect usually
-    // completes silently and lands back with a fresh token. The promise never settles: the page is
-    // navigating away, and rejecting would flash an error alert during the redirect.
+    // The captured token has outlived its validity (the tab stayed open past expiry), so the
+    // session ends and the landing page offers a fresh sign-in. The promise never settles: the
+    // page is navigating away, and rejecting would flash an error alert during the redirect.
     //
     // A 401 on a token still inside its lifetime is a different fault: the API rejects a token this
     // client considers good, as when the stack is redeployed under a new user pool while an older

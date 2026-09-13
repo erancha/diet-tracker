@@ -77,10 +77,9 @@ function userFacingMessage(description: string, rootEmail: string): string {
     : description;
 }
 
-// The sign-in redirect this page load has already started, if any. Every caller that finds the
-// session gone asks to re-authenticate — a request bouncing off a 401, a tab returning to the
-// foreground — and minting a verifier per caller would leave the last one stored while the
-// committed navigation carries an earlier caller's challenge, a PKCE mismatch that fails the
+// The sign-in redirect this page load has already started, if any. A second tap on the sign-in
+// button before the navigation commits would mint a second verifier, leaving that one stored while
+// the committed navigation carries the first tap's challenge, a PKCE mismatch that fails the
 // exchange. One redirect per page load keeps the pair consistent.
 let redirect: Promise<void> | null = null;
 
@@ -88,21 +87,25 @@ export function redirectToLogin(cfg: AppConfig, navigate: (url: string) => void 
   return (redirect ??= startLogin(cfg, navigate));
 }
 
-export function reauthenticate(cfg: AppConfig, navigate: (url: string) => void = navigateTo): void {
+// Returns to the landing page instead of starting the Hosted UI round-trip here: Google's account
+// chooser goes stale minutes after it renders and rejects a late pick with a 400, so the round-trip
+// must start on the user's tap, not on a tab waking in the background.
+export function endSession(cfg: AppConfig, navigate: (url: string) => void = navigateTo): void {
   sessionStorage.removeItem("tokens");
-  void redirectToLogin(cfg, navigate);
+  navigate(cfg.redirectUri);
 }
 
 /**
- * Re-authenticates a tab that returns to the foreground holding a token which expired while it was
- * away. Requests already carry their own 401 recovery; this closes the window before one is made,
- * so a user coming back to the app is not looking at a page whose every action is about to bounce.
+ * Ends the session of a tab that returns to the foreground holding a token which expired while it
+ * was away. Requests already carry their own 401 recovery; this closes the window before one is
+ * made, so a user coming back to the app is not looking at a page whose every action is about to
+ * bounce.
  */
 export function watchSession(
   cfg: AppConfig, tokens: Tokens, navigate: (url: string) => void = navigateTo,
 ): void {
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible" && !isUnexpired(tokens)) reauthenticate(cfg, navigate);
+    if (document.visibilityState === "visible" && !isUnexpired(tokens)) endSession(cfg, navigate);
   });
 }
 
