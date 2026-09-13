@@ -207,12 +207,12 @@ export function TrendChart({ questionnaire, days, today, endDate, loadedInMs, tr
   if (liveDay) dayByDate.set(liveDay.date, liveDay);
   return (
     <div className="trend" dir="ltr">
-      {/* The chart container is LTR for the axes; the legend flips back so it leads from the
-          right like the panel headings. */}
-      <div className="trend-legend" dir="rtl">
-        <span className="trend-legend-dot" /><span>חריגה</span>
+      {/* The legend shares the chart's LTR flow so the violation chip sits at the left edge,
+          each label keeping its own right-to-left text. */}
+      <div className="trend-legend">
+        <span className="trend-legend-item" dir="rtl"><span className="trend-legend-dot" />חריגה</span>
         {loadedInMs !== null
-          && <span className="trend-legend-timing">טעינה: {loadedInMs}ms</span>}
+          && <span className="trend-legend-timing" dir="rtl">טעינה: {loadedInMs}ms</span>}
       </div>
       {panels.map((question, index) => (
         <TrendPanel

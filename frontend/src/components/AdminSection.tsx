@@ -24,7 +24,7 @@ export function AdminSection({ api }: { api: Pick<Api, "getAdminActivity"> }) {
   }, [collapsed, users, api]);
 
   return (
-    <CollapsibleSection title="פעילות משתמשים" collapsed={collapsed}
+    <CollapsibleSection className="admin-section" title="פעילות משתמשים" collapsed={collapsed}
                         onToggle={() => setCollapsed((current) => !current)}>
       {error !== null ? <div className="alert">{error}</div>
         : users === null ? <p>טוען…</p>

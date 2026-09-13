@@ -21,6 +21,12 @@
   --page-pad-top: 0.6rem;
   --page-pad-bottom: 1rem;
   --page-bg: #fafafa;
+  /* One size for every section heading on the main page, so the day log, trends and chat titles
+     read as peers. Below ~28rem it scales with the viewport — the slope the fieldset legends use —
+     so the day log's title and the grade-names toggle sharing its row still fit side by side,
+     with a few percent of clearance down to 320px-wide screens once the body and card paddings
+     are taken out. */
+  --section-title-size: min(1.6rem, 7vw - 6px);
 }
 /* The top edge is tighter than the other three: both screens open on the app title, which sits
    directly on this padding with no heading margin of its own, so a full rem here would read as a
@@ -440,6 +446,7 @@ td.view-day { cursor: pointer; }
 .trend-treat-day line { stroke: var(--accent); stroke-width: 1.5; stroke-dasharray: 1 4; stroke-linecap: round; }
 .trend-treat-day text { font-size: 9px; fill: var(--viz-muted); }
 .trend-legend { display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; margin-bottom: 0.5rem; }
+.trend-legend-item { display: inline-flex; align-items: center; gap: 0.4rem; }
 .trend-legend-timing { margin-inline-start: auto; color: var(--viz-muted); }
 .trend-legend-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--viz-critical); display: inline-block; }
 .trend-tooltip {
@@ -452,21 +459,19 @@ td.view-day { cursor: pointer; }
   direction: rtl;
 }
 .day-tracker { margin-bottom: 1rem; }
-/* The tracker is the app's primary daily surface, so its header reads slightly larger than the
-   other sections'. Those sit directly on the page and need the default heading margins to
-   separate them; inside the card the padding already sets the space above, and the header sits
-   at half the default gap above its dashboard line. */
-.day-tracker h2 { font-size: 1.6rem; margin: 0 0 0.4em; }
+/* Sections sitting directly on the page need the default heading margins to separate them;
+   inside the card the padding already sets the space above, and the header sits at half the
+   default gap above its dashboard line. */
+.day-tracker h2 { margin: 0 0 0.4em; }
+.day-tracker h2, .trends h2, .chat-section h2, .admin-section h2 { font-size: var(--section-title-size); }
 /* A section title sharing its row with a neighbouring section folded down to its own title line.
    Baselines align so both titles sit on one text line; the row wraps only where they cannot fit
    side by side at all. */
 .section-header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 1rem; }
 .section-header h3 { margin: 0; }
 /* Both titles on the shared row read at one size, so the row is a single header line rather than a
-   title with a smaller tag beside it. Two titles at 1.6rem outrun a phone, so below ~28rem they
-   scale with the viewport instead of wrapping — the slope the fieldset legends use, keeping a few
-   percent of clearance down to 320px-wide screens once the body and card paddings are taken out. */
-.day-tracker .section-header h2, .day-tracker .section-header h3 { font-size: min(1.6rem, 7vw - 6px); }
+   title with a smaller tag beside it. */
+.day-tracker .section-header h3 { font-size: var(--section-title-size); }
 /* A section header doubles as its fold's disclosure, taking its size from the heading it sits in.
    Semibold rather than the heading's full bold, so a pressable title reads a shade lighter than
    one that is only a title. */
