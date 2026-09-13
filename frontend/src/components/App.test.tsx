@@ -410,6 +410,29 @@ describe("App", () => {
     expect(screen.queryByRole("button", { name: "יומן אתמול" })).toBeNull();
   });
 
+  it("names both trend graphs and the table as where a crossed bound shows on close", async () => {
+    // Two steepest-grade meals seven hours apart: wide enough to close, heavy enough to cross the
+    // carbs rule's bound.
+    const todayStr = isoDate(new Date());
+    const heavyDay: DayPayload = {
+      date: todayStr,
+      meals: [{ id: "a", at: `${todayStr}T08:00:00+03:00`, carbs_choice: "carb_grade_7", vegetables: false,
+                fruit: false, additions: [], portion: null, second_source: null },
+              { id: "b", at: `${todayStr}T15:00:00+03:00`, carbs_choice: "carb_grade_7", vegetables: false,
+                fruit: false, additions: [], portion: null, second_source: null }],
+      derived: { carbs: 14, meals: 2, vegetables: 0, eating_window: 7 },
+    };
+    const client = api({ today: heavyDay });
+    (client.submitDay as ReturnType<typeof vi.fn>).mockResolvedValue({ date: todayStr });
+    renderApp(false, client);
+
+    fireEvent.click(await screen.findByRole("button", { name: "סגירת יום" }));
+    fireEvent.click(screen.getByLabelText("3 ליטר"));
+    fireEvent.click(screen.getByRole("button", { name: "אישור וסגירה" }));
+
+    expect(await screen.findByText("היום חצה סף (מסומן באדום בגרפי המגמות ובטבלה)")).toBeInTheDocument();
+  });
+
   it("closes the open day view when its day is deleted from the history table", async () => {
     // The full view keeps the history table mounted for its row controls.
     window.localStorage.setItem(STORAGE_KEY, "false");

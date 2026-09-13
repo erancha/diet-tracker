@@ -133,11 +133,12 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, c
       // A crossing day is still a saved day, so the confirmation leads either way — the closed
       // tracker would otherwise be the only sign the figures went through.
       const saved = `נשמר לתאריך ${result.date}!`;
-      // A bound crossed today is painted red in the table beside the banner, so a clean-day claim
-      // there reads as a contradiction; the banner names the crossing instead, as a notice.
+      // A bound crossed today is painted red in the trend graphs and the table beside the banner,
+      // so a clean-day claim there reads as a contradiction; the banner names the crossing
+      // instead, as a notice.
       setAlerts(crossesThreshold(configQuery.data!.questionnaire, answers)
         ? [{ kind: "ok", message: saved },
-           { kind: "notice", message: "היום חצה סף (מסומן באדום בטבלה)" }]
+           { kind: "notice", message: "היום חצה סף (מסומן באדום בגרפי המגמות ובטבלה)" }]
         : [{ kind: "ok", message: `${saved} אין חריגות היום ✔` }]);
       queryClient.invalidateQueries({ queryKey: ["days"] });
     },
