@@ -71,25 +71,30 @@ export function Landing({ onSignIn, chatAvailable }: {
   if (!expanded) {
     return (
       <main className="landing landing-brief">
-        <AppHeading />
-        {/* Each habit's bold initial spells the acronym in place, the way the full view's table
-            opens its rows. */}
-        <p className="landing-condensed">
-          תזונה <strong>בלי לספור קלוריות</strong>: רושמים תיאור <strong>כללי</strong> של כל ארוחה,
-          והאפליקציה עוזרת לשמור על <strong>ארבעה הרגלים פשוטים</strong> — שכפ"צ (<strong>ש</strong>תיה,{" "}
-          <strong>כ</strong>מות ירקות, <strong>פ</strong>תיחת חלון אכילה, <strong>צ</strong>מצום ארוחות).
-        </p>
-        {chatAvailable && (
+        {/* In both views the pitch and the sign-in button share one card, drawn on the same surface
+            as the signed-in page's sections; the reference table and the footer links stay on the
+            page below it. */}
+        <div className="landing-card">
+          <AppHeading />
+          {/* Each habit's bold initial spells the acronym in place, the way the full view's table
+              opens its rows. */}
           <p className="landing-condensed">
-            יש גם <strong>עוזר AI</strong> — צ'אט בתוך האפליקציה שעונה על שאלות על התוכנית (ישירות מתוך מסמכי
-            המקור שלה) ואיך להשתמש באפליקציה. צ'אט אפשר לשתף עם כל המשתמשים, ולקרוא צ'אטים שאחרים <strong>שיתפו</strong> עם כולם.
+            תזונה <strong>בלי לספור קלוריות</strong>: רושמים תיאור <strong>כללי</strong> של כל ארוחה,
+            והאפליקציה עוזרת לשמור על <strong>ארבעה הרגלים פשוטים</strong> — שכפ"צ (<strong>ש</strong>תיה,{" "}
+            <strong>כ</strong>מות ירקות, <strong>פ</strong>תיחת חלון אכילה, <strong>צ</strong>מצום ארוחות).
           </p>
-        )}
-        <p className="landing-condensed">
-          וההתקדמות נראית לעין: <strong>גרפים</strong> לאורך זמן ו<strong>מעקב משקל</strong> שבועי מול היעד.
-        </p>
-        {toggleButton}
-        {signInButton}
+          {chatAvailable && (
+            <p className="landing-condensed">
+              יש גם <strong>עוזר AI</strong> — צ'אט בתוך האפליקציה שעונה על שאלות על התוכנית (ישירות מתוך מסמכי
+              המקור שלה) ואיך להשתמש באפליקציה. צ'אט אפשר לשתף עם כל המשתמשים, ולקרוא צ'אטים שאחרים <strong>שיתפו</strong> עם כולם.
+            </p>
+          )}
+          <p className="landing-condensed">
+            וההתקדמות נראית לעין: <strong>גרפים</strong> לאורך זמן ו<strong>מעקב משקל</strong> שבועי מול היעד.
+          </p>
+          {toggleButton}
+          {signInButton}
+        </div>
         {walkthroughLink}
         {inviteLink}
         {repoLink}
@@ -98,55 +103,61 @@ export function Landing({ onSignIn, chatAvailable }: {
   }
   return (
     <main className="landing">
-      <AppHeading />
-      <p className="landing-intro">
-        אפליקציית SaaS חינמית — יומן ארוחות יומי שעוזר לשמור על הרגלי אכילה בריאים לאורך זמן.
-        לא סופרים קלוריות, אלא בוחנים את אופי כל ארוחה ואת המרווחים ביניהן, לפי ארבעת עקרונות
-        השכפ"צ (<a href={`#${PRINCIPLES_ID}`}>בטבלה שבסוף העמוד</a>):
-      </p>
-      <ul className="landing-summary">
-        <li>
-          כל ארוחה נרשמת כשהיא נאכלת, ואפשר להשלים את יום אתמול גם אחרי חצות. מהרישום נגזרים
-          שלושה מארבעת עקרונות השכפ"צ: כמות הירקות, חלון האכילה ומספר הארוחות
-        </li>
-        <li>
-          שתיית המים היא העיקרון הרביעי, היחיד שאינו נגזר מהיומן, ולכן יום שתועד במלואו נסגר
-          בשאלון סיכום היום עם מילוי כמות המים בלבד
-        </li>
-        <li>
-          מעבר לשכפ"צ, מהרישום מחושב גם ציון יומי: סכום הנקודות של כל הארוחות, לפי דרגת{" "}
-          <a href={CARB_GRADES_PATH} target="_blank" rel="noreferrer">פחמימות / קמחים / סוכרים</a>
-          {" "}של כל ארוחה והתוספות שלה (נמוך = טוב)
-        </li>
-        <li>
-          גרף משקל שבועי: שקילה מול משקל יעד
-        </li>
-        <li>
-          תזכורות והתראות נשלחות במייל (מומלץ לוודא שהן לא מגיעות לתיקיית הספאם), ואופציונלית
-          גם בטלגרם: תזכורת כשדיווח של יום חסר, תזכורת שקילה שבועית וסיכום שבועי
-        </li>
-        {chatAvailable && (
+      <div className="landing-card">
+        <AppHeading />
+        <p className="landing-intro">
+          אפליקציית SaaS חינמית — יומן ארוחות יומי שעוזר לשמור על הרגלי אכילה בריאים לאורך זמן.
+          לא סופרים קלוריות, אלא בוחנים את אופי כל ארוחה ואת המרווחים ביניהן, לפי ארבעת עקרונות
+          השכפ"צ (<a href={`#${PRINCIPLES_ID}`}>בטבלה שבסוף העמוד</a>):
+        </p>
+        <ul className="landing-summary">
           <li>
-            שאלות על עקרונות התוכנית נענות בצ'אט בתוך האפליקציה, מתוך מסמכי המקור של התוכנית;
-            צ'אט אפשר לשתף עם כל המשתמשים, וצ'אטים שמשתמשים אחרים שיתפו עם כולם פתוחים לקריאה
+            כל ארוחה נרשמת כשהיא נאכלת, ואפשר להשלים את יום אתמול גם אחרי חצות. מהרישום נגזרים
+            שלושה מארבעת עקרונות השכפ"צ: כמות הירקות, חלון האכילה ומספר הארוחות
           </li>
-        )}
-      </ul>
-      {toggleButton}
-      {signInButton}
-      {/* Each principle's bold initial opens its row, so the acronym reads down the first column. */}
-      <table className="landing-principles" id={PRINCIPLES_ID}>
-        <caption>שכפ"צ - העקרונות המרכזיים של המעקב</caption>
-        <thead>
-          <tr><th>העיקרון</th><th>היעד היומי</th></tr>
-        </thead>
-        <tbody>
-          <tr><td><strong>ש</strong>תיית מים</td><td>2.5 ליטר ומעלה</td></tr>
-          <tr><td><strong>כ</strong>מות ירקות</td><td>ירקות בשתי ארוחות לפחות</td></tr>
-          <tr><td><strong>פ</strong>תיחת חלון אכילה</td><td>עד 12 שעות מהארוחה הראשונה ועד האחרונה</td></tr>
-          <tr><td><strong>צ</strong>מצום מספר ארוחות</td><td>2-3 ארוחות, בלי נשנושים ביניהן</td></tr>
-        </tbody>
-      </table>
+          <li>
+            שתיית המים היא העיקרון הרביעי, היחיד שאינו נגזר מהיומן, ולכן יום שתועד במלואו נסגר
+            בשאלון סיכום היום עם מילוי כמות המים בלבד
+          </li>
+          <li>
+            מעבר לשכפ"צ, מהרישום מחושב גם ציון יומי: סכום הנקודות של כל הארוחות, לפי דרגת{" "}
+            <a href={CARB_GRADES_PATH} target="_blank" rel="noreferrer">פחמימות / קמחים / סוכרים</a>
+            {" "}של כל ארוחה והתוספות שלה (נמוך = טוב)
+          </li>
+          <li>
+            גרף משקל שבועי: שקילה מול משקל יעד
+          </li>
+          <li>
+            תזכורות והתראות נשלחות במייל (מומלץ לוודא שהן לא מגיעות לתיקיית הספאם), ואופציונלית
+            גם בטלגרם: תזכורת כשדיווח של יום חסר, תזכורת שקילה שבועית וסיכום שבועי
+          </li>
+          {chatAvailable && (
+            <li>
+              שאלות על עקרונות התוכנית נענות בצ'אט בתוך האפליקציה, מתוך מסמכי המקור של התוכנית;
+              צ'אט אפשר לשתף עם כל המשתמשים, וצ'אטים שמשתמשים אחרים שיתפו עם כולם פתוחים לקריאה
+            </li>
+          )}
+        </ul>
+        {toggleButton}
+        {signInButton}
+      </div>
+      {/* The reference table sits on a card of its own, the way the day log holds its history
+          table, so the two blocks close at the same edges and corners. */}
+      <div className="landing-card landing-reference">
+        {/* Each principle's bold initial opens its row, so the acronym reads down the first column. */}
+        <table className="landing-principles" id={PRINCIPLES_ID}>
+          <caption>שכפ"צ - העקרונות המרכזיים של המעקב</caption>
+          <thead>
+            <tr><th>העיקרון</th><th>היעד היומי</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>ש</strong>תיית מים</td><td>2.5 ליטר ומעלה</td></tr>
+            <tr><td><strong>כ</strong>מות ירקות</td><td>ירקות בשתי ארוחות לפחות</td></tr>
+            <tr><td><strong>פ</strong>תיחת חלון אכילה</td><td>עד 12 שעות מהארוחה הראשונה ועד האחרונה</td></tr>
+            <tr><td><strong>צ</strong>מצום מספר ארוחות</td><td>2-3 ארוחות, בלי נשנושים ביניהן</td></tr>
+          </tbody>
+        </table>
+      </div>
       {walkthroughLink}
       {inviteLink}
       {repoLink}
