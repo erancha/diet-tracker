@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
 import { choiceLabel } from "../gradeLabels";
+import { useReveal } from "../reveal";
 import type { Choice, Question } from "../types";
 import { questionTitle, valueLabel } from "../violations";
 
@@ -63,24 +63,20 @@ export function ChoiceFieldset({ question, selectedId, floor, stored, scope = "d
   onPick: (choice: Choice) => void;
 }) {
   const choices = fieldsetChoices(question, floor, stored);
-  // The choice reading in full for its moment, or null.
-  const [revealedId, setRevealedId] = useState<string | null>(null);
-  useEffect(() => {
-    if (revealedId === null) return;
-    const timer = setTimeout(() => setRevealedId(null), PICK_REVEAL_MS);
-    return () => clearTimeout(timer);
-  }, [revealedId]);
+  // The id of the choice reading in full for its moment.
+  const reveal = useReveal<string>();
   const pick = (choice: Choice) => {
     onPick(choice);
-    if (!expandLabels && choice.examples !== undefined) setRevealedId(choice.id);
+    if (!expandLabels && choice.examples !== undefined) reveal.reveal(choice.id, PICK_REVEAL_MS);
   };
   return (
     <fieldset>
       <legend>{questionTitle(question, scope)}</legend>
       {choices.map((choice) => {
-        const revealed = choice.id === revealedId;
+        const revealed = choice.id === reveal.revealed;
         return (
-          <label key={choice.id} className={revealed ? "choice-revealed" : undefined}>
+          <label key={choice.id} className={revealed ? "revealed" : undefined}
+                 style={revealed ? reveal.style : undefined}>
             <input
               type="radio"
               name={question.id}

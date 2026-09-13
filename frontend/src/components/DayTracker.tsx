@@ -10,6 +10,7 @@ import { ChoiceFieldset } from "./ChoiceFieldset";
 import { CollapsibleSection } from "./CollapsibleSection";
 import { DayDashboard } from "./DayDashboard";
 import { Icon } from "./Icon";
+import { FRUIT_FLAG, VEGETABLES_FLAG } from "../mealMarkers";
 import { MealList } from "./MealList";
 
 // The meal time the form opens on is the current clock rounded down to a five-minute mark: a
@@ -445,12 +446,12 @@ export function DayTracker({ questionnaire, treatDay, day, isToday = true, close
           <label>
             <input type="checkbox" checked={vegetables}
                    onChange={(e) => setVegetables(e.target.checked)} />
-            {" "}כולל ירקות
+            {" "}{VEGETABLES_FLAG.label}
           </label>
           <label>
             <input type="checkbox" checked={fruit}
                    onChange={(e) => setFruit(e.target.checked)} />
-            {" "}כולל פרי
+            {" "}{FRUIT_FLAG.label}
           </label>
           {carbsQuestion.additions!.map((addition) => (
             <label key={addition.id}>

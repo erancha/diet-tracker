@@ -404,10 +404,21 @@ td.off-norm { font-weight: bold; }
    than the whole item, so the alarm sits on the number its label merely names, and its
    specificity outranks the green that figure otherwise carries. */
 td.heavy-day, .tracker-dashboard .heavy-day .score, .meal-list .heavy-meal { color: var(--danger); }
-/* The full name a just-picked grade shows for a moment reads as a flash, not a change of
-   density: it comes in highlighted and fades as the option settles. */
-.choice-revealed { animation: choice-reveal 1s ease-out; }
-@keyframes choice-reveal { from { background: #fff8e1; } to { background: transparent; } }
+/* What shows for a moment — a just-picked grade's full name, the markers' legend — reads as a
+   flash, not a change of layout: it comes in highlighted and fades as it settles. The element
+   sets the duration, the same one that withdraws it. */
+.revealed { animation: reveal ease-out; }
+@keyframes reveal { from { background: #fff8e1; } to { background: transparent; } }
+/* A row carrying markers answers a tap on its cells with their names; its controls keep their own
+   pointer treatment. */
+.meal-list .has-markers :is(.meal-at, .meal-text, .meal-points) { cursor: pointer; }
+/* The tapped row's markers, named on a line of their own spanning the grid right under the row.
+   The containment keeps the line's own width out of the column sizing: the columns size to
+   their content, and a spanning line of the fat addition's full label would otherwise widen
+   them past the phone's screen, pushing the row's controls out of view. Contained, the line takes
+   the width the columns already have and wraps within it. Its face is the reopen hint's, a quiet
+   aside to the log rather than one of its rows. */
+.meal-list .marker-legend { grid-column: 1 / -1; contain: inline-size; }
 td.heavy-day.treat-day, .tracker-dashboard .heavy-day.treat-day .score { color: var(--treat-breach); }
 /* The bin is lifted out of the cell's line and pinned to the cell's far edge, so it holds one
    position down the column rather than trailing whatever the row's score happens to measure.
@@ -545,8 +556,8 @@ main:not(.intro-0, .intro-1, .intro-2, .intro-3, .intro-4) .weight .section-togg
   .weight :is(.weight-latest, .weight-chart-toggle) { animation: none; }
   .weight .section-toggle::before { animation: none; }
   .section-waning, .section-folding { animation: none; }
-  /* The full name still shows for its moment; only the highlight's fade goes. */
-  .choice-revealed { animation: none; }
+  /* What is revealed still shows for its moment; only the highlight's fade goes. */
+  .revealed { animation: none; }
   /* The ring stays as a static mark of the wait. */
   .chat-pending::before { animation: none; }
 }
@@ -608,7 +619,8 @@ main:not(.intro-0, .intro-1, .intro-2, .intro-3, .intro-4) .weight .section-togg
 .reopen-toggle:not(.meal-add-warn) { font-size: calc(1rem + 2px); }
 /* Rides the closed tracker's action row beside the add-meal button, naming what that button
    does to a closed day; muted, because it explains rather than acts. */
-.reopen-hint { align-self: center; font-size: 0.85rem; color: #8a8a84; }
+.reopen-hint { align-self: center; }
+.reopen-hint, .marker-legend { font-size: 0.85rem; color: #8a8a84; }
 /* Every carb-score figure — the day total in the dashboard and each meal's points — wears one
    face: same size, weight and colour, so the rows read beyond doubt as the same kind of number
    the total sums. Danger overrides for a heavy day or meal outrank this green by specificity. */

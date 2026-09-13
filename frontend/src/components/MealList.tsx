@@ -2,11 +2,14 @@ import { clockTimeOf } from "../dates";
 import { carbsScales, mealWeights } from "../derive";
 import { choiceLabel } from "../gradeLabels";
 import type { Choice, Meal, Questionnaire } from "../types";
+import { mealMarkers } from "../mealMarkers";
+import { useReveal } from "../reveal";
 import { isHeavyMeal } from "../violations";
 import { Icon } from "./Icon";
 
-// Row marker per addition id; a retired id falls back to its raw id, like retired grade choices.
-const ADDITION_MARKERS: Record<string, string> = { sweet: "🍪", alcohol: "🍷", nuts: "🥜", fat: "🥑" };
+// How long a tapped meal's markers stay named, per marker: the line grows with the meal, and
+// the fat addition's label alone runs to a line of examples.
+const LEGEND_MS_PER_MARKER = 1500;
 
 // A day's meal list rendered in time order, reading top to bottom as the day unfolded — the
 // bottom row is the meal just recorded — each row ending with the meal's effective points so the
@@ -26,6 +29,8 @@ export function MealList({ questionnaire, meals, expandLabels, onEdit, onDelete,
   deletingId?: string;
 }) {
   const carbsQuestion = questionnaire.questions.find((q) => q.id === "carbs")!;
+  // The id of the meal whose markers a tap just asked about, named under its row for a moment.
+  const legend = useReveal<string>();
 
   // A history day may reference a choice or addition id retired by a later questionnaire
   // version, making its weights unknowable here; per-meal points render only when the whole day
@@ -43,12 +48,16 @@ export function MealList({ questionnaire, meals, expandLabels, onEdit, onDelete,
         const choice = carbsQuestion.choices.find((c) => c.id === meal.carbs_choice);
         const second = meal.second_source === null ? undefined
           : carbsQuestion.choices.find((c) => c.id === meal.second_source!.carbs_choice);
+        const markers = mealMarkers(carbsQuestion, meal);
+        // A tap on any cell of the row but its controls asks what the row's markers mean.
+        const askLegend = markers.length === 0 ? {}
+          : { onClick: () => legend.reveal(meal.id, LEGEND_MS_PER_MARKER * markers.length) };
         return (
-          <li key={meal.id}>
+          <li key={meal.id} className={markers.length === 0 ? undefined : "has-markers"}>
             {/* Outside the text cell, so the row lays time and description out as two columns and
                 a description too long for one line wraps against its own edge, not the time's. */}
-            <strong className="meal-at">{clockTimeOf(meal.at)}</strong>
-            <span className="meal-text">
+            <strong className="meal-at" {...askLegend}>{clockTimeOf(meal.at)}</strong>
+            <span className="meal-text" {...askLegend}>
               <Grade choice={choice} choiceId={meal.carbs_choice} expanded={expandLabels} />
               {/* A plate that drew on two carb sources names both, each highlighted on its own
                   grade; the row's points are their sum. */}
@@ -59,9 +68,7 @@ export function MealList({ questionnaire, meals, expandLabels, onEdit, onDelete,
                          expanded={expandLabels} />
                 </>
               )}
-              {meal.vegetables && " · 🥗"}
-              {meal.fruit && " · 🍎"}
-              {meal.additions.map((a) => ` · ${ADDITION_MARKERS[a.id] ?? a.id}`).join("")}
+              {markers.map((m) => ` · ${m.marker}`).join("")}
             </span>
             {/* A bare number reads as nothing in particular; the carbs tooltip is what says it is
                 this meal's contribution to the day's score. The heavy mark rides this figure and
@@ -72,7 +79,7 @@ export function MealList({ questionnaire, meals, expandLabels, onEdit, onDelete,
             {points !== undefined && (
               <span className={isHeavyMeal(carbsQuestion, points[index].total)
                       ? "meal-points score heavy-meal" : "meal-points score"}
-                    title={carbsQuestion.tooltip}>
+                    title={carbsQuestion.tooltip} {...askLegend}>
                 {" · "}{points[index].total}
               </span>
             )}
@@ -94,6 +101,11 @@ export function MealList({ questionnaire, meals, expandLabels, onEdit, onDelete,
                 </button>
               )}
             </span>
+            {legend.revealed === meal.id && (
+              <span className="marker-legend revealed" style={legend.style}>
+                {markers.map((m) => `${m.marker} ${m.label}`).join(" · ")}
+              </span>
+            )}
           </li>
         );
       })}
