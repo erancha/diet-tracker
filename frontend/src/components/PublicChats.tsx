@@ -4,11 +4,13 @@ import { renderQuestion } from "../chatChain";
 import { instantLabel } from "../dates";
 import { flipped } from "../setToggle";
 import type { PublicChat } from "../types";
+import { AnswerFoot } from "./AnswerFoot";
 import { ChatAnswer } from "./ChatAnswer";
 
 // The chats other users shared, newest first, each under its asker's address and date with the
 // answer and its sources folded behind the question. Read-only: no follow-up, digest, share or
-// delete, the chat being someone else's. Loading, folding and the error alert are the chat's.
+// delete, the chat being someone else's; an open answer's foot offers closing alone, which
+// hands focus back to the question. Loading, folding and the error alert are the chat's.
 // A chat named by `reveal` is opened and focused — which scrolls it into view — and the request
 // handed back through onRevealed, so a re-render cannot reopen it.
 export function PublicChatList({ chats, api, onError, reveal, onRevealed }: {
@@ -35,6 +37,13 @@ export function PublicChatList({ chats, api, onError, reveal, onRevealed }: {
     // The request alone triggers this; the list it names is rendered by the time it is set.
   }, [reveal]);
 
+  // Folding from the answer's foot would leave the reader mid-list, so focus moves to the chat's
+  // question button — which also scrolls it back into view.
+  const collapseFromFoot = (at: string) => {
+    setExpanded((current) => flipped(current, at));
+    questionRefs.current.get(at)!.focus();
+  };
+
   return (
     <ul className="chat-messages">
       {chats.map((chat) => (
@@ -58,6 +67,7 @@ export function PublicChatList({ chats, api, onError, reveal, onRevealed }: {
           {expanded.has(chat.at) && (
             <li className="chat-assistant chat-others">
               <ChatAnswer answer={chat.answer} sources={chat.sources} api={api} onError={onError} />
+              <AnswerFoot question={chat.question} readOnly onClose={() => collapseFromFoot(chat.at)} />
             </li>
           )}
         </Fragment>

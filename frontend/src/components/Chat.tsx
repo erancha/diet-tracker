@@ -8,19 +8,12 @@ import { dropped, flipped } from "../setToggle";
 import type { ChatAnswer as StoredAnswer, ChatCount, ChatSampleQuestion, ChatTurn, ExistingChat,
   PublicChat } from "../types";
 import { fromUpstream } from "../upstream";
+import { AnswerFoot } from "./AnswerFoot";
 import { ChatAnswer } from "./ChatAnswer";
 import { Icon } from "./Icon";
 import { PublicChatList } from "./PublicChats";
 import { useGlobalFold } from "./useFoldAll";
 
-// What the two controls under an answer do, which their labels name but do not explain: a
-// follow-up carries this chat's question and answer up with it, and summarizing is a one-way
-// trade of the conversation for a digest of it — chat_history.summarize drops the chain, the
-// follow-ups and the citations for good.
-const FOLLOW_UP_HINT =
-  "שאלה נוספת על אותה שיחה — היא נשלחת יחד עם השאלה והתשובה שכאן, כדי שהתשובה תמשיך אותן.";
-const SUMMARIZE_HINT =
-  "החלפת השיחה בסיכום קצר של מה שנשאל והוסק. השאלות, התשובות והמקורות שבה נמחקים ולא ניתן לשחזר אותם.";
 // Sharing is read by name, and the answer may cite the asker's own tracked data — the choice the
 // confirm spells out before anything leaves the asker's transcript.
 const SHARE_CONFIRM =
@@ -154,6 +147,12 @@ export function Chat({ email, api, sampleQuestions, answerPollSeconds,
   useEffect(() => {
     if (summarizingAt !== null) summarizingRef.current?.focus();
   }, [summarizingAt]);
+  // The offer of an existing chat renders under the composer, past the bottom of the view
+  // on a phone, so it takes focus: the browser scrolls it into view and assistive tech reads it.
+  const existingRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (existing !== null) existingRef.current!.focus();
+  }, [existing]);
 
   // The toggle sits at the foot of the screen more often than not, so a transcript it opens
   // lands below the fold: the list walks into view once it is rendered, which on a first unfold
@@ -425,7 +424,7 @@ export function Chat({ email, api, sampleQuestions, answerPollSeconds,
         <button type="submit" className="primary" disabled={draft.trim() === ""}>שליחה</button>
       </form>
       {existing !== null && (
-        <div className="existing-chat">
+        <div className="existing-chat" tabIndex={-1} ref={existingRef}>
           <p>{existing.own !== null ? "כבר שאלת את השאלה הזו"
             : `השאלה הזו כבר נשאלה ושותפה על ידי ${existing.shared!.email}`}</p>
           <button type="button" className="secondary compact" onClick={reveal}>להציג את הצ'אט הקיים</button>
@@ -537,27 +536,11 @@ export function Chat({ email, api, sampleQuestions, answerPollSeconds,
                     <>
                       <ChatAnswer answer={turn.answer} sources={turn.sources} api={api}
                                   onError={setError} />
-                      <div className="answer-foot">
-                        <button type="button" className="secondary compact reply-turn"
-                          aria-label={`שאלת המשך על ${turn.question}`}
-                          title={FOLLOW_UP_HINT}
-                          aria-pressed={replyTo?.at === turn.at}
-                          onClick={() => setReplyTo(turn)}>שאלת המשך</button>
-                        <button type="button" className="secondary compact"
-                          aria-label={`סיכום הצ'אט על ${turn.question}`}
-                          title={SUMMARIZE_HINT}
-                          disabled={turn.summarized}
-                          onClick={() => void summarize(turn)}>סיכום הצ'אט</button>
-                        <button type="button" className="secondary compact share-turn"
-                          aria-label={`${turn.visibility === null ? "שיתוף" : "ביטול שיתוף"} הצ'אט על ${turn.question}`}
-                          aria-pressed={turn.visibility !== null}
-                          onClick={() => void setVisibility(turn)}>
-                          {turn.visibility === null ? "שיתוף לכולם" : "ביטול השיתוף"}
-                        </button>
-                        <button type="button" className="secondary compact close-turn"
-                          aria-label={`סגירת התשובה על ${turn.question}`}
-                          onClick={() => collapseFromFoot(turn.at)}>סגירה</button>
-                      </div>
+                      <AnswerFoot question={turn.question} readOnly={false}
+                                  replyPressed={replyTo?.at === turn.at} onReply={() => setReplyTo(turn)}
+                                  summarized={turn.summarized} onSummarize={() => void summarize(turn)}
+                                  shared={turn.visibility !== null} onShare={() => void setVisibility(turn)}
+                                  onClose={() => collapseFromFoot(turn.at)} />
                     </>
                   )}
                 </li>

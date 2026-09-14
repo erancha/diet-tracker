@@ -233,6 +233,21 @@ describe("Chat", () => {
     expect(screen.getByText("ירקות וחלבון")).toBeInTheDocument();
   });
 
+  it("collapses a shared chat's open answer from the control at its foot, focusing its question",
+     async () => {
+    render(<Chat email="a@gmail.com" api={withOthers(OTHERS.chats)} sampleQuestions={[]} answerPollSeconds={POLL_SECONDS} />);
+    await userEvent.click(await screen.findByRole("button", { name: "2 צ'אטים של משתמשים אחרים" }));
+    const question = await screen.findByRole("button", { name: "מה מותר בערב?" });
+    await userEvent.click(question);
+    expect(screen.getByText("ירקות וחלבון")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "סגירת התשובה על מה מותר בערב?" }));
+
+    expect(screen.queryByText("ירקות וחלבון")).not.toBeInTheDocument();
+    expect(question).toHaveAttribute("aria-expanded", "false");
+    expect(question).toHaveFocus();
+  });
+
   it("offers no way to change another user's chat", async () => {
     render(<Chat email="a@gmail.com" api={withOthers(OTHERS.chats)} sampleQuestions={[]} answerPollSeconds={POLL_SECONDS} />);
     await userEvent.click(await screen.findByRole("button", { name: "2 צ'אטים של משתמשים אחרים" }));
@@ -1343,6 +1358,16 @@ describe("Chat", () => {
     expect(screen.queryByText("כבר שאלת את השאלה הזו")).not.toBeInTheDocument();
     expect(chatApi.getPublicChats).not.toHaveBeenCalled();
     expect(screen.getByRole("textbox")).toHaveValue("");
+  });
+
+  it("moves focus to the offer of an existing chat, so it scrolls into view under the composer",
+     async () => {
+    const chatApi = api({ findExistingChat: existing("2026-09-01T10:00:01", null) });
+    render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} answerPollSeconds={POLL_SECONDS} />);
+
+    await ask("שאלה 1");
+
+    expect(screen.getByText("כבר שאלת את השאלה הזו").closest(".existing-chat")).toHaveFocus();
   });
 
   it("offers another user's shared chat, and opens it in the others' list on request", async () => {
