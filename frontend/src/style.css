@@ -239,9 +239,11 @@ button {
 :is(.primary, .secondary) { padding: 0.6rem 2.5rem; }
 /* Folds content open or closed: a triangle leading text that keeps the type of whatever it sits
    in. It points along the reading direction when collapsed — its right side in RTL, where a
-   native details marker sits — so direction alone says which way the fold stands. */
+   native details marker sits — so direction alone says which way the fold stands. The sideways
+   triangle is visually lighter than the downward one, so the collapsed marker is set two pixels
+   larger to read as the same weight. */
 .disclosure::before { content: "▾ "; font-size: calc(0.9em + 1px); }
-.disclosure[aria-expanded="false"]::before { content: "◂ "; }
+.disclosure[aria-expanded="false"]::before { content: "◂ "; font-size: calc(0.9em + 3px); }
 /* A marker needs a leading position to be one. Where the fold is seated inside running text —
    the word יעד in the weight summary, which a bound Hebrew prefix (ה, ב, מעל ה) joins into one
    word — a leading triangle would split that word, so the affordance goes under the text. This
