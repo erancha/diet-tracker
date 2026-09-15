@@ -66,3 +66,13 @@ describe("MealList marker legend", () => {
     expect(screen.queryByText(/כולל/)).toBeNull();
   });
 });
+
+describe("MealList row controls", () => {
+  it("offers the edit pencil on the last meal alone when asked to limit corrections to it", () => {
+    render(<MealList questionnaire={questionnaire} meals={meals} expandLabels={false}
+                     onEdit={vi.fn()} editLastOnly />);
+    expect(screen.getByRole("button", { name: "עריכת ארוחה 19:00" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "עריכת ארוחה 09:10" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "עריכת ארוחה 13:30" })).toBeNull();
+  });
+});

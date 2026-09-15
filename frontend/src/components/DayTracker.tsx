@@ -37,9 +37,9 @@ const COLLAPSE_LABELS = "צמצום שמות";
 // toggle reads greyed, a quieter caution than the overdue nudge on the far side of the gap.
 const MIN_MEAL_GAP_HOURS = 3.5;
 
-// What the closed day's one control asks before undoing the close: adding a meal to a closed
-// day means deleting its record — the same deletion the history table offers — and closing again
-// over the fuller log.
+// What the closed day's controls ask before undoing the close: adding a meal to a closed day, or
+// correcting its last one, means deleting its record — the same deletion the history table
+// offers — and closing again over the corrected log.
 const REOPEN_PROMPT = "האם לפתוח את חלון האכילה מחדש?";
 
 // How long each of the nudge's escalating beats runs before the next takes over. The blink rate
@@ -89,7 +89,7 @@ export function DayTracker({ questionnaire, treatDay, day, isToday = true, close
   savingMeal?: boolean;
   onCloseDay: (answers: Record<string, number>) => void;
   // Deletes the closed day's record — the history table's own deletion path — so the day is open
-  // to take the meal the user came to add. Supplied whenever closed can be true.
+  // to take the meal the user came to add or correct. Supplied whenever closed can be true.
   onReopenDay?: () => void;
 }) {
   const carbsQuestion = questionnaire.questions.find((q) => q.id === "carbs")!;
@@ -402,9 +402,16 @@ export function DayTracker({ questionnaire, treatDay, day, isToday = true, close
             {/* The button undoes the close, so its effect stands spelled out beside it. */}
             <span className="reopen-hint">(פתיחת חלון האכילה)</span>
           </div>
-          {/* The recorded meals stay readable, as in the history table's day view, but carry no
-              controls: correcting one starts with reopening the day. */}
-          <MealList questionnaire={questionnaire} meals={day.meals} expandLabels={expandLabels} />
+          {/* The recorded meals stay readable, as in the history table's day view. Only the last
+              one can still be corrected, behind the same reopen question as adding a meal: the
+              form takes the meal before the deletion's round trip, so the reopened day comes back
+              already correcting it. Nothing on a closed day deletes a meal. */}
+          <MealList questionnaire={questionnaire} meals={day.meals} expandLabels={expandLabels}
+                    editLastOnly onEdit={(meal) => {
+                      if (!window.confirm(REOPEN_PROMPT)) return;
+                      startEdit(meal);
+                      onReopenDay!();
+                    }} />
         </>
       ) : (
         <>

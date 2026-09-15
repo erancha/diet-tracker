@@ -111,10 +111,11 @@ view's score.
   figures below that derivation, so the meal log stays the authority over what a closed day
   claims.
 - **Reopening** — a closed day keeps the tracker on screen: its meals stay readable, as in the
-  history table's day view, behind a single add-meal control that asks to reopen the eating
-  window. Confirming deletes the day's record — the same deletion the history table offers,
-  under the same windows — while the meals survive, so the day is simply open again to take the
-  late meal and close over the fuller log.
+  history table's day view, behind an add-meal control and the last meal's edit control, either
+  of which asks to reopen the eating window. Confirming deletes the day's record — the same
+  deletion the history table offers, under the same windows — while the meals survive, so the
+  day is simply open again to take the late meal, or the correction the edit control began, and
+  close over the corrected log.
 - **Small-hours grace window** — a day left unclosed at midnight does not vanish: while the clock
   is still before the configured `day_close.close_until`, an unclosed yesterday holding meals
   stays the tracker's target — its late meals can still be recorded or corrected, dated within

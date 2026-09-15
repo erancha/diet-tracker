@@ -1616,7 +1616,10 @@ describe("DayTracker", () => {
     expect(screen.getByText("09:10")).toBeInTheDocument();
     expect(screen.getByText("13:30")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "סגירת יום" })).toBeNull();
-    expect(screen.queryByRole("button", { name: /עריכת ארוחה/ })).toBeNull();
+    // The last meal alone keeps its pencil: correcting it reopens the day behind the same
+    // question as adding one. Nothing on a closed day deletes a meal.
+    expect(screen.getByRole("button", { name: "עריכת ארוחה 13:30" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "עריכת ארוחה 09:10" })).toBeNull();
     expect(screen.queryByRole("button", { name: /מחיקת ארוחה/ })).toBeNull();
     // The density switch stays: the read-only rows still name grades worth spelling out.
     expect(screen.getByRole("button", { name: "הרחבת שמות" })).toBeInTheDocument();
@@ -1645,6 +1648,33 @@ describe("DayTracker", () => {
     const onReopenDay = renderClosed();
     fireEvent.click(screen.getByRole("button", { name: "הוספת ארוחה" }));
     expect(onReopenDay).not.toHaveBeenCalled();
+  });
+
+  it("reopens the closed day from its last meal's pencil, that meal loaded for correction", () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    const onReopenDay = vi.fn();
+    const props = { maxMealsPerDay: NO_CAP_MEALS, closeMinWindowHours: 6, questionnaire, day: trackedDay, onReopenDay,
+                    firstMealHour: NO_NUDGE_HOUR, mealGapHours: NO_NUDGE_GAP_HOURS,
+                    onAddMeal: vi.fn(), onUpdateMeal: vi.fn(), onDeleteMeal: vi.fn(),
+                    onCloseDay: vi.fn() };
+    const { rerender } = render(<DayTracker treatDay={TREAT_DAY} {...props} closed />);
+    fireEvent.click(screen.getByRole("button", { name: "עריכת ארוחה 13:30" }));
+    expect(window.confirm).toHaveBeenCalledWith("האם לפתוח את חלון האכילה מחדש?");
+    expect(onReopenDay).toHaveBeenCalledTimes(1);
+
+    // The day comes back open with the form already correcting the meal the pencil named.
+    rerender(<DayTracker treatDay={TREAT_DAY} {...props} closed={false} />);
+    expect(screen.getByLabelText("שעת הארוחה")).toHaveValue("13:30");
+    expect(screen.getByLabelText("דרגה 4")).toBeChecked();
+    expect(screen.getByRole("button", { name: "עדכון ארוחה" })).toBeInTheDocument();
+  });
+
+  it("leaves a closed day alone when the last meal's pencil is dismissed at the reopen question", () => {
+    vi.spyOn(window, "confirm").mockReturnValue(false);
+    const onReopenDay = renderClosed();
+    fireEvent.click(screen.getByRole("button", { name: "עריכת ארוחה 13:30" }));
+    expect(onReopenDay).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: "עדכון ארוחה" })).toBeNull();
   });
 
   // From the third recorded meal, one more would cross the meals rule's bound. The warning rides

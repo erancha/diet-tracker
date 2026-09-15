@@ -15,7 +15,8 @@ const LEGEND_MS_PER_MARKER = 1500;
 // bottom row is the meal just recorded — each row ending with the meal's effective points so the
 // rows visibly sum to the day's carb score. Per-meal editing and deletion render only when their
 // handlers are supplied (the live tracker); the read-only history view passes none.
-export function MealList({ questionnaire, meals, expandLabels, onEdit, onDelete, deletingId }: {
+export function MealList({ questionnaire, meals, expandLabels, onEdit, editLastOnly = false, onDelete,
+                           deletingId }: {
   questionnaire: Questionnaire;
   // Every grade a row names carries a list of what it covers, so the density is the caller's to
   // set rather than this component's to assume.
@@ -23,6 +24,8 @@ export function MealList({ questionnaire, meals, expandLabels, onEdit, onDelete,
   // Chronological, as the server stores them — the order the rows render in.
   meals: Meal[];
   onEdit?: (meal: Meal) => void;
+  // Restricts the edit control to the day's last meal — a closed day's one correctable row.
+  editLastOnly?: boolean;
   onDelete?: (id: string) => void;
   // The meal whose deletion is already on the wire. Its bin is held disabled until the row leaves
   // the list, so a second tap cannot race the first into deleting an already-deleted record.
@@ -85,7 +88,7 @@ export function MealList({ questionnaire, meals, expandLabels, onEdit, onDelete,
             )}
             {/* Grouped into one cell so the pencil and bin travel together as the row's controls. */}
             <span className="meal-actions">
-              {onEdit && (
+              {onEdit && (!editLastOnly || index === meals.length - 1) && (
                 <button type="button" className="glyph"
                         aria-label={`עריכת ארוחה ${clockTimeOf(meal.at)}`}
                         onClick={() => onEdit(meal)}>
