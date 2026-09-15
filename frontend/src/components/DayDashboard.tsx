@@ -5,17 +5,21 @@ import { breachesLimit, isViolating, scoreLabel } from "../violations";
 // One-line summary of a day's derived values, shared by the live tracker header (client-derived)
 // and the read-only history view (server-derived). Every figure is its own element so color can
 // land on the number while its label stays in the body text color.
-export function DayDashboard({ questionnaire, treatDay, date, derived }: {
+export function DayDashboard({ questionnaire, treatDay, date, derived, onScoreClick }: {
   questionnaire: Questionnaire;
   treatDay: TreatDaySettings;
   // The day the figures describe; a treat-day breach keeps its mark and takes the softer paint.
   date: string;
   derived: Derived;
+  // Opens the score's breakdown. Offered only from a score past the day rule: a score within it
+  // has nothing to account for, so it stays plain text even when a handler is supplied.
+  onScoreClick?: () => void;
 }) {
   const carbsQuestion = questionnaire.questions.find((q) => q.id === "carbs")!;
   // A day holding no meals yet has nothing to judge: its zeros are what has not been recorded,
   // not a floor missed or a bound crossed.
   const softened = fallsOn(date, treatDay.weekday) ? " treat-day" : "";
+  const heavy = isViolating(questionnaire, carbsQuestion.id, derived.carbs);
   const valueClass = (questionId: string, value: number) =>
     derived.meals > 0 && breachesLimit(questionnaire, questionId, value)
       ? `value breach${softened}` : "value";
@@ -30,10 +34,11 @@ export function DayDashboard({ questionnaire, treatDay, date, derived }: {
       </span>
       <span>ירקות: <span className={valueClass("vegetables", derived.vegetables)}>
         {derived.vegetables}</span></span>
-      <strong title={carbsQuestion.tooltip}
-              className={isViolating(questionnaire, carbsQuestion.id, derived.carbs)
-                ? `heavy-day${softened}` : undefined}>
-        ציון: <span className="score">{scoreLabel(derived.carbs)}</span>
+      <strong title={carbsQuestion.tooltip} className={heavy ? `heavy-day${softened}` : undefined}>
+        ציון: {heavy && onScoreClick !== undefined
+          ? <button type="button" className="score score-link" aria-label="פירוט הציון"
+                    onClick={onScoreClick}>{scoreLabel(derived.carbs)}</button>
+          : <span className="score">{scoreLabel(derived.carbs)}</span>}
       </strong>
     </div>
   );

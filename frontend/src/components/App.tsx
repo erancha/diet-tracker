@@ -345,7 +345,9 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, c
           {viewedDate !== null && (
             viewedDayQuery.isPending ? <p>טוען…</p>
             : viewedDayQuery.isError ? <div className="alert">{alertMessage("טעינת היום נכשלה", viewedDayQuery.error)}</div>
-            : <DayView questionnaire={questionnaire} treatDay={configQuery.data.treat_day}
+            // Keyed by date so switching rows opens the next day on its meal list, not on a
+            // breakdown the previous day left open.
+            : <DayView key={viewedDate} questionnaire={questionnaire} treatDay={configQuery.data.treat_day}
                        day={viewedDayQuery.data}
                        onClose={() => setViewedDate(null)} />
           )}

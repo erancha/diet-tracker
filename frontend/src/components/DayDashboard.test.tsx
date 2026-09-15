@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { DayDashboard } from "./DayDashboard";
 import type { Questionnaire } from "../types";
 
@@ -66,5 +66,33 @@ describe("DayDashboard", () => {
 
     expect(screen.getByText("13")).not.toHaveClass("treat-day");
     expect(screen.getByText("9").closest("strong")).not.toHaveClass("treat-day");
+  });
+});
+
+describe("DayDashboard score link", () => {
+  const heavy = { carbs: 9, meals: 2, vegetables: 2, eating_window: 8 };
+  const light = { carbs: 3, meals: 2, vegetables: 2, eating_window: 8 };
+
+  it("turns a score past the day rule into the control that opens its breakdown", () => {
+    const onScoreClick = vi.fn();
+    render(<DayDashboard questionnaire={questionnaire} treatDay={TREAT_DAY} date={ORDINARY}
+                         derived={heavy} onScoreClick={onScoreClick} />);
+    const link = screen.getByRole("button", { name: "פירוט הציון" });
+    expect(link).toHaveTextContent("9");
+    link.click();
+    expect(onScoreClick).toHaveBeenCalledOnce();
+  });
+
+  it("leaves a score within the rule as plain text even when a handler is offered", () => {
+    render(<DayDashboard questionnaire={questionnaire} treatDay={TREAT_DAY} date={ORDINARY}
+                         derived={light} onScoreClick={vi.fn()} />);
+    expect(screen.queryByRole("button", { name: "פירוט הציון" })).toBeNull();
+    expect(screen.getByText("3")).toBeInTheDocument();
+  });
+
+  it("keeps a heavy score plain where no breakdown is offered", () => {
+    render(<DayDashboard questionnaire={questionnaire} treatDay={TREAT_DAY} date={ORDINARY}
+                         derived={heavy} />);
+    expect(screen.queryByRole("button")).toBeNull();
   });
 });

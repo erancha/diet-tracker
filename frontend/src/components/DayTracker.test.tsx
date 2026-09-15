@@ -1708,3 +1708,48 @@ describe("DayTracker", () => {
     expect(dashboardFigure("ציון")).toHaveTextContent("ציון: 4");
   });
 });
+
+describe("DayTracker score breakdown", () => {
+  // trackedDay with its second meal steepened: grade 7 beside the day's fruit is 7, over the
+  // fixture's day rule of 8 once the heaped sweet is priced in.
+  const heavyDay: DayPayload = {
+    ...trackedDay,
+    meals: [trackedDay.meals[0],
+            { ...trackedDay.meals[1], carbs_choice: "carb_grade_7", additions: [{ id: "sweet", amount: "much" }] }],
+  };
+  const renderHeavy = () =>
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6}
+                       questionnaire={questionnaire} day={heavyDay}
+                       firstMealHour={NO_NUDGE_HOUR} mealGapHours={NO_NUDGE_GAP_HOURS}
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()} onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+
+  it("swaps the meal list and form for the score's breakdown from the heavy score, and back from it", () => {
+    renderHeavy();
+    expect(screen.getByRole("button", { name: "עריכת ארוחה 13:30" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "פירוט הציון" }));
+    expect(screen.getByRole("heading", { name: "פירוט הציון" })).toBeInTheDocument();
+    expect(screen.getByText("כולל מתוק · הרבה")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "עריכת ארוחה 13:30" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /הוספת ארוחה|שמירת ארוחה/ })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "פירוט הציון" }));
+    expect(screen.queryByRole("heading", { name: "פירוט הציון" })).toBeNull();
+    expect(screen.getByRole("button", { name: "עריכת ארוחה 13:30" })).toBeInTheDocument();
+  });
+
+  it("puts the meal list back on its own half a minute after the breakdown opened", () => {
+    vi.useFakeTimers();
+    renderHeavy();
+    fireEvent.click(screen.getByRole("button", { name: "פירוט הציון" }));
+    act(() => { vi.advanceTimersByTime(30_000); });
+    expect(screen.queryByRole("heading", { name: "פירוט הציון" })).toBeNull();
+    expect(screen.getByRole("button", { name: "עריכת ארוחה 13:30" })).toBeInTheDocument();
+  });
+
+  it("offers no breakdown on a day within the rule", () => {
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6}
+                       questionnaire={questionnaire} day={trackedDay}
+                       firstMealHour={NO_NUDGE_HOUR} mealGapHours={NO_NUDGE_GAP_HOURS}
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()} onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    expect(screen.queryByRole("button", { name: "פירוט הציון" })).toBeNull();
+  });
+});

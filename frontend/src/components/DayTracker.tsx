@@ -12,6 +12,7 @@ import { DayDashboard } from "./DayDashboard";
 import { Icon } from "./Icon";
 import { FRUIT_FLAG, VEGETABLES_FLAG } from "../mealMarkers";
 import { MealList } from "./MealList";
+import { ScoreBreakdown } from "./ScoreBreakdown";
 
 // The meal time the form opens on is the current clock rounded down to a five-minute mark: a
 // meal's time is an estimate, not a stopwatch reading.
@@ -129,6 +130,10 @@ export function DayTracker({ questionnaire, treatDay, day, isToday = true, close
   // menu's view command: the tracker is the page's working surface, so even the condensed view
   // leaves it open, and only its own toggle folds it.
   const [sectionCollapsed, setSectionCollapsed] = useState(false);
+  // Whether the score's breakdown stands in for the meal list and form. It shows only while the
+  // score is past the day rule — the link that opens it is offered from nothing less — so a
+  // correction that brings the day back under the rule returns the log without a close.
+  const [breakdownOpen, setBreakdownOpen] = useState(false);
 
   // The day's meals always resolve against the current questionnaire, so deriveDay's throw on an
   // unknown id is a real config/data fault, not a legal state — let the error boundary show it.
@@ -138,6 +143,7 @@ export function DayTracker({ questionnaire, treatDay, day, isToday = true, close
   // meal under the production config — every add-meal control carries the warning styling, so
   // the caution lands before that meal is recorded rather than through the history row after.
   const addMealWarns = isViolating(questionnaire, "meals", derived.meals + 1);
+  const breakdownShown = breakdownOpen && isViolating(questionnaire, carbsQuestion.id, derived.carbs);
   const addMealTitle = addMealWarns
     ? <span className="meal-add-warn">הוספת ארוחה</span>
     : "הוספת ארוחה";
@@ -353,7 +359,13 @@ export function DayTracker({ questionnaire, treatDay, day, isToday = true, close
                         collapsed={sectionCollapsed}
                         onToggle={() => setSectionCollapsed((c) => !c)}
                         summary={
-      <DayDashboard questionnaire={questionnaire} treatDay={treatDay} date={day.date} derived={derived} />
+      <DayDashboard questionnaire={questionnaire} treatDay={treatDay} date={day.date} derived={derived}
+                    // From a folded tracker the score opens the breakdown into view rather than
+                    // toggling a panel the fold would hide.
+                    onScoreClick={() => {
+                      setBreakdownOpen(sectionCollapsed || !breakdownOpen);
+                      setSectionCollapsed(false);
+                    }} />
     }
                         headerAside={
       /* Governs every grade name in the card — the pickers' and the meal rows' alike, the closed
@@ -363,14 +375,17 @@ export function DayTracker({ questionnaire, treatDay, day, isToday = true, close
          density lives outside the component, so withholding the switch keeps the reading.
          Withheld as an empty aside rather than none, so the heading keeps its row — and the
          focus of whoever just pressed it — instead of remounting as the switch comes and goes. */
-      !sectionCollapsed && (day.meals.length > 0 || !formCollapsed)
+      !sectionCollapsed && !breakdownShown && (day.meals.length > 0 || !formCollapsed)
         ? <button type="button" className="secondary compact label-density"
                   onClick={() => setExpandLabels(!expandLabels)}>
             {expandLabels ? COLLAPSE_LABELS : EXPAND_LABELS}
           </button>
         : null
     }>
-      {closed ? (
+      {breakdownShown ? (
+        <ScoreBreakdown questionnaire={questionnaire} treatDay={treatDay} date={day.date} meals={day.meals}
+                        onExpire={() => setBreakdownOpen(false)} />
+      ) : closed ? (
         <>
           <div className="form-actions">
             <button type="button"

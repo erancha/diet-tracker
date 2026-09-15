@@ -467,4 +467,24 @@ describe("App", () => {
     expect(await screen.findByRole("button", { name: "סגירת התצוגה" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: `מחיקת הרשומה של ${yesterdayStr}` })).toBeNull();
   });
+
+  it("opens a heavy history day on its meal list, with the breakdown one score click away", async () => {
+    window.localStorage.setItem(STORAGE_KEY, "false");
+    atClock(1, 0);
+    const yesterdayStr = isoDate(yesterdayOf(new Date()));
+    const client = api({ days: [{ date: yesterdayStr, answers: { drinking: 3, carbs: 9 }, excluded: 0 }] });
+    (client.getDay as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ...emptyDay(yesterdayStr),
+      meals: [{ id: "m", at: `${yesterdayStr}T13:00:00+03:00`, carbs_choice: "carb_grade_7", vegetables: false,
+                fruit: false, additions: [{ id: "sweet", amount: null }], portion: null, second_source: null }],
+      derived: { carbs: 9, meals: 1, vegetables: 0, eating_window: 0 },
+    });
+    renderApp(false, client);
+
+    fireEvent.click(await screen.findByRole("button", { name: `הצגת היומן של ${yesterdayStr}` }));
+    const scoreLink = await screen.findByRole("button", { name: "פירוט הציון" });
+    expect(screen.queryByRole("heading", { name: "פירוט הציון" })).toBeNull();
+    fireEvent.click(scoreLink);
+    expect(screen.getByRole("heading", { name: "פירוט הציון" })).toBeInTheDocument();
+  });
 });

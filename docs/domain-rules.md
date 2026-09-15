@@ -91,6 +91,16 @@ for, so a high treat day is expected rather than alarming, and a treat day insid
 stays green like any other. The frontend's `isViolating` and the backend's `violating_days` are
 the two readings of that one statement.
 
+A heavy day's score is also a link to its own accounting. In the tracker and in the history
+table's day view the red score opens a breakdown in the meal list's place: every meal in time
+order, each priced term by term — the grade at its helping, the second source, the second fruit's
+escalation, each addition at its amount — down to the day's total beside the bound it crossed.
+Grades read there at full length with their examples whatever density the tracker's name switch
+is set to, since naming what cost what is the point. The same link closes it, and it withdraws
+on its own after half a minute so a reader who wandered off finds the log back. The history
+table's score cell opens the day view on its meal list; the breakdown is one more click, on that
+view's score.
+
 ## Day lifecycle
 
 - **Water-close** — the tracker's close button is the only way a day closes, offered once the

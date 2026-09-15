@@ -82,3 +82,17 @@ describe("DayView", () => {
     expect(screen.getByText(/ציון:/)).toHaveClass("heavy-day", "treat-day");
   });
 });
+
+describe("DayView score breakdown", () => {
+  const heavyDay = { ...trackedDay, derived: { ...trackedDay.derived, carbs: 10 } };
+
+  it("swaps the meal list for the breakdown from the heavy score, and back from it", () => {
+    render(<DayView questionnaire={trackerQuestionnaire} treatDay={TREAT_DAY} day={heavyDay} onClose={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "פירוט הציון" }));
+    expect(screen.getByRole("heading", { name: "פירוט הציון" })).toBeInTheDocument();
+    expect(screen.queryByRole("list")).not.toHaveClass("meal-list");
+    fireEvent.click(screen.getByRole("button", { name: "פירוט הציון" }));
+    expect(screen.queryByRole("heading", { name: "פירוט הציון" })).toBeNull();
+    expect(screen.getByRole("list")).toHaveClass("meal-list");
+  });
+});
