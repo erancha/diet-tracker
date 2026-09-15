@@ -2,6 +2,7 @@
   --accent: #2e7d32;
   --accent-border: #b6d0b8;
   --danger: #c62828;
+  --muted-text: #8a8a84;
   /* A bound crossed on the treat day: still a crossing, painted amber rather than red because
      what that day costs is what it is for. */
   --treat-breach: #9a6b00;
@@ -54,7 +55,6 @@ header { display: flex; justify-content: space-between; align-items: baseline; g
   margin-top: calc(-1 * var(--page-pad-top)); padding-top: var(--page-pad-top);
   padding-bottom: 1.35rem;
 }
-header h1 { margin-bottom: 0; }
 /* The alarm badge is the one thing wide enough to crowd the title: beside the account trigger
    alone a narrow phone still has room to spare, but at the shared 9vw the title fills what is
    left exactly once the badge joins the row, so it sizes down only while the badge is there.
@@ -101,7 +101,7 @@ header .account-menu, header .account-menu [role="menu"] { display: flex; flex-d
 header .account-email {
   margin: 0 calc(-1 * var(--menu-pad)) var(--menu-pad);
   padding: 0.3rem calc(var(--menu-text-inset) + var(--menu-pad)) 0.45rem;
-  font-size: 0.85em; color: #8a8a84; border-block-end: 1px solid #e0e0da;
+  font-size: 0.85em; color: var(--muted-text); border-block-end: 1px solid #e0e0da;
 }
 /* Menu items are a pattern of the card holding them rather than one of the control roles: the
    card carries the surface, so they read as a list — no box of their own until a pointer reaches
@@ -134,24 +134,31 @@ h1 { font-size: min(2.1rem, 9vw); color: var(--accent); margin-top: 0; }
    middle alignment centers the emoji's square against the letters, which have no descenders to
    meet a baseline-seated box. */
 h1 .app-icon { width: 1em; height: 1em; vertical-align: middle; margin-inline-end: 0.15em; }
+/* The build's version sits centered right under the name in the muted tone of the app's asides,
+   small enough to read as a footnote to the title rather than a second line of it. The block
+   hugs the name's width so the centering is under the name, not across the page. */
+.app-heading { width: fit-content; text-align: center; }
+.app-heading h1 { margin-bottom: 0; }
+.app-version { margin: 0.1rem 0 0; font-size: 0.75rem; color: var(--muted-text); }
 .landing { display: flex; flex-direction: column; }
 /* The condensed view fills the viewport so the footer links ride the page's bottom edge; the
    expanded view scrolls past a screen anyway, and there they keep the fixed gap the walkthrough
    line shares with the principles table instead. */
 .landing-brief { min-height: calc(100dvh - var(--page-pad-top) - var(--page-pad-bottom)); }
-/* The card's padding seats the title off its top edge, and the title's gap to the summary is half
-   the browser's default plus a rem of air. The card is a flex column like the page, so that margin
-   stands rather than collapsing into the intro's — whose own share is halved alongside — and the
-   sign-in button keeps its full-bleed stretch inside it. */
+/* The card's padding seats the title off its top edge, and a rem of air parts the version line
+   under it from the summary. The card is a flex column like the page, so that margin stands
+   rather than collapsing into the intro's — whose own share is halved alongside — and the sign-in
+   button keeps its full-bleed stretch inside it. */
 .landing-card { display: flex; flex-direction: column; }
-.landing h1 { margin-top: 0; margin-bottom: calc(0.335em + 1rem); }
+.landing .app-heading { margin-bottom: 1rem; }
 /* Two auto margins — above the card and above the footer links — split the condensed view's
    spare height evenly, centering the pitch between the page top and the links riding the bottom;
    both collapse to zero once the content fills the screen. The title takes hero treatment —
    centered, display-sized, viewport-capped to one line — while body copy stays start-aligned to
    read, as does the expanded view's title, which crowns a reading page rather than a splash. */
 .landing-brief .landing-card { margin-top: auto; }
-.landing-brief h1 { text-align: center; font-size: min(2.6rem, 11vw); }
+.landing-brief .app-heading { margin-inline: auto; }
+.landing-brief h1 { font-size: min(2.6rem, 11vw); }
 .landing-brief .landing-walkthrough { margin-top: auto; }
 .landing-intro, .landing-condensed { margin-top: 0.5em; margin-bottom: 0.6rem; }
 /* The condensed pitch is the page's whole message, so it reads a touch larger than body copy. */
@@ -508,7 +515,7 @@ td.view-day { cursor: pointer; }
 .count-new { color: var(--accent); background: #fff3b0; border-radius: 4px; }
 /* How many chats the filter is holding back, in the muted tone the app's asides take: the count
    beside it names what is listed, and this names what is not, so neither reads as the total. */
-.transcript-filtered-out { font-size: 0.85rem; color: #8a8a84; }
+.transcript-filtered-out { font-size: 0.85rem; color: var(--muted-text); }
 /* Frameless like the count it sits beside, so the row reads as one quiet line above the list
    rather than as a control bar; the native arrow is left to say it opens. A select is otherwise
    as wide as its longest option, which strands the arrow away from a shorter chosen one, so it
