@@ -217,8 +217,10 @@ carries the recap to the new night with it.
 
 Scheduled jobs (EventBridge Scheduler, Asia/Jerusalem) run alongside the tracker:
 
-- **Last call** — the day's one tracking reminder, late enough that the day is over in practice
-  and still inside it, so what it asks about is the day the user is living. It reaches every user
+- **Last call** — the day's tracking reminder, fired in the evening late enough that the day is
+  over in practice and still inside it, so what it asks about is the day the user is living, and
+  again just after midnight, when it still asks about the day that ended for as long as the
+  close bound (day_close.close_until) keeps that day open. It reaches every user
   whose day remains open, and tells one whose meals are already logged that the day awaits its
   closing rather than its meals: everything but the water is recorded, and the tracker's close
   button is what seals it. A day carrying no meals gets the plain record-your-meals reminder.

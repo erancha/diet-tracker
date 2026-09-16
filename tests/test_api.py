@@ -27,7 +27,7 @@ def env(monkeypatch, ddb):
     monkeypatch.setenv("WEIGHTS_TABLE", "weights")
     monkeypatch.setenv("UNDELIVERED_TABLE", "undelivered")
     monkeypatch.setenv("APP_CONFIG_PATH", str(APP_CONFIG))
-    monkeypatch.setattr(api, "clock_time", lambda: WEIGH_IN_AT)
+    monkeypatch.setattr(api.dates, "clock_time", lambda: WEIGH_IN_AT)
 
 
 def request(route, body=None, path_params=None, email="a@gmail.com"):
@@ -174,28 +174,28 @@ def test_yesterday_closes_only_inside_the_small_hours_window(env, monkeypatch):
     # The env clock reads 07:42 — morning, past the configured 02:00 bound.
     shut = api.handler(request("POST /days", {"answers": ANSWERS, "date": yesterday}), None)
     assert shut["statusCode"] == 400
-    monkeypatch.setattr(api, "clock_time", lambda: "01:59")
+    monkeypatch.setattr(api.dates, "clock_time", lambda: "01:59")
     still_open = api.handler(request("POST /days", {"answers": ANSWERS, "date": yesterday}), None)
     assert still_open["statusCode"] == 200
 
 
 def test_yesterday_deletes_only_before_its_own_earlier_bound(env, monkeypatch):
     yesterday = days_before(today(), 1)
-    monkeypatch.setattr(api, "clock_time", lambda: "01:00")
+    monkeypatch.setattr(api.dates, "clock_time", lambda: "01:00")
     api.handler(request("POST /days", {"answers": ANSWERS, "date": yesterday}), None)
     # 01:45 sits between the 01:30 delete bound and the 02:00 close bound: the record may still
     # be re-closed but no longer deleted, so no deletion can strand an uncloseable gap.
-    monkeypatch.setattr(api, "clock_time", lambda: "01:45")
+    monkeypatch.setattr(api.dates, "clock_time", lambda: "01:45")
     denied = api.handler(request("DELETE /days/{date}", path_params={"date": yesterday}), None)
     assert denied["statusCode"] == 400
-    monkeypatch.setattr(api, "clock_time", lambda: "01:00")
+    monkeypatch.setattr(api.dates, "clock_time", lambda: "01:00")
     ok = api.handler(request("DELETE /days/{date}", path_params={"date": yesterday}), None)
     assert ok["statusCode"] == 200
 
 
 def test_meals_for_yesterday_write_inside_the_close_window(env, monkeypatch):
     yesterday = days_before(today(), 1)
-    monkeypatch.setattr(api, "clock_time", lambda: "01:00")
+    monkeypatch.setattr(api.dates, "clock_time", lambda: "01:00")
     added = api.handler(request("POST /meals", meal_body(
         "carb_grade_3", True, False, (), "21:10:00", None, None, day=yesterday)), None)
     assert added["statusCode"] == 200
@@ -215,7 +215,7 @@ def test_meals_for_yesterday_write_inside_the_close_window(env, monkeypatch):
 
 def test_meals_for_a_submitted_yesterday_are_still_refused(env, monkeypatch):
     yesterday = days_before(today(), 1)
-    monkeypatch.setattr(api, "clock_time", lambda: "01:00")
+    monkeypatch.setattr(api.dates, "clock_time", lambda: "01:00")
     api.handler(request("POST /days", {"answers": ANSWERS, "date": yesterday}), None)
     closed = api.handler(request("POST /meals", meal_body(
         "carb_grade_3", True, False, (), "21:10:00", None, None, day=yesterday)), None)

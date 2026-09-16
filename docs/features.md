@@ -70,8 +70,9 @@ and the framed weekday are derived.
 
 Messages reach you by email, and by Telegram where a bot token is configured:
 
-- **A last call** for a day still unclosed, late enough that the day is over in practice and still
-  inside it.
+- **A last call** for a day still unclosed: twice in the evening, late enough that the day is over
+  in practice and still inside it, and once more just after midnight, while the day that ended can
+  still be closed.
 - **A weekly weigh-in reminder**, which skips anyone who already weighed in that day.
 - **A weekly recap** of the week that just ended: a line counting the days that were closed, then
   one bullet per bound a day crossed — the findings the trend chart reddens — and flours and sugars

@@ -46,10 +46,14 @@ def env(monkeypatch, ddb, answering):
     monkeypatch.setenv("MEALS_TABLE", "meals")
     monkeypatch.setenv("STATE_TABLE", "state")
     monkeypatch.setenv("WEIGHTS_TABLE", "weights")
+    # The night's evening firing: the last call asks about the running day unless a test moves
+    # the clock past midnight.
+    monkeypatch.setattr("common.dates.clock_time", lambda: "23:30")
     e = nudge.NudgeEnv(
         store=Store("days", "meals", "state", "weights"),
         questionnaire=appconfig.load(APP_CONFIG).questionnaire,
         treat_weekday=appconfig.load(APP_CONFIG).treat_day.weekday,
+        close_until=appconfig.load(APP_CONFIG).day_close.close_until,
         users=[User("u1", "a@gmail.com"), User("u2", "b@gmail.com")],
         telegram=("TOKEN", {"a@gmail.com": "111", "b@gmail.com": "222"}),
         # A real (mocked) SES client, not a stub: _send classifies a refusal by the client's own
@@ -87,6 +91,14 @@ def test_handler_logs_job_start_and_completion(env, monkeypatch, caplog):
 def test_last_call_targets_only_users_missing_today(env):
     e, sent = env
     e.store.put_day("u1", today(), CLEAN, 1, "t")
+    nudge._last_call(e)
+    assert [(kind, target) for kind, target, _ in sent] == [("tg", "222"), ("mail", "b@gmail.com")]
+
+
+def test_last_call_past_midnight_asks_about_the_day_that_just_ended(env, monkeypatch):
+    e, sent = env
+    monkeypatch.setattr("common.dates.clock_time", lambda: "00:30")
+    e.store.put_day("u1", days_before(today(), 1), CLEAN, 1, "t")
     nudge._last_call(e)
     assert [(kind, target) for kind, target, _ in sent] == [("tg", "222"), ("mail", "b@gmail.com")]
 

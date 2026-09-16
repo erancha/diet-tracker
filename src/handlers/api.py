@@ -14,8 +14,9 @@ from datetime import date, datetime, timedelta
 
 import boto3
 
-from common import appconfig, chat_history, notify, ses_identity, undelivered, users, weight
-from common.dates import clock_time, days_before, now_iso, today
+from common import (appconfig, chat_history, dates, notify, ses_identity, undelivered, users,
+                    weight)
+from common.dates import closing_day, days_before, now_iso, today
 from common.derive import derive, excluded_by_day, excluded_points
 from common.log import get_logger
 from common.store import Store
@@ -98,9 +99,7 @@ def _grace_window(until):
     the given small-hours "HH:MM" bound — the stretch just after midnight in which the prior day
     may still be closed, its meals corrected, or (under the earlier bound) its record deleted."""
     day = today()
-    if clock_time() < until:
-        return day, {day, days_before(day, 1)}
-    return day, {day}
+    return day, {day, closing_day(until)}
 
 
 def _reject_outside_window(chosen, allowed):
@@ -394,7 +393,7 @@ def _record_weight(sub, body):
     rather than taken from the body — which is also what keeps it honest as a record of the hour
     the user actually steps on the scale."""
     return _stored_weight(
-        sub, body, lambda store, kg: store.put_weight(sub, today(), kg, clock_time()))
+        sub, body, lambda store, kg: store.put_weight(sub, today(), kg, dates.clock_time()))
 
 
 def _set_target(sub, body):

@@ -23,3 +23,10 @@ def clock_time() -> str:
 
 def days_before(day: str, n: int) -> str:
     return (date.fromisoformat(day) - timedelta(days=n)).isoformat()
+
+
+def closing_day(until: str) -> str:
+    """The day still open to closing: yesterday while the clock sits before the small-hours
+    "HH:MM" bound the day-close config sets, today from then on."""
+    day = today()
+    return days_before(day, 1) if clock_time() < until else day

@@ -17,7 +17,7 @@ import boto3
 
 from common import (appconfig, chat, chat_history, chat_question, derive, notify, undelivered,
                     users, weekly_recap, weight)
-from common.dates import days_before, today
+from common.dates import closing_day, days_before, today
 from common.log import get_logger
 from common.store import Store
 
@@ -47,6 +47,7 @@ class NudgeEnv:
     undelivered: object  # table the messages SES refuses are kept in, for the app to show
     chat_history: object  # transcript table the weekly recap is stored in, as a chat the app wrote
     treat_weekday: str  # the week's treat day, left out of the recap's clean-day count
+    close_until: str  # the small-hours bound until which the last call still addresses yesterday
     sender: str
     app_url: str  # the deployed frontend, cited in every email's mute footnote
     rag_url: str  # empty when the deployment configures no answering service
@@ -106,6 +107,7 @@ def _build_env(audience) -> NudgeEnv:
         store=store,
         questionnaire=config.questionnaire,
         treat_weekday=config.treat_day.weekday,
+        close_until=config.day_close.close_until,
         users=audience(store),
         telegram=notify.telegram_config(ssm, os.environ["BOT_TOKEN_PARAM"], os.environ["CHAT_MAP_PARAM"]),
         ses=boto3.client("ses"),
@@ -152,16 +154,16 @@ def _unsubmitted(env, day) -> list:
 
 
 def _last_call(env):
-    """The evening tracking reminder, fired by each of the evening schedules; the last firing is
-    late enough that the day it asks about is over in practice — and still inside it, so what
-    gets recorded is the day the user is living.
+    """The tracking reminder, fired by each of the night's schedules. The evening firings ask
+    about the running day; the one past midnight still asks about the day just ended, which
+    stays open to closing until the configured small-hours bound.
 
     It nudges every user whose day remains open, and tells one whose meals are already logged
     that the day awaits its closing rather than its meals: everything but the water is recorded,
     and the tracker's close button is what seals it. A day carrying no meals gets the plain
     record-your-meals reminder — and with the tracker the only way a day closes, one that stays
     untracked simply goes unrecorded."""
-    day = today()
+    day = closing_day(env.close_until)
     for user in _unsubmitted(env, day):
         if env.store.get_meals(user.sub, day):
             _send(env, user, OPEN_DAY_SUBJECT, OPEN_DAY_TEXT)

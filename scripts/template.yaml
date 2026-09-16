@@ -603,9 +603,11 @@ Resources:
                 Action: lambda:InvokeFunction
                 Resource: !GetAtt NudgeFunction.Arn
 
-  # An open day is nudged twice each evening: an early call at ten, and a last call at half past
-  # eleven — the final slot at which the day being asked about is still the running one, so what
-  # gets recorded is the day the user is living. A day closed between the two is only nudged once.
+  # An open day is nudged three times a night: an early call at ten, a last call at half past
+  # eleven — the final slot at which the day being asked about is still the running one — and a
+  # call at half past midnight, inside the small-hours window (day_close.close_until, 02:00) in
+  # which the day just ended can still be closed, so the job still asks about that day. A day
+  # closed between two calls is not nudged again.
   EarlyCallSchedule:
     Type: AWS::Scheduler::Schedule
     Properties:
@@ -622,6 +624,18 @@ Resources:
     Type: AWS::Scheduler::Schedule
     Properties:
       ScheduleExpression: 'cron(30 23 * * ? *)'
+      ScheduleExpressionTimezone: Asia/Jerusalem
+      FlexibleTimeWindow:
+        Mode: 'OFF'
+      Target:
+        Arn: !GetAtt NudgeFunction.Arn
+        RoleArn: !GetAtt SchedulerRole.Arn
+        Input: '{"job": "last_call"}'
+
+  AfterMidnightCallSchedule:
+    Type: AWS::Scheduler::Schedule
+    Properties:
+      ScheduleExpression: 'cron(30 0 * * ? *)'
       ScheduleExpressionTimezone: Asia/Jerusalem
       FlexibleTimeWindow:
         Mode: 'OFF'

@@ -1,6 +1,7 @@
 import re
 
-from common.dates import clock_time, days_before, now_iso, today
+from common import dates
+from common.dates import clock_time, closing_day, days_before, now_iso, today
 
 
 def test_today_is_iso_date():
@@ -18,3 +19,10 @@ def test_clock_time_is_a_wall_clock_hour_and_minute():
 def test_days_before():
     assert days_before("2026-08-18", 30) == "2026-07-19"
     assert days_before("2026-01-01", 1) == "2025-12-31"
+
+
+def test_closing_day_is_yesterday_until_the_bound_and_today_from_then_on(monkeypatch):
+    monkeypatch.setattr(dates, "clock_time", lambda: "01:59")
+    assert closing_day("02:00") == days_before(today(), 1)
+    monkeypatch.setattr(dates, "clock_time", lambda: "02:00")
+    assert closing_day("02:00") == today()
