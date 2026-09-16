@@ -34,9 +34,18 @@ function appVersion(): string {
   return `${release.slice(1)}.${commitsSince}`;
 }
 
+// The date of the commit the build was made from, DD/MM/YYYY, so the version line names when the
+// code it describes was written.
+function appCommitDate(): string {
+  return git("log", "-1", "--format=%cd", "--date=format:%d/%m/%Y");
+}
+
 export default defineConfig({
   plugins: [react(), serveAppConfig()],
-  define: { __APP_VERSION__: JSON.stringify(appVersion()) },
+  define: {
+    __APP_VERSION__: JSON.stringify(appVersion()),
+    __APP_COMMIT_DATE__: JSON.stringify(appCommitDate()),
+  },
   // Cognito's registered local callback URL is http://localhost:8000/ — the dev server must
   // stay on that port for local sign-in to work.
   server: { port: 8000 },
