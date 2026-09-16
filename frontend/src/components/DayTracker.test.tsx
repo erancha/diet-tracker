@@ -461,7 +461,7 @@ describe("DayTracker", () => {
       second_source: { carbs_choice: "carb_grade_2", portion: null } }));
   });
 
-  it("drops the second source when the primary grade turns heavy", () => {
+  it("holds a recorded second source through a primary repick the contract bars", () => {
     const onAddMeal = vi.fn();
     render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={emptyDay}
                        firstMealHour={NO_NUDGE_HOUR}
@@ -473,8 +473,27 @@ describe("DayTracker", () => {
     revealSecondSource();
     fireEvent.click(secondSourceGroup().getByLabelText("דרגה 7"));
     fireEvent.click(primaryGroup().getByLabelText("דרגה 4"));
-    // The group folded with its grade: a plate the contract bars from a second source keeps none.
-    expect(screen.queryByRole("group", { name: "מקור פחמימה נוסף" })).toBeNull();
+    // Just-picked grades read spelled out for a second, so the grade is matched by its opening.
+    expect(secondSourceGroup().getByLabelText(/^דרגה 7/)).toBeChecked();
+  });
+
+  it("bars the save while the picked primary cannot carry the second source, and frees it on removal", () => {
+    const onAddMeal = vi.fn();
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={emptyDay}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
+                       onAddMeal={onAddMeal} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    openMealForm();
+    fireEvent.click(screen.getByLabelText("דרגה 2"));
+    revealSecondSource();
+    fireEvent.click(secondSourceGroup().getByLabelText("דרגה 7"));
+    fireEvent.click(primaryGroup().getByLabelText("דרגה 4"));
+    expect(screen.getByRole("button", { name: "שמירת ארוחה" })).toBeDisabled();
+    // The notice names the bound off the contract, so it reads as the rule rather than a refusal.
+    expect(screen.getByText(/מקור פחמימה נוסף מותר רק לצד דרגה קלה/)).toBeInTheDocument();
+    // Dropping the source is the user's own act, and the heavy plate saves once they make it.
+    fireEvent.click(screen.getByRole("button", { name: "הסרת מקור פחמימה נוסף" }));
     fireEvent.click(screen.getByRole("button", { name: "שמירת ארוחה" }));
     expect(onAddMeal).toHaveBeenCalledWith(expect.objectContaining({
       carbs_choice: "carb_grade_4", second_source: null }));

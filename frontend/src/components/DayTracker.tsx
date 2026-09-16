@@ -172,6 +172,10 @@ export function DayTracker({ questionnaire, treatDay, day, isToday = true, close
   // but unanswered group does not.
   const secondSource: CarbSource | null = secondChoiceId === undefined ? null
     : { carbs_choice: secondChoiceId, portion: secondIsHeavy ? secondPortionId : null };
+  // A second source in a form whose primary grade cannot carry one — the state a repick away from
+  // the light grades leaves behind. The plate is unrecordable while it holds, so the save is
+  // barred until the user lowers the primary again or removes the source.
+  const secondSourceBarred = secondSource !== null && !offersSecondSource;
   const closable = derived.eating_window >= closeMinWindowHours;
 
   // A meal cannot have been eaten yet, so a running day's own clock caps the picker — both values
@@ -202,8 +206,8 @@ export function DayTracker({ questionnaire, treatDay, day, isToday = true, close
   const formHoldsUnsavedMeal = editDiverged || newMealDiverged;
 
   // The same terms that let the save button commit the form: a picked grade, at a time the clock
-  // has reached.
-  const mealSaveable = carbsChoiceId !== undefined && !mealTimeIsFuture;
+  // has reached, over a plate the second-source contract admits.
+  const mealSaveable = carbsChoiceId !== undefined && !mealTimeIsFuture && !secondSourceBarred;
 
   // The meal inputs are the tallest thing here and are worth reading only when there is a meal to
   // report, so the tracker always opens on the day's figures and its recorded meals with the
@@ -438,12 +442,7 @@ export function DayTracker({ questionnaire, treatDay, day, isToday = true, close
         </button>
         <CarbSourceFields question={carbsQuestion} selectedId={carbsChoiceId}
                           expandLabels={expandLabels}
-                          onPick={(id) => {
-                            setCarbsChoiceId(id);
-                            // A primary the contract bars from carrying a second source takes the
-                            // open group and its picked grade with it.
-                            if (!allowsSecond(id)) clearSecondSource();
-                          }}>
+                          onPick={(id) => setCarbsChoiceId(id)}>
           {offersPortion && portionPicker(portionId, setPortionId)}
         </CarbSourceFields>
         {secondSourceOpen && (
@@ -455,7 +454,8 @@ export function DayTracker({ questionnaire, treatDay, day, isToday = true, close
         )}
         {/* A plate carrying a second carb source is the exception, so the group is revealed on
             demand — and offered only beside a light primary grade, the one place the contract
-            admits one. An open group outlives a repick only through the remove control here. */}
+            admits one. An open group outlives every repick: this control is the only way one
+            goes, so correcting the primary never discards a source the user recorded. */}
         {(offersSecondSource || secondSourceOpen) && (
           <div className="form-actions">
             <button type="button" className="secondary"
@@ -507,12 +507,17 @@ export function DayTracker({ questionnaire, treatDay, day, isToday = true, close
         </label>
       </CollapsibleSection>
       )}
-      {/* Sits outside the fold that hides the picker: it is the only account of why the submit
+      {/* Sit outside the fold that hides the picker: they are the only account of why the submit
           button is disabled, and that button shows either way. */}
       {mealTimeIsFuture && <p className="notice">לא ניתן לרשום ארוחה בשעה עתידית</p>}
+      {secondSourceBarred && (
+        <p className="notice">
+          {`מקור פחמימה נוסף מותר רק לצד דרגה קלה — עד דרגה ${secondRule.light_grade_max}`}
+        </p>
+      )}
       <div className="form-actions">
         {carbsChoiceId !== undefined && formHoldsUnsavedMeal && (
-          <button type="button" className="primary" disabled={mealTimeIsFuture} onClick={submitMeal}>
+          <button type="button" className="primary" disabled={!mealSaveable} onClick={submitMeal}>
             שמירת ארוחה
           </button>
         )}
