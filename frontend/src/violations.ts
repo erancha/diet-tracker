@@ -14,15 +14,32 @@ export function questionRule(questionnaire: Questionnaire, questionId: string): 
   return questionnaire.rules.find((r) => r.question_id === questionId);
 }
 
-// The configured bound of a question's rule, phrased for display beside the red violation
-// marks. Read from the live rules so the shown limit can never drift from what isViolating
-// paints; undefined where no rule bounds the question. Mirrored by bound_label in
-// src/common/rules.py, which quotes the same bound in the weekly recap.
-export function ruleBoundLabel(questionnaire: Questionnaire, questionId: string): string | undefined {
+// Where a question's rule splits the scale, and which side of that value it counts as a
+// violation. The bound is the value the rule names, whether it is crossed by reaching it, by
+// exceeding it, or by falling under it.
+export interface RuleBand {
+  bound: number;
+  violatingAbove: boolean;
+}
+
+// The split a question's rule draws on its scale, or undefined where no rule bounds it and
+// nothing ever marks red. Read from the live rules so what a surface paints can never drift
+// from what isViolating decides.
+export function ruleBand(questionnaire: Questionnaire, questionId: string): RuleBand | undefined {
   const rule = questionRule(questionnaire, questionId);
   if (rule === undefined) return undefined;
   const over = rule.at_least ?? rule.above;
-  return over !== undefined ? `מעל ${over}` : `פחות מ-${rule.below}`;
+  return over !== undefined ? { bound: over, violatingAbove: true }
+                            : { bound: rule.below!, violatingAbove: false };
+}
+
+// The configured bound of a question's rule, phrased for display beside the red violation
+// marks; undefined where no rule bounds the question. Mirrored by bound_label in
+// src/common/rules.py, which quotes the same bound in the weekly recap.
+export function ruleBoundLabel(questionnaire: Questionnaire, questionId: string): string | undefined {
+  const band = ruleBand(questionnaire, questionId);
+  if (band === undefined) return undefined;
+  return band.violatingAbove ? `מעל ${band.bound}` : `פחות מ-${band.bound}`;
 }
 
 // Every day is judged alike, the treat day included, mirroring violating_days in

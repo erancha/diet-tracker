@@ -1,8 +1,9 @@
-import { CartesianGrid, Line, LineChart, ResponsiveContainer, Text, Tooltip, usePlotArea, XAxis, YAxis } from "recharts";
+import { CartesianGrid, DefaultZIndexes, Line, LineChart, ReferenceArea, ResponsiveContainer, Text, Tooltip, usePlotArea, XAxis, YAxis } from "recharts";
 import type { Day, DayPayload, Question, Questionnaire, TreatDaySettings } from "../types";
 import { dayLabel, fallsOn, lastDays } from "../dates";
 import { domainFor, liveTrendDay, ticksFor, treatDayColumns } from "../trend";
-import { isViolating, panelTitle, ruleBoundLabel, scoreLabel, trendPanels, valueLabel } from "../violations";
+import type { RuleBand } from "../violations";
+import { isViolating, panelTitle, ruleBand, ruleBoundLabel, scoreLabel, trendPanels, valueLabel } from "../violations";
 
 // Days each panel charts. Past a week, so a span ending on the treat day holds two of them and
 // the carb panel can set the latest treat day against the one before it, with days of lead-in.
@@ -46,6 +47,14 @@ function panelData(questionnaire: Questionnaire, treatDay: TreatDaySettings, que
              choiceLabel: valueLabel(question, value), violating,
              softened: violating && fallsOn(date, treatDay.weekday) };
   });
+}
+
+// The two grounds a ruled panel plots on, split at its rule's bound: the safe span and the
+// violating one, so which side of the bound a stretch of the chart is reads before any value
+// does. Each spans from one end of the panel's y-domain to the bound.
+function ruleGrounds(band: RuleBand, domain: [number, number]) {
+  return [{ from: domain[0], to: band.bound, violating: !band.violatingAbove },
+          { from: band.bound, to: domain[1], violating: band.violatingAbove }];
 }
 
 // One treat day's column, marked on the panel that charts the carb score: the target the program
@@ -127,6 +136,7 @@ function TrendPanel({ questionnaire, question, dayStrs, dayByDate, index, showXA
   const decomposed = question.id === "carbs";
   const data = panelData(questionnaire, treatDay, question, dayStrs, dayByDate, decomposed);
   const domain = domainFor(questionnaire, question, data.map((d) => d.value));
+  const band = ruleBand(questionnaire, question.id);
   const boundLabel = ruleBoundLabel(questionnaire, question.id);
   const treatColumns = treatDayColumns(dayStrs, treatDay.weekday);
   const treatLabels = new Set(treatColumns.map((column) => data[column].label));
@@ -147,6 +157,13 @@ function TrendPanel({ questionnaire, question, dayStrs, dayByDate, index, showXA
       </div>
       <ResponsiveContainer width="100%" height={showXAxis ? 122 : 104}>
         <LineChart data={data} margin={{ top: 6, right: MARGIN_RIGHT, bottom: 0, left: 0 }}>
+          {/* Placed in the gridline layer, before the gridlines themselves, so the grounds tint
+              the panel without covering any mark drawn on it. */}
+          {band !== undefined && ruleGrounds(band, domain).map((ground) => (
+            <ReferenceArea key={ground.from} y1={ground.from} y2={ground.to}
+                           zIndex={DefaultZIndexes.grid} ifOverflow="hidden" fillOpacity={1}
+                           fill={ground.violating ? "var(--viz-breach-ground)" : "var(--viz-safe-ground)"} />
+          ))}
           <CartesianGrid horizontal vertical={false} stroke="var(--viz-grid)" />
           <XAxis
             dataKey="label"

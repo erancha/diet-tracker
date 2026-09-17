@@ -172,6 +172,52 @@ describe("TrendChart", () => {
     }
   });
 
+  it("splits a ruled panel into a safe ground and a violating one at its bound", () => {
+    // The carb score violates from 12 up, so its red ground is the upper one; drinking violates
+    // under 2.5, so its red ground is the lower one. Smaller y is higher on screen.
+    const { container } = render(<TrendChart questionnaire={withCarbsPanel} days={scoredDays} today={emptyToday} endDate="2026-08-18" treatDay={TREAT_DAY} loadedInMs={0} />);
+    const groundsOf = (panel: Element) => [...panel.querySelectorAll(".recharts-reference-area-rect")]
+      .map((rect) => ({ fill: rect.getAttribute("fill"), y: Number(rect.getAttribute("y")) }))
+      .sort((a, b) => a.y - b.y)
+      .map((ground) => ground.fill);
+    const [carbs, drinking] = [...container.querySelectorAll(".trend-panel")];
+    expect(groundsOf(carbs)).toEqual(["var(--viz-breach-ground)", "var(--viz-safe-ground)"]);
+    expect(groundsOf(drinking)).toEqual(["var(--viz-safe-ground)", "var(--viz-breach-ground)"]);
+  });
+
+  it("leaves an unruled panel on a single ground, having no bound to split it at", () => {
+    const { container } = render(<TrendChart questionnaire={withCarbsPanel} days={scoredDays} today={emptyToday} endDate="2026-08-18" treatDay={TREAT_DAY} loadedInMs={0} />);
+    const unruled = [...container.querySelectorAll(".trend-panel")].at(-1)!;
+    expect(unruled.querySelectorAll(".recharts-reference-area-rect")).toHaveLength(0);
+  });
+
+  it("grounds a panel behind its gridlines, its plotted lines and the treat-day frame", () => {
+    const { container } = render(<TrendChart questionnaire={withCarbsPanel} days={scoredDays} today={emptyToday} endDate="2026-08-18" treatDay={TREAT_DAY} loadedInMs={0} />);
+    const panel = container.querySelector(".trend-panel")!;
+    const grounds = panel.querySelector(".recharts-reference-area-rect")!;
+    const drawnOver = [".recharts-cartesian-grid", ".trend-treat-day", ".recharts-line"];
+    for (const selector of drawnOver) {
+      const mark = panel.querySelector(selector)!;
+      expect(grounds.compareDocumentPosition(mark) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    }
+  });
+
+  it("splits the grounds where the bound plots, spanning the panel's whole plot area", () => {
+    // The carb panel's domain runs from -0.5 to the top gridline at 36 plus 0.5, so the bound at
+    // 12 splits it a third of the way up from the baseline.
+    const { container } = render(<TrendChart questionnaire={withCarbsPanel} days={scoredDays} today={emptyToday} endDate="2026-08-18" treatDay={TREAT_DAY} loadedInMs={0} />);
+    const panel = container.querySelector(".trend-panel")!;
+    const [upper, lower] = [...panel.querySelectorAll(".recharts-reference-area-rect")]
+      .map((rect) => Object.fromEntries(["x", "y", "width", "height"]
+        .map((attr) => [attr, Number(rect.getAttribute(attr))])))
+      .sort((a, b) => a.y - b.y);
+    expect(upper.x).toBe(lower.x);
+    expect(upper.width).toBe(lower.width);
+    expect(upper.y + upper.height).toBeCloseTo(lower.y);
+    const plotHeight = upper.height + lower.height;
+    expect(lower.height / plotHeight).toBeCloseTo(12.5 / 37, 2);
+  });
+
   it("paints a crossing day's dot red, and amber when the crossing falls on the treat day", () => {
     // The 14th is the Friday the treat day is set to; the 13th is a Thursday. Both cross the
     // score bound.

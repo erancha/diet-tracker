@@ -15,6 +15,11 @@
   /* The excluded part of a carb score — the flour grades and sugar. Warm, so it reads apart from
      the cool series colors without borrowing the red that marks a rule crossing. */
   --viz-excluded: #b3701c;
+  /* The two grounds a trend panel's plot area is split into at its rule's bound. Barely tinted:
+     they say which side of the bound a stretch of the chart is, without competing with the
+     lines, gridlines and dots drawn over them. */
+  --viz-safe-ground: #f2f9f2;
+  --viz-breach-ground: #fdf4f4;
   --viz-grid: #e1e0d9;
   --viz-baseline: #c3c2b7;
   --viz-muted: #898781;
@@ -804,6 +809,9 @@ main:not(.intro-0, .intro-1, .intro-2, .intro-3, .intro-4) .weight .section-togg
                   grid-template-columns: repeat(4, max-content); align-items: center;
                   gap: 0.25rem 1rem; font-size: calc(1rem - 1px); }
 .weight-entries li { display: contents; }
+/* The newest weighing heads the list and is the one read; the measurements behind it are
+   set a pixel smaller, so the top row stands out without a rule or a heavier weight. */
+.weight-entries li:not(:first-child) { font-size: calc(1em - 1px); }
 .weight-entries .weight-entry-date { font-weight: 600; }
 /* The weekday letters are not all the same width, so padding each out to a common one is what
    starts every date at the same place down the list. */
