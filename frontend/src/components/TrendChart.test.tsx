@@ -13,11 +13,11 @@ const days: Day[] = [
 const TREAT_DAY = { weekday: "FRI" };
 
 // A day-in-progress payload with nothing recorded yet, for tests exercising the submitted-days
-// panels rather than the live stand-in.
-const emptyToday: DayPayload = {
-  date: "2026-08-19", meals: [],
-  derived: { carbs: 0, meals: 0, vegetables: 0, eating_window: 0 },
-};
+// panels rather than the live stand-in. The chart spans the ten days ending on it, so its date is
+// what each case sets to choose the span it is written against.
+const todayOn = (date: string): DayPayload =>
+  ({ date, meals: [], derived: { carbs: 0, meals: 0, vegetables: 0, eating_window: 0 } });
+const emptyToday = todayOn("2026-08-19");
 
 // The fixture panels plus a carb-score points panel configured last, mirroring the production
 // config where the carbs question follows the single-type questions.
@@ -41,54 +41,54 @@ const withCarbsPanel: Questionnaire = {
 
 describe("TrendChart", () => {
   it("renders one titled panel per chartable question plus the violation legend", () => {
-    render(<TrendChart questionnaire={fixtureQuestionnaire} days={days} today={emptyToday} endDate="2026-08-18" treatDay={TREAT_DAY} loadedInMs={0} />);
+    render(<TrendChart questionnaire={fixtureQuestionnaire} days={days} today={todayOn("2026-08-18")} treatDay={TREAT_DAY} loadedInMs={0} />);
     expect(screen.getByText("שתיה (ליטרים)")).toBeInTheDocument();
     expect(screen.getByText("חלון אכילה (שעות)")).toBeInTheDocument();
     expect(screen.getByText("חריגה")).toBeInTheDocument();
   });
 
   it("wraps each panel in a trend-panel container so panels are visually separated", () => {
-    const { container } = render(<TrendChart questionnaire={fixtureQuestionnaire} days={days} today={emptyToday} endDate="2026-08-18" treatDay={TREAT_DAY} loadedInMs={0} />);
+    const { container } = render(<TrendChart questionnaire={fixtureQuestionnaire} days={days} today={todayOn("2026-08-18")} treatDay={TREAT_DAY} loadedInMs={0} />);
     expect(container.querySelectorAll(".trend-panel")).toHaveLength(2);
   });
 
   it("renders the violation legend above the panels", () => {
-    const { container } = render(<TrendChart questionnaire={fixtureQuestionnaire} days={days} today={emptyToday} endDate="2026-08-18" treatDay={TREAT_DAY} loadedInMs={0} />);
+    const { container } = render(<TrendChart questionnaire={fixtureQuestionnaire} days={days} today={todayOn("2026-08-18")} treatDay={TREAT_DAY} loadedInMs={0} />);
     const legend = container.querySelector(".trend-legend")!;
     const firstPanel = container.querySelector(".trend-panel")!;
     expect(legend.compareDocumentPosition(firstPanel) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it("labels the chart with how long its data took to reach the browser", () => {
-    render(<TrendChart questionnaire={fixtureQuestionnaire} days={days} today={emptyToday} endDate="2026-08-18" treatDay={TREAT_DAY} loadedInMs={150} />);
+    render(<TrendChart questionnaire={fixtureQuestionnaire} days={days} today={todayOn("2026-08-18")} treatDay={TREAT_DAY} loadedInMs={150} />);
     expect(screen.getByText("טעינה: 150ms")).toBeInTheDocument();
   });
 
   it("shows no timing label to a viewer the load diagnostics are not meant for", () => {
-    render(<TrendChart questionnaire={fixtureQuestionnaire} days={days} today={emptyToday} endDate="2026-08-18" treatDay={TREAT_DAY} loadedInMs={null} />);
+    render(<TrendChart questionnaire={fixtureQuestionnaire} days={days} today={todayOn("2026-08-18")} treatDay={TREAT_DAY} loadedInMs={null} />);
     expect(screen.queryByText(/טעינה/)).not.toBeInTheDocument();
   });
 
   it("renders the panels before any day has been submitted", () => {
-    const { container } = render(<TrendChart questionnaire={fixtureQuestionnaire} days={[]} today={emptyToday} endDate="2026-08-19" treatDay={TREAT_DAY} loadedInMs={0} />);
+    const { container } = render(<TrendChart questionnaire={fixtureQuestionnaire} days={[]} today={todayOn("2026-08-19")} treatDay={TREAT_DAY} loadedInMs={0} />);
     expect(container.querySelectorAll(".trend-panel")).toHaveLength(2);
   });
 
   it("charts the carb-score panel first even when it is configured last", () => {
-    const { container } = render(<TrendChart questionnaire={withCarbsPanel} days={days} today={emptyToday} endDate="2026-08-18" treatDay={TREAT_DAY} loadedInMs={0} />);
+    const { container } = render(<TrendChart questionnaire={withCarbsPanel} days={days} today={todayOn("2026-08-18")} treatDay={TREAT_DAY} loadedInMs={0} />);
     const titles = [...container.querySelectorAll(".trend-panel-title")].map((el) => el.textContent);
     expect(titles).toEqual(["פחמימות (ציון)(חריגה: מעל 12)קמחים וסוכרים",
                             "שתיה (ליטרים)(חריגה: פחות מ-2.5)", "חלון אכילה (שעות)"]);
   });
 
   it("shows each ruled panel's configured limit in its title and leaves unruled panels bare", () => {
-    const { container } = render(<TrendChart questionnaire={fixtureQuestionnaire} days={days} today={emptyToday} endDate="2026-08-18" treatDay={TREAT_DAY} loadedInMs={0} />);
+    const { container } = render(<TrendChart questionnaire={fixtureQuestionnaire} days={days} today={todayOn("2026-08-18")} treatDay={TREAT_DAY} loadedInMs={0} />);
     const titles = [...container.querySelectorAll(".trend-panel-title")].map((el) => el.textContent);
     expect(titles).toEqual(["שתיה (ליטרים)(חריגה: פחות מ-2.5)", "חלון אכילה (שעות)"]);
   });
 
   it("charts the excluded part of the score beside it, on the carb panel alone", () => {
-    const { container } = render(<TrendChart questionnaire={withCarbsPanel} days={scoredDays} today={emptyToday} endDate="2026-08-18" treatDay={TREAT_DAY} loadedInMs={0} />);
+    const { container } = render(<TrendChart questionnaire={withCarbsPanel} days={scoredDays} today={todayOn("2026-08-18")} treatDay={TREAT_DAY} loadedInMs={0} />);
     const linesPerPanel = [...container.querySelectorAll(".trend-panel")]
       .map((panel) => panel.querySelectorAll(".recharts-line").length);
     expect(linesPerPanel).toEqual([2, 1, 1]);
@@ -97,7 +97,7 @@ describe("TrendChart", () => {
   it("plots the excluded line under the score, never above it", () => {
     // The excluded part is a part of the score, so its line reads as the gap below it: on the
     // clean day it rests on the baseline while the score plots well above.
-    const { container } = render(<TrendChart questionnaire={withCarbsPanel} days={scoredDays} today={emptyToday} endDate="2026-08-18" treatDay={TREAT_DAY} loadedInMs={0} />);
+    const { container } = render(<TrendChart questionnaire={withCarbsPanel} days={scoredDays} today={todayOn("2026-08-18")} treatDay={TREAT_DAY} loadedInMs={0} />);
     const [excluded, score] = [...container.querySelector(".trend-panel")!
       .querySelectorAll(".recharts-line-curve")]
       .map((curve) => [...curve.getAttribute("d")!.matchAll(/[ML]([\d.]+),([\d.]+)/g)]
@@ -109,7 +109,7 @@ describe("TrendChart", () => {
   });
 
   it("frames the treat day's column on the carb panel, naming what it marks", () => {
-    const { container } = render(<TrendChart questionnaire={withCarbsPanel} days={days} today={emptyToday} endDate="2026-08-18" treatDay={TREAT_DAY} loadedInMs={0} />);
+    const { container } = render(<TrendChart questionnaire={withCarbsPanel} days={days} today={todayOn("2026-08-18")} treatDay={TREAT_DAY} loadedInMs={0} />);
     const framed = [...container.querySelectorAll(".trend-panel")]
       .map((panel) => panel.querySelectorAll(".trend-treat-day").length);
     expect(framed).toEqual([1, 0, 0]);
@@ -122,7 +122,7 @@ describe("TrendChart", () => {
     const span = ["2026-08-10", "2026-08-11", "2026-08-12", "2026-08-13", "2026-08-14",
                   "2026-08-15", "2026-08-16", "2026-08-17", "2026-08-18", "2026-08-19"]
       .map((date) => ({ date, answers: { carbs: 9 }, excluded: 0 }));
-    const { container } = render(<TrendChart questionnaire={withCarbsPanel} days={span} today={emptyToday} endDate="2026-08-19" treatDay={TREAT_DAY} loadedInMs={0} />);
+    const { container } = render(<TrendChart questionnaire={withCarbsPanel} days={span} today={todayOn("2026-08-19")} treatDay={TREAT_DAY} loadedInMs={0} />);
     const panel = container.querySelector(".trend-panel")!;
     const [left, right] = [...panel.querySelectorAll(".trend-treat-day line")]
       .map((edge) => Number(edge.getAttribute("x1")));
@@ -136,9 +136,19 @@ describe("TrendChart", () => {
     expect(centers[5]).toBeGreaterThan(right);
   });
 
+  it("spans to today when nothing has been recorded for days", () => {
+    // The last closed day is 18.8 and today — 19.8 — carries no meals yet, so neither the records
+    // nor a live stand-in reach the span's end.
+    const { container } = render(<TrendChart questionnaire={fixtureQuestionnaire} days={days}
+                                             today={emptyToday} treatDay={TREAT_DAY} loadedInMs={0} />);
+    const ticks = [...container.querySelectorAll(".recharts-cartesian-axis-tick-value")]
+      .map((tick) => tick.textContent);
+    expect(ticks).toContain("19.8");
+  });
+
   it("colors the treat day's date on the axis green, whichever panel carries the axis", () => {
     // The date row sits under the last panel, which is not the carb panel here.
-    const { container } = render(<TrendChart questionnaire={fixtureQuestionnaire} days={days} today={emptyToday} endDate="2026-08-18" treatDay={TREAT_DAY} loadedInMs={0} />);
+    const { container } = render(<TrendChart questionnaire={fixtureQuestionnaire} days={days} today={todayOn("2026-08-18")} treatDay={TREAT_DAY} loadedInMs={0} />);
     const fillOf = (label: string) => [...container.querySelectorAll(".recharts-cartesian-axis-tick-value")]
       .find((tick) => tick.textContent === label)!.getAttribute("fill");
     // 2026-08-14 is the Friday among the charted days.
@@ -148,7 +158,7 @@ describe("TrendChart", () => {
 
   it("frames both treat days when the span ends on one, so the two can be compared", () => {
     // 2026-08-21 is a Friday; the ten days ending on it open two days before the Friday before.
-    const { container } = render(<TrendChart questionnaire={withCarbsPanel} days={days} today={emptyToday} endDate="2026-08-21" treatDay={TREAT_DAY} loadedInMs={0} />);
+    const { container } = render(<TrendChart questionnaire={withCarbsPanel} days={days} today={todayOn("2026-08-21")} treatDay={TREAT_DAY} loadedInMs={0} />);
     const framed = [...container.querySelectorAll(".trend-panel")]
       .map((panel) => panel.querySelectorAll(".trend-treat-day").length);
     expect(framed).toEqual([2, 0, 0]);
@@ -157,8 +167,8 @@ describe("TrendChart", () => {
   it("moves the frame with the week it charts, keeping it on the configured weekday", () => {
     // 2026-08-14 is a Friday: it is the sixth column of the span ending 2026-08-18 and the
     // fifth of the span ending a day later.
-    const frameAt = (endDate: string) => {
-      const { container } = render(<TrendChart questionnaire={withCarbsPanel} days={days} today={emptyToday} endDate={endDate} treatDay={TREAT_DAY} loadedInMs={0} />);
+    const frameAt = (spanEnd: string) => {
+      const { container } = render(<TrendChart questionnaire={withCarbsPanel} days={days} today={todayOn(spanEnd)} treatDay={TREAT_DAY} loadedInMs={0} />);
       return Number(container.querySelector(".trend-treat-day line")!.getAttribute("x1"));
     };
     const [second, first] = [frameAt("2026-08-18"), frameAt("2026-08-19")];
@@ -166,7 +176,7 @@ describe("TrendChart", () => {
   });
 
   it("lays each title row out right-to-left so the limit follows the title in reading order", () => {
-    const { container } = render(<TrendChart questionnaire={fixtureQuestionnaire} days={days} today={emptyToday} endDate="2026-08-18" treatDay={TREAT_DAY} loadedInMs={0} />);
+    const { container } = render(<TrendChart questionnaire={fixtureQuestionnaire} days={days} today={todayOn("2026-08-18")} treatDay={TREAT_DAY} loadedInMs={0} />);
     for (const row of container.querySelectorAll(".trend-panel-title")) {
       expect(row.getAttribute("dir")).toBe("rtl");
     }
@@ -175,7 +185,7 @@ describe("TrendChart", () => {
   it("splits a ruled panel into a safe ground and a violating one at its bound", () => {
     // The carb score violates from 12 up, so its red ground is the upper one; drinking violates
     // under 2.5, so its red ground is the lower one. Smaller y is higher on screen.
-    const { container } = render(<TrendChart questionnaire={withCarbsPanel} days={scoredDays} today={emptyToday} endDate="2026-08-18" treatDay={TREAT_DAY} loadedInMs={0} />);
+    const { container } = render(<TrendChart questionnaire={withCarbsPanel} days={scoredDays} today={todayOn("2026-08-18")} treatDay={TREAT_DAY} loadedInMs={0} />);
     const groundsOf = (panel: Element) => [...panel.querySelectorAll(".recharts-reference-area-rect")]
       .map((rect) => ({ fill: rect.getAttribute("fill"), y: Number(rect.getAttribute("y")) }))
       .sort((a, b) => a.y - b.y)
@@ -186,13 +196,13 @@ describe("TrendChart", () => {
   });
 
   it("leaves an unruled panel on a single ground, having no bound to split it at", () => {
-    const { container } = render(<TrendChart questionnaire={withCarbsPanel} days={scoredDays} today={emptyToday} endDate="2026-08-18" treatDay={TREAT_DAY} loadedInMs={0} />);
+    const { container } = render(<TrendChart questionnaire={withCarbsPanel} days={scoredDays} today={todayOn("2026-08-18")} treatDay={TREAT_DAY} loadedInMs={0} />);
     const unruled = [...container.querySelectorAll(".trend-panel")].at(-1)!;
     expect(unruled.querySelectorAll(".recharts-reference-area-rect")).toHaveLength(0);
   });
 
   it("grounds a panel behind its gridlines, its plotted lines and the treat-day frame", () => {
-    const { container } = render(<TrendChart questionnaire={withCarbsPanel} days={scoredDays} today={emptyToday} endDate="2026-08-18" treatDay={TREAT_DAY} loadedInMs={0} />);
+    const { container } = render(<TrendChart questionnaire={withCarbsPanel} days={scoredDays} today={todayOn("2026-08-18")} treatDay={TREAT_DAY} loadedInMs={0} />);
     const panel = container.querySelector(".trend-panel")!;
     const grounds = panel.querySelector(".recharts-reference-area-rect")!;
     const drawnOver = [".recharts-cartesian-grid", ".trend-treat-day", ".recharts-line"];
@@ -205,7 +215,7 @@ describe("TrendChart", () => {
   it("splits the grounds where the bound plots, spanning the panel's whole plot area", () => {
     // The carb panel's domain runs from -0.5 to the top gridline at 36 plus 0.5, so the bound at
     // 12 splits it a third of the way up from the baseline.
-    const { container } = render(<TrendChart questionnaire={withCarbsPanel} days={scoredDays} today={emptyToday} endDate="2026-08-18" treatDay={TREAT_DAY} loadedInMs={0} />);
+    const { container } = render(<TrendChart questionnaire={withCarbsPanel} days={scoredDays} today={todayOn("2026-08-18")} treatDay={TREAT_DAY} loadedInMs={0} />);
     const panel = container.querySelector(".trend-panel")!;
     const [upper, lower] = [...panel.querySelectorAll(".recharts-reference-area-rect")]
       .map((rect) => Object.fromEntries(["x", "y", "width", "height"]
@@ -224,7 +234,7 @@ describe("TrendChart", () => {
     const span = ["2026-08-10", "2026-08-11", "2026-08-12", "2026-08-13", "2026-08-14",
                   "2026-08-15", "2026-08-16", "2026-08-17", "2026-08-18", "2026-08-19"]
       .map((date) => ({ date, answers: { carbs: date < "2026-08-13" || date > "2026-08-14" ? 9 : 14 }, excluded: 0 }));
-    const { container } = render(<TrendChart questionnaire={withCarbsPanel} days={span} today={emptyToday} endDate="2026-08-19" treatDay={TREAT_DAY} loadedInMs={0} />);
+    const { container } = render(<TrendChart questionnaire={withCarbsPanel} days={span} today={todayOn("2026-08-19")} treatDay={TREAT_DAY} loadedInMs={0} />);
     const panel = container.querySelector(".trend-panel")!;
     const dots = [...panel.querySelectorAll(".recharts-line-dots")].at(-1)!.querySelectorAll("circle");
     const fills = [...dots].map((dot) => dot.getAttribute("fill"));

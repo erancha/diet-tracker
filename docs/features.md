@@ -48,7 +48,8 @@ spans.
 ## Trends and history
 
 Under the day tracker, a 10-day trend chart draws one panel per tracked value, the panels stacked
-over a single shared date axis.
+over a single shared date axis. The span is a calendar window ending today, so a day with nothing
+recorded stands as a gap in it rather than shortening it.
 
 - The score panel plots a second, dashed line beside the score: the part of each day that came
   from the flour grades and sugar the program excludes from its six non-treat days. The gap

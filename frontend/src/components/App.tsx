@@ -259,7 +259,6 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, c
   const openWeight = firstVisit
     || expandWeightSection(now, configQuery.data.weight.weigh_in.weekday, weightQuery.data.entries);
   const answersByDate = new Map(data.days.map((d) => [d.date, d.answers]));
-  const trendEndDate = data.days.length > 0 ? data.days[0].date : data.today.date;
 
   // Yesterday's record leaves the deletable set before it leaves the closable one, so a deletion
   // can never outlive the chance to re-close what it removed.
@@ -348,7 +347,7 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, c
                                   גרפי מגמה 📈 ונתוני הימים האחרונים 📋
                                 </button>
                                 <TrendChart questionnaire={questionnaire} days={data.days}
-                                            today={data.today} headlineOnly endDate={trendEndDate}
+                                            today={data.today} headlineOnly
                                             treatDay={configQuery.data.treat_day}
                                             loadedInMs={loadedInMs} />
                               </>
@@ -357,7 +356,7 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, c
           <div className={trendsFold.folding ? "section-fold-body section-folding" : "section-fold-body"}>
           <div>
           <TrendChart questionnaire={questionnaire} days={data.days} today={data.today}
-                      endDate={trendEndDate} treatDay={configQuery.data.treat_day}
+                      treatDay={configQuery.data.treat_day}
                       loadedInMs={loadedInMs} />
           {viewedDate !== null && (
             viewedDayQuery.isPending ? <p>טוען…</p>

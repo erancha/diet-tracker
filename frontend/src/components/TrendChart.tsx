@@ -199,11 +199,11 @@ function TrendPanel({ questionnaire, question, dayStrs, dayByDate, index, showXA
   );
 }
 
-// Trend of the last CHART_DAYS days: one line panel per chartable question. Ends at today once
-// today has recorded meals — its running carb score charts live — else at the latest submitted
-// date.
-export function TrendChart({ questionnaire, days, today, endDate, loadedInMs, treatDay, headlineOnly = false }: {
-  questionnaire: Questionnaire; days: Day[]; today: DayPayload; endDate: string;
+// Trend of the CHART_DAYS days ending today: one line panel per chartable question. The span is a
+// calendar window, so a day holding no record charts as a gap in it. Today charts its running carb
+// score from the moment it has meals, rather than waiting to be closed.
+export function TrendChart({ questionnaire, days, today, loadedInMs, treatDay, headlineOnly = false }: {
+  questionnaire: Questionnaire; days: Day[]; today: DayPayload;
   // The weekday the program's treat meal is aimed at, framed on the carb panel as the target the
   // week's scores are read against.
   treatDay: TreatDaySettings;
@@ -219,7 +219,7 @@ export function TrendChart({ questionnaire, days, today, endDate, loadedInMs, tr
   const panels = headlineOnly ? allPanels.slice(0, 1) : allPanels;
   if (panels.length === 0) return null;
   const liveDay = liveTrendDay(questionnaire, today, days);
-  const dayStrs = lastDays(liveDay?.date ?? endDate, CHART_DAYS);
+  const dayStrs = lastDays(today.date, CHART_DAYS);
   const dayByDate = new Map(days.map((d) => [d.date, d]));
   if (liveDay) dayByDate.set(liveDay.date, liveDay);
   return (
