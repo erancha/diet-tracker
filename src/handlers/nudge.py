@@ -184,14 +184,15 @@ def _weekly(env):
 
 
 def _recap(env, user, day):
-    """One user's recap: the seven days ending on their last closed day of the night the job ran
-    on and the day before it.
+    """One user's recap: the seven days ending on their last closed day among the day the job
+    ran on and the day before it.
 
-    The schedule fires late on the weigh-in night, when the day is over in practice but may still
-    be open in the tracker. A day closed by then belongs to the week it ends, so the window takes
-    it; one still open would be counted as missing however diligent the user was, so the window
-    ends the day before it instead. Each user's own days decide, so the week reported is whatever
-    seven days they have most recently had the chance to close."""
+    The schedule fires at midday on the weigh-in day, while that day is normally still open in the
+    tracker, so the week reported ends the day before it — the day whose own close window shut that
+    morning. A user who has already closed the weighing day by then has it counted in the week it
+    ends instead; one still open would be counted as missing however diligent the user was. Each
+    user's own days decide, so the week reported is whatever seven days they have most recently had
+    the chance to close."""
     week_end = day if env.store.has_day(user.sub, day) else days_before(day, 1)
     week_start = days_before(week_end, 6)
     history = env.store.get_days_range(user.sub, week_start, week_end)

@@ -202,16 +202,16 @@ values alone. Its `day_close` element holds the closing rules: the minimum eatin
 (`min_window_hours`), and the small-hours grace bounds — `close_until`, up to which an unclosed
 yesterday may still be closed and its meals written, and the never-later `delete_until`, up to
 which its record may still be deleted. Its `weight` element holds the weigh-in weekday and hour —
-the weekday doubling as the night the weekly recap goes out on — the chart's opening span, and the
-kilogram bounds both the API and the frontend input constrain to. Its `treat_day` element names the
-weekday the trend chart frames;
+the weekday doubling as the day the weekly recap goes out on, at midday — the chart's opening
+span, and the kilogram bounds both the API and the frontend input constrain to. Its `treat_day`
+element names the weekday the trend chart frames;
 like `chat`, no Lambda reads it, so it rides along as a frontend-only section.
 
 Both runtimes read the same file: the Lambda package carries it, and the frontend fetches it from
 its own origin. The weigh-in weekday and hour are the one part `scripts/deploy.sh` also lifts out
 at deploy time, because an EventBridge cron expression is fixed when the stack deploys. The recap
 schedule reuses the weekday from there rather than naming its own, so retargeting the weigh-in
-carries the recap to the new night with it.
+carries the recap to the new day with it.
 
 ## Nudges
 
@@ -225,11 +225,11 @@ Scheduled jobs (EventBridge Scheduler, Asia/Jerusalem) run alongside the tracker
   closing rather than its meals: everything but the water is recorded, and the tracker's close
   button is what seals it. A day carrying no meals gets the plain record-your-meals reminder.
 - **Weekly recap** — reports seven days ending on the user's last closed day of today and
-  yesterday. It fires late on the weigh-in night, when the day is over in practice but may still be
-  open in the tracker: a day the user has closed by then belongs to the week it ends and is counted;
-  one still open would be reported as missing however diligent the user was, so the window ends the
-  day before it instead — that day had its final chance to be closed that morning, at
-  `day_close.close_until`. Each user's own days decide, so the same run reports one user's week
+  yesterday. It fires at midday on the weigh-in day, while that day is normally still open in the
+  tracker, so the week reported ends the day before it — that day had its final chance to be closed
+  that morning, at `day_close.close_until`. A user who has already closed the weighing day by noon
+  has it counted in the week it ends instead; one still open would be reported as missing however
+  diligent the user was. Each user's own days decide, so the same run reports one user's week
   through Thursday and another's through Wednesday. Either way the recap reads the weigh-in
   morning's weight as the freshest one. Each user's recap is produced in an invocation of its
   own, so one slow reading of a week delays no one else's email.

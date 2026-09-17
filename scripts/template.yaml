@@ -29,10 +29,10 @@ Parameters:
     Type: String
     AllowedValues: [SUN, MON, TUE, WED, THU, FRI, SAT]
     Default: THU
-    Description: Day the weekly weigh-in reminder fires, and the night the weekly recap goes out
-      on so it reads that morning's weight. Declared in config/app.json under weight.weigh_in;
-      scripts/deploy.sh passes it here because an EventBridge cron expression is fixed at deploy
-      time
+    Description: Day the weekly weigh-in reminder fires, and the day the weekly recap goes out
+      on at midday, so it reads that morning's weight. Declared in config/app.json under
+      weight.weigh_in; scripts/deploy.sh passes it here because an EventBridge cron expression
+      is fixed at deploy time
   WeighInHour:
     Type: Number
     Default: 8
@@ -644,13 +644,14 @@ Resources:
         RoleArn: !GetAtt SchedulerRole.Arn
         Input: '{"job": "last_call"}'
 
-  # Fires on the weigh-in night so the recap reads the morning's fresh weight. The job reads the
-  # seven days ending yesterday, so the week it reports closes the day before the weighing, and
-  # that last day's own close window (day_close.close_until, 02:00) shut this morning.
+  # Fires at midday on the weigh-in day: late enough that the morning's weighing is the freshest
+  # weight the recap reads, early enough that the weighing day is normally still open in the
+  # tracker, which is what keeps it out of the week reported. That week ends on the day before,
+  # whose own close window (day_close.close_until, 02:00) shut that morning.
   WeeklySchedule:
     Type: AWS::Scheduler::Schedule
     Properties:
-      ScheduleExpression: !Sub 'cron(45 23 ? * ${WeighInWeekday} *)'
+      ScheduleExpression: !Sub 'cron(0 12 ? * ${WeighInWeekday} *)'
       ScheduleExpressionTimezone: Asia/Jerusalem
       FlexibleTimeWindow:
         Mode: 'OFF'
