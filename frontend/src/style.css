@@ -280,10 +280,20 @@ button:disabled { cursor: not-allowed; }
    history score cell; inside the flex glyph controls it has no effect. */
 .icon { width: 1.1em; height: 1.1em; vertical-align: -0.18em; }
 /* pre-line keeps newlines in alert messages (e.g. the sign-in rejection's contact note). */
-.alert { background: #ffebee; color: var(--danger); border-radius: 8px; padding: 0.6rem 1rem; margin-bottom: 0.5rem; white-space: pre-line; }
-.ok { background: #e8f5e9; color: var(--accent); border-radius: 8px; padding: 0.6rem 1rem; margin-bottom: 0.5rem; }
+/* Every item of the message strip shares one box, so each kind below states only its ground and
+   its ink. */
+.alert, .ok, .notice, .crossing { border-radius: 8px; padding: 0.6rem 1rem; margin-bottom: 0.5rem; }
+.alert { background: #ffebee; color: var(--danger); white-space: pre-line; }
+.ok { background: #e8f5e9; color: var(--accent); }
 /* Informational, not a failure: amber sits between the alert red and the ok green. */
-.notice { background: #fff8e1; color: #795500; border-radius: 8px; padding: 0.6rem 1rem; margin-bottom: 0.5rem; }
+.notice { background: #fff8e1; color: #795500; }
+/* A crossing stands on the ground the trend panels tint above their limit, so the strip reporting
+   one and the chart already showing it read as the same finding. Its sentence names a day and
+   then where the mark already is, which is too long to break well: below ~29rem it scales with
+   the viewport, the slope the fieldset legends use, so it holds one line down to 320px-wide
+   screens once the body and box paddings are taken out. */
+.crossing { background: var(--viz-breach-ground); color: var(--danger);
+            font-size: min(1rem, 4vw - 2.6px); }
 /* A message the app could not email is the inbox's content shown here instead — nothing the user
    did wrong — so it takes the amber notice ground rather than the alarm red the rule violations
    above it carry, and adds only the inner layout for its date row, subject and body. The aside

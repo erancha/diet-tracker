@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { crossesThreshold, headedValue, isHeavyMeal, isViolating, panelTitle, questionTitle, ruleBoundLabel, trendPanels, valueLabel, violates } from "./violations";
-import type { Question, Questionnaire, Rule } from "./types";
+import { crossesThreshold, crossesThresholdWhileOpen, headedValue, isHeavyMeal, isViolating, panelTitle, questionTitle, ruleBoundLabel, trendPanels, valueLabel, violates } from "./violations";
+import type { Derived, Question, Questionnaire, Rule } from "./types";
 
 const carbs: Question = {
   id: "carbs", type: "points", text: "פחמימות", max: 30, heavy_meal: 4, panel_title: "ציון פחמימות",
@@ -78,6 +78,23 @@ describe("crossesThreshold", () => {
 
   it("is false when every submitted value respects every bound", () => {
     expect(crossesThreshold(questionnaire, { carbs: 2, meals: 3 })).toBe(false);
+  });
+});
+
+describe("crossesThresholdWhileOpen", () => {
+  const running = (figures: Partial<Derived>): Derived =>
+    ({ carbs: 0, meals: 0, vegetables: 0, eating_window: 0, ...figures });
+
+  it("is true when a running figure has already passed a bound it can only grow into", () => {
+    expect(crossesThresholdWhileOpen(questionnaire, running({ carbs: 9 }))).toBe(true);
+  });
+
+  it("is false for a shortfall the rest of the day can still make up", () => {
+    // A morning stands under every below bound — nothing has been eaten or drunk yet — and
+    // crossesThreshold would call that a crossing.
+    const morning = running({ carbs: 2, meals: 2 });
+    expect(crossesThreshold(questionnaire, { ...morning })).toBe(true);
+    expect(crossesThresholdWhileOpen(questionnaire, morning)).toBe(false);
   });
 });
 

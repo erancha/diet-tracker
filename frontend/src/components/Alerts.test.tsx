@@ -38,6 +38,26 @@ describe("Alerts", () => {
     expect(screen.getByText("היעד טרם נקבע")).toBeInTheDocument();
   });
 
+  it("dismisses a notice marked as fading", () => {
+    const onDismiss = vi.fn();
+    render(<Alerts items={[{ kind: "notice", message: "אתמול חצה סף", fades: true }]}
+                   onDismiss={onDismiss} />);
+
+    act(() => vi.advanceTimersByTime(5000));
+
+    expect(onDismiss).toHaveBeenCalledOnce();
+  });
+
+  it("keeps a fading notice on screen while an unmarked item shares its batch", () => {
+    const onDismiss = vi.fn();
+    render(<Alerts items={[{ kind: "notice", message: "אתמול חצה סף", fades: true },
+                           { kind: "alert", message: "השמירה נכשלה" }]} onDismiss={onDismiss} />);
+
+    act(() => vi.advanceTimersByTime(60_000));
+
+    expect(onDismiss).not.toHaveBeenCalled();
+  });
+
   it("scrolls a fresh batch into view", () => {
     const scrollIntoView = vi.spyOn(Element.prototype, "scrollIntoView")
       .mockImplementation(() => {});

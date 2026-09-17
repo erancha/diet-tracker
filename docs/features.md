@@ -63,6 +63,13 @@ over a single shared date axis.
 Below the chart, the same days appear as a table, newest first, one column per question. Tapping a
 day's score opens that day's meal log, read-only.
 
+Opening the app greets a crossing rather than leaving it to be found: when yesterday or the running
+day has already crossed a bound, a notice names which of them and clears itself after five seconds,
+since it only points at marks the chart and the table are already carrying. A closed day is judged
+on its answers, every bound included. A day still open is judged on the figures its meals so far
+derive, and only against the bounds a day grows into: a morning sits under the water and vegetable
+bounds until the day has answered them, so those two wait for the close.
+
 [Excluded points and the treat day](domain-rules.md#shared-derivation) specify how the subtotal
 and the framed weekday are derived.
 
@@ -81,8 +88,8 @@ Messages reach you by email, and by Telegram where a bot token is configured:
   stored as one chat, so it appears in the chat list and can be continued there like any other.
 
 The account menu turns all of them off and back on with one switch. Opting out changes nothing
-inside the app: a muted account still sees its own violations on closing a day and in the header's
-alarm. See [Nudges](domain-rules.md#nudges) for each job's schedule and audience.
+inside the app: a muted account still sees its own violations on arrival, on closing a day and in
+the header's alarm. See [Nudges](domain-rules.md#nudges) for each job's schedule and audience.
 
 Every message is sent as right-to-left HTML beside its plain text, so Hebrew reads as written
 rather than as the recipient's mail client guesses.

@@ -1,11 +1,12 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { alertMessage, type Api } from "../api";
-import { crossesThreshold } from "../violations";
+import { crossesThreshold, crossingNotice } from "../violations";
 import type { AppConfigFile, NewMeal, WeightPayload } from "../types";
 import { beforeDailyCutoff, expandWeightSection, isoDate, yesterdayOf } from "../dates";
 import { TARGET_UNSET_NOTICE } from "../weight";
 import { isFirstVisit } from "../firstVisit";
+import { signInBreachReminder } from "../signInBreach";
 import { storeCondensedView, storedCondensedView } from "../viewMode";
 import { AdminSection } from "./AdminSection";
 import { Alerts, type AlertItem } from "./Alerts";
@@ -64,6 +65,7 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, c
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
   // Stable so the alert strip's dismissal timer is not restarted by every re-render of this screen.
   const dismissAlerts = useCallback(() => setAlerts([]), []);
+  const greeted = useRef(false);
 
   const configQuery = useQuery({
     queryKey: ["app-config"],
@@ -76,6 +78,21 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, c
   });
   const historyQuery = useQuery({ queryKey: ["days"], queryFn: api.getDays });
   const weightQuery = useQuery({ queryKey: ["weight"], queryFn: api.getWeight });
+
+  // The page's opening word: a bound yesterday or the running day has already crossed. Raised once
+  // per visit, since the history reloads on window focus and after every save, and the strip it
+  // lands in belongs to whatever the user did last. The admin screen carries no tracking, so none
+  // of the surfaces the reminder points at stand on it.
+  useEffect(() => {
+    const config = configQuery.data;
+    const history = historyQuery.data;
+    if (greeted.current || isAdmin || config === undefined || history === undefined) return;
+    greeted.current = true;
+    const reminder = signInBreachReminder(config.questionnaire, history);
+    // Clears itself: it reports what the chart and the table already paint red, rather than
+    // anything the user is being asked to act on.
+    if (reminder !== null) setAlerts([{ kind: "crossing", message: reminder, fades: true }]);
+  }, [isAdmin, configQuery.data, historyQuery.data]);
 
   // The view the account signed off with last time, seeding every state the view command
   // governs. Read once at mount: from here on the command itself carries the current view.
@@ -138,7 +155,7 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, c
       // instead, as a notice.
       setAlerts(crossesThreshold(configQuery.data!.questionnaire, answers)
         ? [{ kind: "ok", message: saved },
-           { kind: "notice", message: "היום חצה סף (מסומן באדום בגרפי המגמות ובטבלה)" }]
+           { kind: "crossing", message: crossingNotice("today") }]
         : [{ kind: "ok", message: `${saved} אין חריגות היום ✔` }]);
       queryClient.invalidateQueries({ queryKey: ["days"] });
     },

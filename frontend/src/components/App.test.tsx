@@ -124,6 +124,25 @@ const atClock = (hour: number, minute: number) => {
 
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); window.localStorage.clear(); });
 
+describe("sign-in breach reminder", () => {
+  const yesterdayStr = isoDate(yesterdayOf(new Date()));
+
+  it("opens the page naming a bound yesterday crossed", async () => {
+    renderApp(false, api({ days: [{ date: yesterdayStr, answers: { carbs: 10 }, excluded: 0 }] }));
+
+    // The strip carries the crossing on the same ground the panels tint above their limit.
+    expect(await screen.findByText("אתמול חצה סף (מסומן באדום בגרפי המגמות ובטבלה)"))
+      .toHaveClass("crossing");
+  });
+
+  it("stays quiet for an account whose days have crossed nothing", async () => {
+    renderApp(false);
+
+    await screen.findByRole("button", { name: "יומן היום" });
+    expect(screen.queryByText(/חצה סף|חצו סף/)).not.toBeInTheDocument();
+  });
+});
+
 describe("App", () => {
   it("shows the admin the chat and activity panels alone, without the tracking sections", async () => {
     renderApp(true);
@@ -430,7 +449,11 @@ describe("App", () => {
     fireEvent.click(screen.getByLabelText("3 ליטר"));
     fireEvent.click(screen.getByRole("button", { name: "אישור וסגירה" }));
 
-    expect(await screen.findByText("היום חצה סף (מסומן באדום בגרפי המגמות ובטבלה)")).toBeInTheDocument();
+    // Today's meals already cross the bound, so the arrival reminder is on the strip before the
+    // close. Waiting for the save confirmation pins the assertion to the batch the close raised.
+    await screen.findByText(`נשמר לתאריך ${todayStr}!`);
+    expect(screen.getByText("היום חצה סף (מסומן באדום בגרפי המגמות ובטבלה)"))
+      .toHaveClass("crossing");
   });
 
   it("closes the open day view when its day is deleted from the history table", async () => {
