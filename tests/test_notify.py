@@ -82,12 +82,12 @@ def test_every_email_carries_a_right_to_left_html_body_beside_its_text():
 def test_html_body_sets_the_opening_line_in_bold_and_the_bullets_a_size_smaller():
     # What the message came to is the one thing a reader should catch first; the findings under
     # it sit a step below. The plain-text part carries neither mark, so Telegram is unaffected.
-    body = ("סיכום שבועי — נסגרו 7 מתוך 7 ימים\n• ציון יומי — חריגה (מעל 12) ב-2 ימים\n\n"
+    body = ("סיכום שבועי — נסגרו 7 מתוך 7 ימים.\n• ציון יומי — חריגה (מעל 12) ב-2 ימים.\n\n"
             "הגרפים והטבלה של השבוע במסך המגמות באפליקציה.")
     html = notify.rtl_html(body)
-    assert "<strong>סיכום שבועי — נסגרו 7 מתוך 7 ימים</strong>" in html
+    assert "<strong>סיכום שבועי — נסגרו 7 מתוך 7 ימים.</strong>" in html
     assert html.count("<strong>") == 1
-    assert '<span style="font-size: 14px">• ציון יומי — חריגה (מעל 12) ב-2 ימים</span>' in html
+    assert '<span style="font-size: 14px">• ציון יומי — חריגה (מעל 12) ב-2 ימים.</span>' in html
     assert html.count("<span") == 1
 
 

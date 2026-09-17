@@ -46,19 +46,19 @@ def text(questionnaire, history: dict, excluded: dict, treat_weekday: str,
     email carries it, the recap the app stores does not, because the follow-up that asks for it
     turns that stored recap into the conversation the reading answers."""
     if not history:
-        return "לא נסגרו ימים השבוע"
-    lines = [f"{TITLE} — נסגרו {len(history)} מתוך 7 ימים"]
+        return "לא נסגרו ימים השבוע."
+    lines = [f"{TITLE} — נסגרו {len(history)} מתוך 7 ימים."]
     for rule in questionnaire.rules:
         days = rules.violating_days(rule, history)
         if days:
             question = questionnaire.question(rule.question_id)
             name = question.day_title or question.panel_title or question.day_heading
-            lines.append(f"• {name} — חריגה ({rules.bound_label(rule)}) {_days(days)}")
+            lines.append(f"• {name} — חריגה ({rules.bound_label(rule)}) {_days(days)}.")
     unclean = sum(1 for day, points in excluded.items()
                   if points > 0 and not rules.falls_on(day, treat_weekday))
     if unclean:
-        lines.append(f"• קמחים וסוכרים {_days(unclean)} שאינם יום פינוק" if unclean > 1
-                     else "• קמחים וסוכרים ביום אחד שאינו יום פינוק")
+        lines.append(f"• קמחים וסוכרים {_days(unclean)} שאינם יום פינוק." if unclean > 1
+                     else "• קמחים וסוכרים ביום אחד שאינו יום פינוק.")
     if insights is not None:
         lines += ["", _INSIGHTS_TITLE, insights]
     return "\n".join(lines + ["", _TRENDS])

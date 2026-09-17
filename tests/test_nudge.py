@@ -130,7 +130,7 @@ def test_the_recap_consumer_answers_the_one_user_its_message_names(env, monkeypa
     nudge.recap_handler({"Records": [{"body": json.dumps(
         {"sub": "u2", "email": "b@gmail.com", "day": today()})}]}, None)
     assert [target for _, target, _ in sent] == ["222", "b@gmail.com"]
-    assert "נסגרו 1 מתוך 7 ימים" in sent[1][2]
+    assert "נסגרו 1 מתוך 7 ימים." in sent[1][2]
 
 
 def test_the_recap_consumer_takes_exactly_one_message_per_invocation(env, monkeypatch):
@@ -172,8 +172,8 @@ def test_weekly_sends_the_recap_to_every_user(env):
     _run_weekly(e)
     targets = [target for _, target, _ in sent]
     assert targets == ["111", "a@gmail.com", "222", "b@gmail.com"]
-    assert any("נסגרו 1 מתוך 7 ימים" in text for _, _, text in sent)
-    assert any("לא נסגרו ימים השבוע" in text for _, _, text in sent)
+    assert any("נסגרו 1 מתוך 7 ימים." in text for _, _, text in sent)
+    assert any("לא נסגרו ימים השבוע." in text for _, _, text in sent)
 
 
 def test_weekly_ends_the_week_yesterday_while_the_day_it_runs_in_is_open(env):
@@ -184,7 +184,7 @@ def test_weekly_ends_the_week_yesterday_while_the_day_it_runs_in_is_open(env):
         e.store.put_day("u1", days_before(today(), offset), CLEAN, 1, "t")
     _run_weekly(e)
     body = next(text for _, target, text in sent if target == "a@gmail.com")
-    assert "נסגרו 7 מתוך 7 ימים" in body
+    assert "נסגרו 7 מתוך 7 ימים." in body
     stored = chat_history.turns(e.chat_history, "u1")
     assert nudge.weekly_recap.chat_title(days_before(today(), 7)) in stored[0]["question"]
 
@@ -198,9 +198,9 @@ def test_weekly_ends_the_week_today_once_the_user_has_closed_it(env):
                         1, "t")
     _run_weekly(e)
     body = next(text for _, target, text in sent if target == "a@gmail.com")
-    assert "נסגרו 7 מתוך 7 ימים" in body
+    assert "נסגרו 7 מתוך 7 ימים." in body
     # Only today's breach is in the window; the one seven days back has fallen out of it.
-    assert "חלון אכילה (שעות) — חריגה (מעל 12) ביום אחד" in body
+    assert "חלון אכילה (שעות) — חריגה (מעל 12) ביום אחד." in body
     stored = chat_history.turns(e.chat_history, "u1")
     assert nudge.weekly_recap.chat_title(days_before(today(), 6)) in stored[0]["question"]
 
@@ -257,7 +257,7 @@ def test_the_weekly_email_carries_the_reading_under_the_findings(env):
     e.store.put_day("u1", days_before(today(), 1), CLEAN, 1, "t")
     _run_weekly(e)
     body = next(text for _, target, text in sent if target == "a@gmail.com")
-    assert "נסגרו 1 מתוך 7 ימים" in body
+    assert "נסגרו 1 מתוך 7 ימים." in body
     # The trends pointer stays last: notify.send_email hangs the app's address off it.
     assert body.index(INSIGHTS) < body.index("הגרפים והטבלה")
 
@@ -290,7 +290,7 @@ def test_an_unreachable_service_costs_only_the_reading(env, monkeypatch, caplog)
         _run_weekly(e)
 
     body = next(text for _, target, text in sent if target == "a@gmail.com")
-    assert "נסגרו 1 מתוך 7 ימים" in body
+    assert "נסגרו 1 מתוך 7 ימים." in body
     assert INSIGHTS not in body
     assert "a@gmail.com" in caplog.text
     stored = chat_history.turns(e.chat_history, "u1")
@@ -437,7 +437,7 @@ def test_weekly_names_the_days_that_cost_flours_and_sugars(env):
     _run_weekly(e)
 
     body = next(text for _, target, text in sent if target == "a@gmail.com")
-    assert "• קמחים וסוכרים ביום אחד שאינו יום פינוק" in body
+    assert "• קמחים וסוכרים ביום אחד שאינו יום פינוק." in body
 
 
 def test_a_week_inside_every_bound_names_no_finding(env):
@@ -447,7 +447,7 @@ def test_a_week_inside_every_bound_names_no_finding(env):
     _run_weekly(e)
 
     body = next(text for _, target, text in sent if target == "a@gmail.com")
-    assert body.startswith("סיכום שבועי — נסגרו 1 מתוך 7 ימים")
+    assert body.startswith("סיכום שבועי — נסגרו 1 מתוך 7 ימים.")
     assert "חריגה" not in body
 
 
