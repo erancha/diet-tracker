@@ -126,10 +126,11 @@ picks a side of the own transcript: every chat, only the ones the user asked, on
 app wrote, or only the ones the user shared; that choice is remembered for the next visit. The
 other is a search, opened from a funnel above the lists: its words narrow both lists to the chats
 holding them, in the question or in the answer, with `|` between words admitting a chat holding
-any of them and `&` demanding all, `&` binding tighter. A search lasts the visit alone. Each list
-then counts its matches and says beside that how many chats the filters are holding back, and a
-question sent, or an earlier chat opened from the composer's offer, widens both filters so the
-chat in hand is not one of the chats held back.
+any of them and `&` demanding all, `&` binding tighter. A search lasts the visit alone, and the
+funnel stands filled while one is in force, so a narrowed list reads as narrowed with the search
+box folded away. Each list then counts its matches and says beside that how many chats the
+filters are holding back, and a question sent, or an earlier chat opened from the composer's
+offer, widens both filters so the chat in hand is not one of the chats held back.
 
 An answer can take longer than the API holds a browser's request, which is 30 seconds. The chat
 keeps waiting on the answering service past that and stores the answer when it comes, so the app,

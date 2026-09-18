@@ -928,9 +928,10 @@ main:not(.intro-0, .intro-1, .intro-2, .intro-3, .intro-4) .weight .section-togg
 /* Applying and clearing sit under the box, set off from the counts the words act on so the row
    does not read as part of the list heading below it. */
 .chat-search-actions { display: flex; gap: 0.5rem; margin-block-end: 0.75rem; }
-/* A funnel standing over a query in force carries the accent, so a narrowed list reads as
-   narrowed even with the form folded away. */
+/* A funnel standing over a query in force carries the accent and fills solid, against the outline
+   every other glyph keeps, so a narrowed list reads as narrowed even with the form folded away. */
 .chat-search-on { --btn-fg: var(--accent); }
+.chat-search-on .icon { fill: currentColor; }
 .chat .clear-draft { position: absolute; inset-inline-end: 0.2rem; top: 50%; transform: translateY(-50%); }
 /* Heads the relocated composer while a reply is in progress, carrying its cancel control. */
 .chat .reply-chip { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.35rem;
