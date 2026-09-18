@@ -62,20 +62,27 @@ export function breachesLimit(questionnaire: Questionnaire, questionId: string,
     || (question?.warn_below !== undefined && value < question.warn_below);
 }
 
+// How yesterday is named wherever a crossing sentence mentions it. The sign-in banner turns this
+// same word into the link opening yesterday's day view, so the word it links cannot drift from the
+// word the sentence was built from.
+export const YESTERDAY_WORD = "אתמול";
+
 // How the days a crossing was found on are named. A day is the subject of its own sentence, so the
 // pair takes the plural verb.
 const CROSSED = {
-  yesterday: "אתמול חצה סף",
+  yesterday: `${YESTERDAY_WORD} חצה סף`,
   today: "היום חצה סף",
-  both: "אתמול והיום חצו סף",
+  both: `${YESTERDAY_WORD} והיום חצו סף`,
 };
+
+export type CrossedDays = keyof typeof CROSSED;
 
 // Where a crossing is already on show, closing every sentence that reports one.
 const CROSSING_MARKED = "(מסומן באדום בגרפי המגמות ובטבלה)";
 
 // The sentence a surface reports a crossing in, so no two of them word it differently or point at
 // a different place than the others.
-export function crossingNotice(days: keyof typeof CROSSED): string {
+export function crossingNotice(days: CrossedDays): string {
   return `${CROSSED[days]} ${CROSSING_MARKED}`;
 }
 

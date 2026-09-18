@@ -11,6 +11,10 @@ import { Icon } from "./Icon";
 // the fat addition's label alone runs to a line of examples.
 const LEGEND_MS_PER_MARKER = 1500;
 
+// A flat lead on top of the per-marker time, for the line to be found and begun before it counts
+// down what it has to say — and for the grades it opens with, which no marker pays for.
+const LEGEND_LEAD_MS = 1000;
+
 // A day's meal list rendered in time order, reading top to bottom as the day unfolded — the
 // bottom row is the meal just recorded — each row ending with the meal's effective points so the
 // rows visibly sum to the day's carb score. Per-meal editing and deletion render only when their
@@ -52,9 +56,17 @@ export function MealList({ questionnaire, meals, expandLabels, onEdit, editLastO
         const second = meal.second_source === null ? undefined
           : carbsQuestion.choices.find((c) => c.id === meal.second_source!.carbs_choice);
         const markers = mealMarkers(carbsQuestion, meal);
-        // A tap on any cell of the row but its controls asks what the row's markers mean.
+        // What the row's carb grades cover, for the legend to spell out — the reading the row
+        // itself gives at the expanded density, so it is offered here only where the row is
+        // showing the trimmed names. A grade the config lists no examples for has nothing to add.
+        const grades = expandLabels ? [] : [choice, second].flatMap((c) =>
+          c === undefined || c.examples === undefined ? [] : [choiceLabel(c, true)]);
+        // A tap on any cell of the row but its controls names what the row carries. Markers are
+        // what offers it: a row with none has only its grades to spell out, and the label-density
+        // switch already does that for the whole list.
         const askLegend = markers.length === 0 ? {}
-          : { onClick: () => legend.reveal(meal.id, LEGEND_MS_PER_MARKER * markers.length) };
+          : { onClick: () => legend.reveal(meal.id,
+                                           LEGEND_LEAD_MS + LEGEND_MS_PER_MARKER * markers.length) };
         return (
           <li key={meal.id} className={markers.length === 0 ? undefined : "has-markers"}>
             {/* Outside the text cell, so the row lays time and description out as two columns and
@@ -106,7 +118,7 @@ export function MealList({ questionnaire, meals, expandLabels, onEdit, editLastO
             </span>
             {legend.revealed === meal.id && (
               <span className="marker-legend revealed" style={legend.style}>
-                {markers.map((m) => `${m.marker} ${m.label}`).join(" · ")}
+                {[...grades, ...markers.map((m) => `${m.marker} ${m.label}`)].join(" · ")}
               </span>
             )}
           </li>

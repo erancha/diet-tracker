@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { signInBreachReminder } from "./signInBreach";
+import { signInCrossedDays } from "./signInBreach";
 import type { Day, DayPayload, HistoryResponse, Question, Questionnaire } from "./types";
 
 const question = (id: string): Question =>
@@ -33,48 +33,48 @@ const history = (days: Day[], today: DayPayload, yesterday: DayPayload): History
 const TODAY = "2026-09-17";
 const YESTERDAY = "2026-09-16";
 
-describe("signInBreachReminder", () => {
+describe("signInCrossedDays", () => {
   it("says nothing when neither day has crossed a bound", () => {
-    expect(signInBreachReminder(questionnaire,
+    expect(signInCrossedDays(questionnaire,
       history([closed(YESTERDAY)], open(TODAY), open(YESTERDAY)))).toBeNull();
   });
 
   it("stays quiet on a morning that has recorded nothing yet", () => {
     // Nothing eaten or drunk stands under both shortfall bounds, which a closed day would be
     // judged against — the reminder must not read that as today having crossed one.
-    expect(signInBreachReminder(questionnaire,
+    expect(signInCrossedDays(questionnaire,
       history([], open(TODAY), open(YESTERDAY)))).toBeNull();
   });
 
   it("names yesterday when its closed answers crossed a bound", () => {
-    const reminder = signInBreachReminder(questionnaire,
+    const crossed = signInCrossedDays(questionnaire,
       history([closed(YESTERDAY, { carbs: 14 })], open(TODAY), open(YESTERDAY)));
 
-    expect(reminder).toBe("אתמול חצה סף (מסומן באדום בגרפי המגמות ובטבלה)");
+    expect(crossed).toBe("yesterday");
   });
 
   it("names yesterday for a shortfall only its closed answers can settle", () => {
-    expect(signInBreachReminder(questionnaire,
+    expect(signInCrossedDays(questionnaire,
       history([closed(YESTERDAY, { drinking: 1 })], open(TODAY), open(YESTERDAY))))
-      .toBe("אתמול חצה סף (מסומן באדום בגרפי המגמות ובטבלה)");
+      .toBe("yesterday");
   });
 
   it("names today off the figures its meals so far derive", () => {
-    expect(signInBreachReminder(questionnaire,
+    expect(signInCrossedDays(questionnaire,
       history([closed(YESTERDAY)], open(TODAY, { carbs: 12 }), open(YESTERDAY))))
-      .toBe("היום חצה סף (מסומן באדום בגרפי המגמות ובטבלה)");
+      .toBe("today");
   });
 
   it("names a yesterday that was never closed off its own recorded meals", () => {
-    expect(signInBreachReminder(questionnaire,
+    expect(signInCrossedDays(questionnaire,
       history([], open(TODAY), open(YESTERDAY, { meals: 4 }))))
-      .toBe("אתמול חצה סף (מסומן באדום בגרפי המגמות ובטבלה)");
+      .toBe("yesterday");
   });
 
   it("names both days together when each crossed a bound", () => {
-    expect(signInBreachReminder(questionnaire,
+    expect(signInCrossedDays(questionnaire,
       history([closed(YESTERDAY, { carbs: 14 })], open(TODAY, { eating_window: 13 }),
               open(YESTERDAY))))
-      .toBe("אתמול והיום חצו סף (מסומן באדום בגרפי המגמות ובטבלה)");
+      .toBe("both");
   });
 });

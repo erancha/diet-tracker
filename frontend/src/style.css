@@ -294,6 +294,10 @@ button:disabled { cursor: not-allowed; }
    line down to 320px-wide screens once the body and box paddings are taken out. */
 .crossing { background: var(--viz-breach-ground); color: var(--danger);
             padding-inline: 0.75rem; font-size: min(1rem, 4vw - 1.6px); }
+/* A word of a strip message standing for the place it names — אתמול for yesterday's own day
+   view. Underlined, which is what marks a link here; the base button rule leaves everything else
+   — ink, type, box — inherited, so the sentence still reads as one line of prose. */
+.message-link { text-decoration: underline; text-underline-offset: 0.2em; }
 /* A message the app could not email is the inbox's content shown here instead — nothing the user
    did wrong — so it takes the amber notice ground rather than the alarm red the rule violations
    above it carry, and adds only the inner layout for its date row, subject and body. The aside
@@ -700,12 +704,17 @@ main:not(.intro-0, .intro-1, .intro-2, .intro-3, .intro-4) .weight .section-togg
 .meal-list.expanded-labels { font-size: calc(1em - 1px); }
 /* Each cell names its column, so a row missing a cell — a history day whose points no longer
    resolve renders no score — leaves its column empty instead of pulling later cells across. The
-   time also pins to its row's top, since a description wrapping to two lines would otherwise
-   centre it against the middle of the pair. */
-.meal-list .meal-at { grid-column: 1; align-self: start; }
-.meal-list .meal-text { grid-column: 2; }
+   time and the description are set at different sizes and the description can wrap to several
+   lines, so the two align on the first line's baseline: centring would drop the time to the middle
+   of a wrapped pair, and matching box edges would not line the two type sizes up at all. */
+.meal-list .meal-at { grid-column: 1; align-self: baseline; }
+.meal-list .meal-text { grid-column: 2; align-self: baseline; }
 .meal-list .meal-points { grid-column: 3; }
 .meal-list .meal-actions { grid-column: 4; }
+/* Two points smaller than the rest of the row: the times are read off an aligned column of
+   digits, so they carry their meaning at a size the grades beside them could not. Relative to the
+   inherited size, so the expanded density's own point still comes off it. */
+.meal-list .meal-at { font-size: calc(1em - 2px); }
 /* Sized for the widest score the carb scale reaches, so a two-digit day does not shift the
    column; the face itself is the shared score styling. */
 .meal-list .meal-points { min-width: 4ch; }

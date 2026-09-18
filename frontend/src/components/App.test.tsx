@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Api } from "../api";
-import { isoDate, yesterdayOf } from "../dates";
+import { isoDate, weekdayDdmmLabel, yesterdayOf } from "../dates";
 import { trackerQuestionnaire } from "../test-fixtures";
 import type { AppConfigFile, DayPayload } from "../types";
 import { STORAGE_KEY } from "../viewMode";
@@ -131,8 +131,30 @@ describe("sign-in breach reminder", () => {
     renderApp(false, api({ days: [{ date: yesterdayStr, answers: { carbs: 10 }, excluded: 0 }] }));
 
     // The strip carries the crossing on the same ground the panels tint above their limit.
-    expect(await screen.findByText("אתמול חצה סף (מסומן באדום בגרפי המגמות ובטבלה)"))
-      .toHaveClass("crossing");
+    const banner = await screen.findByText(/חצה סף/);
+    expect(banner).toHaveClass("crossing");
+    expect(banner).toHaveTextContent("אתמול חצה סף (מסומן באדום בגרפי המגמות ובטבלה)");
+  });
+
+  it("opens yesterday's day view where a history row opens it, and reaches it", async () => {
+    const client = api({ days: [{ date: yesterdayStr, answers: { carbs: 10 }, excluded: 0 }] });
+    client.getDay = vi.fn().mockResolvedValue(trackedDay(yesterdayStr));
+    const scrollIntoView = vi.spyOn(Element.prototype, "scrollIntoView")
+      .mockImplementation(() => {});
+    renderApp(false, client);
+
+    fireEvent.click(await screen.findByRole("button", { name: "אתמול" }));
+
+    expect(await screen.findByRole("heading",
+      { name: `יומן ${weekdayDdmmLabel(yesterdayStr)}` })).toBeInTheDocument();
+    expect(client.getDay).toHaveBeenCalledWith(yesterdayStr);
+    // The view lives inside the trends fold, which the page opens condensed.
+    expect(screen.getByRole("button", { name: "מגמות" }))
+      .toHaveAttribute("aria-expanded", "true");
+    expect(scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "start" });
+    // The banner's word has been followed, so nothing is left to read there.
+    expect(screen.queryByText(/חצה סף/)).toBeNull();
+    scrollIntoView.mockRestore();
   });
 
   it("stays quiet for an account whose days have crossed nothing", async () => {

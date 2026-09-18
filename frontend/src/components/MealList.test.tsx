@@ -13,15 +13,15 @@ const meals: Meal[] = [
     additions: [], portion: null, second_source: null },
 ];
 
-const renderList = () => {
+const renderList = (expandLabels = false) => {
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
-  render(<MealList questionnaire={questionnaire} meals={meals} expandLabels={false} />);
+  render(<MealList questionnaire={questionnaire} meals={meals} expandLabels={expandLabels} />);
 };
 
 describe("MealList marker legend", () => {
   afterEach(() => vi.useRealTimers());
 
-  it("names the tapped meal's own markers under it, from any cell of the row, for 1.5 seconds per marker", () => {
+  it("names the tapped meal's own markers under it, from any cell of the row, for 1.5 seconds per marker over a second's lead", () => {
     renderList();
     expect(screen.queryByText(/כולל/)).toBeNull();
 
@@ -29,21 +29,40 @@ describe("MealList marker legend", () => {
 
     expect(screen.getByText("🥗 כולל ירקות · 🥑 כולל שומן")).toBeInTheDocument();
     expect(screen.queryByText(/כולל פרי/)).toBeNull();
-    act(() => vi.advanceTimersByTime(2999));
+    act(() => vi.advanceTimersByTime(3999));
     expect(screen.getByText("🥗 כולל ירקות · 🥑 כולל שומן")).toBeInTheDocument();
     act(() => vi.advanceTimersByTime(1));
     expect(screen.queryByText(/כולל/)).toBeNull();
   });
 
-  it("gives a single marker its 1.5 seconds", () => {
+  it("gives a single marker its 1.5 seconds over the same lead", () => {
     renderList();
 
     fireEvent.click(screen.getByText("13:30"));
 
-    act(() => vi.advanceTimersByTime(1499));
-    expect(screen.getByText("🍎 כולל פרי")).toBeInTheDocument();
+    act(() => vi.advanceTimersByTime(2499));
+    expect(screen.getByText("דרגה 4 (אורז לבן) · 🍎 כולל פרי")).toBeInTheDocument();
     act(() => vi.advanceTimersByTime(1));
     expect(screen.queryByText(/כולל/)).toBeNull();
+  });
+
+  it("spells out what the row's grades cover, both carb sources of a plate that drew on two", () => {
+    const twoSource: Meal[] = [{ id: "d", at: "2026-08-20T21:40:00+03:00",
+      carbs_choice: "carb_grade_2", vegetables: true, fruit: false, additions: [], portion: "full",
+      second_source: { carbs_choice: "carb_grade_7", portion: "full" } }];
+    render(<MealList questionnaire={questionnaire} meals={twoSource} expandLabels={false} />);
+
+    fireEvent.click(screen.getByText("21:40"));
+
+    expect(screen.getByText("דרגה 2 (קינואה) · דרגה 7 (קמח לבן) · 🥗 כולל ירקות")).toBeInTheDocument();
+  });
+
+  it("leaves the grades to the row where the row already spells them out", () => {
+    renderList(true);
+
+    fireEvent.click(screen.getByText("13:30"));
+
+    expect(screen.getByText("🍎 כולל פרי")).toBeInTheDocument();
   });
 
   it("moves the legend to another meal tapped while one still shows, and restarts its moment", () => {
@@ -52,18 +71,19 @@ describe("MealList marker legend", () => {
     fireEvent.click(screen.getByText("09:10"));
     act(() => vi.advanceTimersByTime(2500));
     fireEvent.click(screen.getByText("13:30"));
-    act(() => vi.advanceTimersByTime(1000));
+    act(() => vi.advanceTimersByTime(2000));
 
-    expect(screen.getByText("🍎 כולל פרי")).toBeInTheDocument();
+    expect(screen.getByText("דרגה 4 (אורז לבן) · 🍎 כולל פרי")).toBeInTheDocument();
     expect(screen.queryByText(/כולל ירקות/)).toBeNull();
   });
 
-  it("shows nothing for a meal carrying no marker", () => {
+  it("shows nothing for a meal carrying no marker, its grade included", () => {
     renderList();
 
     fireEvent.click(screen.getByText("19:00"));
 
     expect(screen.queryByText(/כולל/)).toBeNull();
+    expect(screen.queryByText(/אורז לבן/)).toBeNull();
   });
 });
 

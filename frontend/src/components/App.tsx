@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { alertMessage, type Api } from "../api";
-import { crossesThreshold, crossingNotice } from "../violations";
+import { crossesThreshold, crossingNotice, YESTERDAY_WORD } from "../violations";
 import type { AppConfigFile, NewMeal, WeightPayload } from "../types";
 import { beforeDailyCutoff, expandWeightSection, isoDate, yesterdayOf } from "../dates";
 import { TARGET_UNSET_NOTICE } from "../weight";
 import { isFirstVisit } from "../firstVisit";
-import { signInBreachReminder } from "../signInBreach";
+import { signInCrossedDays } from "../signInBreach";
 import { storeCondensedView, storedCondensedView } from "../viewMode";
 import { AdminSection } from "./AdminSection";
 import { Alerts, type AlertItem } from "./Alerts";
@@ -79,21 +79,6 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, c
   const historyQuery = useQuery({ queryKey: ["days"], queryFn: api.getDays });
   const weightQuery = useQuery({ queryKey: ["weight"], queryFn: api.getWeight });
 
-  // The page's opening word: a bound yesterday or the running day has already crossed. Raised once
-  // per visit, since the history reloads on window focus and after every save, and the strip it
-  // lands in belongs to whatever the user did last. The admin screen carries no tracking, so none
-  // of the surfaces the reminder points at stand on it.
-  useEffect(() => {
-    const config = configQuery.data;
-    const history = historyQuery.data;
-    if (greeted.current || isAdmin || config === undefined || history === undefined) return;
-    greeted.current = true;
-    const reminder = signInBreachReminder(config.questionnaire, history);
-    // Clears itself: it reports what the chart and the table already paint red, rather than
-    // anything the user is being asked to act on.
-    if (reminder !== null) setAlerts([{ kind: "crossing", message: reminder, fades: true }]);
-  }, [isAdmin, configQuery.data, historyQuery.data]);
-
   // The view the account signed off with last time, seeding every state the view command
   // governs. Read once at mount: from here on the command itself carries the current view.
   const [openedCondensed] = useState(storedCondensedView);
@@ -140,6 +125,50 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, c
     queryFn: () => api.getDay(viewedDate!),
     enabled: viewedDate !== null,
   });
+
+  // The block the open day view heads, with the history table beneath it.
+  const openedDay = useRef<HTMLDivElement>(null);
+  // A day view asked for from outside the trends section, still to be brought on screen. The
+  // scroll waits on both the fold opening and the day's meals arriving, since the view mounts
+  // only then and would otherwise shift out from under it.
+  const [reachOpenedDay, setReachOpenedDay] = useState(false);
+  useEffect(() => {
+    if (!reachOpenedDay || trendsFold.collapsed || viewedDayQuery.isPending) return;
+    openedDay.current!.scrollIntoView({ behavior: "smooth", block: "start" });
+    setReachOpenedDay(false);
+  }, [reachOpenedDay, trendsFold.collapsed, viewedDayQuery.isPending]);
+
+  // The way to yesterday the opening banner offers: the same read-only view a history row opens,
+  // in the same place — which means opening the trends fold it lives in and reaching it. The
+  // banner goes with the press, its word having been followed, so its own scroll into view does
+  // not fight this one.
+  const openYesterdayView = () => {
+    setViewedDate(yesterdayStr);
+    trendsFold.set(false);
+    setReachOpenedDay(true);
+    dismissAlerts();
+  };
+
+  // The page's opening word: a bound yesterday or the running day has already crossed. Raised once
+  // per visit, since the history reloads on window focus and after every save, and the strip it
+  // lands in belongs to whatever the user did last. The admin screen carries no tracking, so none
+  // of the surfaces the reminder points at stand on it.
+  useEffect(() => {
+    const config = configQuery.data;
+    const history = historyQuery.data;
+    if (greeted.current || isAdmin || config === undefined || history === undefined) return;
+    greeted.current = true;
+    const crossed = signInCrossedDays(config.questionnaire, history);
+    if (crossed === null) return;
+    // Clears itself: it reports what the chart and the table already paint red, rather than
+    // anything the user is being asked to act on. Where yesterday is one of the days it names,
+    // that word opens yesterday's day view.
+    setAlerts([{
+      kind: "crossing", message: crossingNotice(crossed), fades: true,
+      link: crossed === "today" ? undefined
+                                : { word: YESTERDAY_WORD, onClick: openYesterdayView },
+    }]);
+  }, [isAdmin, configQuery.data, historyQuery.data]);
 
   const errorAlert = (action: string) => (error: Error) =>
     setAlerts([{ kind: "alert", message: alertMessage(action, error) }]);
@@ -358,6 +387,7 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, c
           <TrendChart questionnaire={questionnaire} days={data.days} today={data.today}
                       treatDay={configQuery.data.treat_day}
                       loadedInMs={loadedInMs} />
+          <div ref={openedDay}>
           {viewedDate !== null && (
             viewedDayQuery.isPending ? <p>טוען…</p>
             : viewedDayQuery.isError ? <div className="alert">{alertMessage("טעינת היום נכשלה", viewedDayQuery.error)}</div>
@@ -377,6 +407,7 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, c
             onDelete={(date) => deleteMutation.mutate(date)}
             onView={setViewedDate}
           />
+          </div>
           </div>
           </div>
         </CollapsibleSection>

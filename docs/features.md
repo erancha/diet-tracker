@@ -65,9 +65,11 @@ Below the chart, the same days appear as a table, newest first, one column per q
 day's score opens that day's meal log, read-only.
 
 Opening the app greets a crossing rather than leaving it to be found: when yesterday or the running
-day has already crossed a bound, a notice names which of them and clears itself after five seconds,
-since it only points at marks the chart and the table are already carrying. A closed day is judged
-on its answers, every bound included. A day still open is judged on the figures its meals so far
+day has already crossed a bound, a notice names which of them and clears itself after ten seconds,
+since it only points at marks the chart and the table are already carrying. Where it names
+yesterday, that word is a link: following it opens yesterday's meal log in the same place the table
+opens one, unfolding the trends section and bringing the log on screen. A closed day is judged on
+its answers, every bound included. A day still open is judged on the figures its meals so far
 derive, and only against the bounds a day grows into: a morning sits under the water and vegetable
 bounds until the day has answered them, so those two wait for the close.
 

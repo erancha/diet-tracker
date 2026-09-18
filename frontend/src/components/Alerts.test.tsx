@@ -1,4 +1,4 @@
-import { act, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Alerts } from "./Alerts";
 
@@ -38,14 +38,35 @@ describe("Alerts", () => {
     expect(screen.getByText("היעד טרם נקבע")).toBeInTheDocument();
   });
 
-  it("dismisses a notice marked as fading", () => {
+  it("leaves a notice marked as fading standing past a success's time", () => {
     const onDismiss = vi.fn();
     render(<Alerts items={[{ kind: "notice", message: "אתמול חצה סף", fades: true }]}
                    onDismiss={onDismiss} />);
 
     act(() => vi.advanceTimersByTime(5000));
 
+    expect(onDismiss).not.toHaveBeenCalled();
+  });
+
+  it("dismisses a notice marked as fading", () => {
+    const onDismiss = vi.fn();
+    render(<Alerts items={[{ kind: "notice", message: "אתמול חצה סף", fades: true }]}
+                   onDismiss={onDismiss} />);
+
+    act(() => vi.advanceTimersByTime(10_000));
+
     expect(onDismiss).toHaveBeenCalledOnce();
+  });
+
+  it("turns the named word of a message into the link it carries", () => {
+    const onClick = vi.fn();
+    render(<Alerts items={[{ kind: "crossing", message: "אתמול חצה סף",
+                            link: { word: "אתמול", onClick } }]} onDismiss={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "אתמול" }));
+
+    expect(onClick).toHaveBeenCalledOnce();
+    expect(screen.getByText(/חצה סף/)).toHaveClass("crossing");
   });
 
   it("keeps a fading notice on screen while an unmarked item shares its batch", () => {
