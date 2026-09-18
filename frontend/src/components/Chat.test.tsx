@@ -1445,4 +1445,180 @@ describe("Chat", () => {
     expect(chatApi.ask).not.toHaveBeenCalled();
     expect(screen.getByRole("textbox")).toHaveValue("שאלה");
   });
+
+  describe("text search", () => {
+    // One own chat and one shared chat name חלבון — the own one in its question, the shared one
+    // in its answer — so a query for it has to reach both lists and past the question text.
+    function searchable(overrides: Partial<ChatApi> = {}): ChatApi {
+      return api({
+        getChatTranscript: vi.fn().mockResolvedValue({ turns: [
+          { ...turn(2), question: "כמה חלבון ביום?", answer: "לפי המשקל" },
+          { ...turn(1), question: "מתי לישון?", answer: "שינה מוקדמת" },
+        ] }),
+        getPublicChats: vi.fn().mockResolvedValue({ chats: OTHERS.chats }),
+        getChatCount: counted(2, 0, OTHERS.chats.length),
+        ...overrides,
+      });
+    }
+
+    async function search(query: string) {
+      await userEvent.click(screen.getByRole("button", { name: "חיפוש בצ'אטים" }));
+      await userEvent.type(screen.getByRole("textbox", { name: "מילות חיפוש" }), query);
+      await userEvent.click(screen.getByRole("button", { name: "סינון" }));
+    }
+
+    it("offers no funnel while neither side holds a chat to search", async () => {
+      render(<Chat email="a@gmail.com" api={api()} sampleQuestions={[]} answerPollSeconds={POLL_SECONDS} />);
+      await screen.findByRole("button", { name: "אין צ'אטים של משתמשים אחרים" });
+
+      expect(screen.queryByRole("button", { name: "חיפוש בצ'אטים" })).not.toBeInTheDocument();
+    });
+
+    it("offers the funnel once either side holds a chat", async () => {
+      render(<Chat email="a@gmail.com" api={withOthers(OTHERS.chats)} sampleQuestions={[]} answerPollSeconds={POLL_SECONDS} />);
+
+      expect(await screen.findByRole("button", { name: "חיפוש בצ'אטים" })).toBeInTheDocument();
+    });
+
+    it("clears the composer's room while the form is open, and gives it back when it closes", async () => {
+      const samples = [{ label: "חלבון", question: "כמה חלבון ביום?" }];
+      render(<Chat email="a@gmail.com" api={searchable()} sampleQuestions={samples} answerPollSeconds={POLL_SECONDS} />);
+      await screen.findByText("מתי לישון?");
+
+      const funnel = screen.getByRole("button", { name: "חיפוש בצ'אטים" });
+      await userEvent.click(funnel);
+
+      expect(screen.queryByRole("button", { name: "חלבון" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("textbox", { name: "שאלה" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "שליחה" })).not.toBeInTheDocument();
+
+      await userEvent.click(funnel);
+
+      expect(screen.getByRole("button", { name: "חלבון" })).toBeInTheDocument();
+      expect(screen.getByRole("textbox", { name: "שאלה" })).toBeInTheDocument();
+    });
+
+    it("keeps the words in force after the form closes", async () => {
+      render(<Chat email="a@gmail.com" api={searchable()} sampleQuestions={[]} answerPollSeconds={POLL_SECONDS} />);
+      await screen.findByText("מתי לישון?");
+      await search("חלבון");
+
+      await userEvent.click(screen.getByRole("button", { name: "חיפוש בצ'אטים" }));
+
+      expect(screen.queryByText("מתי לישון?")).not.toBeInTheDocument();
+      expect(screen.getByText("כמה חלבון ביום?")).toBeInTheDocument();
+    });
+
+    it("keeps only the chats holding the word, on both sides", async () => {
+      render(<Chat email="a@gmail.com" api={searchable()} sampleQuestions={[]} answerPollSeconds={POLL_SECONDS} />);
+      await screen.findByText("מתי לישון?");
+
+      await search("חלבון");
+
+      expect(screen.getByText("כמה חלבון ביום?")).toBeInTheDocument();
+      expect(screen.queryByText("מתי לישון?")).not.toBeInTheDocument();
+      expect(await screen.findByText("מה מותר בערב?")).toBeInTheDocument();
+      expect(screen.queryByText("כמה מים?")).not.toBeInTheDocument();
+    });
+
+    it("reads the answer too, so a chat matches on what it was told", async () => {
+      render(<Chat email="a@gmail.com" api={searchable()} sampleQuestions={[]} answerPollSeconds={POLL_SECONDS} />);
+      await screen.findByText("מתי לישון?");
+
+      await search("המשקל");
+
+      expect(screen.getByText("כמה חלבון ביום?")).toBeInTheDocument();
+      expect(screen.queryByText("מתי לישון?")).not.toBeInTheDocument();
+    });
+
+    it("demands both words of an & query", async () => {
+      render(<Chat email="a@gmail.com" api={searchable()} sampleQuestions={[]} answerPollSeconds={POLL_SECONDS} />);
+      await screen.findByText("מתי לישון?");
+
+      await search("חלבון & המשקל");
+
+      expect(screen.getByText("כמה חלבון ביום?")).toBeInTheDocument();
+      expect(screen.queryByText("מתי לישון?")).not.toBeInTheDocument();
+    });
+
+    it("admits either side of a | query", async () => {
+      render(<Chat email="a@gmail.com" api={searchable()} sampleQuestions={[]} answerPollSeconds={POLL_SECONDS} />);
+      await screen.findByText("מתי לישון?");
+
+      await search("חלבון | לישון");
+
+      expect(screen.getByText("כמה חלבון ביום?")).toBeInTheDocument();
+      expect(screen.getByText("מתי לישון?")).toBeInTheDocument();
+    });
+
+    it("counts the matches and notes how many the query left out", async () => {
+      render(<Chat email="a@gmail.com" api={searchable()} sampleQuestions={[]} answerPollSeconds={POLL_SECONDS} />);
+      await screen.findByText("מתי לישון?");
+
+      await search("חלבון");
+
+      expect(await screen.findByRole("button", { name: "צ'אט קודם אחד שלי" })).toBeInTheDocument();
+      expect(await screen.findByRole("button", { name: "צ'אט אחד של משתמשים אחרים" })).toBeInTheDocument();
+      expect(screen.getAllByText("מסונן אחד")).toHaveLength(2);
+    });
+
+    it("opens both lists, which the query can only be read against once they are loaded", async () => {
+      const chatApi = searchable();
+      render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} answerPollSeconds={POLL_SECONDS} defaultTranscriptFolded />);
+      await screen.findByRole("button", { name: "2 צ'אטים קודמים שלי" });
+      expect(chatApi.getChatTranscript).not.toHaveBeenCalled();
+      expect(chatApi.getPublicChats).not.toHaveBeenCalled();
+
+      await search("חלבון");
+
+      expect(await screen.findByText("כמה חלבון ביום?")).toBeInTheDocument();
+      expect(await screen.findByText("מה מותר בערב?")).toBeInTheDocument();
+    });
+
+    it("lists every chat again once the query is cleared", async () => {
+      render(<Chat email="a@gmail.com" api={searchable()} sampleQuestions={[]} answerPollSeconds={POLL_SECONDS} />);
+      await screen.findByText("מתי לישון?");
+      await search("חלבון");
+      expect(screen.queryByText("מתי לישון?")).not.toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole("button", { name: "ניקוי החיפוש" }));
+
+      expect(screen.getByText("מתי לישון?")).toBeInTheDocument();
+      expect(await screen.findByText("כמה מים?")).toBeInTheDocument();
+    });
+
+    it("drops the query so a chat opened from the offer is not hidden by it", async () => {
+      const chatApi = searchable({
+        findExistingChat: vi.fn().mockResolvedValue({ own: { at: turn(1).at }, shared: null }),
+      });
+      render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} answerPollSeconds={POLL_SECONDS} />);
+      await screen.findByText("מתי לישון?");
+      await search("חלבון");
+      expect(screen.queryByText("מתי לישון?")).not.toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole("button", { name: "חיפוש בצ'אטים" }));
+      await userEvent.type(screen.getByRole("textbox", { name: "שאלה" }), "מתי לישון?");
+      await userEvent.click(screen.getByRole("button", { name: "שליחה" }));
+      await userEvent.click(await screen.findByRole("button", { name: "להציג את הצ'אט הקיים" }));
+
+      expect(await screen.findByText("שינה מוקדמת")).toBeInTheDocument();
+      expect(chatApi.ask).not.toHaveBeenCalled();
+    });
+
+    it("drops the query so an arriving answer is not hidden by it", async () => {
+      const chatApi = searchable({
+        ask: vi.fn().mockResolvedValue({ answer: "תשובה חדשה", sources: [], at: "2026-09-02T10:00:00" }),
+      });
+      render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} answerPollSeconds={POLL_SECONDS} />);
+      await screen.findByText("מתי לישון?");
+      await search("חלבון");
+
+      await userEvent.click(screen.getByRole("button", { name: "חיפוש בצ'אטים" }));
+      await userEvent.type(screen.getByRole("textbox", { name: "שאלה" }), "שאלה חדשה");
+      await userEvent.click(screen.getByRole("button", { name: "שליחה" }));
+
+      expect(await screen.findByText("תשובה חדשה")).toBeInTheDocument();
+      expect(screen.getByText("מתי לישון?")).toBeInTheDocument();
+    });
+  });
 });

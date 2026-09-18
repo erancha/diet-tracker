@@ -2,6 +2,7 @@ import { Fragment, useEffect, useRef, useState } from "react";
 import { ApiError, type Api } from "../api";
 import { ANSWER_LABEL, FOLLOW_UP_LABEL, ORIGINAL_LABEL, renderQuestion } from "../chatChain";
 import { storeChatFilter, storedChatFilter, type ChatFilter } from "../chatFilter";
+import { chatMatches } from "../chatSearch";
 import { storePublicCount, storedPublicCount } from "../publicCount";
 import { instantLabel } from "../dates";
 import { dropped, flipped } from "../setToggle";
@@ -50,13 +51,21 @@ function composeFollowUp(target: ChatTurn, question: string): string {
 // the folded condensed sign-in never pays for a transcript nobody opens, and the counts stand
 // in for the lists until then. The others' count is highlighted when it grew since the last
 // visit (publicCount), until the list is unfolded. The filter choice outlives the visit
-// (chatFilter);
-// an arriving answer widens it back to every chat. The menu's condensed/full command folds the
-// transcript, the condensed sign-in starts it folded, and sending always reveals it. Folding
-// either list closes every answer open in it, so it reopens with only the questions in view. A
-// question commanded from elsewhere (askCommand) is sent at once on the app's side of the filter
-// and handed back through onAskCommandTaken, so a remount cannot ask twice; a follow-up inherits
-// the side and the visibility of the chat it extends.
+// (chatFilter); an arriving answer widens it back to every chat. The menu's condensed/full
+// command folds the transcript, the condensed sign-in starts it folded, and sending always
+// reveals it. Folding either list closes every answer open in it, so it reopens with only the
+// questions in view. A question commanded from elsewhere (askCommand) is sent at once on the
+// app's side of the filter and handed back through onAskCommandTaken, so a remount cannot ask
+// twice; a follow-up inherits the side and the visibility of the chat it extends.
+//
+// A funnel above both lists unfolds a search box whose words narrow each of them to the chats
+// holding them, question and answer alike (chatSearch). The open box takes the place of the
+// sample questions and the composer rather than stacking above them, the two boxes being a phone
+// screen apart otherwise; closing it gives them back without lifting the words. It applies within
+// the side filter, and opens and loads both lists — words can only be read against chats that are
+// in. Each count then names the matches with the rest beside it, and an arriving answer drops the
+// words as it widens the side. The words last the visit alone, a search being a momentary act
+// rather than the standing preference the side filter is.
 //
 // A standalone typed question is first looked up: when the user, or another user who shared the
 // chat, already asked it, an offer under the composer opens that chat — loading and unfolding
@@ -116,6 +125,11 @@ export function Chat({ email, api, sampleQuestions, answerPollSeconds,
   const [error, setError] = useState<string | null>(null);
   const [transcriptFolded, setTranscriptFolded] = useState(defaultTranscriptFolded);
   const [filter, setFilter] = useState<ChatFilter>(storedChatFilter);
+  // The words both lists are narrowed to, or "" while the whole of each is listed. Only the
+  // submitted query narrows; the draft is what the form holds meanwhile.
+  const [query, setQuery] = useState("");
+  const [queryDraft, setQueryDraft] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
   const [othersFolded, setOthersFolded] = useState(true);
   // Other users' shared chats, or null until first unfolded; folding keeps what was loaded.
   const [others, setOthers] = useState<PublicChat[] | null>(null);
@@ -214,8 +228,10 @@ export function Chat({ email, api, sampleQuestions, answerPollSeconds,
   const send = async (question: string, target: ChatTurn | null, app = false) => {
     setError(null);
     setTranscriptFolded(false);
-    // The answer must not land outside the listed side of the transcript.
+    // The answer must not land outside what the transcript lists — neither the wrong side of it
+    // nor outside the searched words.
     setFilter("all");
+    setQuery("");
     setPendingQuestion(question);
     try {
       const asked = target === null ? question : composeFollowUp(target, question);
@@ -282,11 +298,13 @@ export function Chat({ email, api, sampleQuestions, answerPollSeconds,
   };
 
   // Opens the offered chat: the user's own when there is one, else the shared one. Either list
-  // is unfolded, and loaded if it never was, so the chat is focused only once rendered.
+  // is unfolded, and loaded if it never was, so the chat is focused only once rendered. The
+  // filters give way first — a chat the search or the side holds back cannot be opened.
   const reveal = () => {
     const found = existing!;
     setExisting(null);
     setDraft("");
+    setQuery("");
     if (found.own !== null) {
       setFilter("all");
       setTranscriptFolded(false);
@@ -434,28 +452,61 @@ export function Chat({ email, api, sampleQuestions, answerPollSeconds,
     </>
   );
 
-  // What the filter admits: the loaded chats once the transcript is in, the server's figures
-  // before — every chat, the ones the user shared, the app's, or the rest.
-  const listed = turns === null ? []
+  // What the filters admit: the loaded chats once the transcript is in, the server's figures
+  // before — every chat, the ones the user shared, the app's, or the rest — and within that side,
+  // the ones the query's words reach. A query is read against a chat's question and its answer.
+  // The server counts no words, so a standing query leaves a list's figure unknown until the
+  // list itself is loaded.
+  const searching = query !== "";
+  const sided = turns === null ? []
     : filter === "all" ? turns
     : filter === "shared" ? turns.filter((turn) => turn.visibility !== null)
     : turns.filter((turn) => turn.app === (filter === "app"));
+  const listed = sided.filter((turn) => chatMatches(query, turn.question, turn.answer));
   const ownTotal = turns === null ? count?.own_total : turns.length;
   const listedCount = turns !== null ? listed.length
-    : count === null ? undefined
+    : searching || count === null ? undefined
     : filter === "all" ? count.own_total
     : filter === "app" ? count.own_app
     : filter === "shared" ? count.own_shared : count.own_total - count.own_app;
   const filteredOut = ownTotal === undefined || listedCount === undefined ? 0 : ownTotal - listedCount;
+  const listedOthers = others === null ? []
+    : others.filter((chat) => chatMatches(query, chat.question, chat.answer));
   const othersTotal = others === null ? count?.public_total : others.length;
+  const othersListedCount = others !== null ? listedOthers.length
+    : searching ? undefined : count?.public_total;
+  const othersFilteredOut = othersTotal === undefined || othersListedCount === undefined
+    ? 0 : othersTotal - othersListedCount;
   // A toggle's figure, bold; the others' one is highlighted while it stands for chats added
   // since the last visit.
   const figure = (text: string, grew = false) =>
     <strong className={grew ? "count count-new" : "count"}>{text}</strong>;
+  // How many of a list's chats the filters hold back, beside its count.
+  const filteredOutNote = (held: number) => held > 0 && (
+    <span className="transcript-filtered-out">
+      {held === 1 ? "מסונן אחד" : `${held} מסוננים`}
+    </span>
+  );
 
-  return (
-    <div className="chat">
-      {sampleQuestions.length > 0 && (
+  // Applying a query opens both lists: the words can only be read against chats that are loaded,
+  // and a narrowed list the reader cannot see says nothing.
+  const applySearch = () => {
+    const words = queryDraft.trim();
+    setQuery(words);
+    if (words === "") return;
+    setTranscriptFolded(false);
+    setOthersGrew(false);
+    setOthersFolded(false);
+  };
+
+  // A funnel over two empty lists has nothing to narrow, so it waits for the first chat on
+  // either side.
+  const searchable = (ownTotal !== undefined && ownTotal > 0)
+    || (othersTotal !== undefined && othersTotal > 0);
+
+  const search = (
+    <div className="chat-search">
+      {!searchOpen && sampleQuestions.length > 0 && (
         <div className="chat-samples">
           {sampleQuestions.map((sample) => (
             <button key={sample.label} type="button" className="secondary compact"
@@ -463,7 +514,32 @@ export function Chat({ email, api, sampleQuestions, answerPollSeconds,
           ))}
         </div>
       )}
-      {replyTo === null && pendingQuestion === null && composer}
+      {searchable && (
+        <button type="button" className={searching ? "glyph chat-search-on" : "glyph"}
+          aria-label="חיפוש בצ'אטים" aria-expanded={searchOpen}
+          onClick={() => setSearchOpen((open) => !open)}><Icon name="filter" /></button>
+      )}
+      {searchOpen && (
+        <form onSubmit={(event) => { event.preventDefault(); applySearch(); }}>
+          <textarea rows={2} value={queryDraft} aria-label="מילות חיפוש"
+            placeholder="מילה | מילה — אחת מהן, מילה & מילה — שתיהן"
+            onChange={(event) => setQueryDraft(event.target.value)} />
+          <div className="chat-search-actions">
+            <button type="submit" className="secondary compact">סינון</button>
+            {searching && (
+              <button type="button" className="secondary compact"
+                onClick={() => { setQuery(""); setQueryDraft(""); }}>ניקוי החיפוש</button>
+            )}
+          </div>
+        </form>
+      )}
+    </div>
+  );
+
+  return (
+    <div className="chat">
+      {search}
+      {!searchOpen && replyTo === null && pendingQuestion === null && composer}
       {error && <div className="alert">{error}</div>}
       {ownTotal !== undefined && ownTotal > 0 && (
         <div className="transcript-head">
@@ -474,15 +550,12 @@ export function Chat({ email, api, sampleQuestions, answerPollSeconds,
               scrollTranscriptOnOpen.current = transcriptFolded;
               setTranscriptFolded((folded) => !folded);
             }}>
-            {listedCount === 0 ? "אין צ'אטים קודמים שלי"
+            {listedCount === undefined ? "צ'אטים קודמים שלי"
+              : listedCount === 0 ? "אין צ'אטים קודמים שלי"
               : listedCount === 1 ? <>צ'אט קודם {figure("אחד")} שלי</>
               : <>{figure(String(listedCount))} צ'אטים קודמים שלי</>}
           </button>
-          {filteredOut > 0 && (
-            <span className="transcript-filtered-out">
-              {filteredOut === 1 ? "מסונן אחד" : `${filteredOut} מסוננים`}
-            </span>
-          )}
+          {filteredOutNote(filteredOut)}
           <select className="transcript-filter" aria-label="סינון הצ'אטים" value={filter}
             onChange={(event) => {
               const chosen = event.target.value as ChatFilter;
@@ -558,19 +631,21 @@ export function Chat({ email, api, sampleQuestions, answerPollSeconds,
       {othersTotal !== undefined && (
         <div className="transcript-head">
           <button type="button" className="disclosure others-toggle" aria-expanded={!othersFolded}
-            disabled={othersTotal === 0}
+            disabled={othersListedCount === 0}
             onClick={() => {
               setOthersGrew(false);
               setOthersFolded((folded) => !folded);
             }}>
-            {othersTotal === 0 ? "אין צ'אטים של משתמשים אחרים"
-              : othersTotal === 1 ? <>צ'אט {figure("אחד", othersGrew)} של משתמשים אחרים</>
-              : <>{figure(String(othersTotal), othersGrew)} צ'אטים של משתמשים אחרים</>}
+            {othersListedCount === undefined ? "צ'אטים של משתמשים אחרים"
+              : othersListedCount === 0 ? "אין צ'אטים של משתמשים אחרים"
+              : othersListedCount === 1 ? <>צ'אט {figure("אחד", othersGrew)} של משתמשים אחרים</>
+              : <>{figure(String(othersListedCount), othersGrew)} צ'אטים של משתמשים אחרים</>}
           </button>
+          {filteredOutNote(othersFilteredOut)}
         </div>
       )}
       {!othersFolded && (others === null ? <p>טוען…</p>
-        : <PublicChatList chats={others} api={api} onError={setError} reveal={revealOthersAt}
+        : <PublicChatList chats={listedOthers} api={api} onError={setError} reveal={revealOthersAt}
                           onRevealed={() => setRevealOthersAt(null)} />)}
     </div>
   );

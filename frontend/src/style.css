@@ -901,18 +901,36 @@ main:not(.intro-0, .intro-1, .intro-2, .intro-3, .intro-4) .weight .section-togg
                         border-block-start-color: transparent; border-radius: 50%;
                         animation: spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
-.chat-samples { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.5rem; font-size: 0.85rem; }
+/* Takes the row's spare width so the chips wrap inside it rather than sizing to their longest
+   line, which would push the funnel beside them onto a row of its own. */
+.chat-samples { flex: 1; display: flex; flex-wrap: wrap; gap: 0.4rem; font-size: 0.85rem; }
 .chat form { display: flex; gap: 0.5rem; margin-bottom: 0.875rem; }
 .chat .composer { flex: 1; position: relative; display: flex; }
+/* Content-sized so a long question or query shows in full with no inner scrollbar; browsers
+   without field-sizing keep the minimum box and scroll past it. */
+.chat textarea { padding: 0.3rem 0.4rem; font: inherit; resize: none; field-sizing: content;
+                 min-height: 2lh; max-height: 6lh; }
 /* End padding reserves the strip the clear icon overlays, so long questions slide under it
-   instead of colliding with it. Content-sized so a pasted sample question shows in full with no
-   inner scrollbar; browsers without field-sizing keep the minimum box and scroll past it. */
-.chat .composer textarea { flex: 1; padding: 0.3rem 0.4rem; padding-inline-end: 2.2rem;
-                           font: inherit; resize: none; field-sizing: content;
-                           min-height: 2lh; max-height: 6lh; }
+   instead of colliding with it. */
+.chat .composer textarea { flex: 1; padding-inline-end: 2.2rem; }
 /* Lighter than the browser default, which sits close enough to typed text that a prompt reads as
    a question already written. */
-.chat .composer textarea::placeholder { color: #bdbdbd; opacity: 1; }
+.chat textarea::placeholder { color: #bdbdbd; opacity: 1; }
+/* The text search above both chat lists: a funnel unfolding a form whose words each list is
+   narrowed to. It shares the sample questions' row, which never fills the line, so the search
+   costs no height of its own; with the form open those questions give way and it stands alone.
+   The words need the room a question gets, so the box takes the whole line and its controls
+   follow on the next one. */
+.chat-search { display: flex; flex-wrap: wrap; align-items: start; margin-bottom: 0.5rem; }
+.chat-search > .glyph { margin-inline-start: auto; }
+.chat-search form { flex-basis: 100%; flex-wrap: wrap; justify-content: flex-end; margin-bottom: 0; }
+.chat-search textarea { flex-basis: 100%; }
+/* Applying and clearing sit under the box, set off from the counts the words act on so the row
+   does not read as part of the list heading below it. */
+.chat-search-actions { display: flex; gap: 0.5rem; margin-block-end: 0.75rem; }
+/* A funnel standing over a query in force carries the accent, so a narrowed list reads as
+   narrowed even with the form folded away. */
+.chat-search-on { --btn-fg: var(--accent); }
 .chat .clear-draft { position: absolute; inset-inline-end: 0.2rem; top: 50%; transform: translateY(-50%); }
 /* Heads the relocated composer while a reply is in progress, carrying its cancel control. */
 .chat .reply-chip { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.35rem;

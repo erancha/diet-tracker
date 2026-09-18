@@ -121,6 +121,16 @@ before the upstream call, and the admin is notified when a user reaches it. Ever
 stored per user, so the transcript survives reloads and follows its user across devices, and a chat
 the app wrote — the weekly recap — is marked as such in the list.
 
+Both lists — the user's own chats and the ones others shared — are narrowed by two filters. One
+picks a side of the own transcript: every chat, only the ones the user asked, only the ones the
+app wrote, or only the ones the user shared; that choice is remembered for the next visit. The
+other is a search, opened from a funnel above the lists: its words narrow both lists to the chats
+holding them, in the question or in the answer, with `|` between words admitting a chat holding
+any of them and `&` demanding all, `&` binding tighter. A search lasts the visit alone. Each list
+then counts its matches and says beside that how many chats the filters are holding back, and a
+question sent, or an earlier chat opened from the composer's offer, widens both filters so the
+chat in hand is not one of the chats held back.
+
 An answer can take longer than the API holds a browser's request, which is 30 seconds. The chat
 keeps waiting on the answering service past that and stores the answer when it comes, so the app,
 its request having failed with no reason from the chat, reads the transcript every few seconds

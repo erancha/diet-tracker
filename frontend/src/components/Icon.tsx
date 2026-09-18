@@ -18,6 +18,7 @@ const GLYPHS = {
   openDay: <><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
              <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" /></>,
   menu: <><path d="M3 6h18" /><path d="M3 12h18" /><path d="M3 18h18" /></>,
+  filter: <path d="M3 4h18l-7 8.5V19l-4 2v-8.5Z" />,
   foldAll: <><path d="m7 20 5-5 5 5" /><path d="m7 4 5 5 5-5" /></>,
   unfoldAll: <><path d="m7 15 5 5 5-5" /><path d="m7 9 5-5 5 5" /></>,
   alarmOff: <><path d="M8.7 3A6 6 0 0 1 18 8a21.3 21.3 0 0 0 .6 5" />
