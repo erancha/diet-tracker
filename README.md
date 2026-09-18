@@ -81,6 +81,7 @@ file.
 
 - [Feature overview](docs/features.md) — what each part of the app does, in full
 - [Architecture](docs/architecture.md) — how it is put together and where each piece runs
+- [Design patterns](docs/design-patterns.md) — the shapes the code repeats, and what each one is for
 - [Domain rules](docs/domain-rules.md) — how a meal is scored, how a day opens and closes, and
   what each reminder is for
 - [Development & deployment](docs/development.md) — local setup, tests, deploy scripts, and
