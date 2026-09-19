@@ -45,9 +45,9 @@ const threeMealDay: DayPayload = {
 
 // Pins the clock: the meal form's default time is derived from it, as are the future-time guard
 // on the submit button and the hour that starts the add-meal nudge on an unrecorded day.
-const atLocalTime = (hour: number, minute = 0) => {
+const atLocalTime = (hour: number, minute = 0, day = 20) => {
   vi.useFakeTimers({ toFake: ["Date"] });
-  vi.setSystemTime(new Date(2026, 7, 20, hour, minute));
+  vi.setSystemTime(new Date(2026, 7, day, hour, minute));
 };
 
 // Past every hour a clock can report, so cases not about the first-meal nudge always arrive
@@ -56,6 +56,9 @@ const atLocalTime = (hour: number, minute = 0) => {
 const TREAT_DAY = { weekday: "FRI" };
 
 const NO_NUDGE_HOUR = 24;
+
+// The app's own day_close.close_until: how far past midnight a day's log keeps running.
+const STRETCHES_UNTIL = "02:00";
 
 // Longer than any gap a clock can open, so cases not about the stale-meal nudge always arrive
 // with a quiet toggle, however old the day fixture's meals are.
@@ -95,7 +98,7 @@ describe("DayTracker", () => {
 
   it("starts expanded on an empty day whatever the hour", () => {
     atLocalTime(9);
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={emptyDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={emptyDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -105,7 +108,7 @@ describe("DayTracker", () => {
   });
 
   it("starts expanded however recently the last meal was recorded", () => {
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={dayWithMealHoursAgo(1)}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={dayWithMealHoursAgo(1)}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -115,7 +118,7 @@ describe("DayTracker", () => {
   });
 
   it("derives the dashboard from the recorded meals, not the payload's derived copy", () => {
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={staleDerivedDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={staleDerivedDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -128,7 +131,7 @@ describe("DayTracker", () => {
 
   it("close-day submits values derived from the recorded meals", () => {
     const onCloseDay = vi.fn();
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={wideWindowDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={wideWindowDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -141,7 +144,7 @@ describe("DayTracker", () => {
   });
 
   it("renders each meal's time in bold", () => {
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={trackedDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={trackedDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -151,7 +154,7 @@ describe("DayTracker", () => {
   });
 
   it("titles the per-meal carbs picker with the meal-level text, not the score summary", () => {
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={emptyDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={emptyDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -163,7 +166,7 @@ describe("DayTracker", () => {
 
   it("records a meal with the picked grade, vegetables, fruit and additions", () => {
     const onAddMeal = vi.fn();
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={emptyDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={emptyDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={onAddMeal} onUpdateMeal={vi.fn()}
@@ -186,7 +189,7 @@ describe("DayTracker", () => {
 
   it("records each checked addition at the amount picked beside it", () => {
     const onAddMeal = vi.fn();
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={emptyDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={emptyDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={onAddMeal} onUpdateMeal={vi.fn()}
@@ -213,7 +216,7 @@ describe("DayTracker", () => {
                 second_source: null }],
       derived: { carbs: 7, meals: 1, vegetables: 0, eating_window: 0 },
     };
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={day}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={day}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -230,7 +233,7 @@ describe("DayTracker", () => {
                 second_source: null }],
       derived: { carbs: 9, meals: 1, vegetables: 0, eating_window: 0 },
     };
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={day}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={day}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -241,7 +244,7 @@ describe("DayTracker", () => {
   });
 
   it("offers the portion picker only on grades worth splitting by helping", () => {
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={emptyDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={emptyDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -256,7 +259,7 @@ describe("DayTracker", () => {
 
   it("records the picked portion, and drops it when the grade no longer offers one", () => {
     const onAddMeal = vi.fn();
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={emptyDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={emptyDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={onAddMeal} onUpdateMeal={vi.fn()}
@@ -282,7 +285,7 @@ describe("DayTracker", () => {
 
   it("defaults an offered portion to the full helping", () => {
     const onAddMeal = vi.fn();
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={emptyDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={emptyDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={onAddMeal} onUpdateMeal={vi.fn()}
@@ -297,7 +300,7 @@ describe("DayTracker", () => {
   it("opens spelled out by default, before any density has been chosen", () => {
     window.localStorage.removeItem(GRADE_LABELS_KEY);
     atLocalTime(19, 5);
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={trackedDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={trackedDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -309,7 +312,7 @@ describe("DayTracker", () => {
 
   it("switches the grade reading on demand, in the picker and the rows alike", () => {
     atLocalTime(19, 5);
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={trackedDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={trackedDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -332,7 +335,7 @@ describe("DayTracker", () => {
   it("spells out the picked grade for a second in the picker while names are condensed", () => {
     vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout"] });
     vi.setSystemTime(new Date(2026, 7, 20, 19, 5));
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={trackedDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={trackedDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -353,7 +356,7 @@ describe("DayTracker", () => {
 
   it("withholds the density switch while no grade name is on screen", () => {
     atLocalTime(19, 5);
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={emptyDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={emptyDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -366,7 +369,7 @@ describe("DayTracker", () => {
 
   it("keeps the density switch over a recorded meal while the inputs are folded", () => {
     atLocalTime(19, 5);
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={trackedDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={trackedDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -376,7 +379,7 @@ describe("DayTracker", () => {
 
   it("seats the density switch on the day's heading row and folds it away with the tracker", () => {
     atLocalTime(19, 5);
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={trackedDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={trackedDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -390,7 +393,7 @@ describe("DayTracker", () => {
   });
 
   it("offers a second source only beside a light primary, over every grade but the plain no-carb one", () => {
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={emptyDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={emptyDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -409,7 +412,7 @@ describe("DayTracker", () => {
 
   it("records a heavy second source at the picked helping", () => {
     const onAddMeal = vi.fn();
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={emptyDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={emptyDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={onAddMeal} onUpdateMeal={vi.fn()}
@@ -429,7 +432,7 @@ describe("DayTracker", () => {
 
   it("defaults a heavy second source to the full helping", () => {
     const onAddMeal = vi.fn();
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={emptyDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={emptyDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={onAddMeal} onUpdateMeal={vi.fn()}
@@ -445,7 +448,7 @@ describe("DayTracker", () => {
 
   it("records a light second source with no helping and offers no picker for it", () => {
     const onAddMeal = vi.fn();
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={emptyDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={emptyDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={onAddMeal} onUpdateMeal={vi.fn()}
@@ -463,7 +466,7 @@ describe("DayTracker", () => {
 
   it("holds a recorded second source through a primary repick the contract bars", () => {
     const onAddMeal = vi.fn();
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={emptyDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={emptyDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={onAddMeal} onUpdateMeal={vi.fn()}
@@ -479,7 +482,7 @@ describe("DayTracker", () => {
 
   it("bars the save while the picked primary cannot carry the second source, and frees it on removal", () => {
     const onAddMeal = vi.fn();
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={emptyDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={emptyDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={onAddMeal} onUpdateMeal={vi.fn()}
@@ -501,7 +504,7 @@ describe("DayTracker", () => {
 
   it("records no second source once the group is removed", () => {
     const onAddMeal = vi.fn();
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={emptyDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={emptyDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={onAddMeal} onUpdateMeal={vi.fn()}
@@ -518,7 +521,7 @@ describe("DayTracker", () => {
 
   it("records no second source from a group left open and unanswered", () => {
     const onAddMeal = vi.fn();
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={emptyDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={emptyDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={onAddMeal} onUpdateMeal={vi.fn()}
@@ -538,7 +541,7 @@ describe("DayTracker", () => {
                 second_source: { carbs_choice: "carb_grade_7", portion: "small" } }],
     };
     const onUpdateMeal = vi.fn();
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={twoSourceDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={twoSourceDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={onUpdateMeal}
@@ -555,7 +558,7 @@ describe("DayTracker", () => {
 
   it("records the picked choice id even when another choice shares its numeric value", () => {
     const onAddMeal = vi.fn();
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={emptyDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={emptyDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={onAddMeal} onUpdateMeal={vi.fn()}
@@ -568,7 +571,7 @@ describe("DayTracker", () => {
 
   it("defaults the meal time to the five-minute boundary just passed", () => {
     atLocalTime(12, 27);
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={emptyDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={emptyDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -580,7 +583,7 @@ describe("DayTracker", () => {
   it("records a meal at the picked time rather than the submission moment", () => {
     atLocalTime(16, 5);
     const onAddMeal = vi.fn();
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={emptyDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={emptyDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={onAddMeal} onUpdateMeal={vi.fn()}
@@ -594,7 +597,7 @@ describe("DayTracker", () => {
 
   it("returns the meal time to the default estimate after a meal is recorded", () => {
     atLocalTime(16, 5);
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={emptyDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={emptyDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -611,7 +614,7 @@ describe("DayTracker", () => {
   it("refuses to record a meal at a time the day has not reached yet", () => {
     atLocalTime(13, 0);
     const onAddMeal = vi.fn();
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={emptyDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={emptyDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={onAddMeal} onUpdateMeal={vi.fn()}
@@ -624,7 +627,7 @@ describe("DayTracker", () => {
   });
 
   it("loads a recorded meal into the meal form when its edit button is tapped", () => {
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={trackedDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={trackedDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()} onDeleteMeal={vi.fn()}
@@ -641,7 +644,7 @@ describe("DayTracker", () => {
   it("sends the edited meal under its own id and returns the form to recording", () => {
     atLocalTime(19, 5);
     const onUpdateMeal = vi.fn();
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={trackedDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={trackedDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={onUpdateMeal} onDeleteMeal={vi.fn()}
@@ -662,7 +665,7 @@ describe("DayTracker", () => {
     atLocalTime(19, 5);
     const onUpdateMeal = vi.fn();
     const confirmSpy = vi.spyOn(window, "confirm");
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={trackedDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={trackedDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={onUpdateMeal} onDeleteMeal={vi.fn()}
@@ -682,7 +685,7 @@ describe("DayTracker", () => {
   it("keeps a diverged edit when its discard dialog is dismissed", () => {
     atLocalTime(19, 5);
     vi.spyOn(window, "confirm").mockReturnValue(false);
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={trackedDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={trackedDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()} onDeleteMeal={vi.fn()}
@@ -699,7 +702,7 @@ describe("DayTracker", () => {
   it("discards a diverged edit once its dialog is confirmed", () => {
     atLocalTime(19, 5);
     const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={trackedDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={trackedDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()} onDeleteMeal={vi.fn()}
@@ -716,7 +719,7 @@ describe("DayTracker", () => {
   it("treats a re-picked addition as a divergence worth confirming", () => {
     atLocalTime(19, 5);
     const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={trackedDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={trackedDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()} onDeleteMeal={vi.fn()}
@@ -729,14 +732,14 @@ describe("DayTracker", () => {
 
   it("falls back to recording when the meal being edited is deleted", () => {
     const { rerender } = render(
-      <DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={trackedDay}
+      <DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={trackedDay}
                   firstMealHour={NO_NUDGE_HOUR}
                   mealGapHours={NO_NUDGE_GAP_HOURS}
                   onAddMeal={vi.fn()} onUpdateMeal={vi.fn()} onDeleteMeal={vi.fn()}
                   onCloseDay={vi.fn()} />);
     fireEvent.click(screen.getByRole("button", { name: "עריכת ארוחה 13:30" }));
 
-    rerender(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire}
+    rerender(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire}
                          firstMealHour={NO_NUDGE_HOUR}
                          mealGapHours={NO_NUDGE_GAP_HOURS}
                          day={{ ...trackedDay, meals: [trackedDay.meals[0]] }}
@@ -748,7 +751,7 @@ describe("DayTracker", () => {
   });
 
   it("collapses to the dashboard alone and expands back on header toggle", () => {
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={wideWindowDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={wideWindowDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -770,7 +773,7 @@ describe("DayTracker", () => {
   });
 
   it("starts with the meal inputs folded behind the actions and the meal list", () => {
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={wideWindowDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={wideWindowDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -785,7 +788,7 @@ describe("DayTracker", () => {
   });
 
   it("keeps the toggle quiet while the last meal is younger than the gap", () => {
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={4}
                        day={dayWithMealHoursAgo(3)}
@@ -797,7 +800,7 @@ describe("DayTracker", () => {
   });
 
   it("keeps the inputs folded but blinks the toggle once the gap since the last meal passed", () => {
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={4}
                        day={dayWithMealHoursAgo(5)}
@@ -809,7 +812,7 @@ describe("DayTracker", () => {
   });
 
   it("greys the add-meal toggle while the last meal is under three and a half hours old", () => {
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={4}
                        day={dayWithMealHoursAgo(3)}
@@ -819,7 +822,7 @@ describe("DayTracker", () => {
   });
 
   it("gives the toggle its colour back once three and a half hours have passed", () => {
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={4}
                        day={dayWithMealHoursAgo(3.5)}
@@ -832,17 +835,17 @@ describe("DayTracker", () => {
     const props = { questionnaire, firstMealHour: NO_NUDGE_HOUR, mealGapHours: 4,
                     onAddMeal: vi.fn(), onUpdateMeal: vi.fn(), onDeleteMeal: vi.fn(),
                     onCloseDay: vi.fn() };
-    const { rerender } = render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} {...props} day={dayWithMealHoursAgo(5)} />);
+    const { rerender } = render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} {...props} day={dayWithMealHoursAgo(5)} />);
     expect(mealFormSection()).toHaveClass("nudge-0");
 
-    rerender(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} {...props} day={dayWithMealHoursAgo(1)} />);
+    rerender(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} {...props} day={dayWithMealHoursAgo(1)} />);
 
     expect(mealFormSection().className).not.toMatch(/nudge/);
   });
 
   it("blinks the toggle from the first-meal hour on a day with nothing recorded", () => {
     atLocalTime(11);
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={emptyDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={emptyDay}
                        firstMealHour={11}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -854,7 +857,7 @@ describe("DayTracker", () => {
 
   it("keeps the toggle quiet before the first-meal hour", () => {
     atLocalTime(10, 59);
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={emptyDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={emptyDay}
                        firstMealHour={11}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -864,7 +867,7 @@ describe("DayTracker", () => {
 
   it("keeps the toggle quiet past the hour once the day has a recorded meal", () => {
     atLocalTime(15);
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={trackedDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={trackedDay}
                        firstMealHour={11}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -874,7 +877,7 @@ describe("DayTracker", () => {
 
   it("pauses the nudge while the inputs are open and resumes it when they fold again", () => {
     atLocalTime(11);
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={emptyDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={emptyDay}
                        firstMealHour={11}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -890,7 +893,7 @@ describe("DayTracker", () => {
   it("escalates the blink after ten seconds and settles into the slow beat after twenty", () => {
     vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout"] });
     vi.setSystemTime(new Date(2026, 7, 20, 11, 0));
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={emptyDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={emptyDay}
                        firstMealHour={11}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -909,7 +912,7 @@ describe("DayTracker", () => {
   });
 
   it("unfolds the meal inputs when a recorded meal is opened for editing", () => {
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        day={dayWithMealHoursAgo(1)}
@@ -926,7 +929,7 @@ describe("DayTracker", () => {
 
   it("folds the meal inputs away once a meal is recorded", () => {
     atLocalTime(19, 5);
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={emptyDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={emptyDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -942,7 +945,7 @@ describe("DayTracker", () => {
 
   it("folds the meal inputs away once a correction is sent", () => {
     atLocalTime(19, 5);
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={trackedDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={trackedDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -957,7 +960,7 @@ describe("DayTracker", () => {
 
   it("offers saving an edit only once it diverges from the stored meal", () => {
     atLocalTime(19, 5);
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={trackedDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={trackedDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -974,7 +977,7 @@ describe("DayTracker", () => {
   it("closes an untouched recording form from its cancel button without asking", () => {
     atLocalTime(19, 5);
     const confirmSpy = vi.spyOn(window, "confirm");
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={emptyDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={emptyDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -993,7 +996,7 @@ describe("DayTracker", () => {
   it("discards a half-composed meal from the destructive cancel button", () => {
     atLocalTime(19, 5);
     const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={emptyDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={emptyDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -1011,7 +1014,7 @@ describe("DayTracker", () => {
 
   it("folds the meal inputs away when an edit is cancelled", () => {
     atLocalTime(19, 5);
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={trackedDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={trackedDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -1027,7 +1030,7 @@ describe("DayTracker", () => {
   it("leaves an untouched edit when the meal inputs are folded away", () => {
     atLocalTime(19, 5);
     const confirmSpy = vi.spyOn(window, "confirm");
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={trackedDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={trackedDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -1047,7 +1050,7 @@ describe("DayTracker", () => {
   it("folds an untouched recording form away without asking", () => {
     atLocalTime(11);
     const confirmSpy = vi.spyOn(window, "confirm");
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={emptyDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={emptyDay}
                        firstMealHour={11}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -1063,7 +1066,7 @@ describe("DayTracker", () => {
   it("keeps a half-composed meal and its open inputs when the fold's dialog is dismissed", () => {
     atLocalTime(19, 5);
     const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={emptyDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={emptyDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -1082,7 +1085,7 @@ describe("DayTracker", () => {
   it("resets a half-composed meal once the fold's dialog is confirmed", () => {
     atLocalTime(19, 5);
     const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={emptyDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={emptyDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -1105,7 +1108,7 @@ describe("DayTracker", () => {
   it("folds the form from the corner close button, through the same discard guard", () => {
     atLocalTime(19, 5);
     const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={emptyDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={emptyDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -1123,7 +1126,7 @@ describe("DayTracker", () => {
   it("asks before folding away a meal time picked off the opening default", () => {
     atLocalTime(19, 5);
     const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={emptyDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={emptyDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -1139,7 +1142,7 @@ describe("DayTracker", () => {
   it("unfolds the recording form without asking, whatever the clock has done meanwhile", () => {
     atLocalTime(19, 5);
     const confirmSpy = vi.spyOn(window, "confirm");
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={emptyDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={emptyDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -1158,7 +1161,7 @@ describe("DayTracker", () => {
   it("keeps a diverged edit and its open inputs when the fold's dialog is dismissed", () => {
     atLocalTime(19, 5);
     vi.spyOn(window, "confirm").mockReturnValue(false);
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={trackedDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={trackedDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -1176,7 +1179,7 @@ describe("DayTracker", () => {
   it("discards a diverged edit once the fold's dialog is confirmed", () => {
     atLocalTime(19, 5);
     const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={trackedDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={trackedDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -1193,7 +1196,7 @@ describe("DayTracker", () => {
   });
 
   it("renders the score bold and last in the dashboard", () => {
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={trackedDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={trackedDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -1204,7 +1207,7 @@ describe("DayTracker", () => {
   });
 
   it("exposes the carbs tooltip on the dashboard score", () => {
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={trackedDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={trackedDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -1215,7 +1218,7 @@ describe("DayTracker", () => {
   it("shows the day's derived values and meal list with delete", () => {
     const onDeleteMeal = vi.fn();
     vi.spyOn(window, "confirm").mockReturnValue(true);
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={trackedDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={trackedDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -1233,7 +1236,7 @@ describe("DayTracker", () => {
   });
 
   it("disables a meal's delete button only while its deletion is in flight", () => {
-    const props = { maxMealsPerDay: NO_CAP_MEALS, closeMinWindowHours: 6, questionnaire, day: trackedDay,
+    const props = { maxMealsPerDay: NO_CAP_MEALS, closeMinWindowHours: 6, stretchesUntil: STRETCHES_UNTIL, questionnaire, day: trackedDay,
                     firstMealHour: NO_NUDGE_HOUR, mealGapHours: NO_NUDGE_GAP_HOURS,
                     onAddMeal: vi.fn(), onUpdateMeal: vi.fn(), onDeleteMeal: vi.fn(),
                     onCloseDay: vi.fn() };
@@ -1248,7 +1251,7 @@ describe("DayTracker", () => {
   });
 
   it("lists meals in time order, oldest first", () => {
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={trackedDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={trackedDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -1258,7 +1261,7 @@ describe("DayTracker", () => {
   });
 
   it("shows each meal's effective points at the end of its row", () => {
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={trackedDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={trackedDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -1268,7 +1271,7 @@ describe("DayTracker", () => {
   });
 
   it("gives each meal's time its own cell, so a wrapped description never runs under it", () => {
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={trackedDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={trackedDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -1281,7 +1284,7 @@ describe("DayTracker", () => {
   });
 
   it("gives each meal's points their own cell so the scores hold a column", () => {
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={trackedDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={trackedDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -1295,7 +1298,7 @@ describe("DayTracker", () => {
   });
 
   it("names the meal's score through the carbs tooltip, so the bare number is explained", () => {
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={trackedDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={trackedDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -1315,7 +1318,7 @@ describe("DayTracker", () => {
                 portion: null, second_source: null }],
       derived: { carbs: 17, meals: 1, vegetables: 0, eating_window: 0 },
     };
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={additionsDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={additionsDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -1325,7 +1328,7 @@ describe("DayTracker", () => {
   });
 
   it("marks each meal's row controls with the glyph role", () => {
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={trackedDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={trackedDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -1337,7 +1340,7 @@ describe("DayTracker", () => {
 
   it("close-day asks for water and submits derived values plus drinking", () => {
     const onCloseDay = vi.fn();
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={wideWindowDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={wideWindowDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -1350,7 +1353,7 @@ describe("DayTracker", () => {
   });
 
   it("the close-day button leaves once its panel opens, so the flow ends in the confirm", () => {
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={wideWindowDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={wideWindowDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -1365,7 +1368,7 @@ describe("DayTracker", () => {
   it("walks the opened close panel into view and hands focus to the water choices", () => {
     const scrollIntoView = vi.spyOn(Element.prototype, "scrollIntoView")
       .mockImplementation(() => {});
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={wideWindowDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={wideWindowDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -1380,7 +1383,7 @@ describe("DayTracker", () => {
   });
 
   it("the close flow does not linger past the close into a reopened day", () => {
-    const props = { maxMealsPerDay: NO_CAP_MEALS, closeMinWindowHours: 6, questionnaire, day: wideWindowDay,
+    const props = { maxMealsPerDay: NO_CAP_MEALS, closeMinWindowHours: 6, stretchesUntil: STRETCHES_UNTIL, questionnaire, day: wideWindowDay,
                     firstMealHour: NO_NUDGE_HOUR, mealGapHours: NO_NUDGE_GAP_HOURS,
                     onAddMeal: vi.fn(), onUpdateMeal: vi.fn(), onDeleteMeal: vi.fn(),
                     onCloseDay: vi.fn(), onReopenDay: vi.fn() };
@@ -1399,7 +1402,7 @@ describe("DayTracker", () => {
 
   it("offers closing at whatever minimum window the config sets", () => {
     // trackedDay spans 4.5 hours: under the repo's six-hour bound, over a configured four.
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={4}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={4} stretchesUntil={STRETCHES_UNTIL}
                        questionnaire={questionnaire} day={trackedDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
@@ -1410,7 +1413,7 @@ describe("DayTracker", () => {
 
   it("close-day stays hidden until the recorded meals span six hours", () => {
     const { rerender } = render(
-      <DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={trackedDay}
+      <DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={trackedDay}
                   firstMealHour={NO_NUDGE_HOUR}
                   mealGapHours={NO_NUDGE_GAP_HOURS}
                   onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -1418,7 +1421,7 @@ describe("DayTracker", () => {
     expect(dashboardFigure("חלון")).toHaveTextContent("חלון: 5 שעות");
     expect(screen.queryByRole("button", { name: "סגירת יום" })).toBeNull();
 
-    rerender(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={wideWindowDay}
+    rerender(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={wideWindowDay}
                          firstMealHour={NO_NUDGE_HOUR}
                          mealGapHours={NO_NUDGE_GAP_HOURS}
                          onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -1429,7 +1432,7 @@ describe("DayTracker", () => {
 
   it("folds the close-day panel away when a deletion narrows the window below six hours", () => {
     const { rerender } = render(
-      <DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={wideWindowDay}
+      <DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={wideWindowDay}
                   firstMealHour={NO_NUDGE_HOUR}
                   mealGapHours={NO_NUDGE_GAP_HOURS}
                   onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -1437,7 +1440,7 @@ describe("DayTracker", () => {
     fireEvent.click(screen.getByRole("button", { name: "סגירת יום" }));
     expect(screen.getByRole("button", { name: "אישור וסגירה" })).toBeInTheDocument();
 
-    rerender(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={trackedDay}
+    rerender(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={trackedDay}
                          firstMealHour={NO_NUDGE_HOUR}
                          mealGapHours={NO_NUDGE_GAP_HOURS}
                          onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -1448,7 +1451,7 @@ describe("DayTracker", () => {
   it("close-day saves the composed meal itself and continues into closing", () => {
     const onAddMeal = vi.fn();
     const onCloseDay = vi.fn();
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={wideWindowDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={wideWindowDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={onAddMeal} onUpdateMeal={vi.fn()}
@@ -1466,7 +1469,7 @@ describe("DayTracker", () => {
   });
 
   it("close-day locks only while the composed meal cannot be saved yet", () => {
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={wideWindowDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={wideWindowDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -1479,7 +1482,7 @@ describe("DayTracker", () => {
   });
 
   it("close-day's confirm waits for the meal it saved to land in the day's figures", () => {
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={wideWindowDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={wideWindowDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS} savingMeal
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -1491,7 +1494,7 @@ describe("DayTracker", () => {
 
   it("a meal composed after the close-day panel opened locks its confirm the same way", () => {
     const onCloseDay = vi.fn();
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={wideWindowDay}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={wideWindowDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -1512,21 +1515,21 @@ describe("DayTracker", () => {
       derived: { carbs: 0, meals: 1, vegetables: 1, eating_window: 0 },
     };
     const { rerender } = render(
-      <DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={emptyDay}
+      <DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={emptyDay}
                   firstMealHour={NO_NUDGE_HOUR}
                   mealGapHours={NO_NUDGE_GAP_HOURS}
                   onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                   onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     expect(screen.queryByRole("button", { name: "סגירת יום" })).toBeNull();
 
-    rerender(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={singleMealDay}
+    rerender(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={singleMealDay}
                          firstMealHour={NO_NUDGE_HOUR}
                          mealGapHours={NO_NUDGE_GAP_HOURS}
                          onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                          onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     expect(screen.queryByRole("button", { name: "סגירת יום" })).toBeNull();
 
-    rerender(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={wideWindowDay}
+    rerender(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={wideWindowDay}
                          firstMealHour={NO_NUDGE_HOUR}
                          mealGapHours={NO_NUDGE_GAP_HOURS}
                          onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -1536,7 +1539,7 @@ describe("DayTracker", () => {
 
   // trackedDay holds two meals, so a cap of two is the day at its quota and three is under it.
   const renderWithCap = (maxMealsPerDay: number) =>
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={maxMealsPerDay} closeMinWindowHours={6} questionnaire={questionnaire}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={maxMealsPerDay} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire}
                        day={trackedDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
@@ -1567,7 +1570,7 @@ describe("DayTracker", () => {
   const renderYesterday = (payload: DayPayload, onAddMeal = vi.fn()) => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date(2026, 7, 21, 0, 30));
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire} day={payload}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={payload}
                        isToday={false}
                        firstMealHour={0} mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={onAddMeal} onUpdateMeal={vi.fn()}
@@ -1617,7 +1620,7 @@ describe("DayTracker", () => {
   // toggle asks to reopen the eating window, and confirming hands the day-record deletion to
   // the same path the history table uses.
   const renderClosed = (onReopenDay = vi.fn()) => {
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire}
                        day={trackedDay} closed onReopenDay={onReopenDay}
                        firstMealHour={NO_NUDGE_HOUR} mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -1647,7 +1650,7 @@ describe("DayTracker", () => {
   it("reopens the closed day once the eating-window question is confirmed, form ready", () => {
     vi.spyOn(window, "confirm").mockReturnValue(true);
     const onReopenDay = vi.fn();
-    const props = { maxMealsPerDay: NO_CAP_MEALS, closeMinWindowHours: 6, questionnaire, day: trackedDay, onReopenDay,
+    const props = { maxMealsPerDay: NO_CAP_MEALS, closeMinWindowHours: 6, stretchesUntil: STRETCHES_UNTIL, questionnaire, day: trackedDay, onReopenDay,
                     firstMealHour: NO_NUDGE_HOUR, mealGapHours: NO_NUDGE_GAP_HOURS,
                     onAddMeal: vi.fn(), onUpdateMeal: vi.fn(), onDeleteMeal: vi.fn(),
                     onCloseDay: vi.fn() };
@@ -1672,7 +1675,7 @@ describe("DayTracker", () => {
   it("reopens the closed day from its last meal's pencil, that meal loaded for correction", () => {
     vi.spyOn(window, "confirm").mockReturnValue(true);
     const onReopenDay = vi.fn();
-    const props = { maxMealsPerDay: NO_CAP_MEALS, closeMinWindowHours: 6, questionnaire, day: trackedDay, onReopenDay,
+    const props = { maxMealsPerDay: NO_CAP_MEALS, closeMinWindowHours: 6, stretchesUntil: STRETCHES_UNTIL, questionnaire, day: trackedDay, onReopenDay,
                     firstMealHour: NO_NUDGE_HOUR, mealGapHours: NO_NUDGE_GAP_HOURS,
                     onAddMeal: vi.fn(), onUpdateMeal: vi.fn(), onDeleteMeal: vi.fn(),
                     onCloseDay: vi.fn() };
@@ -1700,7 +1703,7 @@ describe("DayTracker", () => {
   // the add-meal controls themselves — the form toggle's label and the closed day's reopen
   // control — before that meal exists to redden a history row.
   const renderWithMeals = (day: DayPayload, closed = false) =>
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} questionnaire={questionnaire}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire}
                        day={day} closed={closed} onReopenDay={vi.fn()}
                        firstMealHour={NO_NUDGE_HOUR} mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -1729,7 +1732,7 @@ describe("DayTracker", () => {
   });
 
   it("warns on the treat day as on any other day", () => {
-    render(<DayTracker treatDay={{ weekday: "THU" }} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6}
+    render(<DayTracker treatDay={{ weekday: "THU" }} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL}
                        questionnaire={questionnaire} day={threeMealDay} onReopenDay={vi.fn()}
                        firstMealHour={NO_NUDGE_HOUR} mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
@@ -1767,7 +1770,7 @@ describe("DayTracker score breakdown", () => {
             { ...trackedDay.meals[1], carbs_choice: "carb_grade_7", additions: [{ id: "sweet", amount: "much" }] }],
   };
   const renderHeavy = () =>
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL}
                        questionnaire={questionnaire} day={heavyDay}
                        firstMealHour={NO_NUDGE_HOUR} mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()} onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
@@ -1795,10 +1798,67 @@ describe("DayTracker score breakdown", () => {
   });
 
   it("offers no breakdown on a day within the rule", () => {
-    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6}
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL}
                        questionnaire={questionnaire} day={trackedDay}
                        firstMealHour={NO_NUDGE_HOUR} mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()} onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     expect(screen.queryByRole("button", { name: "פירוט הציון" })).toBeNull();
+  });
+});
+
+describe("a day's log stretching past midnight", () => {
+  afterEach(() => { window.localStorage.clear(); vi.useRealTimers(); });
+  beforeEach(() => window.localStorage.setItem(GRADE_LABELS_KEY, "false"));
+
+  // 00:30 on 21.8, with 20.8's log still the one the tracker stands on.
+  const inTheSmallHours = () => {
+    atLocalTime(0, 30, 21);
+    const onAddMeal = vi.fn();
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL}
+                       questionnaire={questionnaire} day={trackedDay} isToday={false}
+                       firstMealHour={NO_NUDGE_HOUR} mealGapHours={NO_NUDGE_GAP_HOURS}
+                       onAddMeal={onAddMeal} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    openMealForm();
+    return onAddMeal;
+  };
+
+  it("records a small-hours meal on the night's own date, in the day it ran out of", () => {
+    const onAddMeal = inTheSmallHours();
+    fireEvent.change(screen.getByLabelText("שעת הארוחה"), { target: { value: "00:30" } });
+    fireEvent.click(screen.getByLabelText("דרגה 4"));
+    fireEvent.click(screen.getByRole("button", { name: "שמירת ארוחה" }));
+    expect(onAddMeal.mock.calls[0][0].at).toMatch(/^2026-08-21T00:30:00[+-]\d{2}:\d{2}$/);
+  });
+
+  it("keeps an evening time on the log's own date", () => {
+    const onAddMeal = inTheSmallHours();
+    fireEvent.change(screen.getByLabelText("שעת הארוחה"), { target: { value: "21:40" } });
+    fireEvent.click(screen.getByLabelText("דרגה 4"));
+    fireEvent.click(screen.getByRole("button", { name: "שמירת ארוחה" }));
+    expect(onAddMeal.mock.calls[0][0].at).toMatch(/^2026-08-20T21:40:00[+-]\d{2}:\d{2}$/);
+  });
+
+  it("refuses a small-hours time the clock has not reached yet", () => {
+    inTheSmallHours();
+    fireEvent.change(screen.getByLabelText("שעת הארוחה"), { target: { value: "01:00" } });
+    fireEvent.click(screen.getByLabelText("דרגה 4"));
+    expect(screen.getByText("לא ניתן לרשום ארוחה בשעה עתידית")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "שמירת ארוחה" })).toBeDisabled();
+  });
+
+  it("sends a small-hours time picked on a running day's own log to yesterday's log", () => {
+    atLocalTime(9);
+    render(<DayTracker treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} stretchesUntil={STRETCHES_UNTIL}
+                       questionnaire={questionnaire} day={trackedDay}
+                       firstMealHour={NO_NUDGE_HOUR} mealGapHours={NO_NUDGE_GAP_HOURS}
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    openMealForm();
+    fireEvent.change(screen.getByLabelText("שעת הארוחה"), { target: { value: "00:30" } });
+    fireEvent.click(screen.getByLabelText("דרגה 4"));
+    expect(screen.getByText("שעה זו שייכת ליום הקודם — ניתן לרשום אותה ביומן אתמול"))
+      .toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "שמירת ארוחה" })).toBeDisabled();
   });
 });

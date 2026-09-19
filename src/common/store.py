@@ -4,10 +4,21 @@ float/int in app code and as Decimal inside DynamoDB; the conversion lives here 
 else."""
 
 import secrets
+from datetime import date, datetime, time
 from decimal import Decimal
 
 import boto3
 from boto3.dynamodb.conditions import Key
+
+
+def _elapsed_in_day(day, at) -> str:
+    """The "HH:MM:SS" a meal is keyed under within its day: hours elapsed from that day's own
+    midnight, so sort-key order stays chronological. A day stretches into the small hours of the
+    next date, and a meal eaten there keys past the twenty-fourth hour rather than back at zero."""
+    elapsed = (datetime.fromisoformat(at).replace(tzinfo=None)
+               - datetime.combine(date.fromisoformat(day), time.min))
+    hours, rest = divmod(int(elapsed.total_seconds()), 3600)
+    return f"{hours:02d}:{rest // 60:02d}:{rest % 60:02d}"
 
 
 def _to_dynamo(value):
@@ -182,9 +193,9 @@ class Store:
         """Stores one meal, returning its id. The meal is a mapping over MEAL_ATTRIBUTES, which is
         also the shape the API validates a request body into: projecting through that tuple keeps
         anything else a caller happens to carry out of the record."""
-        # Time-of-day prefix keeps sort-key order chronological; the random suffix separates
-        # same-second reports.
-        meal_id = f"{meal['at'][11:19]}-{secrets.token_hex(3)}"
+        # The random suffix separates same-second reports, which the elapsed prefix alone collides
+        # on.
+        meal_id = f"{_elapsed_in_day(day, meal['at'])}-{secrets.token_hex(3)}"
         self._meals.put_item(Item={
             "pk": user_sub, "sk": f"{day}#{meal_id}",
             **{name: meal[name] for name in MEAL_ATTRIBUTES},
@@ -209,10 +220,10 @@ class Store:
 
     def replace_meal(self, user_sub, day, meal_id, meal) -> str:
         """Rewrites one meal wholesale, returning its new id; raises KeyError when no such meal
-        exists. The id carries the meal's time to keep the sort key chronological, so a corrected
-        time necessarily moves the meal to a new id. The replacement is written before the
-        original is removed: an interrupted correction leaves a duplicate the user can delete,
-        never a meal that silently disappeared."""
+        exists. The id carries how far into the day the meal falls to keep the sort key
+        chronological, so a corrected time necessarily moves the meal to a new id. The
+        replacement is written before the original is removed: an interrupted correction leaves a
+        duplicate the user can delete, never a meal that silently disappeared."""
         if "Item" not in self._meals.get_item(Key={"pk": user_sub, "sk": f"{day}#{meal_id}"}):
             raise KeyError(meal_id)
         new_id = self.add_meal(user_sub, day, meal)

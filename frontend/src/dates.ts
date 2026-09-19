@@ -159,3 +159,32 @@ export function mealTooSoon(now: Date, minGapHours: number,
                             meals: readonly { at: string }[]): boolean {
   return meals.length > 0 && sinceLastMeal(now, meals) < minGapHours * MS_PER_HOUR;
 }
+
+// Client-local ISO timestamp with offset — the eating window is the user's clock, not UTC.
+function localIso(at: Date): string {
+  const tz = -at.getTimezoneOffset();
+  const sign = tz >= 0 ? "+" : "-";
+  const pad = (n: number) => String(Math.abs(n)).padStart(2, "0");
+  return `${at.getFullYear()}-${pad(at.getMonth() + 1)}-${pad(at.getDate())}` +
+    `T${pad(at.getHours())}:${pad(at.getMinutes())}:${pad(at.getSeconds())}` +
+    `${sign}${pad(Math.trunc(tz / 60))}:${pad(tz % 60)}`;
+}
+
+// The instant a meal picked as "HH:MM" on an open day's log was eaten. An eating day stretches
+// past midnight up to stretchUntil (day_close.close_until), so on the previous day's log a
+// small-hours time names the night that ended it and carries the following date — the meal stays
+// in that day's record, sorting last and widening its eating window.
+export function mealInstant(day: string, picked: string, isToday: boolean,
+                            stretchUntil: string): string {
+  const at = parseIsoDate(day);
+  if (!isToday && picked < stretchUntil) at.setDate(at.getDate() + 1);
+  const [hours, minutes] = picked.split(":").map(Number);
+  at.setHours(hours, minutes, 0, 0);
+  return localIso(at);
+}
+
+// Whether a picked time falls before the open day even began. Today's log runs from stretchUntil,
+// so an earlier time belongs to yesterday's record and cannot be recorded here.
+export function beforeDayStart(picked: string, isToday: boolean, stretchUntil: string): boolean {
+  return isToday && picked < stretchUntil;
+}

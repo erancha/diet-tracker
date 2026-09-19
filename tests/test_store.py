@@ -377,3 +377,18 @@ def test_deleting_a_weight_removes_only_that_day(store):
 def test_deleting_a_day_that_holds_no_weight_raises(store):
     with pytest.raises(KeyError):
         store.delete_weight("u1", "2026-08-27")
+
+
+def test_a_meal_eaten_past_midnight_sorts_after_the_evening_it_followed(store):
+    """The day a meal is keyed under runs past midnight, so the sort key counts hours elapsed
+    from that day's own start rather than the wall clock the meal reads."""
+    store.add_meal("u1", "2026-08-20", meal("2026-08-20T09:10:00+03:00", "carb_grade_3"))
+    store.add_meal("u1", "2026-08-20", meal("2026-08-21T00:30:00+03:00", "carb_grade_3"))
+    store.add_meal("u1", "2026-08-20", meal("2026-08-20T21:40:00+03:00", "carb_grade_3"))
+    assert [m["at"][11:16] for m in store.get_meals("u1", "2026-08-20")] == [
+        "09:10", "21:40", "00:30"]
+
+
+def test_a_crossing_meal_is_keyed_past_the_twenty_fourth_hour(store):
+    meal_id = store.add_meal("u1", "2026-08-20", meal("2026-08-21T00:30:00+03:00", "no_carbs"))
+    assert meal_id.startswith("24:30:00-")

@@ -38,9 +38,35 @@
         ]
       },
       {
+        "id": "meals",
+        "type": "single",
+        "text": "שכפ\"צ - צמצום מספר ארוחות",
+        "day_title": "מספר ארוחות",
+        "unit": "ארוחות",
+        "choices": [
+          {
+            "id": "m2",
+            "label": "2 ארוחות",
+            "value": 2
+          },
+          {
+            "id": "m3",
+            "label": "3 ארוחות",
+            "value": 3
+          },
+          {
+            "id": "over_3",
+            "label": "מעל 3 / נשנושים !!",
+            "value": 4,
+            "bound": true
+          }
+        ]
+      },
+      {
         "id": "vegetables",
         "type": "single",
         "text": "שכפ\"צ - כמות ירקות",
+        "day_title": "מספר ארוחות עם ירקות",
         "unit": "ארוחות",
         "warn_below": 2,
         "norm": 2,
@@ -103,30 +129,6 @@
             "id": "over_12",
             "label": "מעל 12 שעות !!",
             "value": 13,
-            "bound": true
-          }
-        ]
-      },
-      {
-        "id": "meals",
-        "type": "single",
-        "text": "שכפ\"צ - צמצום מספר ארוחות",
-        "unit": "ארוחות",
-        "choices": [
-          {
-            "id": "m2",
-            "label": "2 ארוחות",
-            "value": 2
-          },
-          {
-            "id": "m3",
-            "label": "3 ארוחות",
-            "value": 3
-          },
-          {
-            "id": "over_3",
-            "label": "מעל 3 ארוחות / נשנושים בין הארוחות !!",
-            "value": 4,
             "bound": true
           }
         ]

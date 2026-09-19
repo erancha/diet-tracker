@@ -1,7 +1,8 @@
-import { useState, type KeyboardEvent } from "react";
-import type { AnsweredDay, Questionnaire, TreatDaySettings } from "../types";
+import { Fragment, useState, type KeyboardEvent } from "react";
+import type { Day, Questionnaire, TreatDaySettings } from "../types";
 import { daysBefore, fallsOn, weekdayDdmmLabel } from "../dates";
-import { headedValue, isBoundValue, isViolating, questionTitle } from "../violations";
+import { EXCLUDED_SCORE_LABEL, headedValue, isBoundValue, isViolating, panelTitle, questionTitle, scoreLabel }
+  from "../violations";
 import { Icon } from "./Icon";
 
 // Window lengths the reader can choose between, shortest first. The longest is bounded by the
@@ -14,7 +15,7 @@ interface Props {
   // The weekday whose crossings paint softer: judged like any day, but what it costs is what it
   // is for.
   treatDay: TreatDaySettings;
-  days: AnsweredDay[];
+  days: Day[];
   // Anchors the visible window: rows are kept from this date back over the chosen range. It is
   // today rather than the newest recorded date, so a stretch with nothing recorded reads as the
   // gap it is instead of scrolling older days up into the week.
@@ -42,13 +43,13 @@ function DeleteDayButton({ date, onDelete }: { date: string; onDelete: (date: st
   );
 }
 
-function daysWithin(days: AnsweredDay[], today: string, range: Range): AnsweredDay[] {
+function daysWithin(days: Day[], today: string, range: Range): Day[] {
   return days.filter((day) => day.date >= daysBefore(today, range - 1));
 }
 
 // A wider range is offered only where the history reaches past every range already on offer: one
 // that would redraw the same rows is a control that appears to do nothing.
-function offeredRanges(days: AnsweredDay[], today: string): Range[] {
+function offeredRanges(days: Day[], today: string): Range[] {
   const [shortest, ...wider] = RANGES;
   const offered: Range[] = [shortest];
   let widest = daysWithin(days, today, shortest).length;
@@ -87,6 +88,15 @@ export function HistoryTable({ questionnaire, treatDay, days, today, deletableDa
   const cellText = (questionId: string, value: number) =>
     headedValue(questionnaire.questions.find((q) => q.id === questionId)!, value);
 
+  // The columns the table carries. A question that charts a trend panel is read there instead, so
+  // only the ones charting nowhere tabulate — except the score, which stays as the row's headline
+  // and the control that opens a day's log.
+  const columns = questionnaire.questions.filter(
+    (q) => panelTitle(q) === undefined || q.type === "points");
+  // The score column, whose crossing the row's ground reports. A questionnaire without one leaves
+  // every row plain.
+  const scoreQuestion = columns.find((q) => q.type === "points");
+
   const offered = offeredRanges(days, today);
   // Deleting the last day beyond the chosen range withdraws that range mid-choice; the window
   // falls back to the default rather than leaving the picker with nothing marked.
@@ -101,16 +111,30 @@ export function HistoryTable({ questionnaire, treatDay, days, today, deletableDa
           <thead>
             <tr>
               <th>תאריך</th>
-              {questionnaire.questions.map((q) => <th key={q.id} title={q.tooltip}>{questionTitle(q, "day")}</th>)}
+              {columns.map((q) => (q.type === "points"
+                ? <Fragment key={q.id}>
+                    <th>{EXCLUDED_SCORE_LABEL}</th>
+                    <th title={q.tooltip}>{questionTitle(q, "day")}</th>
+                  </Fragment>
+                : <th key={q.id} title={q.tooltip}>{questionTitle(q, "day")}</th>))}
             </tr>
           </thead>
           <tbody>
-            {visibleDays.map((day) => (
-              <tr key={day.date}>
+            {visibleDays.map((day) => {
+              // The day's score crossing its rule is what the row's ground reports, and a treat
+              // day's crossing paints amber rather than red. The score column carries no mark of
+              // its own: the ground behind it says the same thing across the whole row.
+              const heavy = scoreQuestion !== undefined && scoreQuestion.id in day.answers
+                && isViolating(questionnaire, scoreQuestion.id, day.answers[scoreQuestion.id]);
+              const softened = heavy && fallsOn(day.date, treatDay.weekday);
+              return (
+              <tr key={day.date}
+                  className={[heavy && "heavy-row", softened && "treat-day"]
+                    .filter(Boolean).join(" ") || undefined}>
                 <td>{weekdayDdmmLabel(day.date)}</td>
-                {questionnaire.questions.map((q, index) => {
+                {columns.map((q, index) => {
                   // Deletion rides in the row's last cell, where it costs no column width of its own.
-                  const deletion = index === questionnaire.questions.length - 1
+                  const deletion = index === columns.length - 1
                     && day.date === viewedDate && deletableDates.has(day.date)
                     ? <DeleteDayButton date={day.date} onDelete={onDelete} />
                     : null;
@@ -119,24 +143,23 @@ export function HistoryTable({ questionnaire, treatDay, days, today, deletableDa
                   const value = day.answers[q.id];
                   const viewable = q.type === "points";
                   const violating = isViolating(questionnaire, q.id, value);
-                  const softened = violating && fallsOn(day.date, treatDay.weekday);
                   // A bound label is truncated to the row's single-line height by the stylesheet,
                   // so its cell carries the full wording in its title.
                   const bound = q.type !== "points" && isBoundValue(q, value);
-                  // The score column signals a heavy day with red text alone; the violation
-                  // background stays on the answer columns, where a value under its question's
-                  // warn floor reddens without it.
+                  // The violation background belongs to the answer columns, where a value under
+                  // its question's warn floor reddens without it. The score column leaves its
+                  // crossing to the row's ground and keeps only what opens the day view.
                   const classes = [
                     ...(q.type === "points"
-                      ? [violating && "heavy-day", viewable && "view-day"]
+                      ? [viewable && "view-day"]
                       : [violating && "violation",
+                         violating && fallsOn(day.date, treatDay.weekday) && "treat-day",
                          q.warn_below !== undefined && value < q.warn_below && "shortfall",
                          q.norm !== undefined && value !== q.norm && "off-norm",
                          bound && "bound"]),
-                    softened && "treat-day",
                     deleteClass,
                   ].filter(Boolean).join(" ");
-                  return (
+                  const cell = (
                     <td key={q.id} className={classes || undefined}
                         title={bound ? cellText(q.id, value) : undefined}
                         {...(viewable && {
@@ -153,9 +176,14 @@ export function HistoryTable({ questionnaire, treatDay, days, today, deletableDa
                       {deletion}
                     </td>
                   );
+                  // The excluded subtotal decomposes the score, so it reads immediately beside it.
+                  return q.type === "points"
+                    ? <Fragment key={q.id}><td>{scoreLabel(day.excluded)}</td>{cell}</Fragment>
+                    : cell;
                 })}
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>

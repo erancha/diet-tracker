@@ -61,8 +61,11 @@ recorded stands as a gap in it rather than shortening it.
 - A dot turns red on a day that crossed its rule's limit, and each panel heading names the limit
   it is drawn against.
 
-Below the chart, the same days appear as a table, newest first, one column per question. Tapping a
-day's score opens that day's meal log, read-only.
+Below the chart, the same days appear as a table, newest first. A value with a panel of its own is
+read there rather than tabulated, so the columns are the questions charting nowhere, the excluded
+subtotal, and the day's score. A day whose score crossed the rule grounds its whole row — faintly,
+under any cell mark, and amber rather than red on the treat day — with the score itself bold.
+Tapping a day's score opens that day's meal log, read-only.
 
 Opening the app greets a crossing rather than leaving it to be found: when yesterday or the running
 day has already crossed a bound, a notice names which of them and clears itself after ten seconds,

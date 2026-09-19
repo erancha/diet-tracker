@@ -43,6 +43,11 @@ def body_of(response):
     return json.loads(response["body"])
 
 
+def tomorrow():
+    """The date a meal timed past midnight carries while still belonging to today's record."""
+    return days_before(today(), -1)
+
+
 def meal_body(carbs_choice, vegetables, fruit, additions, at_time, portion, second_source,
               day=None):
     """The body both recording and correcting a meal take, so the two helpers cannot drift."""
@@ -52,16 +57,16 @@ def meal_body(carbs_choice, vegetables, fruit, additions, at_time, portion, seco
 
 
 def add_meal(carbs_choice="carb_grade_3", vegetables=True, fruit=False, additions=(),
-             at_time="09:10:00", portion=None, second_source=None):
+             at_time="09:10:00", portion=None, second_source=None, day=None):
     return api.handler(request("POST /meals", meal_body(
-        carbs_choice, vegetables, fruit, additions, at_time, portion, second_source)), None)
+        carbs_choice, vegetables, fruit, additions, at_time, portion, second_source, day)), None)
 
 
 def update_meal(meal_id, carbs_choice="carb_grade_3", vegetables=True, fruit=False, additions=(),
                 portion=None,
-                at_time="09:10:00", date=None, second_source=None):
+                at_time="09:10:00", date=None, second_source=None, day=None):
     return api.handler(request("PUT /meals/{date}/{id}", meal_body(
-        carbs_choice, vegetables, fruit, additions, at_time, portion, second_source),
+        carbs_choice, vegetables, fruit, additions, at_time, portion, second_source, day),
         path_params={"date": date or today(), "id": meal_id}), None)
 
 
@@ -770,3 +775,22 @@ def _age_verification_reading(minutes):
     state = store.get_nudge_state("u1")
     aged = datetime.fromisoformat(state["ses"]["at"]) - timedelta(minutes=minutes)
     store.put_nudge_state("u1", {**state, "ses": {**state["ses"], "at": aged.isoformat()}})
+
+
+def test_a_meal_eaten_past_midnight_lands_on_the_day_it_ran_out_of(env):
+    """An eating day stretches into the small hours, so a meal timed past midnight belongs to the
+    day that ran into it — and widens that day's eating window rather than opening the next."""
+    payload = body_of(add_meal("no_carbs", at_time="09:10:00"))
+    assert payload["date"] == today()
+    payload = body_of(add_meal("no_carbs", at_time="00:30:00", day=tomorrow()))
+    assert payload["date"] == today()
+    assert [m["at"][11:16] for m in payload["meals"]] == ["09:10", "00:30"]
+    assert payload["derived"]["eating_window"] == 16
+
+
+def test_correcting_a_meal_into_the_small_hours_keeps_it_in_its_own_day(env):
+    meal_id = body_of(add_meal("no_carbs", at_time="21:40:00"))["meals"][0]["id"]
+    payload = body_of(update_meal(meal_id, "no_carbs", at_time="00:30:00",
+                                  day=tomorrow()))
+    assert payload["date"] == today()
+    assert [m["at"][11:16] for m in payload["meals"]] == ["00:30"]

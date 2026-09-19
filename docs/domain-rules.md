@@ -118,8 +118,10 @@ view's score.
   close over the corrected log.
 - **Small-hours grace window** — a day left unclosed at midnight does not vanish: while the clock
   is still before the configured `day_close.close_until`, an unclosed yesterday holding meals
-  stays the tracker's target — its late meals can still be recorded or corrected, dated within
-  it, and its closing still lands on it. A just-closed yesterday stays on as well, reopenable,
+  stays the tracker's target — its late meals can still be recorded or corrected, and its closing
+  still lands on it. A day's eating stretches to that same bound, so a meal timed past midnight
+  carries the new date while staying in the record of the day that ran into it: it sorts last in
+  that day's log and widens its eating window rather than opening the next day's. A just-closed yesterday stays on as well, reopenable,
   until the delete bound. Past what applies, the tracker hands over to today. Deleting
   yesterday's record shuts earlier, at `day_close.delete_until`, which never
   outlives the close bound — so no deletion can leave a day that could not be re-closed. The API
@@ -200,8 +202,9 @@ questions, their numeric choice values (the carb meal-point weights among them),
 rules; its `version` is stamped on every closed day, so it tracks the questions and their
 values alone. Its `day_close` element holds the closing rules: the minimum eating window
 (`min_window_hours`), and the small-hours grace bounds — `close_until`, up to which an unclosed
-yesterday may still be closed and its meals written, and the never-later `delete_until`, up to
-which its record may still be deleted. Its `weight` element holds the weigh-in weekday and hour —
+yesterday may still be closed and its meals written, and which doubles as the hour a day's eating
+stretches to past midnight, and the never-later `delete_until`, up to which its record may still
+be deleted. Its `weight` element holds the weigh-in weekday and hour —
 the weekday doubling as the day the weekly recap goes out on, at midday — the chart's opening
 span, and the kilogram bounds both the API and the frontend input constrain to. Its `treat_day`
 element names the weekday the trend chart frames;
@@ -236,7 +239,7 @@ Scheduled jobs (EventBridge Scheduler, Asia/Jerusalem) run alongside the tracker
 
   The email opens with one line — how many of the seven days were closed — and under it one
   bullet per bound a day crossed, counted day by day the way the trend chart reddens a dot and the
-  history table a cell, in the wording the chart legend gives that bound. Flours and sugars are
+  history table marks the day, in the wording the chart legend gives that bound. Flours and sugars are
   counted apart, over the six days the program means to keep clear of them; the treat day is what
   they are for, so a day of it is never a finding. A week inside every bound says so in its one
   line. Dates, single days' values and every weekly average stay in the app, a tap away, where the

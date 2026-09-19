@@ -16,7 +16,7 @@ import boto3
 
 from common import (appconfig, chat_history, dates, notify, ses_identity, undelivered, users,
                     weight)
-from common.dates import closing_day, days_before, now_iso, today
+from common.dates import closing_day, days_before, meal_day, now_iso, today
 from common.derive import derive, excluded_by_day, excluded_points
 from common.log import get_logger
 from common.store import Store
@@ -273,17 +273,18 @@ def _additions_rejection(additions, questionnaire):
     return None
 
 
-def _meal_rejection(body, allowed, questionnaire):
+def _meal_rejection(body, allowed, stretch_until, questionnaire):
     """The 400 response a meal body earns when a field cannot be stored, or None when the whole
     body is legal. Recording and correcting a meal take identical bodies, so they share it. The
-    meal's own timestamp names the day it lands on, which must be among the allowed days."""
+    day a meal lands on is derived from its own timestamp against the stretch bound, and must be
+    among the allowed days."""
     try:
         at = datetime.fromisoformat(body["at"])
     except ValueError:
         return _response(400, {"error": f"at ({body['at']!r}) is not a valid ISO timestamp"})
     if at.tzinfo is None:
         return _response(400, {"error": f"at ({body['at']!r}) must include a UTC offset"})
-    if at.date().isoformat() not in allowed:
+    if meal_day(body["at"], stretch_until) not in allowed:
         return _response(400,
                          {"error": f"meals can only be recorded for {sorted(allowed)}"})
     if body["carbs_choice"] not in questionnaire.carb_weights():
@@ -310,11 +311,12 @@ def _meal_rejection(body, allowed, questionnaire):
 
 def _add_meal(sub, body):
     config = _config()
-    _, allowed = _grace_window(config.day_close.close_until)
-    rejection = _meal_rejection(body, allowed, config.questionnaire)
+    stretch_until = config.day_close.close_until
+    _, allowed = _grace_window(stretch_until)
+    rejection = _meal_rejection(body, allowed, stretch_until, config.questionnaire)
     if rejection is not None:
         return rejection
-    day = datetime.fromisoformat(body["at"]).date().isoformat()
+    day = meal_day(body["at"], stretch_until)
     store = _store()
     if store.has_day(sub, day):
         return _response(409, {"error": f"{day} is already submitted"})
@@ -329,13 +331,14 @@ def _update_meal(sub, date, meal_id, body):
     the time included. A corrected time re-keys the meal, so the reply carries the day's meals in
     their new order along with the re-derived values."""
     config = _config()
-    _, allowed = _grace_window(config.day_close.close_until)
+    stretch_until = config.day_close.close_until
+    _, allowed = _grace_window(stretch_until)
     outside = _reject_outside_window(date, allowed)
     if outside is not None:
         return outside
-    # A corrected time stays within the meal's own day: the correction rewrites the day's record,
-    # never moves the meal across the midnight boundary.
-    rejection = _meal_rejection(body, {date}, config.questionnaire)
+    # A corrected time stays within the meal's own day record. The timestamp itself may cross
+    # midnight, since the day stretches into the small hours of the following date.
+    rejection = _meal_rejection(body, {date}, stretch_until, config.questionnaire)
     if rejection is not None:
         return rejection
     store = _store()

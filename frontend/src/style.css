@@ -7,6 +7,9 @@
      what that day costs is what it is for. */
   --treat-breach: #9a6b00;
   --treat-breach-ground: #fff8e1;
+  /* The faint amber counterpart, for a whole history row of a treat day that crossed the score
+     rule: laid under the cell grounds above, so a breaching answer still reads on a tinted row. */
+  --treat-breach-ground-faint: #fffcf0;
   --viz-treat-breach: #e0a100;
   --viz-series-1: #2a78d6;
   --viz-series-2: #1baf7a;
@@ -17,9 +20,10 @@
   --viz-excluded: #b3701c;
   /* The two grounds a trend panel's plot area is split into at its rule's bound. Barely tinted:
      they say which side of the bound a stretch of the chart is, without competing with the
-     lines, gridlines and dots drawn over them. */
+     lines, gridlines and dots drawn over them. The breach ground serves the same role wherever a
+     whole region reads as crossed — a history row, the crossing banner — under any cell mark. */
   --viz-safe-ground: #f2f9f2;
-  --viz-breach-ground: #fdf4f4;
+  --breach-ground: #fdf4f4;
   --viz-grid: #e1e0d9;
   --viz-baseline: #c3c2b7;
   --viz-muted: #898781;
@@ -292,7 +296,7 @@ button:disabled { cursor: not-allowed; }
    then where the mark already is, which is too long to break well: below ~27.5rem it scales with
    the viewport, and its side padding is narrower than the strip's other items, so it holds one
    line down to 320px-wide screens once the body and box paddings are taken out. */
-.crossing { background: var(--viz-breach-ground); color: var(--danger);
+.crossing { background: var(--breach-ground); color: var(--danger);
             padding-inline: 0.75rem; font-size: min(1rem, 4vw - 1.6px); }
 /* A word of a strip message standing for the place it names — אתמול for yesterday's own day
    view. Underlined, which is what marks a link here; the base button rule leaves everything else
@@ -362,14 +366,18 @@ button:disabled { cursor: not-allowed; }
    Headers are exempt: they are long, they stack by design, and holding them to one line would
    near-triple the table's width. Bound-label cells (marked .bound by the table) carry sentence-
    length wording that would either stretch the row several lines tall or drag its column past a
-   phone screen's edge; the zero max-width takes them out of the column-sizing negotiation
-   entirely, so the column stays the width its header and numeric answers earn — the table fits
-   the screen exactly as if the label were a number — and the label truncates at that width.
-   The ellipsis loses nothing the reader cannot recover: the red background still flags the
-   crossed bound, and the cell's title holds the full wording. The landing's reference table
-   sits outside this wrapper, its sentence-length cells free to wrap. */
+   phone screen's edge, so they enter the column-sizing negotiation with a budget rather than
+   with their full length. The budget is whatever the neighbouring headers can spare while still
+   wrapping to two lines: both the slope and the ceiling are measured against that fit rather
+   than chosen, so it tapers with the viewport — nothing below ~335px, the full 6.5rem from
+   ~410px up — and every width from 360px keeps two lines while the label takes the rest. Past
+   the tablet breakpoint the fixed header width further down governs the column instead and the
+   budget stops mattering. The ellipsis loses nothing the reader cannot recover: the red
+   background still flags the crossed bound, and the cell's title holds the full wording. The
+   landing's reference table sits outside this wrapper, its sentence-length cells free to wrap. */
 .table-wrap td { white-space: nowrap; }
-.table-wrap td.bound { max-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.table-wrap td.bound { max-width: clamp(0px, calc((100vw - 335px) * 1.38), 6.5rem);
+                       overflow: hidden; text-overflow: ellipsis; }
 table { border-collapse: collapse; min-width: min(calc(var(--column-width) * 1.2), 100%); margin-top: 0.5rem; background: #fff; }
 /* A pixel under the 0.9rem the cells would otherwise read at, so the history grid's many columns
    hold their values without wrapping and the landing's reference table stays subordinate to the
@@ -427,11 +435,11 @@ td.shortfall { color: var(--danger); }
 /* An answer off its question's declared norm: bold, so a deviation to either side stands out
    down the column while routine days recede. */
 td.off-norm { font-weight: bold; }
-/* A heavy day or meal reads as red text pinned to the price that earned it: the history score
-   cell, the dashboard total, and a meal's points. In the dashboard it reaches the figure rather
-   than the whole item, so the alarm sits on the number its label merely names, and its
-   specificity outranks the green that figure otherwise carries. */
-td.heavy-day, .tracker-dashboard .heavy-day .score, .meal-list .heavy-meal,
+/* A heavy day or meal reads as red text pinned to the price that earned it: the dashboard total
+   and a meal's points. In the dashboard it reaches the figure rather than the whole item, so the
+   alarm sits on the number its label merely names, and its specificity outranks the green that
+   figure otherwise carries. The history table says it differently, over the whole row below. */
+.tracker-dashboard .heavy-day .score, .meal-list .heavy-meal,
 .breakdown-sum .heavy-day { color: var(--danger); }
 /* What shows for a moment — a just-picked grade's full name, the markers' legend — reads as a
    flash, not a change of layout: it comes in highlighted and fades as it settles. The element
@@ -448,8 +456,16 @@ td.heavy-day, .tracker-dashboard .heavy-day .score, .meal-list .heavy-meal,
    the width the columns already have and wraps within it. Its face is the reopen hint's, a quiet
    aside to the log rather than one of its rows. */
 .meal-list .marker-legend { grid-column: 1 / -1; contain: inline-size; }
-td.heavy-day.treat-day, .tracker-dashboard .heavy-day.treat-day .score,
+.tracker-dashboard .heavy-day.treat-day .score,
 .breakdown-sum .heavy-day.treat-day { color: var(--treat-breach); }
+/* A history day whose score crossed the rule, said across the row rather than on the number that
+   earned it — a column of tinted rows reads as a stretch of heavy days at a glance. The ground is
+   far fainter than the cell marks it sits under, so a breaching answer still stands out on it. */
+tr.heavy-row { background: var(--breach-ground); }
+tr.heavy-row.treat-day { background: var(--treat-breach-ground-faint); }
+/* The score that earned the ground, weighted rather than recoloured: the row says which days were
+   heavy, and the bold number says which figure crossed. */
+tr.heavy-row .day-score { font-weight: bold; }
 /* The bin is lifted out of the cell's line and pinned to the cell's far edge, so it holds one
    position down the column rather than trailing whatever the row's score happens to measure.
    Out of flow it contributes no width, so the cell reserves its footprint as padding instead: the

@@ -30,3 +30,12 @@ def closing_day(until: str) -> str:
     "HH:MM" bound the day-close config sets, today from then on."""
     day = today()
     return days_before(day, 1) if clock_time() < until else day
+
+
+def meal_day(at: str, until: str) -> str:
+    """The day record a meal belongs to. An eating day stretches past midnight, so a meal timed
+    before the small-hours "HH:MM" bound the day-close config sets belongs to the day that ran
+    into it rather than to the calendar date it reads."""
+    moment = datetime.fromisoformat(at)
+    return (moment.date() - timedelta(days=1) if moment.strftime("%H:%M") < until
+            else moment.date()).isoformat()

@@ -174,6 +174,14 @@ export function questionTitle(question: Question, scope: "day" | "meal" | "panel
   return qualifier === undefined ? question.text : `${question.text} (${qualifier})`;
 }
 
+// The part of a carb score the program excludes on its six non-treat days, named the same wherever
+// it is reported — the trend panel's second line and the history table's column.
+export const EXCLUDED_LABEL = "קמחים וסוכרים";
+
+// The same subtotal where it is tabulated as a figure rather than named as a chart line: the
+// history column sits beside the day's own score, and says which of the two it reports.
+export const EXCLUDED_SCORE_LABEL = `ציון ${EXCLUDED_LABEL}`;
+
 // A question's trend-panel heading, or undefined for questions charting no panel: panel_title
 // stands alone when the chart names the subject differently from the question text; otherwise
 // panel_qualifier qualifies the text, keeping the subject defined once in the config.

@@ -191,8 +191,8 @@ describe("TrendChart", () => {
       .sort((a, b) => a.y - b.y)
       .map((ground) => ground.fill);
     const [carbs, drinking] = [...container.querySelectorAll(".trend-panel")];
-    expect(groundsOf(carbs)).toEqual(["var(--viz-breach-ground)", "var(--viz-safe-ground)"]);
-    expect(groundsOf(drinking)).toEqual(["var(--viz-safe-ground)", "var(--viz-breach-ground)"]);
+    expect(groundsOf(carbs)).toEqual(["var(--breach-ground)", "var(--viz-safe-ground)"]);
+    expect(groundsOf(drinking)).toEqual(["var(--viz-safe-ground)", "var(--breach-ground)"]);
   });
 
   it("leaves an unruled panel on a single ground, having no bound to split it at", () => {

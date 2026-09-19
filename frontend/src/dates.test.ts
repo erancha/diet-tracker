@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fallsOn, beforeDailyCutoff, dayLabel, daysBefore, daysSince, ddmmLabel, instantLabel, mealOverdue, mealTooSoon, expandWeightSection, isWeighInDay, isoDate, lastDays, parseIsoDate, weekdayDdmmLabel, weekdayLabel, weekdayLetter } from "./dates";
+import { fallsOn, beforeDayStart, mealInstant, beforeDailyCutoff, dayLabel, daysBefore, daysSince, ddmmLabel, instantLabel, mealOverdue, mealTooSoon, expandWeightSection, isWeighInDay, isoDate, lastDays, parseIsoDate, weekdayDdmmLabel, weekdayLabel, weekdayLetter } from "./dates";
 
 describe("isoDate", () => {
   it("formats a local date as YYYY-MM-DD with zero padding", () => {
@@ -226,5 +226,40 @@ describe("fallsOn", () => {
     // 2026-08-21 is a Friday.
     expect(fallsOn("2026-08-21", "FRI")).toBe(true);
     expect(fallsOn("2026-08-20", "FRI")).toBe(false);
+  });
+});
+
+describe("mealInstant", () => {
+  it("stamps a picked time on the day whose log is open", () => {
+    expect(mealInstant("2026-08-20", "13:30", true, "02:00")).toMatch(
+      /^2026-08-20T13:30:00[+-]\d{2}:\d{2}$/);
+    expect(mealInstant("2026-08-20", "21:40", false, "02:00")).toMatch(
+      /^2026-08-20T21:40:00[+-]\d{2}:\d{2}$/);
+  });
+
+  it("carries the next date for a small-hours time on the previous day's log", () => {
+    expect(mealInstant("2026-08-20", "00:30", false, "02:00")).toMatch(
+      /^2026-08-21T00:30:00[+-]\d{2}:\d{2}$/);
+    expect(mealInstant("2026-08-20", "01:59", false, "02:00")).toMatch(
+      /^2026-08-21T01:59:00[+-]\d{2}:\d{2}$/);
+    expect(mealInstant("2026-08-20", "02:00", false, "02:00")).toMatch(
+      /^2026-08-20T02:00:00[+-]\d{2}:\d{2}$/);
+  });
+
+  it("crosses a month end with the date", () => {
+    expect(mealInstant("2026-08-31", "00:30", false, "02:00")).toMatch(
+      /^2026-09-01T00:30:00[+-]\d{2}:\d{2}$/);
+  });
+});
+
+describe("beforeDayStart", () => {
+  it("marks a small-hours time on today's own log as belonging to yesterday's record", () => {
+    expect(beforeDayStart("00:30", true, "02:00")).toBe(true);
+    expect(beforeDayStart("02:00", true, "02:00")).toBe(false);
+    expect(beforeDayStart("13:30", true, "02:00")).toBe(false);
+  });
+
+  it("leaves the previous day's log free to record its small hours", () => {
+    expect(beforeDayStart("00:30", false, "02:00")).toBe(false);
   });
 });

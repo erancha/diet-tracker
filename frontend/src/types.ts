@@ -217,11 +217,6 @@ export interface Day {
   excluded: number;
 }
 
-// A recorded day narrowed to the values it answers, for reads that judge a day by those alone.
-// The excluded part of its carb score is charted rather than answered, so it is no part of this
-// shape.
-export type AnsweredDay = Pick<Day, "date" | "answers">;
-
 // One message the app addressed to the user that SES refused to deliver, kept so the header can
 // show what never reached their inbox. The body is the text as the sending job wrote it, without
 // the mute footnote and app link an email closes with.

@@ -3,7 +3,7 @@ import type { Day, DayPayload, Question, Questionnaire, TreatDaySettings } from 
 import { dayLabel, fallsOn, lastDays } from "../dates";
 import { domainFor, liveTrendDay, ticksFor, treatDayColumns } from "../trend";
 import type { RuleBand } from "../violations";
-import { isViolating, panelTitle, ruleBand, ruleBoundLabel, scoreLabel, trendPanels, valueLabel } from "../violations";
+import { EXCLUDED_LABEL, isViolating, panelTitle, ruleBand, ruleBoundLabel, scoreLabel, trendPanels, valueLabel } from "../violations";
 
 // Days each panel charts. Past a week, so a span ending on the treat day holds two of them and
 // the carb panel can set the latest treat day against the one before it, with days of lead-in.
@@ -13,10 +13,6 @@ const CHART_DAYS = 10;
 // down the stack and the one visible date axis dates them all.
 const Y_AXIS_WIDTH = 40;
 const MARGIN_RIGHT = 14;
-
-// What the second line names in the panel heading and the tooltip: the flour grades and sugar the
-// program's six non-treat days exclude, which is what the subtotal sums.
-const EXCLUDED_LABEL = "קמחים וסוכרים";
 
 // What the framed column names: the weekday the program aims its treat meal at.
 const TREAT_DAY_LABEL = "יום פינוק";
@@ -162,7 +158,7 @@ function TrendPanel({ questionnaire, question, dayStrs, dayByDate, index, showXA
           {band !== undefined && ruleGrounds(band, domain).map((ground) => (
             <ReferenceArea key={ground.from} y1={ground.from} y2={ground.to}
                            zIndex={DefaultZIndexes.grid} ifOverflow="hidden" fillOpacity={1}
-                           fill={ground.violating ? "var(--viz-breach-ground)" : "var(--viz-safe-ground)"} />
+                           fill={ground.violating ? "var(--breach-ground)" : "var(--viz-safe-ground)"} />
           ))}
           <CartesianGrid horizontal vertical={false} stroke="var(--viz-grid)" />
           <XAxis
@@ -189,7 +185,7 @@ function TrendPanel({ questionnaire, question, dayStrs, dayByDate, index, showXA
               {treatColumns.map((column) => (
                 <TreatDayFrame key={column} column={column} columns={dayStrs.length} />
               ))}
-              <Line dataKey="excluded" stroke="var(--viz-excluded)" strokeWidth={2} strokeDasharray="4 3" isAnimationActive={false} connectNulls={false} dot={{ r: 2.5, fill: "var(--viz-excluded)", stroke: "none" }} />
+              <Line dataKey="excluded" stroke="var(--viz-excluded)" strokeWidth={2} strokeDasharray="4 3" isAnimationActive={false} connectNulls={false} dot={{ r: 3, fill: "var(--viz-excluded)", stroke: "none" }} />
             </>
           )}
           <Line dataKey="value" stroke={color} strokeWidth={2} isAnimationActive={false} connectNulls={false} dot={<PanelDot color={color} />} />

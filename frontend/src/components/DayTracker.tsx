@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { clockTimeOf, mealOverdue, mealTooSoon, parseIsoDate } from "../dates";
+import { beforeDayStart, clockTimeOf, mealInstant, mealOverdue, mealTooSoon } from "../dates";
 import { carbsScales, deriveDay, portionOffered } from "../derive";
 import { mayDiscardEdits } from "../edits";
 import { isViolating } from "../violations";
@@ -54,7 +54,8 @@ const NUDGE_ESCALATION_MS = 10_000;
 // close-day values come from the vector-pinned client derivation twin, so they always agree with
 // the meal list rendered beside them — the server re-derives on submit and stays the authority.
 export function DayTracker({ questionnaire, treatDay, day, isToday = true, closed = false, firstMealHour,
-                             mealGapHours, maxMealsPerDay, closeMinWindowHours, onAddMeal,
+                             mealGapHours, maxMealsPerDay, closeMinWindowHours, stretchesUntil,
+                             onAddMeal,
                              onUpdateMeal, onDeleteMeal, deletingMealId, savingMeal, onCloseDay,
                              onReopenDay }: {
   questionnaire: Questionnaire;
@@ -78,6 +79,9 @@ export function DayTracker({ questionnaire, treatDay, day, isToday = true, close
   // floor either — and with the tracker the only close, a day that never spans it stays
   // unrecorded.
   closeMinWindowHours: number;
+  // Small-hours "HH:MM" an eating day runs to past midnight (day_close.close_until): the bound
+  // that tells a late-night pick on the previous day's log from an early-morning one.
+  stretchesUntil: string;
   onAddMeal: (meal: NewMeal) => void;
   // Replaces the meal wholesale; a corrected time re-keys it, so the id is the one being replaced.
   onUpdateMeal: (id: string, meal: NewMeal) => void;
@@ -178,11 +182,13 @@ export function DayTracker({ questionnaire, treatDay, day, isToday = true, close
   const secondSourceBarred = secondSource !== null && !offersSecondSource;
   const closable = derived.eating_window >= closeMinWindowHours;
 
-  // A meal cannot have been eaten yet, so a running day's own clock caps the picker — both values
-  // are zero-padded "HH:MM" on the same day, so they compare as strings. On the previous day every
-  // hour has already passed, so nothing is future there.
   const nowTime = clockTime(minutesOfDay(new Date()));
-  const mealTimeIsFuture = isToday && mealTime > nowTime;
+  // The instant the form would record, which is also what decides whether the picked time is
+  // still ahead of the clock: on the previous day's log a small-hours pick is tonight's, so it
+  // can be future there too.
+  const mealAt = mealInstant(day.date, mealTime, isToday, stretchesUntil);
+  const mealTimeIsFuture = Date.parse(mealAt) > Date.now();
+  const mealTimeBeforeDay = beforeDayStart(mealTime, isToday, stretchesUntil);
 
   // The meal under correction can vanish beneath the form — deleted from the list mid-edit, or
   // from another tab — and the form then goes back to recording a new meal.
@@ -206,8 +212,10 @@ export function DayTracker({ questionnaire, treatDay, day, isToday = true, close
   const formHoldsUnsavedMeal = editDiverged || newMealDiverged;
 
   // The same terms that let the save button commit the form: a picked grade, at a time the clock
-  // has reached, over a plate the second-source contract admits.
-  const mealSaveable = carbsChoiceId !== undefined && !mealTimeIsFuture && !secondSourceBarred;
+  // has reached and that falls inside the open day, over a plate the second-source contract
+  // admits.
+  const mealSaveable = carbsChoiceId !== undefined && !mealTimeIsFuture && !mealTimeBeforeDay
+    && !secondSourceBarred;
 
   // The meal inputs are the tallest thing here and are worth reading only when there is a meal to
   // report, so the tracker always opens on the day's figures and its recorded meals with the
@@ -263,10 +271,10 @@ export function DayTracker({ questionnaire, treatDay, day, isToday = true, close
   }, [nudging]);
 
   // Only reachable through the submit button, which renders only once a grade is picked and is
-  // disabled while the picked time is still ahead of the clock.
+  // disabled unless mealSaveable above holds.
   // Additions are sent in config order so the recorded list is deterministic.
   function submitMeal() {
-    const meal: NewMeal = { at: localIso(atClockTime(parseIsoDate(day.date), mealTime)),
+    const meal: NewMeal = { at: mealAt,
                             carbs_choice: carbsChoiceId!, vegetables, fruit,
                             additions: carbsQuestion.additions!
                               .filter((a) => pickedAdditions.has(a.id))
@@ -334,7 +342,7 @@ export function DayTracker({ questionnaire, treatDay, day, isToday = true, close
     setPickedAdditions(new Map());
     setPortionId(defaultPortionId);
     clearSecondSource();
-    const opensOn = defaultMealTime(new Date());
+    const opensOn = openingTime();
     setMealTime(opensOn);
     setPristineTime(opensOn);
     setEditingId(undefined);
@@ -502,7 +510,8 @@ export function DayTracker({ questionnaire, treatDay, day, isToday = true, close
         </div>
         <label className="meal-time">
           שעת הארוחה{" "}
-          <input type="time" value={mealTime} max={nowTime}
+          <input type="time" value={mealTime} min={isToday ? stretchesUntil : undefined}
+                 max={isToday ? nowTime : undefined}
                  onChange={(e) => setMealTime(e.target.value)} />
         </label>
       </CollapsibleSection>
@@ -510,6 +519,9 @@ export function DayTracker({ questionnaire, treatDay, day, isToday = true, close
       {/* Sit outside the fold that hides the picker: they are the only account of why the submit
           button is disabled, and that button shows either way. */}
       {mealTimeIsFuture && <p className="notice">לא ניתן לרשום ארוחה בשעה עתידית</p>}
+      {mealTimeBeforeDay && (
+        <p className="notice">שעה זו שייכת ליום הקודם — ניתן לרשום אותה ביומן אתמול</p>
+      )}
       {secondSourceBarred && (
         <p className="notice">
           {`מקור פחמימה נוסף מותר רק לצד דרגה קלה — עד דרגה ${secondRule.light_grade_max}`}
@@ -615,22 +627,4 @@ function clockTime(minutes: number): string {
 function defaultMealTime(now: Date): string {
   const minutes = minutesOfDay(now);
   return clockTime(minutes - minutes % TIME_STEP_MINUTES);
-}
-
-// The current date carrying the picked wall-clock time, whole minutes.
-function atClockTime(now: Date, picked: string): Date {
-  const [hours, minutes] = picked.split(":").map(Number);
-  const at = new Date(now);
-  at.setHours(hours, minutes, 0, 0);
-  return at;
-}
-
-// Client-local ISO timestamp with offset — the eating window is the user's clock, not UTC.
-function localIso(now: Date): string {
-  const tz = -now.getTimezoneOffset();
-  const sign = tz >= 0 ? "+" : "-";
-  const pad = (n: number) => String(Math.abs(n)).padStart(2, "0");
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}` +
-    `T${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}` +
-    `${sign}${pad(Math.trunc(tz / 60))}:${pad(tz % 60)}`;
 }
