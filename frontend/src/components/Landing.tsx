@@ -12,7 +12,7 @@
  * intro names the words without their daily targets — and sits past the sign-in button so the
  * summary above stays about what the app does, with the acronym's first mention linking down
  * to it.
- * Rendered instead of the questionnaire until sign-in completes.
+ * Rendered in place of the signed-in screen until sign-in completes.
  */
 import { useState } from "react";
 import { whatsAppInviteUrl } from "../invite";

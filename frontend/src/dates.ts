@@ -80,8 +80,8 @@ export function nextWeekdayDate(now: Date, weekday: string): string {
   return isoDate(new Date(now.getFullYear(), now.getMonth(), now.getDate() + ahead));
 }
 
-// Whole days from a recorded date to the day now falls in — the calendar distance the rhythm is
-// read in, not an elapsed-hours count.
+// Whole days from a recorded date to the day now falls in, counted by calendar date rather than
+// by elapsed hours, so the hour of either end never counts.
 export function daysSince(date: string, now: Date): number {
   const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   return Math.round((midnight.getTime() - parseIsoDate(date).getTime()) / MS_PER_DAY);

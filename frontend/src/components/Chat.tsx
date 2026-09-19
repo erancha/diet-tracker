@@ -21,9 +21,6 @@ const SHARE_CONFIRM =
   "לשתף את הצ'אט עם כל המשתמשים? הם יראו את השאלה, התשובה וכתובת המייל שלך. "
   + "אפשר לבטל את השיתוף בכל עת.";
 
-// A follow-up rides the same single-question API: the prior conversation is folded into the
-// question text as a labeled chain. An already-chained stored question only appends the
-// target's answer and the new question.
 // A stored chat's stamp is the server's clock and the ask's is the browser's; a chat this much
 // older than the ask still counts as its answer.
 const CLOCK_SKEW_MS = 60_000;
@@ -36,6 +33,9 @@ function failureMessage(action: string, failure: Error): string {
     : `${action} (${failure.message})`;
 }
 
+// A follow-up rides the same single-question API: the prior conversation is folded into the
+// question text as a labeled chain. An already-chained stored question only appends the
+// target's answer and the new question.
 function composeFollowUp(target: ChatTurn, question: string): string {
   const chain = target.question.startsWith(ORIGINAL_LABEL)
     ? target.question
@@ -51,7 +51,7 @@ function composeFollowUp(target: ChatTurn, question: string): string {
 // the folded condensed sign-in never pays for a transcript nobody opens, and the counts stand
 // in for the lists until then. The others' count is highlighted when it grew since the last
 // visit (publicCount), until the list is unfolded. The filter choice outlives the visit
-// (chatFilter); an arriving answer widens it back to every chat. The menu's condensed/full
+// (chatFilter); sending a question widens it back to every chat. The menu's condensed/full
 // command folds the transcript, the condensed sign-in starts it folded, and sending always
 // reveals it. Folding either list closes every answer open in it, so it reopens with only the
 // questions in view. A question commanded from elsewhere (askCommand) is sent at once on the
@@ -63,7 +63,7 @@ function composeFollowUp(target: ChatTurn, question: string): string {
 // sample questions and the composer rather than stacking above them, the two boxes being a phone
 // screen apart otherwise; closing it gives them back without lifting the words. It applies within
 // the side filter, and opens and loads both lists — words can only be read against chats that are
-// in. Each count then names the matches with the rest beside it, and an arriving answer drops the
+// in. Each count then names the matches with the rest beside it, and sending a question drops the
 // words as it widens the side. The words last the visit alone, a search being a momentary act
 // rather than the standing preference the side filter is.
 //
@@ -207,8 +207,6 @@ export function Chat({ email, api, sampleQuestions, answerPollSeconds,
       .catch((thrown) => setError(`טעינת הצ'אטים המשותפים נכשלה (${(thrown as Error).message})`));
   }, [othersFolded, others, api]);
 
-  // Sends the question, as a follow-up on target when one is given. `app` marks a question the
-  // app composed; a follow-up keeps whichever mark the chat it extends already carries.
   // The chat an ask stored, once the transcript holds one under the asked question that is
   // newer than the ask; null until then.
   const landedAnswer = async (asked: string, sentAt: number): Promise<StoredAnswer | null> => {
@@ -225,6 +223,8 @@ export function Chat({ email, api, sampleQuestions, answerPollSeconds,
     return found !== undefined && found.summarized ? found : null;
   };
 
+  // Sends the question, as a follow-up on target when one is given. `app` marks a question the
+  // app composed; a follow-up keeps whichever mark the chat it extends already carries.
   const send = async (question: string, target: ChatTurn | null, app = false) => {
     setError(null);
     setTranscriptFolded(false);
@@ -250,7 +250,7 @@ export function Chat({ email, api, sampleQuestions, answerPollSeconds,
                                    summarized: false, app: authored,
                                    visibility: target === null ? null : target.visibility,
                                    at: reply.at };
-      // Fresh or followed-up, the answered turn leads — the order the server returns on reload.
+      // Fresh or followed-up, the answered chat leads — the order the server returns on reload.
       // A transcript not loaded yet is loaded now, after the reply, so it already holds the chat.
       const loaded = turns ?? (await api.getChatTranscript()).turns;
       setTurns([answered, ...loaded.filter((turn) => turn.at !== target?.at && turn.at !== reply.at)]);

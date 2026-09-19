@@ -1,5 +1,5 @@
-// Threshold-rule checks and numeric-value labeling against the questionnaire config. All
-// functions take the questionnaire explicitly so they stay pure and independently testable.
+// Threshold-rule checks, crossing wording, and value and heading labels, all read off the
+// questionnaire config passed in rather than any shared state.
 
 import type { AnswerValue, Choice, Derived, Question, Questionnaire, Rule } from "./types";
 

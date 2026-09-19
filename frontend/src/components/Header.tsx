@@ -38,9 +38,9 @@ const ACCOUNT_HINTS = {
 // The account menu names the signed-in address and holds the account-level actions — signing
 // out, the reminder subscription, and the WhatsApp invite — plus the one page-wide control, the
 // condensed/full view toggle. The address is identification rather than chrome the page needs
-// standing, so it appears only when the menu it labels is open. Leaving is when a user decides they are done
-// being reminded, so the opt-out is offered alongside the exit; it reads as a toggle, so the
-// same menu is also the way back.
+// standing, so it appears only when the menu it labels is open. Leaving is when a user decides
+// they are done being reminded, so the opt-out is offered alongside the exit; it reads as a
+// toggle, so the same menu is also the way back.
 export function Header({ email, muted, isAdmin, onSignOut, onSetMuted, onFoldAll,
                          nextViewCondensed, undelivered, emailVerified,
                          onDismissUndelivered }: {

@@ -37,7 +37,7 @@ def test_repo_config_loads_with_numeric_choices_and_threshold_rules():
     assert [w for g, w in q.carb_weights().items() if g != "no_carbs"] == [1, 2, 3, 4, 5, 6, 7]
     assert q.carb_weights()["no_carbs"] == 0
     # Grades that stood for a quantity, or collapsed two of the scale's steps into one, are gone
-    # from the picker; store.py reads meals recorded under them as their current equivalent.
+    # from the picker; the meals recorded under them were migrated to the current ids in the table.
     assert not {"grade6_7", "grade7_light", "grade7_heavy"} & set(q.carb_weights())
     # Fat is an accompaniment of any grade, not a grade of its own, so it never returns to the
     # scale as the heavy no-carb grade it replaced.

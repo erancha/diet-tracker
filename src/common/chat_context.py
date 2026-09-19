@@ -32,17 +32,16 @@ _FRUIT = "פרי"
 _ADDITIONS = "תוספות"
 _AMOUNT = "כמות"
 
-# Names the grade ladder for what it is on both counts: every grade the app records, each named by
-# foods that exemplify it rather than bound it.
 _GRADE_LADDER = "דרגות מקור הפחמימה (דוגמאות מזון)"
 
 
 def user_context(store, questionnaire, sub, day) -> str | None:
-    """The user's recent data as a labeled context block, never exceeding the upstream cap;
-    None when even the last remnant does not fit, telling the caller to send no context.
+    """The user's recent data as a labeled context block, never longer than MAX_CONTEXT_CHARS;
+    None when the block is still too long once every droppable section is gone, telling the
+    caller to send no context.
 
-    When the cap is tight, whole sections are dropped in _bounded's fixed order of decreasing
-    bulk, the weight block last because it is small.
+    While the block is too long, whole sections are dropped in _bounded's fixed order of
+    decreasing bulk, the weight block last because it is small.
     The tracking scope and the grade ladder are never dropped: the first keeps absent data
     readable as a missing field rather than an unrecorded habit, the second keeps the grades the
     meals are recorded in from arriving undefined. Absent data is a legal domain state and still

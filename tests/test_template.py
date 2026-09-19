@@ -39,8 +39,8 @@ def _load_template():
 
 def test_admin_listing_is_routed_gated_and_granted_pool_access():
     # The admin activity route needs four things wired together: the route itself, the address
-    # the caller is recognized by, the right to enumerate the pool, and the right to count chat
-    # turns — a missing one surfaces only when the admin opens the listing on a deployed stack.
+    # the caller is recognized by, the right to enumerate the pool, and the right to count chats
+    # — a missing one surfaces only when the admin opens the listing on a deployed stack.
     template = _load_template()
     api_function = template["Resources"]["ApiFunction"]["Properties"]
     routes = {(e["Properties"]["Method"], e["Properties"]["Path"])

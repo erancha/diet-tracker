@@ -283,10 +283,10 @@ button:disabled { cursor: not-allowed; }
 /* The negative vertical-align seats a glyph on the text baseline where one sits inline, as in the
    history score cell; inside the flex glyph controls it has no effect. */
 .icon { width: 1.1em; height: 1.1em; vertical-align: -0.18em; }
-/* pre-line keeps newlines in alert messages (e.g. the sign-in rejection's contact note). */
 /* Every item of the message strip shares one box, so each kind below states only its ground and
    its ink. */
 .alert, .ok, .notice, .crossing { border-radius: 8px; padding: 0.6rem 1rem; margin-bottom: 0.5rem; }
+/* The alert keeps its newlines: the sign-in rejection's contact note breaks onto its own line. */
 .alert { background: #ffebee; color: var(--danger); white-space: pre-line; }
 .ok { background: #e8f5e9; color: var(--accent); }
 /* Informational, not a failure: amber sits between the alert red and the ok green. */
@@ -833,13 +833,13 @@ main:not(.intro-0, .intro-1, .intro-2, .intro-3, .intro-4) .weight .section-togg
 .weight-over-target .weight-latest,
 .weight-over-target .weight-summary .weight-gap,
 .weight-entries .over-target { color: var(--danger); }
-/* The measurements behind the chart: one grid whose columns — date, hour, weight, delete — each
-   sit at their widest content, aligned down the list with no cell stretched. The rows dissolve
-   into the grid (display: contents) so every row's cells share the same columns. */
 .weight-rhythm { margin: 0 0 0.5rem; opacity: 0.8; }
 /* The word that opens the chat sits inside the sentence rather than beside it, so it reads as a
    link in running text: the sentence's own colour, marked by the underline alone. */
 .weight-rhythm button { text-decoration: underline; text-underline-offset: 2px; }
+/* The measurements behind the chart: one grid whose columns — date, hour, weight, delete — each
+   sit at their widest content, aligned down the list with no cell stretched. The rows dissolve
+   into the grid (display: contents) so every row's cells share the same columns. */
 .weight-entries { list-style: none; padding: 0; margin: 0.5rem 0 0; display: grid;
                   grid-template-columns: repeat(4, max-content); align-items: center;
                   gap: 0.25rem 1rem; font-size: calc(1rem - 1px); }

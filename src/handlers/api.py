@@ -422,7 +422,7 @@ def _admin_activity(email):
     trailing week and the account's whole history, their all-time weighing count and whether a
     target weight is set, most active first — for the admin account alone. Counts, flags and
     addresses only, never recorded content: this is an activity overview, not a data export,
-    which is why the target arrives as a boolean and never as the kilograms. Chat turns are
+    which is why the target arrives as a boolean and never as the kilograms. Chats are
     stamped in UTC while the week runs on local days, so the chat window's edges sit at UTC
     midnight, a few hours after the local day boundary the other counts honour."""
     if email.lower() != os.environ["ADMIN_EMAIL"].lower():

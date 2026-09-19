@@ -50,9 +50,10 @@ const NUDGE_ESCALATION_MS = 10_000;
 // values live, lists the day's meals for in-place correction or deletion, closes a fully
 // tracked day by asking only for water, and holds a closed day read-only behind its reopen
 // gate. Normally the day is today; during the small-hours grace window it is yesterday, still
-// open for its late meals, its closing or its reopening. The dashboard and
-// close-day values come from the vector-pinned client derivation twin, so they always agree with
-// the meal list rendered beside them — the server re-derives on submit and stays the authority.
+// open for its late meals, its closing or its reopening. The dashboard and close-day values come
+// from the client-side derivation, held to the server's by the shared test vectors in
+// config/derive-vectors.json, so they always agree with the meal list rendered beside them — the
+// server re-derives on submit and stays the authority.
 export function DayTracker({ questionnaire, treatDay, day, isToday = true, closed = false, firstMealHour,
                              mealGapHours, maxMealsPerDay, closeMinWindowHours, stretchesUntil,
                              onAddMeal,

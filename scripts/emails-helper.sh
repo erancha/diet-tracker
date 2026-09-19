@@ -102,8 +102,8 @@ rejected() {
 
 # Runs the scheduled job's own code, from the working tree, with its audience narrowed to the one
 # account — so what a rule or config edit will send can be read before it is deployed. The AWS
-# inputs come from the deployed NudgeFunction's environment, leaving the questionnaire as the only
-# thing read from the working tree. Without --send both delivery channels and the transcript write
+# inputs come from the deployed NudgeFunction's environment, leaving config/app.json as the only
+# input read from the working tree. Without --send both delivery channels and the transcript write
 # are replaced by prints, but the answering service is still asked — its reading of the week is
 # most of what there is to preview, and it cannot be had without the call. With --send, the recap
 # lands in that user's mail and chat list, where it can be followed up and deleted like any other

@@ -28,7 +28,7 @@ const defaults = {
 // view is the open one.
 const deleting = { deletableDates: new Set(["2026-08-17"]), viewedDate: "2026-08-17" };
 
-// The row a cell sits in — where a day's score crossing is now reported.
+// The row a cell sits in: a day's score crossing is reported on the whole row, not on a cell.
 const rowOf = (cell: HTMLElement) => cell.closest("tr")!;
 
 describe("HistoryTable", () => {

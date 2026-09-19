@@ -1,9 +1,8 @@
 """Per-user daily chat allowance: one DynamoDB item per user per day, keyed '{sub}#{day}'.
 
-The day inside the key replaces reset logic — there is no stored day to compare and no
-first-message-of-the-day branch. A single atomic ADD both creates the item and counts against
-it, so concurrent requests cannot lose one another's writes, and the TTL attribute lets
-DynamoDB delete yesterday's rows on its own."""
+The day inside the key is the reset: a new day counts against a fresh item. A single atomic
+ADD both creates the item and counts against it, so concurrent requests cannot lose one
+another's writes, and the TTL attribute lets DynamoDB delete yesterday's rows on its own."""
 
 import time
 

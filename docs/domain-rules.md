@@ -220,10 +220,10 @@ carries the recap to the new day with it.
 
 Scheduled jobs (EventBridge Scheduler, Asia/Jerusalem) run alongside the tracker:
 
-- **Last call** — the day's tracking reminder, fired in the evening late enough that the day is
-  over in practice and still inside it, so what it asks about is the day the user is living, and
-  again just after midnight, when it still asks about the day that ended for as long as the
-  close bound (day_close.close_until) keeps that day open. It reaches every user
+- **Last call** — the day's tracking reminder, fired twice in the evening, late enough that the
+  day is over in practice and still inside it, so what it asks about is the day the user is
+  living, and once more just after midnight, when it still asks about the day that ended for as
+  long as the close bound (day_close.close_until) keeps that day open. It reaches every user
   whose day remains open, and tells one whose meals are already logged that the day awaits its
   closing rather than its meals: everything but the water is recorded, and the tracker's close
   button is what seals it. A day carrying no meals gets the plain record-your-meals reminder.
@@ -262,10 +262,8 @@ Scheduled jobs (EventBridge Scheduler, Asia/Jerusalem) run alongside the tracker
   counts the questions the user chose to spend — this one they did not ask.
 - **Weigh-in reminder** — a weekly prompt to step on the scale, skipped for anyone who already
   recorded a weight on the weigh-in day itself, on the same channels as the last call above.
-- **Trend chart** — a 10-day trend chart after each closed day.
 
 Every job above reads its audience from the pool minus the accounts that have opted out, so one
 switch silences all of them — the unconditional weekly recap included. The switch is the account
-menu's second item, beside the sign-out it sits with because leaving is when a user decides they
-are done being reminded; it toggles, so the same item subscribes again. Opting out changes nothing
+menu's first item; it toggles, so the same item subscribes again. Opting out changes nothing
 inside the app: a muted account still sees its own red marks on closing a day and in the table.

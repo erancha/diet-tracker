@@ -130,12 +130,12 @@ export function createApi(
     setWeightTarget: (kg) => request("PUT", "/weight/target", { kg }),
     deleteWeight: (date) => request("DELETE", `/weight/${date}`),
     setMuted: (muted) => request("PUT", "/notifications", { muted }),
-    // The timestamp travels percent-encoded for the same reason a chat turn's does: its '+' and
-    // ':' must reach the route as the literal characters the message is stored under.
+    // The timestamp travels percent-encoded for the same reason a chat's does: its '+' and ':'
+    // must reach the route as the literal characters the message is stored under.
     dismissUndelivered: (at) => request("DELETE", `/undelivered/${encodeURIComponent(at)}`),
     getAdminActivity: () => request("GET", "/admin/activity"),
     // `at` marks the question as a follow-up: the server writes the answered question over the
-    // turn stored under that timestamp, keeping the conversation as that one turn.
+    // chat stored under that timestamp, keeping the conversation as that one chat.
     // `app` marks a question the app composed rather than one the user typed; the stored chat
     // keeps the mark, and a follow-up has to repeat it because the server rewrites the chat whole.
     ask: (question, at, app) => request("POST", "/chat", {
@@ -144,7 +144,7 @@ export function createApi(
       ...(app === true && { app }),
     }),
     getChatTranscript: () => request("GET", "/chat"),
-    // The timestamp's '+' and ':' must reach the route as the literal characters the turn is
+    // The timestamp's '+' and ':' must reach the route as the literal characters the chat is
     // stored under, so it travels percent-encoded.
     deleteChatTurn: (at) => request("DELETE", `/chat/${encodeURIComponent(at)}`),
     // Returns the chat as the summary leaves it: the conversation's original question, the

@@ -13,11 +13,11 @@ stack_output() {
 
 (cd frontend && npm ci && npm run build)
 
-# app.json is published separately below and must survive --delete.
 BUCKET=$(stack_output FrontendBucket)
 
 # config.js is built by deploy.sh for one specific stack's endpoints; syncing a config.js left
-# over from another environment (e.g. dev) would silently point that environment's users at it.
+# over from another environment (e.g. dev) would silently point this stack's users at that one's
+# API.
 DEPLOY_CMD="scripts/deploy.sh${1:+ $1}"
 if [ ! -f frontend/public/config.js ]; then
   echo "frontend/public/config.js is missing — run $DEPLOY_CMD to regenerate config.js for this environment" >&2
@@ -31,7 +31,8 @@ fi
 # Hashed bundles are immutable by construction, so browsers may keep them forever; everything
 # else (index.html, config.js, app.json) is served under a stable name and must be revalidated
 # on every visit — without an explicit no-cache, browsers cache these heuristically and keep
-# running a stale app long after an edge invalidation.
+# running a stale app long after an edge invalidation. app.json is not part of the Vite build,
+# so the sync excludes it from --delete and it is published on its own.
 aws s3 sync frontend/dist/assets "s3://${BUCKET}/assets" --delete \
   --cache-control 'public,max-age=31536000,immutable'
 aws s3 sync frontend/dist "s3://${BUCKET}" --delete --exclude 'assets/*' --exclude app.json \

@@ -47,10 +47,10 @@ deploy_cognito() {
       CallbackUrls="$callbacks" DomainPrefix="diet-trk${ENV_SUFFIX}"
 }
 
-# Every hour a schedule's cron is built from is passed on each deploy: CloudFormation keeps the
-# previous value of any parameter a deploy leaves out, so a template default is inert once the
-# stack exists. The weigh-in slot is declared in config/app.json and lifted out here because an
-# EventBridge cron is fixed when the stack deploys.
+# The weigh-in slot is declared in config/app.json and lifted into stack parameters here because
+# an EventBridge cron is fixed when the stack deploys. It is passed on every deploy: CloudFormation
+# keeps the previous value of any parameter a deploy leaves out, so a template default is inert
+# once the stack exists.
 app_config() {
   python3 -c "import json; print(json.load(open('config/app.json'))$1)"
 }
@@ -92,7 +92,6 @@ CLIENT_ID=$(stack_output "${APP}-cognito" UserPoolClientId)
 API_URL=$(stack_output "$APP" ApiUrl)
 FIRST_MEAL_HOUR=$(stack_output "$APP" FirstMealHour)
 MEAL_GAP_HOURS=$(stack_output "$APP" MealGapHours)
-# public/ may be absent on a fresh clone — its only content is this gitignored file.
 mkdir -p frontend/public
 # The admin is shown to rejected sign-ins as the access contact; the developer's address
 # gates the diagnostic readings the app shows of itself. The chat's answering service reaches the

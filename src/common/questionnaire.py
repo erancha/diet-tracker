@@ -116,9 +116,7 @@ class Question:
     # Standalone day-scope heading (see day_heading), for a day value that is not the question's
     # subject: the carbs question's day value is the whole day's score, additions included.
     day_title: str | None
-    # Parenthesized qualifier appended to the text in day-scope headings (see day_heading). The
-    # config also carries a meal_qualifier for the frontend's per-meal picker; the backend never
-    # renders a meal-scope heading, so it is not modeled here.
+    # Parenthesized qualifier appended to the text in day-scope headings (see day_heading).
     day_qualifier: str | None
     # What the question measures, named in the day-scope heading — see day_heading. Mirrors the
     # unit field frontend/src/types.ts declares.

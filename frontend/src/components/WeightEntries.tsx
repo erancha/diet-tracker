@@ -6,7 +6,7 @@ import { Icon } from "./Icon";
 // The plotted measurements as a list, newest first — the chart's own reading order is oldest
 // first, but a reader looking for the entry to remove starts from the most recent. Each row
 // carries the hour it was weighed at, which is what makes a weekly rhythm legible; a weighing
-// recorded before the time was kept holds a dash, keeping the columns aligned. Each value is read
+// stored without an hour holds a dash, keeping the columns aligned. Each value is read
 // against the target the way the section's heading is — the colour lands on the number alone,
 // leaving the unit as chrome. The weekday and the value each carry their own span so the
 // stylesheet can pad them to a common width, which is what holds the columns straight.

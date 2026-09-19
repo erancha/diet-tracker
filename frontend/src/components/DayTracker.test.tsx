@@ -50,11 +50,11 @@ const atLocalTime = (hour: number, minute = 0, day = 20) => {
   vi.setSystemTime(new Date(2026, 7, day, hour, minute));
 };
 
-// Past every hour a clock can report, so cases not about the first-meal nudge always arrive
-// with a quiet toggle, whatever hour they pin — or leave unpinned.
 // trackedDay and the days built from it fall on 2026-08-20, a Thursday, under a Friday treat day.
 const TREAT_DAY = { weekday: "FRI" };
 
+// Past every hour a clock can report, so cases not about the first-meal nudge always arrive
+// with a quiet toggle, whatever hour they pin — or leave unpinned.
 const NO_NUDGE_HOUR = 24;
 
 // The app's own day_close.close_until: how far past midnight a day's log keeps running.

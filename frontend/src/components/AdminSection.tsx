@@ -6,11 +6,10 @@ import { CollapsibleSection } from "./CollapsibleSection";
 // The admin's per-user activity overview: every pool account as a card with its closed-day, meal
 // and chat-question counts split into a trailing-week and an all-time column, its all-time
 // weighing count and a target-set check (never the kilograms), in the server's order — the
-// trailing week decides who counts as most active. Rendered for the
-// admin alone (the API refuses anyone else), and always opening expanded: the listing is what
-// the admin screen exists to show, so it stands outside the menu's condensed/full view command
-// and only its own toggle folds it. The server is asked only while open, so a hand-folded
-// section stops re-fetching.
+// trailing week decides who counts as most active. Rendered for the admin alone (the API refuses
+// anyone else), and always opening expanded: the listing is what the admin screen exists to
+// show, so it stands outside the menu's condensed/full view command and only its own toggle
+// folds it. The server is asked only while open, so a hand-folded section stops re-fetching.
 export function AdminSection({ api }: { api: Pick<Api, "getAdminActivity"> }) {
   const [collapsed, setCollapsed] = useState(false);
   const [users, setUsers] = useState<AdminActivityUser[] | null>(null);

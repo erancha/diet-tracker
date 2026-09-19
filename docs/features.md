@@ -56,8 +56,8 @@ recorded stands as a gap in it rather than shortening it.
   between the two lines is the part of the day that stayed within the program.
 - That panel also frames the weekday the program's treat meal is aimed at, so a lift inside the
   frame reads as a treat meal taken on the intended day and a lift outside it as one taken off
-  it. The chart runs one day past a week, so a span ending on the treat day sets it against the
-  one before.
+  it. The chart spans ten days, past a week, so a span ending on the treat day sets it against
+  the one before.
 - A dot turns red on a day that crossed its rule's limit, and each panel heading names the limit
   it is drawn against.
 
@@ -94,8 +94,8 @@ Messages reach you by email, and by Telegram where a bot token is configured:
   stored as one chat, so it appears in the chat list and can be continued there like any other.
 
 The account menu turns all of them off and back on with one switch. Opting out changes nothing
-inside the app: a muted account still sees its own violations on arrival, on closing a day and in
-the header's alarm. See [Nudges](domain-rules.md#nudges) for each job's schedule and audience.
+inside the app: a muted account still sees its own violations on arrival, on closing a day, and in
+the chart and the table. See [Nudges](domain-rules.md#nudges) for each job's schedule and audience.
 
 Every message is sent as right-to-left HTML beside its plain text, so Hebrew reads as written
 rather than as the recipient's mail client guesses.

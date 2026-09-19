@@ -1,5 +1,5 @@
-// Domain types shared across the frontend: the app config (fetched from the site origin at
-// runtime) and the API's answer-history, submission, and weight payloads.
+// Domain types shared across the frontend: config/app.json as the frontend fetches it, and the
+// API's payloads — history, meals, weight, chat, undelivered mail and the admin overview.
 
 export interface Choice {
   id: string;
@@ -299,7 +299,7 @@ export interface WeightEntry {
   date: string;
   kg: number;
   // Wall-clock "HH:MM" the weighing was recorded at. Null on weighings recorded before the time
-  // was kept — the rhythm reading draws on the ones that carry it and leaves those alone.
+  // was kept; a reading that needs the time leaves those weighings out.
   at: string | null;
 }
 

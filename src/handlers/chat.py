@@ -107,10 +107,10 @@ def _daily_limit(email):
 
 def _from_upstream(context, call):
     """Runs one call to the answering service — `call` takes the seconds it may wait — within
-    what the invocation has left, less the margin, so a hung service surfaces as a clean 502
-    instead of the invocation dying mid-request. An answer that outlasted the gateway's wait is
-    logged, since the browser's request is gone by then and the app reads it from the
-    transcript."""
+    what the invocation has left, less WAIT_MARGIN_SECONDS, so a hung service surfaces as a
+    clean 502 instead of the invocation dying mid-request. An answer that outlasted the
+    gateway's wait is logged, since the browser's request is gone by then and the app reads it
+    from the transcript."""
     budget = context.get_remaining_time_in_millis() / 1000 - WAIT_MARGIN_SECONDS
     started = time.monotonic()
     result = call(budget)
@@ -226,9 +226,8 @@ def _summarize(sub, email, at, context):
 
 
 def _conversation(turn):
-    """A stored chat as the text the digest is made from. It stays within the service's context
-    cap because every follow-up that grew the chain was itself sent under the smaller question
-    cap."""
+    """A stored chat as the text the digest is made from. Its question half arrived under the
+    question cap, half the context cap, so the answer has the other half."""
     return chat_history.conversation(turn["question"], turn["answer"])
 
 

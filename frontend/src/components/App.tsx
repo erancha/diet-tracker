@@ -106,7 +106,7 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, c
   // that hold their own collapsed state; the trends fold, held right here above the provider,
   // takes it directly. The day tracker and the chat section stand outside the command — the
   // tracker is the page's working surface and the chat keeps its composer on screen, folding
-  // only its previous turns — so both keep their own hand-toggled folds.
+  // only its earlier chats — so both keep their own hand-toggled folds.
   const [foldAll, setFoldAll] = useState<FoldAllCommand>({ gen: 0, collapsed: openedCondensed });
   const [chatCollapsed, setChatCollapsed] = useState(false);
   // A question another panel asked the chat to send, until the chat takes it. Opening the chat

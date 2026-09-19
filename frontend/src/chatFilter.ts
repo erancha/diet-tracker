@@ -1,8 +1,7 @@
 // The browser-remembered choice of which side of the chat transcript is listed: every chat, only
 // the ones the user asked, only the ones the app wrote for them, or only the ones the user
-// shared. Which chats each value admits is the chat's own call (components/Chat); here lives only
-// the choice, persisting past the visit so the next sign-in opens on the side the filter last
-// chose.
+// shared. Which chats each value admits is the chat list's own call; here lives only the choice,
+// persisting past the visit so the next sign-in opens on the side the filter last chose.
 
 import { readStored, writeStored } from "./localStore";
 

@@ -18,7 +18,7 @@ const LEGEND_LEAD_MS = 1000;
 // A day's meal list rendered in time order, reading top to bottom as the day unfolded — the
 // bottom row is the meal just recorded — each row ending with the meal's effective points so the
 // rows visibly sum to the day's carb score. Per-meal editing and deletion render only when their
-// handlers are supplied (the live tracker); the read-only history view passes none.
+// handlers are supplied.
 export function MealList({ questionnaire, meals, expandLabels, onEdit, editLastOnly = false, onDelete,
                            deletingId }: {
   questionnaire: Questionnaire;

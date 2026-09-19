@@ -6,8 +6,8 @@ Keep the checkout on the WSL ext4 filesystem (`~/projects/diet-tracker`) rather 
 `/mnt/c`. WSL reaches Windows drives through a file-sharing protocol that makes every file open a
 round trip to the Windows side, and the development loop is built from the operations that open
 the most files: interpreter startup, test collection, bundling. Importing boto3 from a virtualenv
-costs 5.0s under `/mnt/c` against 0.30s on ext4, and collecting the 309-test suite 14.5s against
-0.9s.
+costs 5.0s under `/mnt/c` against 0.30s on ext4, and collecting the backend test suite 14.5s
+against 0.9s.
 
 Reading the files from Windows through `\\wsl$\` pays the same penalty in the other direction, so
 a Windows-side editor relocates the cost rather than removing it.
@@ -36,9 +36,10 @@ narration names specific carb grades and scores.
 
 `config/app.json` is read by both runtimes — the Lambda package carries it, `sync-frontend.sh`
 publishes it at the site origin root, and the Vite dev server serves it from the same source file.
-Editing the weigh-in weekday or hour needs a `deploy.sh` run, which is where those two values reach
-the EventBridge schedules — the weekday drives both the weigh-in reminder and the day the weekly
-recap goes out on; everything else in the file takes effect on the next frontend sync.
+Every edit to it needs a `deploy.sh` run: the Lambdas read the copy inside their package, so a
+frontend sync alone changes only what the browser reads. The weigh-in weekday and hour also reach
+the EventBridge schedules through that deploy — the weekday drives both the weigh-in reminder and
+the day the weekly recap goes out on.
 
 ## Backend tests
 

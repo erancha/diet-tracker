@@ -1,5 +1,4 @@
-"""Reading a whole query result across the pages a table hands it back in — shared by the
-per-user records that sit outside Store: the chat transcript and the kept undelivered messages."""
+"""Reading a whole query result across the pages a table hands it back in."""
 
 
 def query_all(table, **query) -> list:
