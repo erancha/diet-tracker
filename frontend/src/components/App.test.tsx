@@ -102,6 +102,17 @@ const CHARTING_CONFIG: AppConfigFile = {
   },
 };
 
+// A second charted panel under the headline: trendPanels orders the points-type carb score
+// first, so drinking charts below it — where the full view governs whether it charts at all.
+const STACKED_CONFIG: AppConfigFile = {
+  ...CHARTING_CONFIG,
+  questionnaire: {
+    ...CHARTING_CONFIG.questionnaire,
+    questions: CHARTING_CONFIG.questionnaire.questions.map((q) =>
+      q.id === "drinking" ? { ...q, panel_title: "שתיה (ליטרים)" } : q),
+  },
+};
+
 describe("history load timing", () => {
   const charting = () => api({ today: trackedDay(isoDate(new Date())) });
 
@@ -319,6 +330,28 @@ describe("App", () => {
     // must not open a form whose unfolding starts composing a meal.
     expect(screen.getByRole("button", { name: "הוספת ארוחה" }))
       .toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("charts the panels below the headline in the full view alone", async () => {
+    window.localStorage.setItem(STORAGE_KEY, "false");
+    renderApp(false, api(), false, STACKED_CONFIG);
+    await screen.findByRole("button", { name: "יומן היום" });
+    const chartedPanels = () => document.querySelectorAll(".trend-panel").length;
+    expect(chartedPanels()).toBe(2);
+    expect(screen.getByText("שתיה (ליטרים)")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "תפריט חשבון" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "תצוגה מצומצמת" }));
+    // Opening the section by hand is not the full view: the condensed reading of the stack is
+    // its headline panel, folded or open.
+    fireEvent.click(screen.getByRole("button", { name: "מגמות" }));
+    expect(chartedPanels()).toBe(1);
+    expect(screen.queryByText("שתיה (ליטרים)")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "תפריט חשבון" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "תצוגה מלאה" }));
+    expect(chartedPanels()).toBe(2);
+    expect(screen.getByText("שתיה (ליטרים)")).toBeInTheDocument();
   });
 
   it("keeps the admin panel open regardless of the view command", async () => {

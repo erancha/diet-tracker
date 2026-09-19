@@ -385,7 +385,10 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, c
                             className={trendsFold.waning ? "trends section-waning" : "trends"}>
           <div className={trendsFold.folding ? "section-fold-body section-folding" : "section-fold-body"}>
           <div>
+          {/* The panels below the headline are part of the full view the menu commands, so the
+              condensed view keeps the stack to its headline even here, with the section open. */}
           <TrendChart questionnaire={questionnaire} days={data.days} today={data.today}
+                      headlineOnly={foldAll.collapsed}
                       treatDay={configQuery.data.treat_day}
                       loadedInMs={loadedInMs} />
           <div ref={openedDay}>

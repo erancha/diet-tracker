@@ -207,8 +207,9 @@ export function TrendChart({ questionnaire, days, today, loadedInMs, treatDay, h
   // request carries, so the wait belongs on the chart it delayed. Null for every account but the
   // developer's, which sees no timing at all.
   loadedInMs: number | null;
-  // Condensed rendering for the folded trends section: the legend and the headline panel alone —
-  // trendPanels orders the summed carb score first, so that is the panel that stays on screen.
+  // Condensed rendering: the legend and the headline panel alone — trendPanels orders the summed
+  // carb score first, so that is the panel that stays on screen. Both the folded section's
+  // summary line and the menu's condensed view read the chart this way.
   headlineOnly?: boolean;
 }) {
   const allPanels = trendPanels(questionnaire);
