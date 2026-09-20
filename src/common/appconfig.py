@@ -61,11 +61,13 @@ class DayCloseConfig:
     be closed and its meals written; until delete_until, its day record may still be deleted.
     The delete bound never outlives the close bound, so a deleted yesterday can always be
     re-closed. Declared in the config so the API's windows and the frontend's controls agree
-    without either restating the times. min_window_hours is the eating window a day's recorded
-    meals must span before the tracker offers closing at all."""
+    without either restating the times. The tracker offers closing once a day's recorded meals
+    span min_window_hours, or once the clock passes close_from, an evening "HH:MM" that lies
+    after close_until so the two readings of the clock never overlap."""
     close_until: str
     delete_until: str
     min_window_hours: float
+    close_from: str
 
 
 @dataclass(frozen=True)
@@ -129,9 +131,12 @@ def _parse_day_close(raw: dict) -> DayCloseConfig:
         raise ValueError(f"min_window_hours {hours!r} must be a positive number of hours")
     config = DayCloseConfig(close_until=_wall_clock(raw, "close_until"),
                             delete_until=_wall_clock(raw, "delete_until"),
-                            min_window_hours=hours)
+                            min_window_hours=hours, close_from=_wall_clock(raw, "close_from"))
     if config.delete_until > config.close_until:
         raise ValueError(f"delete_until {config.delete_until} may not outlive "
+                         f"close_until {config.close_until}")
+    if config.close_from <= config.close_until:
+        raise ValueError(f"close_from {config.close_from} must fall after "
                          f"close_until {config.close_until}")
     return config
 

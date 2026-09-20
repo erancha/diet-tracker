@@ -129,6 +129,9 @@ export interface DayCloseSettings {
   delete_until: string;
   // Eating-window hours a day's meals must span before the tracker offers closing.
   min_window_hours: number;
+  // Evening "HH:MM" from which the tracker offers closing a day holding any meal, whatever its
+  // eating window.
+  close_from: string;
 }
 
 // Frontend-only section of config/app.json, like ChatSettings: the weekday the program's treat

@@ -55,7 +55,7 @@ const NUDGE_ESCALATION_MS = 10_000;
 // config/derive-vectors.json, so they always agree with the meal list rendered beside them — the
 // server re-derives on submit and stays the authority.
 export function DayTracker({ questionnaire, treatDay, day, isToday = true, closed = false, firstMealHour,
-                             mealGapHours, maxMealsPerDay, closeMinWindowHours, stretchesUntil,
+                             mealGapHours, maxMealsPerDay, closeMinWindowHours, closeFrom, stretchesUntil,
                              onAddMeal,
                              onUpdateMeal, onDeleteMeal, deletingMealId, savingMeal, onCloseDay,
                              onReopenDay }: {
@@ -77,9 +77,12 @@ export function DayTracker({ questionnaire, treatDay, day, isToday = true, close
   // Eating-window hours the recorded meals must span before closing is offered (app.json's
   // day_close.min_window_hours): anything narrower is a day still being eaten, whose figures
   // would close too early. A day under two meals derives a zero window, so it never reaches this
-  // floor either — and with the tracker the only close, a day that never spans it stays
-  // unrecorded.
+  // floor.
   closeMinWindowHours: number;
+  // Evening "HH:MM" (day_close.close_from) from which a day holding any meal closes whatever its
+  // window: a short eating day is a legitimate day once the evening is in. A yesterday still on
+  // screen in the small hours is past this bound by definition.
+  closeFrom: string;
   // Small-hours "HH:MM" an eating day runs to past midnight (day_close.close_until): the bound
   // that tells a late-night pick on the previous day's log from an early-morning one.
   stretchesUntil: string;
@@ -181,9 +184,10 @@ export function DayTracker({ questionnaire, treatDay, day, isToday = true, close
   // the light grades leaves behind. The plate is unrecordable while it holds, so the save is
   // barred until the user lowers the primary again or removes the source.
   const secondSourceBarred = secondSource !== null && !offersSecondSource;
-  const closable = derived.eating_window >= closeMinWindowHours;
-
   const nowTime = clockTime(minutesOfDay(new Date()));
+  const pastEveningBound = !isToday || nowTime >= closeFrom;
+  const closable = derived.eating_window >= closeMinWindowHours
+    || (day.meals.length > 0 && pastEveningBound);
   // The instant the form would record, which is also what decides whether the picked time is
   // still ahead of the clock: on the previous day's log a small-hours pick is tonight's, so it
   // can be future there too.

@@ -27,11 +27,11 @@ recorded for it, plus its additions at the amount recorded for each, summed over
 Golf-style — lower is better. [The scoring model](domain-rules.md#meal-log-and-scoring) gives the
 grade ladder, the second carb source, the fruit escalation and the addition surcharges.
 
-A day closes only from the tracker, once its meals span the configured minimum eating window, and
-stays closable through the small hours after midnight. A day never logged goes unrecorded. A closed
-day stays readable, and one confirmation reopens it — the record deleted, the meals kept — to add a
-forgotten meal or correct the last one, and close over the corrected log. See
-[Day lifecycle](domain-rules.md#day-lifecycle).
+A day closes only from the tracker, once its meals span the configured minimum eating window or
+the evening has come round, and stays closable through the small hours after midnight. A day never
+logged goes unrecorded. A closed day stays readable, and one confirmation reopens it — the record
+deleted, the meals kept — to add a forgotten meal or correct the last one, and close over the
+corrected log. See [Day lifecycle](domain-rules.md#day-lifecycle).
 
 ## Weight
 

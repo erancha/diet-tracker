@@ -104,9 +104,10 @@ view's score.
 ## Day lifecycle
 
 - **Water-close** — the tracker's close button is the only way a day closes, offered once the
-  recorded meals span the minimum eating window (`day_close.min_window_hours`), and it asks for
-  water alone: every other value is the derived reading of the meal log. A day whose meals never
-  span that window — or that was never tracked at all — stays unrecorded.
+  recorded meals span the minimum eating window (`day_close.min_window_hours`) or, for a day
+  holding any meal, once the clock passes the evening bound (`day_close.close_from`): a short
+  eating day is a legitimate day once the evening is in. It asks for water alone: every other
+  value is the derived reading of the meal log. A day never tracked at all stays unrecorded.
 - **Close validation** — the server re-derives the closing day from its stored meals and rejects
   figures below that derivation, so the meal log stays the authority over what a closed day
   claims.
@@ -201,7 +202,8 @@ weight is something the chart shows rather than a nudge that fires.
 questions, their numeric choice values (the carb meal-point weights among them), and the threshold
 rules; its `version` is stamped on every closed day, so it tracks the questions and their
 values alone. Its `day_close` element holds the closing rules: the minimum eating window
-(`min_window_hours`), and the small-hours grace bounds — `close_until`, up to which an unclosed
+(`min_window_hours`), the evening bound (`close_from`) from which a day holding any meal closes
+whatever its window, and the small-hours grace bounds — `close_until`, up to which an unclosed
 yesterday may still be closed and its meals written, and which doubles as the hour a day's eating
 stretches to past midnight, and the never-later `delete_until`, up to which its record may still
 be deleted. Its `weight` element holds the weigh-in weekday and hour —

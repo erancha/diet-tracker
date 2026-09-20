@@ -353,6 +353,7 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, c
             mealGapHours={mealGapHours}
             maxMealsPerDay={configQuery.data.meals.max_per_day}
             closeMinWindowHours={dayClose.min_window_hours}
+            closeFrom={dayClose.close_from}
             stretchesUntil={dayClose.close_until}
             onAddMeal={(meal) => mealMutation.mutate(meal)}
             onUpdateMeal={(id, meal) => updateMealMutation.mutate({ date: activeDay.date, id, meal })}

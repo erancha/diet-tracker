@@ -8,7 +8,8 @@ from common import appconfig
 
 LEGAL_MEALS = {"max_per_day": 5}
 
-LEGAL_DAY_CLOSE = {"close_until": "02:00", "delete_until": "01:30", "min_window_hours": 6}
+LEGAL_DAY_CLOSE = {"close_until": "02:00", "delete_until": "01:30", "min_window_hours": 6,
+                   "close_from": "20:00"}
 
 
 def write(tmp_path, weight, meals=LEGAL_MEALS, day_close=LEGAL_DAY_CLOSE):
@@ -45,6 +46,7 @@ def test_repo_config_carries_every_section():
     assert config.day_close.close_until == "02:00"
     assert config.day_close.delete_until == "01:30"
     assert config.day_close.min_window_hours == 6
+    assert config.day_close.close_from == "20:00"
 
 
 def test_day_close_bounds_must_be_padded_wall_clock_times(tmp_path):
@@ -62,6 +64,21 @@ def test_day_close_min_window_must_be_a_positive_number_of_hours(tmp_path):
                      day_close={**LEGAL_DAY_CLOSE, "min_window_hours": bad})
         with pytest.raises(ValueError, match="min_window_hours"):
             appconfig.load(path)
+
+
+def test_day_close_evening_bound_must_be_a_padded_wall_clock_time(tmp_path):
+    for bad in ("8:00", "20:60", 20, None):
+        path = write(tmp_path, LEGAL_WEIGHT, day_close={**LEGAL_DAY_CLOSE, "close_from": bad})
+        with pytest.raises(ValueError, match="close_from"):
+            appconfig.load(path)
+
+
+def test_day_close_evening_bound_must_fall_after_the_small_hours_close_bound(tmp_path):
+    # The tracker reads a clock past close_from as an evening and one under close_until as the
+    # previous day's small hours; a close_from inside the small hours would make both true.
+    path = write(tmp_path, LEGAL_WEIGHT, day_close={**LEGAL_DAY_CLOSE, "close_from": "01:00"})
+    with pytest.raises(ValueError, match="close_from"):
+        appconfig.load(path)
 
 
 def test_day_close_delete_bound_may_not_outlive_the_close_bound(tmp_path):

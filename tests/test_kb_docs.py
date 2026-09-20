@@ -165,6 +165,7 @@ def test_day_close_bounds():
     assert f"עד {day_close['close_until']} בלילה" in DOC
     assert f"עד {day_close['delete_until']}" in DOC
     assert f"{day_close['min_window_hours']} שעות" in _doc_line("משתרעות על")
+    assert f"מהשעה {day_close['close_from']}" in _doc_line("משתרעות על")
 
 
 def test_mail_confirmation_section_names_the_senders_a_user_must_look_for():
