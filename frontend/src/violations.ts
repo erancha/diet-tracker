@@ -1,7 +1,7 @@
 // Threshold-rule checks, crossing wording, and value and heading labels, all read off the
 // questionnaire config passed in rather than any shared state.
 
-import type { AnswerValue, Choice, Derived, Question, Questionnaire, Rule } from "./types";
+import type { Choice, Question, Questionnaire, Rule } from "./types";
 
 export function violates(rule: Rule, value: number): boolean {
   if (rule.at_least !== undefined) return value >= rule.at_least;
@@ -51,17 +51,6 @@ export function isViolating(questionnaire: Questionnaire, questionId: string, va
   return questionnaire.rules.some((rule) => rule.question_id === questionId && violates(rule, value));
 }
 
-// Whether one day's value breaches what the config sets for its question, on either count: it
-// crossed the rule bound, or fell under the question's display floor. The history table keeps the
-// two apart because it marks them differently — a violation background, a shortfall color; a
-// surface carrying one red mark asks this instead.
-export function breachesLimit(questionnaire: Questionnaire, questionId: string,
-                              value: number): boolean {
-  const question = questionnaire.questions.find((q) => q.id === questionId);
-  return isViolating(questionnaire, questionId, value)
-    || (question?.warn_below !== undefined && value < question.warn_below);
-}
-
 // How yesterday is named wherever a crossing sentence mentions it. The sign-in banner turns this
 // same word into the link opening yesterday's day view, so the word it links cannot drift from the
 // word the sentence was built from.
@@ -86,25 +75,16 @@ export function crossingNotice(days: CrossedDays): string {
   return `${CROSSED[days]} ${CROSSING_MARKED}`;
 }
 
-// Whether any answer of one submitted day crosses its rule's bound — the same per-day signal the
-// history table paints red. The submit banner reads it so a saved day is declared clean only
-// when nothing crossed a bound.
-export function crossesThreshold(questionnaire: Questionnaire,
-                                 answers: Record<string, AnswerValue>): boolean {
-  return Object.entries(answers).some(([questionId, value]) =>
-    isViolating(questionnaire, questionId, value));
-}
-
-// Whether a day still open has already crossed a bound, judged on the figures its meals so far
-// derive. Only a bound reached by growing can be settled before the day ends, and a figure that
-// has reached one still stands there at closing. A day sits under every shortfall bound until the
-// eating and drinking that answer it have happened, so those bounds wait for the closed day — as
-// does drinking, which is answered at closing and derived from nothing.
-export function crossesThresholdWhileOpen(questionnaire: Questionnaire, derived: Derived): boolean {
-  return questionnaire.rules.some((rule) => {
-    const running = derived[rule.question_id as keyof Derived];
-    return running !== undefined && band(rule).violatingAbove && violates(rule, running);
-  });
+// Whether a day's score crosses its rule's bound, judged on whatever figures the day has: a
+// closed day's answers, or the figures an open day's meals so far derive. The two are judged
+// alike because a score's bound is one the day grows into, so a running score that has reached
+// it still stands there at closing.
+export function crossesScoreBound(questionnaire: Questionnaire,
+                                  values: Record<string, number>): boolean {
+  const scores = new Set(
+    questionnaire.questions.filter((q) => q.type === "points").map((q) => q.id));
+  return questionnaire.rules.some((rule) =>
+    scores.has(rule.question_id) && violates(rule, values[rule.question_id]));
 }
 
 // What one plate must cost to count as heavy, judged on the meal's whole price — its grade,

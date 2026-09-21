@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { crossesThreshold, crossesThresholdWhileOpen, headedValue, isHeavyMeal, isViolating, panelTitle, questionTitle, ruleBoundLabel, trendPanels, valueLabel, violates } from "./violations";
+import { crossesScoreBound, headedValue, isHeavyMeal, isViolating, panelTitle, questionTitle, ruleBoundLabel, trendPanels, valueLabel, violates } from "./violations";
 import type { Derived, Question, Questionnaire, Rule } from "./types";
 
 const carbs: Question = {
@@ -70,31 +70,19 @@ describe("isHeavyMeal", () => {
   });
 });
 
-describe("crossesThreshold", () => {
-  it("is true when any submitted value crosses its rule's bound", () => {
-    expect(crossesThreshold(questionnaire, { carbs: 9, meals: 3 })).toBe(true);
-    expect(crossesThreshold(questionnaire, { carbs: 2, meals: 2 })).toBe(true);
+describe("crossesScoreBound", () => {
+  it("is true when the score crosses its rule's bound", () => {
+    expect(crossesScoreBound(questionnaire, { carbs: 9, meals: 3 })).toBe(true);
   });
 
-  it("is false when every submitted value respects every bound", () => {
-    expect(crossesThreshold(questionnaire, { carbs: 2, meals: 3 })).toBe(false);
-  });
-});
-
-describe("crossesThresholdWhileOpen", () => {
-  const running = (figures: Partial<Derived>): Derived =>
-    ({ carbs: 0, meals: 0, vegetables: 0, eating_window: 0, ...figures });
-
-  it("is true when a running figure has already passed a bound it can only grow into", () => {
-    expect(crossesThresholdWhileOpen(questionnaire, running({ carbs: 9 }))).toBe(true);
+  it("is false when the score respects its bound, whatever the other answers did", () => {
+    // Two meals cross the few-meals rule; the banner leaves that to the table.
+    expect(crossesScoreBound(questionnaire, { carbs: 2, meals: 2 })).toBe(false);
   });
 
-  it("is false for a shortfall the rest of the day can still make up", () => {
-    // A morning stands under every below bound — nothing has been eaten or drunk yet — and
-    // crossesThreshold would call that a crossing.
-    const morning = running({ carbs: 2, meals: 2 });
-    expect(crossesThreshold(questionnaire, { ...morning })).toBe(true);
-    expect(crossesThresholdWhileOpen(questionnaire, morning)).toBe(false);
+  it("judges a running day's figures the same way", () => {
+    const running: Derived = { carbs: 9, meals: 0, vegetables: 0, eating_window: 0 };
+    expect(crossesScoreBound(questionnaire, running)).toBe(true);
   });
 });
 

@@ -71,14 +71,14 @@ subtotal, and the day's score. A day whose score crossed the rule grounds its wh
 under any cell mark, and amber rather than red on the treat day — with the score itself bold.
 Tapping a day's score opens that day's meal log, read-only.
 
-Opening the app greets a crossing rather than leaving it to be found: when yesterday or the running
-day has already crossed a bound, a notice names which of them and clears itself after ten seconds,
-since it only points at marks the chart and the table are already carrying. Where it names
-yesterday, that word is a link: following it opens yesterday's meal log in the same place the table
-opens one, unfolding the trends section and bringing the log on screen. A closed day is judged on
-its answers, every bound included. A day still open is judged on the figures its meals so far
-derive, and only against the bounds a day grows into: a morning sits under the water and vegetable
-bounds until the day has answered them, so those two wait for the close.
+Opening the app greets a crossing rather than leaving it to be found: when yesterday's or the
+running day's score has already crossed its bound, a notice names which of them and clears itself
+after ten seconds, since it only points at marks the chart and the table are already carrying.
+Where it names yesterday, that word is a link: following it opens yesterday's meal log in the same
+place the table opens one, unfolding the trends section and bringing the log on screen. The notice
+answers to the score alone, as does the one raised on closing a day: too little water, no
+vegetables, a fourth meal or a long window mark their own cell red and are left there. A closed
+day is judged on its recorded score, a day still open on the score its meals so far derive.
 
 [Excluded points and the treat day](domain-rules.md#shared-derivation) specify how the subtotal
 and the framed weekday are derived.

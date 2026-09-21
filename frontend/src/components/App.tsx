@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { alertMessage, type Api } from "../api";
-import { crossesThreshold, crossingNotice, YESTERDAY_WORD } from "../violations";
+import { crossesScoreBound, crossingNotice, YESTERDAY_WORD } from "../violations";
 import type { AppConfigFile, NewMeal, WeightPayload } from "../types";
 import { beforeDailyCutoff, expandWeightSection, isoDate, yesterdayOf } from "../dates";
 import { lastStepRises, TARGET_UNSET_NOTICE } from "../weight";
@@ -149,10 +149,10 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, c
     dismissAlerts();
   };
 
-  // The page's opening word: a bound yesterday or the running day has already crossed. Raised once
-  // per visit, since the history reloads on window focus and after every save, and the strip it
-  // lands in belongs to whatever the user did last. The admin screen carries no tracking, so none
-  // of the surfaces the reminder points at stand on it.
+  // The page's opening word: a score bound yesterday or the running day has already crossed.
+  // Raised once per visit, since the history reloads on window focus and after every save, and
+  // the strip it lands in belongs to whatever the user did last. The admin screen carries no
+  // tracking, so none of the surfaces the reminder points at stand on it.
   useEffect(() => {
     const config = configQuery.data;
     const history = historyQuery.data;
@@ -179,10 +179,10 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, c
       // A crossing day is still a saved day, so the confirmation leads either way — the closed
       // tracker would otherwise be the only sign the figures went through.
       const saved = `נשמר לתאריך ${result.date}!`;
-      // A bound crossed today is painted red in the trend graphs and the table beside the banner,
-      // so a clean-day claim there reads as a contradiction; the banner names the crossing
-      // instead, as a notice.
-      setAlerts(crossesThreshold(configQuery.data!.questionnaire, answers)
+      // A score past its bound today is painted red in the trend graphs and the table beside the
+      // banner, so a clean-day claim there reads as a contradiction; the banner names the crossing
+      // instead, as a notice. Any other answer's crossing keeps to its red cell.
+      setAlerts(crossesScoreBound(configQuery.data!.questionnaire, answers)
         ? [{ kind: "ok", message: saved },
            { kind: "crossing", message: crossingNotice("today") }]
         : [{ kind: "ok", message: `${saved} אין חריגות היום ✔` }]);

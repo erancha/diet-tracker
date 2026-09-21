@@ -1,6 +1,6 @@
 import type { Derived, Questionnaire, TreatDaySettings } from "../types";
 import { fallsOn } from "../dates";
-import { breachesLimit, isViolating, scoreLabel } from "../violations";
+import { isViolating, scoreLabel } from "../violations";
 
 // One-line summary of a day's derived values, shared by the live tracker header (client-derived)
 // and the read-only history view (server-derived). Every figure is its own element so color can
@@ -18,10 +18,11 @@ export function DayDashboard({ questionnaire, treatDay, date, derived, onScoreCl
   const carbsQuestion = questionnaire.questions.find((q) => q.id === "carbs")!;
   const softened = fallsOn(date, treatDay.weekday) ? " treat-day" : "";
   const heavy = isViolating(questionnaire, carbsQuestion.id, derived.carbs);
-  // A day holding no meals yet has nothing to judge: its zeros are what has not been recorded,
-  // not a floor missed or a bound crossed.
+  // A figure marks on its rule bound alone, never on a question's display floor. A day holding
+  // no meals yet has nothing to judge: its zeros are what has not been recorded, not a bound
+  // crossed.
   const valueClass = (questionId: string, value: number) =>
-    derived.meals > 0 && breachesLimit(questionnaire, questionId, value)
+    derived.meals > 0 && isViolating(questionnaire, questionId, value)
       ? `value breach${softened}` : "value";
   return (
     <div className="tracker-dashboard">

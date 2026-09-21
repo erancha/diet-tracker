@@ -54,7 +54,8 @@ export interface Question {
   excluded_grade?: number;
   excluded_additions?: string[];
   // Display floor: history answers below it redden as a shortfall, day by day, without the
-  // background a rule crossing earns.
+  // background a rule crossing earns. It is a mark of the history table alone; no other surface
+  // reads it.
   warn_below?: number;
   // The day value the plan treats as routine: a history cell holding any other value is bolded,
   // so deviations to either side stand out down the column while routine days recede.
@@ -198,7 +199,7 @@ export interface Meal {
   second_source: CarbSource | null;
 }
 
-export interface Derived {
+export type Derived = {
   carbs: number;
   meals: number;
   vegetables: number;

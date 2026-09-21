@@ -4,8 +4,9 @@ import { DayDashboard } from "./DayDashboard";
 import type { Questionnaire } from "../types";
 
 // Every limit the dashboard can mark, one per figure: the window bounded from above by its rule,
-// the vegetables display floor, and the score's own rule. The meal count is bounded by nothing
-// here, so it stands for the figures that never mark.
+// vegetables bounded from below by theirs, and the score's own rule. The vegetables display floor
+// sits above its rule so the two are told apart: the floor marks in the history table alone. The
+// meal count is bounded by nothing here, so it stands for the figures that never mark.
 const questionnaire: Questionnaire = {
   version: 1,
   questions: [
@@ -17,6 +18,7 @@ const questionnaire: Questionnaire = {
   rules: [
     { id: "window", question_id: "eating_window", above: 12 },
     { id: "heavy", question_id: "carbs", at_least: 8 },
+    { id: "no_vegetables", question_id: "vegetables", below: 1 },
   ],
 };
 
@@ -26,13 +28,20 @@ const ORDINARY = "2026-08-20";
 const TREAT = "2026-08-21";
 
 describe("DayDashboard", () => {
-  it("marks a window past its bound and vegetables under their floor", () => {
+  it("marks a window past its bound and vegetables under their rule", () => {
     render(<DayDashboard questionnaire={questionnaire} treatDay={TREAT_DAY} date={ORDINARY}
-                         derived={{ carbs: 9, meals: 3, vegetables: 1, eating_window: 13 }} />);
+                         derived={{ carbs: 9, meals: 3, vegetables: 0, eating_window: 13 }} />);
 
     expect(screen.getByText("13")).toHaveClass("breach");
-    expect(screen.getByText("1")).toHaveClass("breach");
+    expect(screen.getByText("0")).toHaveClass("breach");
     expect(screen.getByText("9").closest("strong")).toHaveClass("heavy-day");
+  });
+
+  it("leaves vegetables under their display floor unmarked: the floor is the table's alone", () => {
+    render(<DayDashboard questionnaire={questionnaire} treatDay={TREAT_DAY} date={ORDINARY}
+                         derived={{ carbs: 5, meals: 3, vegetables: 1, eating_window: 8 }} />);
+
+    expect(screen.getByText("1")).not.toHaveClass("breach");
   });
 
   it("marks nothing on a day with no meals recorded yet", () => {
@@ -53,11 +62,11 @@ describe("DayDashboard", () => {
 
   it("marks a treat-day breach like any other, softened by the treat-day class", () => {
     render(<DayDashboard questionnaire={questionnaire} treatDay={TREAT_DAY} date={TREAT}
-                         derived={{ carbs: 9, meals: 3, vegetables: 1, eating_window: 13 }} />);
+                         derived={{ carbs: 9, meals: 3, vegetables: 0, eating_window: 13 }} />);
 
     expect(screen.getByText("13")).toHaveClass("breach", "treat-day");
     expect(screen.getByText("9").closest("strong")).toHaveClass("heavy-day", "treat-day");
-    expect(screen.getByText("1")).toHaveClass("breach", "treat-day");
+    expect(screen.getByText("0")).toHaveClass("breach", "treat-day");
   });
 
   it("keeps the treat-day class off an ordinary day's marks", () => {
