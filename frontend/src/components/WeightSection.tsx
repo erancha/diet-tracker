@@ -8,6 +8,7 @@ import { activeSpan, ceilingWarning, entriesWithin, floorWarning, kgLabel, offer
 import { CollapsibleSection } from "./CollapsibleSection";
 import { Icon, type IconName } from "./Icon";
 import { useGlobalFold } from "./useFoldAll";
+import { useWindDownFold } from "./useWindDownFold";
 import { WeightChart } from "./WeightChart";
 import { WeightEntries } from "./WeightEntries";
 
@@ -157,6 +158,10 @@ const TREND_ICONS: Record<TrendShape, IconName> = {
   valley: "trendValley",
 };
 
+// How long the glance holds the section open before it folds itself away: enough to take in the
+// chart's newest stretch, short enough that the tracker below is not kept waiting.
+export const WEIGHT_GLANCE_MS = 5_000;
+
 // Today's weighing. The row marks itself on the weigh-in day, which is what the stylesheet sizes
 // it by: the day the rhythm asks for a weighing reads larger, and recording stays open on any.
 function TodayRow({ recorded, limits, due, onRecord }: {
@@ -189,14 +194,20 @@ function TodayRow({ recorded, limits, due, onRecord }: {
 // a section the caller opened stands until a toggle or the menu's global fold closes it. Saving a
 // weighing leaves it open: the chart is what the new measurement is worth reading against.
 //
+// A glance is the one opening the section takes on its own account: a few seconds with the chart
+// on screen, for a gain the reader should not walk past, then the timed fold shuts it unless a
+// toggle, the global fold or a saved weighing has taken it over meanwhile.
+//
 // The rhythm line above the chart carries the one word that opens the chat, so a reader who wonders
 // why the weighing is weekly can ask without leaving the section.
-export function WeightSection({ weight, settings, now, defaultExpanded,
+export function WeightSection({ weight, settings, now, defaultExpanded, glance,
                                 onRecord, onSetTarget, onDelete, onAskChat }: {
   weight: WeightPayload;
   settings: WeightSettings;
   now: Date;
   defaultExpanded: boolean;
+  // Opens the section for the glance; a section opened by defaultExpanded stands regardless.
+  glance: boolean;
   onRecord: (kg: number) => void;
   onSetTarget: (kg: number) => void;
   onDelete: (date: string) => void;
@@ -204,8 +215,10 @@ export function WeightSection({ weight, settings, now, defaultExpanded,
   onAskChat?: (question: string) => void;
 }) {
   const [span, setSpan] = useState<ChartSpan>(settings.chart_months);
-  const [collapsed, setCollapsed] = useState(!defaultExpanded);
-  useGlobalFold(setCollapsed);
+  const fold = useWindDownFold(glance && !defaultExpanded, !(defaultExpanded || glance),
+                               WEIGHT_GLANCE_MS);
+  useGlobalFold(fold.set);
+  const collapsed = fold.collapsed;
   const todayStr = isoDate(now);
   const recordedToday = weight.entries.find((entry) => entry.date === todayStr);
   const summary = summarize(weight.entries, weight.target);
@@ -230,9 +243,11 @@ export function WeightSection({ weight, settings, now, defaultExpanded,
     <CollapsibleSection
       title={heading}
       collapsed={collapsed}
-      onToggle={() => setCollapsed((c) => !c)}
+      onToggle={fold.toggle}
       label={figure === null ? "משקל" : `משקל: ${figure} ${unit}`}
-      className={summary.overTarget ? "weight weight-over-target" : "weight"}
+      className={["weight", summary.overTarget && "weight-over-target", fold.waning && "section-waning"]
+        .filter(Boolean).join(" ")}
+      style={fold.style}
       headerAside={
         <>
           <TargetReading summary={summary} limits={settings.limits} onSet={onSetTarget} />
@@ -241,12 +256,14 @@ export function WeightSection({ weight, settings, now, defaultExpanded,
               draws the last three weighings, so the folded line carries the direction the chart
               behind it would show. */}
           <button type="button" className="glyph weight-chart-toggle" aria-expanded={!collapsed}
-                  aria-label="גרף המשקל" onClick={() => setCollapsed((c) => !c)}>
+                  aria-label="גרף המשקל" onClick={fold.toggle}>
             <Icon name={shape === null ? "trend" : TREND_ICONS[shape]} />
           </button>
         </>
       }
     >
+      <div className={fold.folding ? "section-fold-body section-folding" : "section-fold-body"}>
+      <div>
       {rhythm !== null && (
         <p className="weight-rhythm">
           {rhythm.before}
@@ -261,12 +278,14 @@ export function WeightSection({ weight, settings, now, defaultExpanded,
       )}
       <TodayRow recorded={recordedToday?.kg ?? null} limits={settings.limits}
                 due={isWeighInDay(now, settings.weigh_in.weekday)}
-                onRecord={onRecord} />
+                onRecord={(kg) => { fold.disarm(); onRecord(kg); }} />
       {weight.entries.length > 0 && (
         <WeightChart entries={plotted} target={weight.target} span={active} spans={spans}
                      onSpanChange={setSpan} />
       )}
       <WeightEntries entries={plotted} target={weight.target} onDelete={onDelete} />
+      </div>
+      </div>
     </CollapsibleSection>
   );
 }

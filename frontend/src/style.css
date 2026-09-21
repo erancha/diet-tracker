@@ -409,10 +409,11 @@ th { vertical-align: top; font-size: calc(var(--cell-font-size) - 1pt); }
 }
 /* A panel standing open unbidden makes its exit as a wind-down, not a vanishing act, so it
    cannot read as a glitch: full presence for the first half, a deep dim across the back half —
-   timed so delay plus duration meet useWindDownFold's ten-second fold — and then the content
-   sweeps closed via the grid row while the title line stays. The body wrapper always carries
-   the grid, so the sweep has a single row to close. */
-.section-waning { animation: section-wane 5s ease 5s forwards; }
+   split from the hold useWindDownFold sets on the section, so the dim ends where its fold
+   begins — and then the content sweeps closed via the grid row while the title line stays. The
+   body wrapper always carries the grid, so the sweep has a single row to close. */
+.section-waning { animation: section-wane calc(var(--wind-down-hold) / 2) ease
+                             calc(var(--wind-down-hold) / 2) forwards; }
 @keyframes section-wane { to { opacity: 0.35; } }
 .section-fold-body { display: grid; grid-template-rows: 1fr; }
 .section-fold-body > div { min-height: 0; }
@@ -838,12 +839,18 @@ main:not(.intro-0, .intro-1, .intro-2, .intro-3, .intro-4) .weight .section-togg
    link in running text: the sentence's own colour, marked by the underline alone. */
 .weight-rhythm button { text-decoration: underline; text-underline-offset: 2px; }
 /* The measurements behind the chart: one grid whose columns — date, hour, weight, delete — each
-   sit at their widest content, aligned down the list with no cell stretched. The rows dissolve
-   into the grid (display: contents) so every row's cells share the same columns. */
+   sit at their widest content, aligned down the list with no cell stretched. Each row is a
+   subgrid spanning the four columns, so its cells line up with every other row's while the row
+   itself stays a box that can carry a ground. The rows' spacing is their own padding rather than
+   a row gap, so two grounded rows in a run meet as one band. */
 .weight-entries { list-style: none; padding: 0; margin: 0.5rem 0 0; display: grid;
-                  grid-template-columns: repeat(4, max-content); align-items: center;
-                  gap: 0.25rem 1rem; font-size: calc(1rem - 1px); }
-.weight-entries li { display: contents; }
+                  grid-template-columns: repeat(4, max-content); column-gap: 1rem;
+                  font-size: calc(1rem - 1px); }
+.weight-entries li { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid;
+                     align-items: center; padding: 0.125rem 0.35rem; margin-inline: -0.35rem;
+                     border-radius: 4px; }
+/* A row at either end of a stretch the weight climbed over, on the ground a crossing earns. */
+.weight-entries .weight-entry-gain { background: var(--breach-ground); }
 /* The newest weighing heads the list and is the one read; the measurements behind it are
    set a pixel smaller, so the top row stands out without a rule or a heavier weight. */
 .weight-entries li:not(:first-child) { font-size: calc(1em - 1px); }

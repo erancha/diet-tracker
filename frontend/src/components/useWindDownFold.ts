@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 
-// How long an auto-opened panel stands before folding away on its own. The style sheet's
-// wind-down dim is timed to end exactly here, so the dim and the fold read as one gesture.
+// How long an auto-opened panel stands before folding away on its own, unless the caller names
+// another hold. The style sheet's wind-down dim reads the hold from the custom property the hook
+// hands back, so the dim ends exactly where the fold begins whatever the hold.
 export const WIND_DOWN_FOLD_MS = 10_000;
 
 // How long the closing sweep runs — the duration of the style sheet's section-fold animation.
@@ -20,8 +21,11 @@ export const WIND_DOWN_SWEEP_MS = 800;
  * the three readings with the style sheet's section-fold classes: `waning` dresses the section
  * for the whole armed stretch (the dim animation carries its own delay), `folding` runs the
  * closing sweep with the content still mounted, and `collapsed` lands once the sweep is done.
+ * `style` goes on the section so the dim knows the hold; `holdMs` is how long the section stands
+ * before the sweep starts.
  */
-export function useWindDownFold(armed: boolean, initiallyCollapsed: boolean) {
+export function useWindDownFold(armed: boolean, initiallyCollapsed: boolean,
+                                holdMs: number = WIND_DOWN_FOLD_MS) {
   const [collapsed, setCollapsed] = useState(initiallyCollapsed);
   const [folding, setFolding] = useState(false);
   const [engaged, setEngaged] = useState(false);
@@ -44,11 +48,12 @@ export function useWindDownFold(armed: boolean, initiallyCollapsed: boolean) {
 
   useEffect(() => {
     if (!armed || engaged || collapsed) return;
-    const fold = setTimeout(() => setFolding(true), WIND_DOWN_FOLD_MS);
+    const fold = setTimeout(() => setFolding(true), holdMs);
     const folded = setTimeout(() => { setFolding(false); setCollapsed(true); },
-                              WIND_DOWN_FOLD_MS + WIND_DOWN_SWEEP_MS);
+                              holdMs + WIND_DOWN_SWEEP_MS);
     return () => { clearTimeout(fold); clearTimeout(folded); };
-  }, [armed, engaged, collapsed]);
+  }, [armed, engaged, collapsed, holdMs]);
 
-  return { collapsed, folding, waning: armed && !engaged && !collapsed, toggle, disarm, set };
+  const style = { "--wind-down-hold": `${holdMs}ms` } as CSSProperties;
+  return { collapsed, folding, waning: armed && !engaged && !collapsed, style, toggle, disarm, set };
 }

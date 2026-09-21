@@ -51,6 +51,19 @@ describe("WeightEntries", () => {
     expect(under.querySelector(".over-target")).toBeNull();
   });
 
+  it("grounds both ends of every stretch the weight climbed over, and no other row", () => {
+    render(<WeightEntries target={null} onDelete={() => {}} entries={[
+      { date: "2026-08-06", kg: 78, at: null },
+      { date: "2026-08-13", kg: 77, at: null },
+      { date: "2026-08-20", kg: 77.5, at: null },
+      { date: "2026-08-27", kg: 77.2, at: null },
+    ]} />);
+    const grounded = screen.getAllByRole("listitem")
+      .map((row) => row.classList.contains("weight-entry-gain"));
+    // Newest first: 27/08 fell, 20/08 rose from 13/08, 06/08 only fell into the next.
+    expect(grounded).toEqual([false, true, true, false]);
+  });
+
   it("reads values plainly before a target has been set", () => {
     render(<WeightEntries entries={ENTRIES} target={null} onDelete={() => {}} />);
     expect(document.querySelector(".over-target")).toBeNull();

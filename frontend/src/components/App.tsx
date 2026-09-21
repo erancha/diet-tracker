@@ -4,7 +4,7 @@ import { alertMessage, type Api } from "../api";
 import { crossesThreshold, crossingNotice, YESTERDAY_WORD } from "../violations";
 import type { AppConfigFile, NewMeal, WeightPayload } from "../types";
 import { beforeDailyCutoff, expandWeightSection, isoDate, yesterdayOf } from "../dates";
-import { TARGET_UNSET_NOTICE } from "../weight";
+import { lastStepRises, TARGET_UNSET_NOTICE } from "../weight";
 import { isFirstVisit } from "../firstVisit";
 import { signInCrossedDays } from "../signInBreach";
 import { storeCondensedView, storedCondensedView } from "../viewMode";
@@ -287,6 +287,9 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, c
   // was loaded: a first visit, and the weigh-in morning while no recent weighing answers it.
   const openWeight = firstVisit
     || expandWeightSection(now, configQuery.data.weight.weigh_in.weekday, weightQuery.data.entries);
+  // A gain at the newest weighing earns a glance — the section opens on its own for a few
+  // seconds — on any other load: an occasion that already opens the section holds it open.
+  const glanceWeight = !openWeight && lastStepRises(weightQuery.data.entries);
   const answersByDate = new Map(data.days.map((d) => [d.date, d.answers]));
 
   // Yesterday's record leaves the deletable set before it leaves the closable one, so a deletion
@@ -335,6 +338,7 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, c
           settings={configQuery.data.weight}
           now={now}
           defaultExpanded={openWeight}
+          glance={glanceWeight}
           onRecord={(kg) => recordWeightMutation.mutate(kg)}
           onSetTarget={(kg) => setTargetMutation.mutate(kg)}
           onDelete={(date) => deleteWeightMutation.mutate(date)}
@@ -383,7 +387,8 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, c
                                             loadedInMs={loadedInMs} />
                               </>
                             )}
-                            className={trendsFold.waning ? "trends section-waning" : "trends"}>
+                            className={trendsFold.waning ? "trends section-waning" : "trends"}
+                            style={trendsFold.style}>
           <div className={trendsFold.folding ? "section-fold-body section-folding" : "section-fold-body"}>
           <div>
           {/* The panels below the headline are part of the full view the menu commands, so the

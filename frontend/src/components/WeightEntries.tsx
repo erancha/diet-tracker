@@ -1,6 +1,6 @@
 import type { WeightEntry } from "../types";
 import { ddmmLabel, weekdayLabel } from "../dates";
-import { deleteWeightPrompt, kgLabel, overTargetSeverity } from "../weight";
+import { deleteWeightPrompt, kgLabel, overTargetSeverity, risingEdges } from "../weight";
 import { Icon } from "./Icon";
 
 // The plotted measurements as a list, newest first — the chart's own reading order is oldest
@@ -11,6 +11,10 @@ import { Icon } from "./Icon";
 // leaving the unit as chrome. The weekday and the value each carry their own span so the
 // stylesheet can pad them to a common width, which is what holds the columns straight.
 //
+// The rows at both ends of a stretch the weight climbed over stand on the breach ground, the
+// same ground the chart above lays under that stretch, so the list and the chart mark one gain
+// the same way.
+//
 // Deletion is offered at every date, however old. A weight feeds no day score and no rule judgment,
 // so removing one restates nothing; a measurement logged against the wrong day would otherwise
 // have no way out of the chart.
@@ -20,12 +24,13 @@ export function WeightEntries({ entries, target, onDelete }: {
   onDelete: (date: string) => void;
 }) {
   if (entries.length === 0) return null;
+  const gained = new Set(risingEdges(entries).flatMap((edge) => [edge.from, edge.to]));
   return (
     <ul className="weight-entries">
       {[...entries].reverse().map((entry) => {
         const severity = overTargetSeverity(entry.kg, target);
         return (
-        <li key={entry.date}>
+        <li key={entry.date} className={gained.has(entry.date) ? "weight-entry-gain" : undefined}>
           <span className="weight-entry-date">
             <span className="weight-entry-weekday">{weekdayLabel(entry.date)}</span>
             {" "}{ddmmLabel(entry.date)}

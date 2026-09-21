@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { WeightSection } from "./WeightSection";
+import { WeightSection, WEIGHT_GLANCE_MS } from "./WeightSection";
+import { WIND_DOWN_SWEEP_MS } from "./useWindDownFold";
 import type { WeightPayload, WeightSettings } from "../types";
 import { DISCARD_EDITS_PROMPT } from "../edits";
 import { WEIGH_IN_CADENCE_QUESTION } from "../weight";
@@ -24,7 +25,7 @@ interface Handlers {
 }
 
 function renderSection(weight: Partial<WeightPayload> = {}, handlers: Handlers = {},
-                       defaultExpanded = false, now: Date = NOW) {
+                       defaultExpanded = false, now: Date = NOW, glance = false) {
   render(
     <WeightSection
       weight={{ ...EMPTY, ...weight }}
@@ -35,6 +36,7 @@ function renderSection(weight: Partial<WeightPayload> = {}, handlers: Handlers =
       onDelete={handlers.onDelete ?? (() => {})}
       onAskChat={handlers.onAskChat}
       defaultExpanded={defaultExpanded}
+      glance={glance}
     />,
   );
 }
@@ -91,6 +93,45 @@ describe("open panel at rest", () => {
     act(() => { vi.advanceTimersByTime(60_000); });
     expect(screen.getByLabelText("המשקל היום")).toBeInTheDocument();
     vi.useRealTimers();
+  });
+});
+
+// The glance: the section opened unbidden for a five-second look at a gain, then folds itself
+// away unless a hand takes it over meanwhile.
+describe("glance", () => {
+  const GAIN = [{ date: "2026-08-20", kg: 80, at: null }, { date: TODAY, kg: 81, at: null }];
+
+  afterEach(() => vi.useRealTimers());
+
+  it("opens for five seconds and folds itself away", () => {
+    vi.useFakeTimers();
+    renderSection({ entries: GAIN }, {}, false, NOW, true);
+    const section = document.querySelector("section.weight")!;
+    expect(screen.getByLabelText("המשקל היום")).toBeInTheDocument();
+    expect(section).toHaveClass("section-waning");
+    expect(section).toHaveStyle({ "--wind-down-hold": "5000ms" });
+    act(() => { vi.advanceTimersByTime(WEIGHT_GLANCE_MS + WIND_DOWN_SWEEP_MS); });
+    expect(screen.queryByLabelText("המשקל היום")).toBeNull();
+  });
+
+  it("stays with the hand that toggled it", () => {
+    vi.useFakeTimers();
+    renderSection({ entries: GAIN }, {}, false, NOW, true);
+    const button = screen.getByRole("button", { name: "גרף המשקל" });
+    fireEvent.click(button);
+    fireEvent.click(button);
+    act(() => { vi.advanceTimersByTime(60_000); });
+    expect(screen.getByLabelText("המשקל היום")).toBeInTheDocument();
+    expect(document.querySelector("section.weight")).not.toHaveClass("section-waning");
+  });
+
+  it("stays open once a weighing is saved into it", () => {
+    vi.useFakeTimers();
+    renderSection({ entries: GAIN }, {}, false, NOW, true);
+    fireEvent.change(screen.getByLabelText("המשקל היום"), { target: { value: "80.5" } });
+    fireEvent.click(screen.getByRole("button", { name: "עדכון" }));
+    act(() => { vi.advanceTimersByTime(60_000); });
+    expect(screen.getByLabelText("המשקל היום")).toBeInTheDocument();
   });
 });
 

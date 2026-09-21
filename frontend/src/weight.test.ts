@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { activeSpan, ceilingWarning, chartDomain, entriesWithin, floorWarning, kgLabel,
-         offeredSpans, overTargetSeverity, parseKg, rhythmReading, summarize, targetChangePrompt,
-         trendShape, usualHour } from "./weight";
+         lastStepRises, offeredSpans, overTargetSeverity, parseKg, rhythmReading, risingEdges,
+         summarize, targetChangePrompt, trendShape, usualHour } from "./weight";
 import type { WeightEntry } from "./types";
 
 const TODAY = new Date(2026, 7, 27); // 2026-08-27
@@ -153,6 +153,35 @@ describe("trendShape", () => {
     expect(trendShape(series(80, 79))).toBe("down");
     expect(trendShape(series(80))).toBeNull();
     expect(trendShape([])).toBeNull();
+  });
+});
+
+describe("risingEdges", () => {
+  const series = (...kgs: number[]): WeightEntry[] =>
+    kgs.map((kg, i) => ({ date: `2026-08-${String(20 + i).padStart(2, "0")}`, kg, at: null }));
+
+  it("names each stretch between a weighing and a heavier one after it", () => {
+    expect(risingEdges(series(80, 81, 80.5, 82))).toEqual([
+      { from: "2026-08-20", to: "2026-08-21" },
+      { from: "2026-08-22", to: "2026-08-23" },
+    ]);
+  });
+
+  it("does not count a weighing that held or fell", () => {
+    expect(risingEdges(series(80, 80.04, 79))).toEqual([]);
+    expect(risingEdges(series(80))).toEqual([]);
+  });
+});
+
+describe("lastStepRises", () => {
+  const series = (...kgs: number[]): WeightEntry[] =>
+    kgs.map((kg, i) => ({ date: `2026-08-${String(20 + i).padStart(2, "0")}`, kg, at: null }));
+
+  it("is true only when the newest weighing is heavier than the one before it", () => {
+    expect(lastStepRises(series(78, 80, 81))).toBe(true);
+    expect(lastStepRises(series(78, 81, 80))).toBe(false);
+    expect(lastStepRises(series(78, 80, 80.04))).toBe(false);
+    expect(lastStepRises(series(80))).toBe(false);
   });
 });
 

@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useState, type CSSProperties, type ReactNode } from "react";
 
 type Shared = {
   // Rich rather than plain text, so a heading built from a figure and its unit can paint the two
@@ -14,6 +14,8 @@ type Shared = {
   headerAside?: ReactNode;
   children: ReactNode;
   className?: string;
+  // Inline custom properties the section's own styles read, such as a timed fold's hold.
+  style?: CSSProperties;
   // Nested sections need a subordinate heading so the document outline stays ordered.
   headingLevel?: 2 | 3;
 };
@@ -27,7 +29,7 @@ type CallerManaged = Shared & { collapsed: boolean; onToggle: () => void; defaul
 // Section whose heading toggles the body; `summary` (when given) stays visible while collapsed,
 // serving as the section's at-a-glance line.
 export function CollapsibleSection(props: SelfManaged | CallerManaged) {
-  const { title, label, summary, headerAside, children, className, headingLevel = 2 } = props;
+  const { title, label, summary, headerAside, children, className, style, headingLevel = 2 } = props;
   const [selfCollapsed, setSelfCollapsed] = useState(props.defaultCollapsed === true);
 
   const collapsed = props.collapsed === undefined ? selfCollapsed : props.collapsed;
@@ -46,7 +48,7 @@ export function CollapsibleSection(props: SelfManaged | CallerManaged) {
   );
 
   return (
-    <section className={className}>
+    <section className={className} style={style}>
       {headerAside === undefined
         ? heading
         : <div className="section-header">{heading}{headerAside}</div>}

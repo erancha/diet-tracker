@@ -146,6 +146,20 @@ function step(from: number, to: number): "down" | "flat" | "up" {
   return "flat";
 }
 
+// Each stretch between a weighing and a heavier one after it, by the dates at its ends: the
+// stretches the chart and the list ground as a gain.
+export function risingEdges(entries: WeightEntry[]): { from: string; to: string }[] {
+  return entries.slice(1).flatMap((entry, i) =>
+    step(entries[i].kg, entry.kg) === "up" ? [{ from: entries[i].date, to: entry.date }] : []);
+}
+
+// Whether the newest weighing is heavier than the one before it — a fresh gain, as distinct from
+// the run over three weighings that trendShape reads.
+export function lastStepRises(entries: WeightEntry[]): boolean {
+  return entries.length >= 2
+    && step(entries[entries.length - 2].kg, entries[entries.length - 1].kg) === "up";
+}
+
 // A plateau does not turn a run: a step too small to render leaves the direction around it
 // standing, so a slow descent with one unchanged weighing in it still reads as a descent.
 export function trendShape(entries: WeightEntry[]): TrendShape | null {

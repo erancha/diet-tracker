@@ -295,6 +295,35 @@ describe("App", () => {
     expect(document.querySelector("main")!.className).not.toMatch(/intro/);
   });
 
+  // An account whose newest weighing gained on the one before it.
+  function gained(): Api {
+    const client = api();
+    client.getWeight = vi.fn().mockResolvedValue({
+      target: 70, entries: [{ date: "2026-08-13", kg: 77, at: "07:30" },
+                            { date: "2026-08-20", kg: 78, at: "07:30" }],
+    });
+    return client;
+  }
+
+  it("opens the weight section for a glance when the newest weighing gained", async () => {
+    // A Friday, with the weigh-in on Sunday: nothing else opens the section.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date(2026, 7, 21, 10, 0));
+    renderApp(false, gained());
+    await screen.findByRole("button", { name: "יומן היום" });
+    expect(screen.getByRole("button", { name: /^משקל/ })).toHaveAttribute("aria-expanded", "true");
+    expect(document.querySelector("section.weight")).toHaveClass("section-waning");
+  });
+
+  it("holds the weight section open on the weigh-in morning, gain or no gain", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date(2026, 7, 23, 10, 0));
+    renderApp(false, gained());
+    await screen.findByRole("button", { name: "יומן היום" });
+    expect(screen.getByRole("button", { name: /^משקל/ })).toHaveAttribute("aria-expanded", "true");
+    expect(document.querySelector("section.weight")).not.toHaveClass("section-waning");
+  });
+
   it("flashes nothing once a target is set", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     renderApp(false, weighed(72));
