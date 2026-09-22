@@ -6,13 +6,14 @@ import { flipped } from "../setToggle";
 import type { PublicChat } from "../types";
 import { AnswerFoot } from "./AnswerFoot";
 import { ChatAnswer } from "./ChatAnswer";
+import { useAnswerReveal } from "./useAnswerReveal";
 
 // The chats other users shared, newest first, each under its asker's address and date with the
 // answer and its sources folded behind the question. Read-only: no follow-up, digest, share or
 // delete, the chat being someone else's; an open answer's foot offers closing alone, which
 // hands focus back to the question. Loading, folding and the error alert are the chat's.
-// A chat named by `reveal` is opened and focused — which scrolls it into view — and the request
-// handed back through onRevealed, so a re-render cannot reopen it.
+// A chat named by `reveal` is opened, its question focused and its answer scrolled into view,
+// and the request handed back through onRevealed, so a re-render cannot reopen it.
 export function PublicChatList({ chats, api, onError, reveal, onRevealed }: {
   chats: PublicChat[];
   api: Pick<Api, "sourceUrl">;
@@ -24,6 +25,7 @@ export function PublicChatList({ chats, api, onError, reveal, onRevealed }: {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   // Question buttons by timestamp, for handing focus to a revealed chat.
   const questionRefs = useRef(new Map<string, HTMLButtonElement>());
+  const { markAnswer, answerRef } = useAnswerReveal();
   useEffect(() => {
     if (reveal === null) return;
     onRevealed();
@@ -33,7 +35,8 @@ export function PublicChatList({ chats, api, onError, reveal, onRevealed }: {
       return;
     }
     setExpanded((current) => new Set(current).add(reveal));
-    question.focus();
+    question.focus({ preventScroll: true });
+    markAnswer(reveal);
     // The request alone triggers this; the list it names is rendered by the time it is set.
   }, [reveal]);
 
@@ -65,7 +68,7 @@ export function PublicChatList({ chats, api, onError, reveal, onRevealed }: {
             </button>
           </li>
           {expanded.has(chat.at) && (
-            <li className="chat-assistant chat-others">
+            <li className="chat-assistant chat-others" ref={answerRef(chat.at)}>
               <ChatAnswer answer={chat.answer} sources={chat.sources} api={api} onError={onError} />
               <AnswerFoot question={chat.question} readOnly onClose={() => collapseFromFoot(chat.at)} />
             </li>

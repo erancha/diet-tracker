@@ -13,6 +13,7 @@ import { AnswerFoot } from "./AnswerFoot";
 import { ChatAnswer } from "./ChatAnswer";
 import { Icon } from "./Icon";
 import { PublicChatList } from "./PublicChats";
+import { useAnswerReveal } from "./useAnswerReveal";
 import { useGlobalFold } from "./useFoldAll";
 
 // Sharing is read by name, and the answer may cite the asker's own tracked data — the choice the
@@ -134,11 +135,12 @@ export function Chat({ email, api, sampleQuestions, answerPollSeconds,
   // Other users' shared chats, or null until first unfolded; folding keeps what was loaded.
   const [others, setOthers] = useState<PublicChat[] | null>(null);
   // The chats already opened with the draft, offered instead of sending it; null while no offer
-  // stands. Editing the draft withdraws the offer.
+  // stands. Editing the draft withdraws the offer. While it stands, both lists fold and the
+  // submit is held back, so opening the offered chat is the one way on.
   const [existing, setExisting] = useState<ExistingChat | null>(null);
-  // The own chat to open and focus once the transcript renders it, or null.
+  // The own chat to open and scroll to once the transcript renders it, or null.
   const [revealAt, setRevealAt] = useState<string | null>(null);
-  // The shared chat the others' list is to open and focus once it renders, or null.
+  // The shared chat the others' list is to open and scroll to once it renders, or null.
   const [revealOthersAt, setRevealOthersAt] = useState<string | null>(null);
   useGlobalFold(setTranscriptFolded);
   useEffect(() => {
@@ -147,6 +149,7 @@ export function Chat({ email, api, sampleQuestions, answerPollSeconds,
   // Question buttons by timestamp, for handing focus back when a chat folds from its answer's
   // foot or its digest replaces the answer that held it.
   const questionRefs = useRef(new Map<string, HTMLButtonElement>());
+  const { markAnswer, answerRef } = useAnswerReveal();
 
   // Sending withdraws the composer out from under the user's focus, so the thinking indicator
   // takes it: assistive tech announces the wait and the browser scrolls the indicator into view.
@@ -161,6 +164,23 @@ export function Chat({ email, api, sampleQuestions, answerPollSeconds,
   useEffect(() => {
     if (summarizingAt !== null) summarizingRef.current?.focus();
   }, [summarizingAt]);
+  // Folds both lists, leaving the composer and what stands under it alone on the screen.
+  const foldLists = () => {
+    setTranscriptFolded(true);
+    setOthersFolded(true);
+  };
+
+  // A chip fills the composer from above it, and on a phone the submit it enables sits below the
+  // fold, so the chip walks the submit into view. No submit stands while a question is pending.
+  const submitRef = useRef<HTMLButtonElement>(null);
+  const takeSample = (question: string) => {
+    setDraft(question);
+    foldLists();
+    if (submitRef.current !== null) {
+      submitRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  };
+
   // The offer of an existing chat renders under the composer, past the bottom of the view
   // on a phone, so it takes focus: the browser scrolls it into view and assistive tech reads it.
   const existingRef = useRef<HTMLDivElement>(null);
@@ -287,6 +307,7 @@ export function Chat({ email, api, sampleQuestions, answerPollSeconds,
       void send(question, null);
       return;
     }
+    foldLists();
     setExisting(found);
   };
 
@@ -325,7 +346,9 @@ export function Chat({ email, api, sampleQuestions, answerPollSeconds,
       return;
     }
     setExpanded((current) => new Set(current).add(revealAt));
-    question.focus();
+    // The answer, not the question, is what the reveal scrolls to.
+    question.focus({ preventScroll: true });
+    markAnswer(revealAt);
   }, [revealAt, turns, transcriptFolded]);
 
   useEffect(() => {
@@ -439,13 +462,16 @@ export function Chat({ email, api, sampleQuestions, answerPollSeconds,
               onClick={() => setDraft("")}><Icon name="close" /></button>
           )}
         </div>
-        <button type="submit" className="primary" disabled={draft.trim() === ""}>שליחה</button>
+        <button type="submit" className="primary" ref={submitRef}
+          disabled={draft.trim() === "" || existing !== null}>
+          שליחה
+        </button>
       </form>
       {existing !== null && (
         <div className="existing-chat" tabIndex={-1} ref={existingRef}>
           <p>{existing.own !== null ? "כבר שאלת את השאלה הזו"
             : `השאלה הזו כבר נשאלה ושותפה על ידי ${existing.shared!.email}`}</p>
-          <button type="button" className="secondary compact" onClick={reveal}>להציג את הצ'אט הקיים</button>
+          <button type="button" className="primary compact" onClick={reveal}>להציג את הצ'אט הקיים</button>
           <button type="button" className="secondary compact" onClick={askAnyway}>לשאול בכל זאת</button>
         </div>
       )}
@@ -510,7 +536,7 @@ export function Chat({ email, api, sampleQuestions, answerPollSeconds,
         <div className="chat-samples">
           {sampleQuestions.map((sample) => (
             <button key={sample.label} type="button" className="secondary compact"
-              onClick={() => setDraft(sample.question)}>{sample.label}</button>
+              onClick={() => takeSample(sample.question)}>{sample.label}</button>
           ))}
         </div>
       )}
@@ -600,7 +626,7 @@ export function Chat({ email, api, sampleQuestions, answerPollSeconds,
                   onClick={() => void remove(turn)}><Icon name="remove" /></button>
               </li>
               {expanded.has(turn.at) && (
-                <li className="chat-assistant">
+                <li className="chat-assistant" ref={answerRef(turn.at)}>
                   {summarizingAt === turn.at ? (
                     <p className="chat-pending" tabIndex={-1} ref={summarizingRef}>
                       {digestPolled ? "עדיין מסכם…" : "מסכם…"}

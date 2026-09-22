@@ -917,7 +917,9 @@ describe("Chat", () => {
     expect(screen.getByRole("button", { name: "חלבון" })).toBeInTheDocument();
   });
 
-  it("pastes a sample's full question into the composer without sending it", async () => {
+  it("pastes a sample's full question into the composer without sending it, and walks the submit into view",
+     async () => {
+    const scrollIntoView = vi.spyOn(Element.prototype, "scrollIntoView").mockImplementation(() => {});
     const chatApi = api();
     render(<Chat email="a@gmail.com" api={chatApi} answerPollSeconds={POLL_SECONDS} sampleQuestions={[
       { label: "חלבון", question: "כמה חלבון מומלץ לצרוך ביום?" },
@@ -928,6 +930,31 @@ describe("Chat", () => {
     expect(screen.getByRole("textbox")).toHaveValue("כמה חלבון מומלץ לצרוך ביום?");
     expect(screen.getByRole("button", { name: "שליחה" })).toBeEnabled();
     expect(chatApi.ask).not.toHaveBeenCalled();
+    expect(scrollIntoView).toHaveBeenCalledOnce();
+    expect(scrollIntoView.mock.instances[0]).toBe(screen.getByRole("button", { name: "שליחה" }));
+    scrollIntoView.mockRestore();
+  });
+
+  it("folds both lists when a sample chip fills the composer", async () => {
+    const scrollIntoView = vi.spyOn(Element.prototype, "scrollIntoView").mockImplementation(() => {});
+    const chatApi = withOthers(OTHERS.chats, {
+      getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(2) }),
+      getChatCount: counted(2, 0, OTHERS.chats.length),
+    });
+    render(<Chat email="a@gmail.com" api={chatApi} answerPollSeconds={POLL_SECONDS} sampleQuestions={[
+      { label: "חלבון", question: "כמה חלבון מומלץ לצרוך ביום?" },
+    ]} />);
+    await screen.findByRole("button", { name: "שאלה 2" });
+    await userEvent.click(screen.getByRole("button", { name: /של משתמשים אחרים/ }));
+    await screen.findByRole("button", { name: "כמה מים?" });
+
+    await userEvent.click(screen.getByRole("button", { name: "חלבון" }));
+
+    expect(screen.getByRole("button", { name: /צ'אטים קודמים שלי/ })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("button", { name: "שאלה 2" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /של משתמשים אחרים/ })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("button", { name: "כמה מים?" })).not.toBeInTheDocument();
+    scrollIntoView.mockRestore();
   });
 
   it("disables sending until the composer holds a question", async () => {
@@ -1338,6 +1365,7 @@ describe("Chat", () => {
   });
 
   it("offers the user's own earlier chat instead of asking again, and opens it on request", async () => {
+    const scrollIntoView = vi.spyOn(Element.prototype, "scrollIntoView").mockImplementation(() => {});
     const chatApi = api({
       getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(2) }),
       getChatCount: counted(2),
@@ -1355,9 +1383,12 @@ describe("Chat", () => {
     expect(await screen.findByText("תשובה 1")).toBeInTheDocument();
     expect(screen.queryByText("תשובה 2")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "שאלה 1" })).toHaveFocus();
+    expect(scrollIntoView).toHaveBeenCalledOnce();
+    expect(scrollIntoView.mock.instances[0]).toBe(screen.getByText("תשובה 1").closest("li"));
     expect(screen.queryByText("כבר שאלת את השאלה הזו")).not.toBeInTheDocument();
     expect(chatApi.getPublicChats).not.toHaveBeenCalled();
     expect(screen.getByRole("textbox")).toHaveValue("");
+    scrollIntoView.mockRestore();
   });
 
   it("moves focus to the offer of an existing chat, so it scrolls into view under the composer",
@@ -1371,6 +1402,7 @@ describe("Chat", () => {
   });
 
   it("offers another user's shared chat, and opens it in the others' list on request", async () => {
+    const scrollIntoView = vi.spyOn(Element.prototype, "scrollIntoView").mockImplementation(() => {});
     const chatApi = withOthers(OTHERS.chats, { findExistingChat: existing(null, OTHERS.chats[1].at) });
     render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} answerPollSeconds={POLL_SECONDS} />);
     await screen.findByRole("button", { name: /של משתמשים אחרים/ });
@@ -1384,6 +1416,9 @@ describe("Chat", () => {
     expect(await screen.findByText("שלושה ליטר")).toBeInTheDocument();
     expect(screen.queryByText("ירקות וחלבון")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "כמה מים?" })).toHaveFocus();
+    expect(scrollIntoView).toHaveBeenCalledOnce();
+    expect(scrollIntoView.mock.instances[0]).toBe(screen.getByText("שלושה ליטר").closest("li"));
+    scrollIntoView.mockRestore();
   });
 
   it("asks anyway on request", async () => {
@@ -1397,6 +1432,33 @@ describe("Chat", () => {
     expect(chatApi.ask).toHaveBeenCalledWith("שאלה 1", undefined, false);
     expect(await screen.findByText("תשובה חדשה")).toBeInTheDocument();
     expect(screen.queryByText("כבר שאלת את השאלה הזו")).not.toBeInTheDocument();
+  });
+
+  it("puts the offer forward alone: reveal filled, submit held back, both lists folded", async () => {
+    const chatApi = withOthers(OTHERS.chats, {
+      getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(2) }),
+      getChatCount: counted(2, 0, OTHERS.chats.length),
+      findExistingChat: existing(turn(1).at, null),
+    });
+    render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} answerPollSeconds={POLL_SECONDS} />);
+    await screen.findByRole("button", { name: "שאלה 2" });
+    await userEvent.click(screen.getByRole("button", { name: /של משתמשים אחרים/ }));
+    await screen.findByRole("button", { name: "כמה מים?" });
+
+    await ask("שאלה 1");
+
+    expect(screen.getByRole("button", { name: "שליחה" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "להציג את הצ'אט הקיים" })).toHaveClass("primary");
+    expect(screen.getByRole("button", { name: /צ'אטים קודמים שלי/ })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("button", { name: "שאלה 2" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /של משתמשים אחרים/ })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("button", { name: "כמה מים?" })).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "להציג את הצ'אט הקיים" }));
+
+    expect(await screen.findByText("תשובה 1")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "שאלה 1" })).toHaveFocus();
+    expect(screen.getByRole("button", { name: /של משתמשים אחרים/ })).toHaveAttribute("aria-expanded", "false");
   });
 
   it("drops the offer once the question is edited", async () => {
