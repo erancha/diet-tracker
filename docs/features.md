@@ -44,7 +44,7 @@ A weight is measured rather than scored: it changes no day's score and raises no
 climbing weight is something the chart shows rather than a nudge that fires. Every stretch the
 weight climbed over stands on the same faint red ground the history table lays under a heavy day,
 in the chart and under the two rows of the list beneath it, so a gain reads as a setback at a
-glance. When the newest weighing is the one that gained, the section opens on its own for five
+glance. When the newest weighing is the one that gained, the section opens on its own for a few
 seconds on loading the app and then folds itself away, unless you toggle it or record a weighing
 meanwhile. See [Weight](domain-rules.md#weight) for the recording rules, the target, deletion and
 the chart's spans.

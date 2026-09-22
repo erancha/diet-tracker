@@ -8,7 +8,7 @@ export const WIND_DOWN_FOLD_MS = 10_000;
 // How long the closing sweep runs — the duration of the style sheet's section-fold animation.
 // The collapsed state lands only once the sweep has finished, because collapsing unmounts the
 // content the animation needs on screen.
-export const WIND_DOWN_SWEEP_MS = 800;
+export const WIND_DOWN_SWEEP_MS = 500;
 
 /**
  * Timed wind-down fold for a section that opened on its own initiative: full presence for a

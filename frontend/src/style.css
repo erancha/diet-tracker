@@ -417,7 +417,7 @@ th { vertical-align: top; font-size: calc(var(--cell-font-size) - 1pt); }
 @keyframes section-wane { to { opacity: 0.35; } }
 .section-fold-body { display: grid; grid-template-rows: 1fr; }
 .section-fold-body > div { min-height: 0; }
-.section-folding { animation: section-fold 0.8s ease forwards; }
+.section-folding { animation: section-fold 0.5s ease forwards; }
 .section-folding > div { overflow: hidden; }
 @keyframes section-fold { to { grid-template-rows: 0fr; opacity: 0; } }
 /* Half the browser's default heading gap, so each section header sits close to the data it

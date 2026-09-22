@@ -160,7 +160,7 @@ const TREND_ICONS: Record<TrendShape, IconName> = {
 
 // How long the glance holds the section open before it folds itself away: enough to take in the
 // chart's newest stretch, short enough that the tracker below is not kept waiting.
-export const WEIGHT_GLANCE_MS = 5_000;
+export const WEIGHT_GLANCE_MS = 2_500;
 
 // Today's weighing. The row marks itself on the weigh-in day, which is what the stylesheet sizes
 // it by: the day the rhythm asks for a weighing reads larger, and recording stays open on any.

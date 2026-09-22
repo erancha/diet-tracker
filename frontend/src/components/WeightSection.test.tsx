@@ -96,20 +96,20 @@ describe("open panel at rest", () => {
   });
 });
 
-// The glance: the section opened unbidden for a five-second look at a gain, then folds itself
-// away unless a hand takes it over meanwhile.
+// The glance: the section opened unbidden for a short look at a gain, then folds itself away
+// unless a hand takes it over meanwhile.
 describe("glance", () => {
   const GAIN = [{ date: "2026-08-20", kg: 80, at: null }, { date: TODAY, kg: 81, at: null }];
 
   afterEach(() => vi.useRealTimers());
 
-  it("opens for five seconds and folds itself away", () => {
+  it("opens for the glance and folds itself away", () => {
     vi.useFakeTimers();
     renderSection({ entries: GAIN }, {}, false, NOW, true);
     const section = document.querySelector("section.weight")!;
     expect(screen.getByLabelText("המשקל היום")).toBeInTheDocument();
     expect(section).toHaveClass("section-waning");
-    expect(section).toHaveStyle({ "--wind-down-hold": "5000ms" });
+    expect(section).toHaveStyle({ "--wind-down-hold": `${WEIGHT_GLANCE_MS}ms` });
     act(() => { vi.advanceTimersByTime(WEIGHT_GLANCE_MS + WIND_DOWN_SWEEP_MS); });
     expect(screen.queryByLabelText("המשקל היום")).toBeNull();
   });
