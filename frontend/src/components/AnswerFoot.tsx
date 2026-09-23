@@ -10,6 +10,9 @@ const SUMMARIZE_HINT =
 // The controls at the end of an open answer, given the chat's question for their labels. Closing
 // is always offered; a chat the user owns also gets reply, summarize and share. In readOnly mode
 // — another user's shared chat — closing stands alone, the rest being the asker's to do.
+//
+// The follow-up is the step an answer invites, and on a phone it lands below the fold, so an
+// answer that opens walks it into view — with its sweep, which style.css runs on the same mount.
 export function AnswerFoot({ question, onClose, ...own }: { question: string; onClose: () => void }
   & ({ readOnly: true } | {
     readOnly: false;
@@ -24,7 +27,7 @@ export function AnswerFoot({ question, onClose, ...own }: { question: string; on
     <div className="answer-foot">
       {!own.readOnly && (
         <>
-          <button type="button" className="secondary compact reply-turn"
+          <button type="button" className="secondary compact reply-turn" ref={scrollIntoViewOnMount}
             aria-label={`שאלת המשך על ${question}`}
             title={FOLLOW_UP_HINT}
             aria-pressed={own.replyPressed}
@@ -47,4 +50,10 @@ export function AnswerFoot({ question, onClose, ...own }: { question: string; on
         onClick={onClose}>סגירה</button>
     </div>
   );
+}
+
+// A ref callback runs once the element is in the DOM, and only there; a short answer rises into
+// view whole, a long one shows its tail with the button.
+function scrollIntoViewOnMount(button: HTMLButtonElement | null) {
+  if (button !== null) button.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }

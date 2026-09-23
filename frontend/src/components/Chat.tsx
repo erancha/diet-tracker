@@ -13,7 +13,6 @@ import { AnswerFoot } from "./AnswerFoot";
 import { ChatAnswer } from "./ChatAnswer";
 import { Icon } from "./Icon";
 import { PublicChatList } from "./PublicChats";
-import { useAnswerReveal } from "./useAnswerReveal";
 import { useGlobalFold } from "./useFoldAll";
 
 // Sharing is read by name, and the answer may cite the asker's own tracked data — the choice the
@@ -149,7 +148,6 @@ export function Chat({ email, api, sampleQuestions, answerPollSeconds,
   // Question buttons by timestamp, for handing focus back when a chat folds from its answer's
   // foot or its digest replaces the answer that held it.
   const questionRefs = useRef(new Map<string, HTMLButtonElement>());
-  const { markAnswer, answerRef } = useAnswerReveal();
 
   // Sending withdraws the composer out from under the user's focus, so the thinking indicator
   // takes it: assistive tech announces the wait and the browser scrolls the indicator into view.
@@ -180,6 +178,13 @@ export function Chat({ email, api, sampleQuestions, answerPollSeconds,
       submitRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
   };
+
+  // A reply moves the composer under the answer, and the box takes focus there: the browser
+  // scrolls it into view and the question can be typed at once.
+  const draftRef = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    if (replyTo !== null) draftRef.current!.focus();
+  }, [replyTo]);
 
   // The offer of an existing chat renders under the composer, past the bottom of the view
   // on a phone, so it takes focus: the browser scrolls it into view and assistive tech reads it.
@@ -346,9 +351,8 @@ export function Chat({ email, api, sampleQuestions, answerPollSeconds,
       return;
     }
     setExpanded((current) => new Set(current).add(revealAt));
-    // The answer, not the question, is what the reveal scrolls to.
+    // The opened answer's foot scrolls itself into view; focus must not pull the page back up.
     question.focus({ preventScroll: true });
-    markAnswer(revealAt);
   }, [revealAt, turns, transcriptFolded]);
 
   useEffect(() => {
@@ -448,6 +452,7 @@ export function Chat({ email, api, sampleQuestions, answerPollSeconds,
       <form onSubmit={(event) => { event.preventDefault(); void sendDraft(); }}>
         <div className="composer">
           <textarea
+            ref={draftRef}
             rows={2}
             value={draft}
             onChange={(event) => {
@@ -626,7 +631,7 @@ export function Chat({ email, api, sampleQuestions, answerPollSeconds,
                   onClick={() => void remove(turn)}><Icon name="remove" /></button>
               </li>
               {expanded.has(turn.at) && (
-                <li className="chat-assistant" ref={answerRef(turn.at)}>
+                <li className="chat-assistant">
                   {summarizingAt === turn.at ? (
                     <p className="chat-pending" tabIndex={-1} ref={summarizingRef}>
                       {digestPolled ? "עדיין מסכם…" : "מסכם…"}

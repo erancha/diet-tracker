@@ -626,6 +626,7 @@ main:not(.intro-0, .intro-1, .intro-2, .intro-3, .intro-4) .weight .section-togg
   .revealed { animation: none; }
   /* The ring stays as a static mark of the wait. */
   .chat-pending::before { animation: none; }
+  .chat .reply-turn::before { animation: none; }
 }
 /* Kept near body size against the tracker's larger heading, so the fold reads as a row inside
    the panel rather than as a section of its own; its top margin opens the gap under whatever
@@ -972,6 +973,21 @@ main:not(.intro-0, .intro-1, .intro-2, .intro-3, .intro-4) .weight .section-togg
    read as optional next steps rather than the bubble's primary content. The row sets their type;
    they inherit it. */
 .chat .answer-foot { display: flex; gap: 0.5rem; margin-top: 0.5rem; font-size: 0.85rem; }
+/* An answer just opened leads the eye to the follow-up: an accent arc sweeps the button's edge
+   once a second for seven seconds and goes. The overlay is masked down to a two-pixel band over the
+   border, so the sweep never crosses the label. The angle is a registered property so the sweep
+   can be animated at all. */
+@property --sweep { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+.chat .reply-turn { position: relative; }
+.chat .reply-turn::before {
+  content: ""; position: absolute; inset: -1px; padding: 2px; border-radius: inherit; opacity: 0;
+  background: conic-gradient(from var(--sweep), transparent 70%, var(--accent));
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  animation: border-sweep 7s linear;
+}
+@keyframes border-sweep { from { --sweep: 0deg; opacity: 1; } 85% { opacity: 1; }
+                          to { --sweep: 2520deg; opacity: 0; } }
 /* Closing costs nothing and changes nothing, so it sits apart from the pair that spends a
    question and rewrites the chat. */
 .chat .close-turn { margin-inline-start: auto; }

@@ -680,6 +680,20 @@ describe("Chat", () => {
     expect(screen.getByRole("img", { name: "צ'אט משותף לכולם" })).toBeInTheDocument();
   });
 
+  it("walks the follow-up button into view when an answer opens, and not when it closes", async () => {
+    const scrollIntoView = vi.spyOn(Element.prototype, "scrollIntoView").mockImplementation(() => {});
+    const chatApi = api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(1) }) });
+    render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} answerPollSeconds={POLL_SECONDS} />);
+    await userEvent.click(await screen.findByRole("button", { name: "שאלה 1" }));
+
+    expect(scrollIntoView).toHaveBeenCalledOnce();
+    expect(scrollIntoView.mock.instances[0]).toBe(screen.getByRole("button", { name: "שאלת המשך על שאלה 1" }));
+
+    await userEvent.click(screen.getByRole("button", { name: "סגירת התשובה על שאלה 1" }));
+    expect(scrollIntoView).toHaveBeenCalledOnce();
+    scrollIntoView.mockRestore();
+  });
+
   it("keeps the turn when deletion is not confirmed", async () => {
     vi.spyOn(window, "confirm").mockReturnValue(false);
     const chatApi = api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(1) }) });
@@ -738,12 +752,14 @@ describe("Chat", () => {
     );
   });
 
-  it("moves the composer under the answer being replied to and marks the reply in progress", async () => {
+  it("moves the composer under the answer being replied to with the box focused, and marks the reply in progress", async () => {
     render(<Chat email="a@gmail.com" api={api({ getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(1) }) })}
                  sampleQuestions={[]} answerPollSeconds={POLL_SECONDS} />);
     await userEvent.click(await screen.findByRole("button", { name: "שאלה 1" }));
 
     await userEvent.click(screen.getByRole("button", { name: "שאלת המשך על שאלה 1" }));
+
+    expect(screen.getByRole("textbox")).toHaveFocus();
 
     const composerRow = screen.getByRole("textbox").closest("li");
     expect(composerRow).toHaveClass("chat-composer");
@@ -1384,7 +1400,7 @@ describe("Chat", () => {
     expect(screen.queryByText("תשובה 2")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "שאלה 1" })).toHaveFocus();
     expect(scrollIntoView).toHaveBeenCalledOnce();
-    expect(scrollIntoView.mock.instances[0]).toBe(screen.getByText("תשובה 1").closest("li"));
+    expect(scrollIntoView.mock.instances[0]).toBe(screen.getByRole("button", { name: "שאלת המשך על שאלה 1" }));
     expect(screen.queryByText("כבר שאלת את השאלה הזו")).not.toBeInTheDocument();
     expect(chatApi.getPublicChats).not.toHaveBeenCalled();
     expect(screen.getByRole("textbox")).toHaveValue("");
