@@ -12,7 +12,10 @@ LEGAL_DAY_CLOSE = {"close_until": "02:00", "delete_until": "01:30", "min_window_
                    "close_from": "20:00"}
 
 
-def write(tmp_path, weight, meals=LEGAL_MEALS, day_close=LEGAL_DAY_CLOSE):
+LEGAL_TREAT_DAY = {"weekday": "FRI"}
+
+
+def write(tmp_path, weight, meals=LEGAL_MEALS, day_close=LEGAL_DAY_CLOSE, treat_day=LEGAL_TREAT_DAY):
     raw = {
         "questionnaire": {
             "version": 1,
@@ -24,21 +27,21 @@ def write(tmp_path, weight, meals=LEGAL_MEALS, day_close=LEGAL_DAY_CLOSE):
         "weight": weight,
         "meals": meals,
         "day_close": day_close,
-        "treat_day": {"weekday": "FRI"},
+        "treat_day": treat_day,
     }
     path = tmp_path / "app.json"
     path.write_text(json.dumps(raw), encoding="utf-8")
     return path
 
 
-LEGAL_WEIGHT = {"weigh_in": {"weekday": "THU", "hour": 8}, "chart_months": 3,
+LEGAL_WEIGHT = {"weigh_in": {"hour": 8}, "chart_months": 3,
                 "limits": {"min_kg": 20, "max_kg": 400}}
 
 
 def test_repo_config_carries_every_section():
     config = appconfig.load(APP_CONFIG)
     assert config.questionnaire.question("carbs").type == "points"
-    assert config.weight.weigh_in.weekday == "THU"
+    assert config.weight.weigh_in.weekday == config.treat_day.weekday
     assert config.weight.weigh_in.hour == 8
     assert config.weight.chart_months == 3
     assert (config.weight.limits.min_kg, config.weight.limits.max_kg) == (40, 200)
@@ -96,15 +99,29 @@ def test_max_meals_per_day_must_be_a_positive_integer(tmp_path):
             appconfig.load(path)
 
 
-def test_weigh_in_weekday_must_be_a_scheduler_token(tmp_path):
-    path = write(tmp_path, {**LEGAL_WEIGHT, "weigh_in": {"weekday": "Thursday", "hour": 8}})
+def test_the_weigh_in_falls_on_the_treat_day(tmp_path):
+    # The program's week turns on one day: the treat meal, the weighing and the recap all fall on
+    # it, so the config declares that weekday once and the weigh-in inherits it.
+    config = appconfig.load(write(tmp_path, LEGAL_WEIGHT, treat_day={"weekday": "SUN"}))
+    assert config.weight.weigh_in.weekday == "SUN"
+
+
+def test_the_weigh_in_declares_no_weekday_of_its_own(tmp_path):
+    # A weekday under weigh_in would read as a second declaration the loader silently ignores.
+    path = write(tmp_path, {**LEGAL_WEIGHT, "weigh_in": {"weekday": "THU", "hour": 8}})
+    with pytest.raises(ValueError, match="weekday"):
+        appconfig.load(path)
+
+
+def test_treat_day_weekday_must_be_a_scheduler_token(tmp_path):
+    path = write(tmp_path, LEGAL_WEIGHT, treat_day={"weekday": "Friday"})
     with pytest.raises(ValueError, match="weekday"):
         appconfig.load(path)
 
 
 def test_weigh_in_hour_must_be_an_hour_of_the_day(tmp_path):
     for hour in (24, -1, 8.5, True, "8"):
-        path = write(tmp_path, {**LEGAL_WEIGHT, "weigh_in": {"weekday": "THU", "hour": hour}})
+        path = write(tmp_path, {**LEGAL_WEIGHT, "weigh_in": {"hour": hour}})
         with pytest.raises(ValueError, match="hour"):
             appconfig.load(path)
 
@@ -125,7 +142,7 @@ def test_weight_limits_must_span_a_range(tmp_path):
 
 
 def test_missing_keys_surface_instead_of_defaulting(tmp_path):
-    path = write(tmp_path, {"weigh_in": {"weekday": "THU", "hour": 8}})
+    path = write(tmp_path, {"weigh_in": {"hour": 8}})
     with pytest.raises(KeyError):
         appconfig.load(path)
 

@@ -6,11 +6,12 @@ import type { WeightPayload, WeightSettings } from "../types";
 import { DISCARD_EDITS_PROMPT } from "../edits";
 import { WEIGH_IN_CADENCE_QUESTION } from "../weight";
 
-const NOW = new Date(2026, 7, 27); // 2026-08-27
+const NOW = new Date(2026, 7, 27); // 2026-08-27, a Thursday
 const TODAY = "2026-08-27";
+const WEIGH_IN_WEEKDAY = "THU";
 
 const SETTINGS: WeightSettings = {
-  weigh_in: { weekday: "THU", hour: 8 },
+  weigh_in: { hour: 8 },
   chart_months: 3,
   limits: { min_kg: 20, max_kg: 400 },
 };
@@ -30,6 +31,7 @@ function renderSection(weight: Partial<WeightPayload> = {}, handlers: Handlers =
     <WeightSection
       weight={{ ...EMPTY, ...weight }}
       settings={SETTINGS}
+      weighInWeekday={WEIGH_IN_WEEKDAY}
       now={now}
       onRecord={handlers.onRecord ?? (() => {})}
       onSetTarget={handlers.onSetTarget ?? (() => {})}

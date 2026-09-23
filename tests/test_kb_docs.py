@@ -154,9 +154,10 @@ def test_trend_chart_treat_day():
 
 
 def test_weekly_recap_names_the_night_it_is_sent_on():
-    # The recap goes out on the weigh-in night, so a retargeted weigh-in moves it. The guide is
-    # what the RAG service answers from, and a wrong night there is a confidently wrong answer.
-    weekday = WEEKDAY_NAMES[CONFIG["weight"]["weigh_in"]["weekday"]]
+    # The recap goes out on the weigh-in day, which is the treat day, so a retargeted treat day
+    # moves it. The guide is what the RAG service answers from, and a wrong day there is a
+    # confidently wrong answer.
+    weekday = WEEKDAY_NAMES[CONFIG["treat_day"]["weekday"]]
     assert f"ונשלח ביום {weekday}" in _doc_line("הסיכום השבועי מתייחס")
 
 

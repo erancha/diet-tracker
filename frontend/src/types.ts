@@ -93,7 +93,8 @@ export interface Questionnaire {
 export type ChartSpan = 1 | 3 | 6 | 12 | null;
 
 export interface WeightSettings {
-  weigh_in: { weekday: string; hour: number };
+  // The hour the weigh-in reminder fires at; its weekday is the treat day's.
+  weigh_in: { hour: number };
   // The span the chart opens on.
   chart_months: ChartSpan;
   // Kilogram bounds the weight inputs constrain to, matching what the API accepts.
@@ -135,10 +136,11 @@ export interface DayCloseSettings {
   close_from: string;
 }
 
-// Frontend-only section of config/app.json, like ChatSettings: the weekday the program's treat
-// meal is aimed at, as one of the EventBridge Scheduler tokens WEEKDAY_TOKENS in dates.ts
-// mirrors. The trend chart frames that column; no rule reads it, and no stored day is marked by
-// it — it is a target drawn on a chart, not something the app records.
+// The weekday the program's week turns on, as one of the EventBridge Scheduler tokens
+// WEEKDAY_TOKENS in dates.ts mirrors: the treat meal is aimed at it and the weigh-in falls on it.
+// The trend chart frames that column and the weight section opens on it; no rule scores by it,
+// and no stored day is marked by it — the frame is a target drawn on a chart, not something the
+// app records.
 export interface TreatDaySettings {
   weekday: string;
 }

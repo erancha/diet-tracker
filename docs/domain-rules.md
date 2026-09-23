@@ -155,10 +155,11 @@ lockstep.
   to backfill;
   the trend chart plots it beside the score, where the gap between the two lines is the part of
   the day that stayed within the program.
-- **The treat day** — `treat_day` in the config names the weekday the program's treat meal is
-  aimed at, and the trend chart frames that column. Nothing marks a stored day as a treat day and
-  no rule reads the weekday: the app prices whatever is recorded, and the frame is a target drawn
-  on a chart.
+- **The treat day** — `treat_day` in the config names the weekday the program's week turns on:
+  the treat meal is aimed at it, the weekly weigh-in falls on it, and the weekly recap goes out
+  on it. The trend chart frames that column. Nothing marks a stored day as a treat day and no
+  rule scores by the weekday: the app prices whatever is recorded, and the frame is a target
+  drawn on a chart.
 
 ## Weight
 
@@ -181,7 +182,7 @@ weight is something the chart shows rather than a nudge that fires.
 - **Chart span** — the chart opens on the configured number of months and offers wider spans only
   where the recorded series actually reaches past them.
 - **Weigh-in rhythm** — the recommendation the weight log serves is a weighing once a week, on the
-  same weekday and at about the same hour. The section reads back where the user stands in that
+  treat day and at about the same hour. The section reads back where the user stands in that
   rhythm: the weigh-in day while it holds no weighing, the next weigh-in day otherwise, how long
   it has been once a week has passed with none, and the usual hour once enough weighings carry a
   time to name one. The usual hour is the middle recorded time of the last few weighings, so it
@@ -190,8 +191,8 @@ weight is something the chart shows rather than a nudge that fires.
   days rather than flagged.
 - **Weigh-in fold** — the weight section rests folded and opens itself on the weigh-in day while
   the day holds no weighing, the same treatment an overdue meal gives the tracker's meal inputs.
-- **Weigh-in reminder** — a weekly nudge on the configured weekday and hour, skipping only a user
-  who already recorded a weight that day. The job runs on the weigh-in weekday, so weighing on it
+- **Weigh-in reminder** — a weekly nudge on the treat day at the configured hour, skipping only a
+  user who already recorded a weight that day. The job runs on the weigh-in weekday, so weighing on it
   is the thing being asked for; a weighing on any other day is the drift the weekly rhythm loses
   itself to and excuses nothing. It reaches the user by email, and by Telegram where that channel
   is configured, rather than waiting in the app.
@@ -206,17 +207,18 @@ values alone. Its `day_close` element holds the closing rules: the minimum eatin
 whatever its window, and the small-hours grace bounds — `close_until`, up to which an unclosed
 yesterday may still be closed and its meals written, and which doubles as the hour a day's eating
 stretches to past midnight, and the never-later `delete_until`, up to which its record may still
-be deleted. Its `weight` element holds the weigh-in weekday and hour —
-the weekday doubling as the day the weekly recap goes out on, at midday — the chart's opening
-span, and the kilogram bounds both the API and the frontend input constrain to. Its `treat_day`
-element names the weekday the trend chart frames;
-like `chat`, no Lambda reads it, so it rides along as a frontend-only section.
+be deleted. Its `treat_day` element names the one weekday the program's week turns on: the trend
+chart frames it, the weekly weigh-in falls on it, and the weekly recap goes out on it at midday.
+Its `weight` element holds the weigh-in hour — the weigh-in declares no weekday of its own, and
+the loader rejects one, so the day cannot be stated twice — the chart's opening span, and the
+kilogram bounds both the API and the frontend input constrain to. Like `chat`, the `treat_day`
+element is read by the frontend straight from the file; unlike it, the nudge Lambda reads it too.
 
 Both runtimes read the same file: the Lambda package carries it, and the frontend fetches it from
-its own origin. The weigh-in weekday and hour are the one part `scripts/deploy.sh` also lifts out
-at deploy time, because an EventBridge cron expression is fixed when the stack deploys. The recap
-schedule reuses the weekday from there rather than naming its own, so retargeting the weigh-in
-carries the recap to the new day with it.
+its own origin. The treat day and the weigh-in hour are the one part `scripts/deploy.sh` also
+lifts out at deploy time, because an EventBridge cron expression is fixed when the stack deploys.
+Both the reminder and the recap schedules build on that one weekday parameter, so retargeting the
+treat day carries the weigh-in and the recap to the new day with it.
 
 ## Nudges
 
@@ -235,8 +237,8 @@ Scheduled jobs (EventBridge Scheduler, Asia/Jerusalem) run alongside the tracker
   that morning, at `day_close.close_until`. A user who has already closed the weighing day by noon
   has it counted in the week it ends instead; one still open would be reported as missing however
   diligent the user was. Each user's own days decide, so the same run reports one user's week
-  through Thursday and another's through Wednesday. Either way the recap reads the weigh-in
-  morning's weight as the freshest one. Each user's recap is produced in an invocation of its
+  through the weigh-in day and another's through the day before it. Either way the recap reads
+  the weigh-in morning's weight as the freshest one. Each user's recap is produced in an invocation of its
   own, so one slow reading of a week delays no one else's email.
 
   The email opens with one line — how many of the seven days were closed — and under it one

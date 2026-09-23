@@ -311,7 +311,6 @@
   },
   "weight": {
     "weigh_in": {
-      "weekday": "THU",
       "hour": 8
     },
     "chart_months": 3,

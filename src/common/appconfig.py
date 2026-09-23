@@ -11,8 +11,8 @@ from pathlib import Path
 
 from common.questionnaire import Questionnaire, parse
 
-# EventBridge Scheduler's day-of-week tokens; the weigh-in schedule's cron expression is built
-# from the configured one at deploy time.
+# EventBridge Scheduler's day-of-week tokens; the weigh-in and recap schedules' cron expressions
+# are built from the configured treat day at deploy time.
 WEEKDAYS = ("SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT")
 
 # Spans the weight chart's range selector offers, in months. None is the whole series. The
@@ -23,7 +23,8 @@ CHART_SPANS = (1, 3, 6, 12, None)
 
 @dataclass(frozen=True)
 class WeighIn:
-    """When the weekly weigh-in reminder fires, in Asia/Jerusalem."""
+    """When the weekly weigh-in reminder fires, in Asia/Jerusalem. The weekday is the treat day's:
+    the program's week turns on one day, and the config declares it once, under treat_day."""
     weekday: str
     hour: int
 
@@ -72,11 +73,13 @@ class DayCloseConfig:
 
 @dataclass(frozen=True)
 class TreatDayConfig:
-    """The weekday the program aims its treat meal at, in the three-letter form the config writes.
+    """The weekday the program's week turns on, in the three-letter form the config writes: the
+    day the treat meal is aimed at, the day the weekly weigh-in falls on, and so the day the
+    weekly recap goes out on.
 
-    Nothing enforces it: no day is scored differently and no recorded day is marked as one. It
-    names the day the weekly recap never counts as a flours-and-sugars finding, and the column the
-    trend chart frames."""
+    No day is scored differently for it and no recorded day is marked as one. It names the day
+    the weekly recap never counts as a flours-and-sugars finding, and the column the trend chart
+    frames."""
     weekday: str
 
 
@@ -89,11 +92,10 @@ class AppConfig:
     treat_day: TreatDayConfig
 
 
-def _parse_weight(raw: dict) -> WeightConfig:
+def _parse_weight(raw: dict, treat_day: TreatDayConfig) -> WeightConfig:
     weigh_in = raw["weigh_in"]
-    weekday = weigh_in["weekday"]
-    if weekday not in WEEKDAYS:
-        raise ValueError(f"weigh_in weekday {weekday!r} is not one of {list(WEEKDAYS)}")
+    if "weekday" in weigh_in:
+        raise ValueError("weigh_in declares a weekday; the weigh-in falls on treat_day's weekday")
     hour = weigh_in["hour"]
     if isinstance(hour, bool) or not isinstance(hour, int) or not 0 <= hour <= 23:
         raise ValueError(f"weigh_in hour {hour!r} must be an integer hour of the day")
@@ -103,8 +105,8 @@ def _parse_weight(raw: dict) -> WeightConfig:
     limits = Limits(min_kg=raw["limits"]["min_kg"], max_kg=raw["limits"]["max_kg"])
     if limits.min_kg >= limits.max_kg:
         raise ValueError(f"weight limits {limits.min_kg}..{limits.max_kg} span no range")
-    return WeightConfig(weigh_in=WeighIn(weekday=weekday, hour=hour), chart_months=chart_months,
-                        limits=limits)
+    return WeightConfig(weigh_in=WeighIn(weekday=treat_day.weekday, hour=hour),
+                        chart_months=chart_months, limits=limits)
 
 
 def _parse_meals(raw: dict) -> MealsConfig:
@@ -150,6 +152,8 @@ def _parse_treat_day(raw: dict) -> TreatDayConfig:
 
 def load(path) -> AppConfig:
     raw = json.loads(Path(path).read_text(encoding="utf-8"))
-    return AppConfig(questionnaire=parse(raw["questionnaire"]), weight=_parse_weight(raw["weight"]),
+    treat_day = _parse_treat_day(raw["treat_day"])
+    return AppConfig(questionnaire=parse(raw["questionnaire"]),
+                     weight=_parse_weight(raw["weight"], treat_day),
                      meals=_parse_meals(raw["meals"]), day_close=_parse_day_close(raw["day_close"]),
-                     treat_day=_parse_treat_day(raw["treat_day"]))
+                     treat_day=treat_day)

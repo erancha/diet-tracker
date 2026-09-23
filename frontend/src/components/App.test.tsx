@@ -13,7 +13,7 @@ import { INTRO_STAGE_MS } from "./useWelcomeIntro";
 
 const CONFIG: AppConfigFile = {
   questionnaire: trackerQuestionnaire,
-  weight: { weigh_in: { weekday: "SUN", hour: 8 }, chart_months: 3, limits: { min_kg: 40, max_kg: 200 } },
+  weight: { weigh_in: { hour: 8 }, chart_months: 3, limits: { min_kg: 40, max_kg: 200 } },
   meals: { max_per_day: 4 },
   day_close: { close_until: "02:00", delete_until: "01:30", min_window_hours: 6, close_from: "20:00" },
   treat_day: { weekday: "FRI" },
@@ -306,9 +306,10 @@ describe("App", () => {
   }
 
   it("opens the weight section for a glance when the newest weighing gained", async () => {
-    // A Friday, with the weigh-in on Sunday: nothing else opens the section.
+    // A Sunday, two days past the Friday treat day the weigh-in falls on: nothing else opens
+    // the section.
     vi.useFakeTimers({ shouldAdvanceTime: true });
-    vi.setSystemTime(new Date(2026, 7, 21, 10, 0));
+    vi.setSystemTime(new Date(2026, 7, 23, 10, 0));
     renderApp(false, gained());
     await screen.findByRole("button", { name: "יומן היום" });
     expect(screen.getByRole("button", { name: /^משקל/ })).toHaveAttribute("aria-expanded", "true");
@@ -316,8 +317,9 @@ describe("App", () => {
   });
 
   it("holds the weight section open on the weigh-in morning, gain or no gain", async () => {
+    // The Friday treat day is the weigh-in day, a week past the newest weighing.
     vi.useFakeTimers({ shouldAdvanceTime: true });
-    vi.setSystemTime(new Date(2026, 7, 23, 10, 0));
+    vi.setSystemTime(new Date(2026, 7, 28, 10, 0));
     renderApp(false, gained());
     await screen.findByRole("button", { name: "יומן היום" });
     expect(screen.getByRole("button", { name: /^משקל/ })).toHaveAttribute("aria-expanded", "true");

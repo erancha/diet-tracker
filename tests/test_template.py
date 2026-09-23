@@ -143,6 +143,15 @@ def test_weigh_in_schedule_defaults_agree_with_the_app_config():
     assert parameters["WeighInHour"]["Default"] == weigh_in.hour
 
 
+def test_the_weekday_deploy_passes_the_schedules_is_the_treat_day():
+    # The weigh-in falls on the treat day, and config/app.json declares that weekday once, under
+    # treat_day. A deploy lifting the weekday from anywhere else would schedule the reminder and
+    # the recap on a day the app no longer names.
+    weekday_override = next(line for line in DEPLOY.read_text().splitlines()
+                            if "WeighInWeekday=" in line)
+    assert "['treat_day']['weekday']" in weekday_override
+
+
 def test_weekly_recap_fires_on_the_weigh_in_weekday():
     # The recap is timed to read the weigh-in morning's weight. Spelling the weekday out here
     # instead of reusing the parameter would let a retargeted weigh-in leave the recap behind on

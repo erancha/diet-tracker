@@ -28,16 +28,16 @@ Parameters:
   WeighInWeekday:
     Type: String
     AllowedValues: [SUN, MON, TUE, WED, THU, FRI, SAT]
-    Default: THU
-    Description: Day the weekly weigh-in reminder fires, and the day the weekly recap goes out
-      on at midday, so it reads that morning's weight. Declared in config/app.json under
-      weight.weigh_in; scripts/deploy.sh passes it here because an EventBridge cron expression
-      is fixed at deploy time
+    Default: FRI
+    Description: The program's treat day, on which the weekly weigh-in reminder fires and the
+      weekly recap goes out at midday, so it reads that morning's weight. Declared in
+      config/app.json under treat_day; scripts/deploy.sh passes it here because an EventBridge
+      cron expression is fixed at deploy time
   WeighInHour:
     Type: Number
     Default: 8
-    Description: Asia/Jerusalem hour of the weekly weigh-in reminder, from the same config/app.json
-      declaration as WeighInWeekday
+    Description: Asia/Jerusalem hour of the weekly weigh-in reminder, declared in config/app.json
+      under weight.weigh_in
   AdminEmail:
     Type: String
     Description: Address whose authenticated caller the API recognizes as the admin — the one

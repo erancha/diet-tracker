@@ -200,10 +200,12 @@ function TodayRow({ recorded, limits, due, onRecord }: {
 //
 // The rhythm line above the chart carries the one word that opens the chat, so a reader who wonders
 // why the weighing is weekly can ask without leaving the section.
-export function WeightSection({ weight, settings, now, defaultExpanded, glance,
+export function WeightSection({ weight, settings, weighInWeekday, now, defaultExpanded, glance,
                                 onRecord, onSetTarget, onDelete, onAskChat }: {
   weight: WeightPayload;
   settings: WeightSettings;
+  // The treat day's weekday, which the weigh-in falls on.
+  weighInWeekday: string;
   now: Date;
   defaultExpanded: boolean;
   // Opens the section for the glance; a section opened by defaultExpanded stands regardless.
@@ -233,7 +235,7 @@ export function WeightSection({ weight, settings, now, defaultExpanded, glance,
   // The rhythm reads inside the fold rather than on the header line: the phone-width line already
   // carries the weight and the target, and the one morning the reading is urgent is the morning
   // the caller opens the section anyway.
-  const rhythm = rhythmReading(weight.entries, settings.weigh_in.weekday, now);
+  const rhythm = rhythmReading(weight.entries, weighInWeekday, now);
   const shape = trendShape(weight.entries);
   const spans = offeredSpans(weight.entries, now);
   const active = activeSpan(spans, span);
@@ -277,7 +279,7 @@ export function WeightSection({ weight, settings, now, defaultExpanded, glance,
         </p>
       )}
       <TodayRow recorded={recordedToday?.kg ?? null} limits={settings.limits}
-                due={isWeighInDay(now, settings.weigh_in.weekday)}
+                due={isWeighInDay(now, weighInWeekday)}
                 onRecord={(kg) => { fold.disarm(); onRecord(kg); }} />
       {weight.entries.length > 0 && (
         <WeightChart entries={plotted} target={weight.target} span={active} spans={spans}

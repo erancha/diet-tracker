@@ -286,7 +286,7 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, c
   // The weight section rests folded, and opens for the two occasions it is the reason the page
   // was loaded: a first visit, and the weigh-in morning while no recent weighing answers it.
   const openWeight = firstVisit
-    || expandWeightSection(now, configQuery.data.weight.weigh_in.weekday, weightQuery.data.entries);
+    || expandWeightSection(now, configQuery.data.treat_day.weekday, weightQuery.data.entries);
   // A gain at the newest weighing earns a glance — the section opens on its own for a few
   // seconds — on any other load: an occasion that already opens the section holds it open.
   const glanceWeight = !openWeight && lastStepRises(weightQuery.data.entries);
@@ -336,6 +336,7 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, c
         <WeightSection
           weight={weightQuery.data}
           settings={configQuery.data.weight}
+          weighInWeekday={configQuery.data.treat_day.weekday}
           now={now}
           defaultExpanded={openWeight}
           glance={glanceWeight}
