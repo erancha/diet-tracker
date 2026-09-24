@@ -536,7 +536,7 @@ export function Chat({ email, api, sampleQuestions, answerPollSeconds,
               setDraft(event.target.value);
               setExisting(null);
             }}
-            placeholder={replyTo === null ? "שאלה על סבא חטוב 👴…" : "שאלת המשך…"}
+            placeholder={replyTo === null ? "שאלה על תוכנית התזונה 🥗…" : "שאלת המשך…"}
             aria-label="שאלה"
           />
           {draft !== "" && (

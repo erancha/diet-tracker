@@ -434,7 +434,7 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, c
         </>}
         {chatAvailable && (
           <CollapsibleSection className="chat-section"
-                              title={<>שאלות על <span className="app-name">סבא חטוב</span> 👴</>}
+                              title={<>שאלות על <span className="app-name">תוכנית התזונה</span> 🥗</>}
                               collapsed={chatCollapsed}
                               onToggle={() => setChatCollapsed((c) => !c)}>
             <Chat email={email} api={api} sampleQuestions={configQuery.data.chat.sample_questions}
