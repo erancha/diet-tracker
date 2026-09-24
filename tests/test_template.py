@@ -198,3 +198,11 @@ def test_the_chat_function_outlives_the_gateway_so_a_slow_answer_is_still_stored
 
     chat_function = _load_template()["Resources"]["ChatFunction"]["Properties"]
     assert chat_function["Timeout"] > chat.GATEWAY_WAIT_SECONDS
+
+
+def test_the_next_meal_recommendation_is_routed_to_the_chat_function():
+    template = _load_template()
+    chat_function = template["Resources"]["ChatFunction"]["Properties"]
+    routes = {(e["Properties"]["Method"], e["Properties"]["Path"])
+              for e in chat_function["Events"].values() if e["Type"] == "HttpApi"}
+    assert ("POST", "/chat/recommendation") in routes

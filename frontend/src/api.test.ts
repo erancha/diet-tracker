@@ -99,6 +99,19 @@ describe("createApi", () => {
       { question: "שרשור", at: "2026-09-01T10:00:00+00:00" });
   });
 
+  it("posts the next-meal recommendation with no body under its own path", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(
+      '{"question": "המלץ…", "answer": "עדשים", "sources": [], "at": "2026-09-24T10:00:00+00:00"}'));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await createApi(cfg, tokens).recommendNextMeal();
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("https://api.example.com/chat/recommendation");
+    expect(init.method).toBe("POST");
+    expect(init.body).toBeUndefined();
+  });
+
   it("percent-encodes the turn timestamp in the chat delete path", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response('{"at": "2026-09-01T10:00:00+00:00"}'));
     vi.stubGlobal("fetch", fetchMock);

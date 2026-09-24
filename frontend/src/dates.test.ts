@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fallsOn, beforeDayStart, mealInstant, beforeDailyCutoff, dayLabel, daysBefore, daysSince, ddmmLabel, instantLabel, mealOverdue, mealTooSoon, expandWeightSection, isWeighInDay, isoDate, lastDays, parseIsoDate, weekdayDdmmLabel, weekdayLabel, weekdayLetter } from "./dates";
+import { fallsOn, beforeDayStart, mealInstant, beforeDailyCutoff, dayLabel, daysBefore, daysSince, ddmmLabel, instantLabel, mealOverdue, mealTooSoon, nextMealNear, expandWeightSection, isWeighInDay, isoDate, lastDays, parseIsoDate, weekdayDdmmLabel, weekdayLabel, weekdayLetter } from "./dates";
 
 describe("isoDate", () => {
   it("formats a local date as YYYY-MM-DD with zero padding", () => {
@@ -201,6 +201,36 @@ describe("expandWeightSection", () => {
 
   it("stays folded on every other day, weighed or not", () => {
     expect(expandWeightSection(WEDNESDAY, "THU", [])).toBe(false);
+  });
+});
+
+describe("nextMealNear", () => {
+  const firstMealHour = 11;
+  const mealGapHours = 4;
+  const leadHours = 1;
+  const mealAt = (hour: number, minute = 0) => ({ at: new Date(2026, 7, 18, hour, minute).toISOString() });
+  const clock = (hour: number, minute = 0) => new Date(2026, 7, 18, hour, minute);
+
+  it("is near from an hour before the first-meal hour on an empty day, and not before that", () => {
+    expect(nextMealNear(clock(10, 0), firstMealHour, mealGapHours, leadHours, [])).toBe(true);
+    expect(nextMealNear(clock(9, 59), firstMealHour, mealGapHours, leadHours, [])).toBe(false);
+  });
+
+  it("is near from an hour before the gap after the latest meal runs out", () => {
+    expect(nextMealNear(clock(10, 0), firstMealHour, mealGapHours, leadHours, [mealAt(7)])).toBe(true);
+    expect(nextMealNear(clock(9, 59), firstMealHour, mealGapHours, leadHours, [mealAt(7)])).toBe(false);
+  });
+
+  it("stays near once the meal is overdue", () => {
+    expect(nextMealNear(clock(15, 0), firstMealHour, mealGapHours, leadHours, [mealAt(7)])).toBe(true);
+  });
+
+  it("measures from the latest meal whatever order the meals arrive in", () => {
+    expect(nextMealNear(clock(12, 0), firstMealHour, mealGapHours, leadHours, [mealAt(10), mealAt(6)])).toBe(false);
+  });
+
+  it("respects a different lead", () => {
+    expect(nextMealNear(clock(9, 0), firstMealHour, mealGapHours, 2, [mealAt(7)])).toBe(true);
   });
 });
 

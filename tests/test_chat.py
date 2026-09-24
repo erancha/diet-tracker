@@ -466,11 +466,11 @@ def test_a_summary_replaces_the_chat_with_its_original_question_and_the_digest(e
     assert response["statusCode"] == 200
     assert body_of(response) == {"question": "מה מותר?", "answer": "השיחה עסקה במה שמותר לאכול",
                                  "sources": [], "summarized": True, "app": False,
-                                 "visibility": None, "at": at}
+                                 "recommendation": False, "visibility": None, "at": at}
     (turn,) = transcript()
     assert turn == {"question": "מה מותר?", "answer": "השיחה עסקה במה שמותר לאכול",
-                    "sources": [], "summarized": True, "app": False, "visibility": None,
-                    "at": at}
+                    "sources": [], "summarized": True, "app": False, "recommendation": False,
+                    "visibility": None, "at": at}
 
 
 def test_a_summary_keeps_every_line_of_a_multi_line_original_question(env, monkeypatch):
@@ -655,7 +655,7 @@ def test_public_chats_of_other_users_are_listed_with_their_askers(env, pool, mon
     assert body_of(response) == {"chats": [
         {"email": "other@gmail.com", "question": "שאלה של אחר", "answer": "תשובה",
          "sources": [{"fileName": "מדריך.pdf", "score": 0.5}], "summarized": False, "app": False,
-         "at": theirs}]}
+         "recommendation": False, "at": theirs}]}
 
 
 def test_a_summary_keeps_the_chats_visibility(env, monkeypatch):
@@ -782,3 +782,85 @@ def test_a_summary_slower_than_the_gateway_is_logged_the_same_way(env, monkeypat
         response = chat_handler.handler(summary_request(at), lambda_context())
     assert response["statusCode"] == 200
     assert "transcript" in caplog.text
+
+
+def recommendation_request(sub="u1", email="a@gmail.com"):
+    return {
+        "routeKey": "POST /chat/recommendation",
+        "body": None,
+        "requestContext": {"authorizer": {"jwt": {"claims": {"sub": sub, "email": email}}}},
+    }
+
+
+def test_a_recommendation_asks_with_todays_facts_and_stores_one_marked_chat(env, ddb, monkeypatch):
+    Store("days", "meals", "state", "weights", dynamodb=ddb).add_meal("u1", today(), {
+        "at": f"{today()}T12:30:00+03:00", "carbs_choice": "carb_grade_2", "vegetables": True,
+        "fruit": False, "additions": [], "portion": None, "second_source": None})
+    asked = {}
+    monkeypatch.setattr(chat_handler.chat, "ask", lambda api_url, key, question, context=None, timeout=None:
+                        asked.update(question=question, context=context)
+                        or {"answer": "עדשים עם סלט", "sources": []})
+
+    response = chat_handler.handler(recommendation_request(), lambda_context())
+
+    assert response["statusCode"] == 200
+    body = body_of(response)
+    assert body["answer"] == "עדשים עם סלט"
+    assert body["question"] == asked["question"]
+    assert "ארוחות עד כה היום: 1" in asked["question"]
+    assert "ארוחות עם ירקות: 1" in asked["question"]
+    assert "נתוני המעקב של השואל" in asked["context"]
+    (turn,) = transcript()
+    assert turn["question"] == asked["question"]
+    assert turn["app"] is True
+    assert turn["recommendation"] is True
+    assert turn["at"] == body["at"]
+
+
+def test_a_second_recommendation_replaces_the_first(env, monkeypatch):
+    answers = iter(["ראשונה", "שנייה"])
+    monkeypatch.setattr(chat_handler.chat, "ask",
+                        lambda api_url, key, question, context=None, timeout=None: {"answer": next(answers), "sources": []})
+    first = body_of(chat_handler.handler(recommendation_request(), lambda_context()))["at"]
+
+    second = body_of(chat_handler.handler(recommendation_request(), lambda_context()))["at"]
+
+    assert second > first
+    (turn,) = transcript()
+    assert turn["answer"] == "שנייה"
+    assert turn["at"] == second
+
+
+def test_a_recommendation_spends_the_daily_allowance(env, monkeypatch):
+    monkeypatch.setattr(chat_handler.chat, "ask",
+                        lambda api_url, key, question, context=None, timeout=None: {"answer": "ת", "sources": []})
+    chat_handler.handler(recommendation_request(), lambda_context())
+    chat_handler.handler(recommendation_request(), lambda_context())
+
+    refused = chat_handler.handler(recommendation_request(), lambda_context())
+
+    assert refused["statusCode"] == 429
+
+
+def test_a_closed_day_has_no_next_meal_and_spends_no_allowance(env, ddb, monkeypatch):
+    Store("days", "meals", "state", "weights", dynamodb=ddb).put_day(
+        "u1", today(), {"drinking": 3}, 15, f"{today()}T21:00:00+03:00")
+    monkeypatch.setattr(chat_handler.chat, "ask",
+                        lambda api_url, key, question, context=None, timeout=None: {"answer": "ת", "sources": []})
+
+    response = chat_handler.handler(recommendation_request(), lambda_context())
+
+    assert response["statusCode"] == 400
+    assert transcript() == []
+    for _ in range(2):
+        assert chat_handler.handler(request({"question": "שאלה"}), lambda_context())["statusCode"] == 200
+
+
+def test_a_recommendation_upstream_failure_maps_to_502_and_stores_nothing(env, monkeypatch):
+    monkeypatch.setattr(chat_handler.chat, "ask",
+                        lambda *args, **kwargs: (_ for _ in ()).throw(urllib.error.URLError("down")))
+
+    response = chat_handler.handler(recommendation_request(), lambda_context())
+
+    assert response["statusCode"] == 502
+    assert transcript() == []

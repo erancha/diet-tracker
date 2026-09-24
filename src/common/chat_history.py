@@ -44,14 +44,15 @@ def follow_up(question, answer, asked) -> str:
     return f"{conversation(question, answer)}\n{FOLLOW_UP_LABEL} {asked}"
 
 
-def append(table, sub, question, answer, sources, at=None, app=False):
+def append(table, sub, question, answer, sources, at=None, app=False, recommendation=False):
     """Stores one answered chat for the user, stamped now (UTC), and returns that stamp — the
     chat's identity for a later delete or follow-up. With `at`, one transaction replaces the
     named chat with the fresh-stamped one, so the chat cannot be lost or doubled between the
     two writes; naming a missing chat raises KeyError rather than resurrecting a deleted one.
 
     `app` marks a chat the app itself wrote; a follow-up writes the item whole, so it has to
-    re-state the mark. The replaced chat's visibility is read off it and carried over."""
+    re-state the mark. `recommendation` marks the user's one next-meal recommendation chat. The
+    replaced chat's visibility and recommendation mark are read off it and carried over."""
     sk = datetime.now(timezone.utc).isoformat()
     item = {
         "pk": sub,
@@ -62,6 +63,8 @@ def append(table, sub, question, answer, sources, at=None, app=False):
     }
     if app:
         item["app"] = True
+    if recommendation:
+        item["recommendation"] = True
     if at is None:
         table.put_item(Item=item)
         return sk
@@ -70,6 +73,8 @@ def append(table, sub, question, answer, sources, at=None, app=False):
         raise KeyError(at)
     if "visibility" in replaced["Item"]:
         item["visibility"] = replaced["Item"]["visibility"]
+    if "recommendation" in replaced["Item"]:
+        item["recommendation"] = True
     # The resource's client shares the table's plain-value document interface — values stay untyped.
     client = table.meta.client
     try:
@@ -105,6 +110,18 @@ def find_public(table, reader_sub, question) -> dict | None:
         if item["pk"] != reader_sub and opened_with(item["question"], question):
             return {"sub": item["pk"], "at": item["sk"]}
     return None
+
+
+def find_recommendation(table, sub) -> str | None:
+    """Timestamp of the user's next-meal recommendation chat, or None while they hold none. A
+    user holds at most one, since each request replaces it, so two is a corrupted transcript."""
+    items = query_all(table, KeyConditionExpression=Key("pk").eq(sub),
+                      FilterExpression=Attr("recommendation").exists(),
+                      ProjectionExpression="sk")
+    if not items:
+        return None
+    (item,) = items
+    return item["sk"]
 
 
 def opened_with(stored, question) -> bool:
@@ -249,6 +266,8 @@ def _turn(item):
         # Likewise written only for a chat the app wrote, so one carrying no such attribute is
         # one the user asked.
         "app": "app" in item,
+        # Written only for the user's next-meal recommendation chat, which each request replaces.
+        "recommendation": "recommendation" in item,
         # Absent on a private chat.
         "visibility": item["visibility"] if "visibility" in item else None,
         "at": item["sk"],

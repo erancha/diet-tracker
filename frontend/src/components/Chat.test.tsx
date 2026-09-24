@@ -8,12 +8,13 @@ import { instantLabel } from "../dates";
 import type { ChatTurn } from "../types";
 import { Chat } from "./Chat";
 
-type ChatApi = Pick<Api, "ask" | "getChatTranscript" | "deleteChatTurn" | "summarizeChatTurn" | "sourceUrl"
+type ChatApi = Pick<Api, "ask" | "recommendNextMeal" | "getChatTranscript" | "deleteChatTurn" | "summarizeChatTurn" | "sourceUrl"
   | "setChatVisibility" | "clearChatVisibility" | "getPublicChats" | "getChatCount" | "findExistingChat">;
 
 function api(overrides: Partial<ChatApi> = {}): ChatApi {
   return {
     ask: vi.fn(),
+    recommendNextMeal: vi.fn(),
     getChatTranscript: vi.fn().mockResolvedValue({ turns: [] }),
     deleteChatTurn: vi.fn(),
     summarizeChatTurn: vi.fn(),
@@ -35,7 +36,8 @@ function counted(ownTotal: number, ownApp = 0, publicTotal = 0, ownShared = 0) {
 
 function turn(index: number, app = false, visibility: ChatTurn["visibility"] = null): ChatTurn {
   return { question: `שאלה ${index}`, answer: `תשובה ${index}`, sources: [], summarized: false,
-           app, visibility, at: `2026-09-01T10:00:${String(index).padStart(2, "0")}` };
+           app, recommendation: false, visibility,
+           at: `2026-09-01T10:00:${String(index).padStart(2, "0")}` };
 }
 
 // Newest first, mirroring the order the server returns.
@@ -67,9 +69,9 @@ function mixedTurns(): ChatTurn[] {
 const OTHERS = { chats: [
   { email: "other@gmail.com", question: "מה מותר בערב?", answer: "ירקות וחלבון",
     sources: [{ fileName: "מדריך.pdf", score: 0.5 }], summarized: false, app: false,
-    at: "2026-09-01T10:00:02+00:00" },
+    recommendation: false, at: "2026-09-01T10:00:02+00:00" },
   { email: "third@gmail.com", question: "כמה מים?", answer: "שלושה ליטר", sources: [],
-    summarized: true, app: false, at: "2026-09-01T10:00:01+00:00" },
+    summarized: true, app: false, recommendation: false, at: "2026-09-01T10:00:01+00:00" },
 ] };
 
 // An api whose others' listing holds the given chats, counted for the toggle.
@@ -310,6 +312,118 @@ describe("Chat", () => {
     rerender(<Chat email="a@gmail.com" api={client} answerPollSeconds={POLL_SECONDS} sampleQuestions={[]} askCommand={null}
                    onAskCommandTaken={onAskCommandTaken} />);
     expect(client.ask).toHaveBeenCalledTimes(1);
+  });
+
+  it("opens a recommendation younger than the reuse window instead of asking again", async () => {
+    const fresh = { ...turn(1, true), recommendation: true, answer: "המלצה טרייה",
+                    at: new Date(Date.now() - 30 * 60_000).toISOString() };
+    const client = api({
+      getChatTranscript: vi.fn().mockResolvedValue({ turns: [fresh, turn(2)] }),
+      recommendNextMeal: vi.fn(),
+    });
+    render(<Chat email="a@gmail.com" api={client} answerPollSeconds={POLL_SECONDS} sampleQuestions={[]}
+                 recommendCommand={1} onRecommendCommandTaken={vi.fn()} reuseWithinHours={1} />);
+
+    expect(await screen.findByText("המלצה טרייה")).toBeInTheDocument();
+    expect(client.recommendNextMeal).not.toHaveBeenCalled();
+    expect(screen.queryByText("ממליץ על הארוחה הבאה…")).not.toBeInTheDocument();
+  });
+
+  it("asks anew once the recommendation is older than the reuse window", async () => {
+    const stale = { ...turn(1, true), recommendation: true,
+                    at: new Date(Date.now() - 2 * 3_600_000).toISOString() };
+    const client = api({
+      getChatTranscript: vi.fn().mockResolvedValue({ turns: [stale, turn(2)] }),
+      recommendNextMeal: vi.fn().mockResolvedValue({
+        question: "המלץ", answer: "המלצה חדשה", sources: [], at: new Date().toISOString() }),
+    });
+    render(<Chat email="a@gmail.com" api={client} answerPollSeconds={POLL_SECONDS} sampleQuestions={[]}
+                 recommendCommand={1} onRecommendCommandTaken={vi.fn()} reuseWithinHours={1} />);
+
+    expect(await screen.findByText("המלצה חדשה")).toBeInTheDocument();
+    expect(client.recommendNextMeal).toHaveBeenCalledTimes(1);
+  });
+
+  it("takes a recommend command once, shows the composed question and drops the old recommendation", async () => {
+    const old = { ...turn(1, true), recommendation: true, at: "2026-09-20T10:00:00" };
+    const client = api({
+      getChatTranscript: vi.fn().mockResolvedValue({ turns: [old, turn(2)] }),
+      recommendNextMeal: vi.fn().mockResolvedValue({
+        question: "המלץ על הארוחה הבאה", answer: "עדשים עם סלט", sources: [], at: "2026-09-24T10:00:00" }),
+    });
+    const onRecommendCommandTaken = vi.fn();
+    const { rerender } = render(<Chat email="a@gmail.com" api={client} answerPollSeconds={POLL_SECONDS} sampleQuestions={[]}
+                                      recommendCommand={1} onRecommendCommandTaken={onRecommendCommandTaken} />);
+
+    expect(await screen.findByText("עדשים עם סלט")).toBeInTheDocument();
+    expect(screen.getByText("המלץ על הארוחה הבאה")).toBeInTheDocument();
+    expect(screen.queryByText(old.question)).not.toBeInTheDocument();
+    expect(screen.getByText(turn(2).question)).toBeInTheDocument();
+    expect(client.recommendNextMeal).toHaveBeenCalledTimes(1);
+    expect(onRecommendCommandTaken).toHaveBeenCalledTimes(1);
+
+    rerender(<Chat email="a@gmail.com" api={client} answerPollSeconds={POLL_SECONDS} sampleQuestions={[]}
+                   recommendCommand={null} onRecommendCommandTaken={onRecommendCommandTaken} />);
+    expect(client.recommendNextMeal).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows the recommendation as pending while it is being asked for", async () => {
+    let settle!: (value: unknown) => void;
+    const client = api({ recommendNextMeal: vi.fn().mockReturnValue(new Promise((resolve) => { settle = resolve; })) });
+    render(<Chat email="a@gmail.com" api={client} answerPollSeconds={POLL_SECONDS} sampleQuestions={[]}
+                 recommendCommand={1} onRecommendCommandTaken={vi.fn()} />);
+
+    expect(await screen.findByText("ממליץ על הארוחה הבאה…")).toBeInTheDocument();
+    settle({ question: "ש", answer: "ת", sources: [], at: "2026-09-24T10:00:00" });
+    expect(await screen.findByText("ת")).toBeInTheDocument();
+  });
+
+  it("reports a failed recommendation and keeps the transcript", async () => {
+    const client = api({
+      getChatTranscript: vi.fn().mockResolvedValue({ turns: [turn(2)] }),
+      recommendNextMeal: vi.fn().mockRejectedValue(new ApiError(429, "POST /chat/recommendation → 429", "מכסת השאלות היומית נוצלה")),
+    });
+    render(<Chat email="a@gmail.com" api={client} answerPollSeconds={POLL_SECONDS} sampleQuestions={[]}
+                 recommendCommand={1} onRecommendCommandTaken={vi.fn()} />);
+
+    // Same as ask's own reasoned failure: the server's reason stands alone, with no action prefix.
+    expect(await screen.findByText("מכסת השאלות היומית נוצלה")).toBeInTheDocument();
+    expect(screen.getByText("שאלה 2")).toBeInTheDocument();
+  });
+
+  it("drops a recommend press that arrives while one is still in flight", async () => {
+    const client = api({ recommendNextMeal: vi.fn().mockReturnValue(new Promise(() => {})) });
+    const onRecommendCommandTaken = vi.fn();
+    const { rerender } = render(<Chat email="a@gmail.com" api={client} answerPollSeconds={POLL_SECONDS} sampleQuestions={[]}
+                                      recommendCommand={1} onRecommendCommandTaken={onRecommendCommandTaken} />);
+    await screen.findByText("ממליץ על הארוחה הבאה…");
+
+    rerender(<Chat email="a@gmail.com" api={client} answerPollSeconds={POLL_SECONDS} sampleQuestions={[]}
+                   recommendCommand={2} onRecommendCommandTaken={onRecommendCommandTaken} />);
+
+    expect(client.recommendNextMeal).toHaveBeenCalledTimes(1);
+    expect(onRecommendCommandTaken).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps waiting past a stale recommendation until a strictly newer one lands", async () => {
+    const old: ChatTurn = { ...turn(1, true), recommendation: true,
+                            at: new Date(Date.now() - 5_000).toISOString() };
+    const fresh: ChatTurn = { ...turn(2), recommendation: true, question: "המלץ על הארוחה הבאה",
+                              answer: "עדשים עם סלט", at: new Date().toISOString() };
+    const client = api({
+      getChatTranscript: vi.fn()
+        .mockResolvedValueOnce({ turns: [old] })
+        .mockResolvedValueOnce({ turns: [old] })
+        .mockResolvedValue({ turns: [fresh, old] }),
+      recommendNextMeal: vi.fn().mockRejectedValue(
+        new ApiError(503, 'POST /chat/recommendation → 503: {"message":"Service Unavailable"}')),
+    });
+    render(<Chat email="a@gmail.com" api={client} answerPollSeconds={POLL_SECONDS} sampleQuestions={[]}
+                 recommendCommand={1} onRecommendCommandTaken={vi.fn()} />);
+
+    expect(await screen.findByText("עדשים עם סלט")).toBeInTheDocument();
+    expect(screen.queryByText(old.question)).not.toBeInTheDocument();
+    expect(client.getChatTranscript).toHaveBeenCalledTimes(3);
   });
 
   it("shows the question, the answer, and its sources", async () => {

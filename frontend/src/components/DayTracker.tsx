@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { beforeDayStart, clockTimeOf, mealInstant, mealOverdue, mealTooSoon } from "../dates";
+import { beforeDayStart, clockTimeOf, mealInstant, mealOverdue, mealTooSoon, nextMealNear } from "../dates";
 import { carbsScales, deriveDay, portionOffered } from "../derive";
 import { mayDiscardEdits } from "../edits";
 import { isViolating } from "../violations";
@@ -58,7 +58,7 @@ export function DayTracker({ questionnaire, treatDay, day, isToday = true, close
                              mealGapHours, maxMealsPerDay, closeMinWindowHours, closeFrom, stretchesUntil,
                              onAddMeal,
                              onUpdateMeal, onDeleteMeal, deletingMealId, savingMeal, onCloseDay,
-                             onReopenDay }: {
+                             onReopenDay, onRecommend, suggestBeforeHours }: {
   questionnaire: Questionnaire;
   // The weekday whose breaches the dashboard paints softer.
   treatDay: TreatDaySettings;
@@ -99,6 +99,12 @@ export function DayTracker({ questionnaire, treatDay, day, isToday = true, close
   // Deletes the closed day's record — the history table's own deletion path — so the day is open
   // to take the meal the user came to add or correct. Supplied whenever closed can be true.
   onReopenDay?: () => void;
+  // Asks the chat for the next meal on the user's behalf; absent on a deployment with no
+  // answering service, which also has no chat.
+  onRecommend?: () => void;
+  // Hours before the next meal is due from which the recommendation reads as timely
+  // (app.json's next_meal.suggest_before_hours).
+  suggestBeforeHours: number;
 }) {
   const carbsQuestion = questionnaire.questions.find((q) => q.id === "carbs")!;
   const drinkingQuestion = questionnaire.questions.find((q) => q.id === "drinking")!;
@@ -243,6 +249,10 @@ export function DayTracker({ questionnaire, treatDay, day, isToday = true, close
   // The opposite caution: a meal that would land too close after the last one greys the folded
   // toggle. Open inputs are already recording, so the shade lifts with them.
   const tooSoon = formCollapsed && mealTooSoon(new Date(), MIN_MEAL_GAP_HOURS, day.meals);
+
+  // The recommendation button reads greyed until the next meal is within the configured lead.
+  const suggestionTimely = nextMealNear(new Date(), firstMealHour, mealGapHours,
+                                        suggestBeforeHours, day.meals);
 
   // The panel opens below the day's meal list, past the fold more often than not, so it walks
   // into view and hands focus to its first water choice rather than waiting to be found.
@@ -445,7 +455,18 @@ export function DayTracker({ questionnaire, treatDay, day, isToday = true, close
                           headingLevel={3}
                           title={editing !== undefined ? "עדכון ארוחה" : addMealTitle}
                           collapsed={formCollapsed}
-                          onToggle={toggleForm}>
+                          onToggle={toggleForm}
+                          headerAside={
+      /* The next meal's recommendation rides beside the add-meal heading, the question it
+         answers. Present whenever the section is, so the header keeps one shape open or folded;
+         greyed until the next meal is within the configured lead. */
+      onRecommend !== undefined && isToday
+        ? <button type="button" onClick={onRecommend}
+                  className={"secondary compact next-meal" + (suggestionTimely ? "" : " next-meal-early")}>
+            מה לאכול בארוחה הבאה?
+          </button>
+        : undefined
+    }>
         {/* Sits in the frame's far corner via the style sheet rather than in the heading row:
             an aside there would restructure the header between open and folded, recreating the
             toggle mid-interaction and dropping keyboard focus with it. */}

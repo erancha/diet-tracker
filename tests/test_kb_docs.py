@@ -186,3 +186,9 @@ def test_the_guide_states_the_tracking_scope_as_a_design_choice():
     section = _doc_section("1. רישום ארוחה")
     assert "חלבון" in section
     assert "בכוונה תחילה" in section
+
+
+def test_next_meal_hours():
+    next_meal = CONFIG["next_meal"]
+    assert f"עד שעה {next_meal['suggest_before_hours']} לפני" in DOC
+    assert f"בת פחות משעה {next_meal['reuse_within_hours']} פותחת" in DOC

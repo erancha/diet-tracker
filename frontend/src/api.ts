@@ -5,7 +5,8 @@ import { endSession, isUnexpired, type Tokens } from "./auth";
 import type { AppConfig } from "./config";
 import type { AdminActivity, AnswerValue, ChatAnswer, ChatCount, ChatTranscript, ChatTurn,
   ChatVisibility, DayPayload, ExistingChat, HistoryResponse, LoadedHistory, NewMeal,
-  NotificationSettings, PublicChats, SubmitResult, WeightPayload } from "./types";
+  NextMealRecommendation, NotificationSettings, PublicChats, SubmitResult,
+  WeightPayload } from "./types";
 
 /**
  * Backend request rejected; the message keeps the method, path, status, and body for diagnosis,
@@ -65,6 +66,7 @@ export interface Api {
   dismissUndelivered(at: string): Promise<{ at: string }>;
   getAdminActivity(): Promise<AdminActivity>;
   ask(question: string, at?: string, app?: boolean): Promise<ChatAnswer>;
+  recommendNextMeal(): Promise<NextMealRecommendation>;
   getChatTranscript(): Promise<ChatTranscript>;
   deleteChatTurn(at: string): Promise<{ at: string }>;
   summarizeChatTurn(at: string): Promise<ChatTurn>;
@@ -143,6 +145,8 @@ export function createApi(
       ...(at !== undefined && { at }),
       ...(app === true && { app }),
     }),
+    // The server composes the question from today's meals, so nothing is sent.
+    recommendNextMeal: () => request("POST", "/chat/recommendation"),
     getChatTranscript: () => request("GET", "/chat"),
     // The timestamp's '+' and ':' must reach the route as the literal characters the chat is
     // stored under, so it travels percent-encoded.

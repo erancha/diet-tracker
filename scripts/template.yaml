@@ -383,6 +383,12 @@ Resources:
             ApiId: !Ref Api
             Method: POST
             Path: /chat
+        ChatRecommendation:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref Api
+            Method: POST
+            Path: /chat/recommendation
         ChatTranscript:
           Type: HttpApi
           Properties:

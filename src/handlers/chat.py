@@ -23,8 +23,8 @@ import urllib.error
 
 import boto3
 
-from common import appconfig, chat, chat_history, chat_question, notify, quota, users
-from common.dates import today
+from common import appconfig, chat, chat_history, chat_question, next_meal, notify, quota, users
+from common.dates import clock_time, today
 from common.log import get_logger
 from common.store import Store
 from common.webapi import response
@@ -39,7 +39,8 @@ SUMMARY_INSTRUCTION = ("סכם בעברית את השיחה המצורפת בה�
 
 # The routes that reach the answering service. The transcript routes are outside it, so a
 # deployment without the service still serves and deletes what earlier ones stored.
-UPSTREAM_ROUTES = {"POST /chat", "POST /chat/{at}/summary", "POST /chat/source-url"}
+UPSTREAM_ROUTES = {"POST /chat", "POST /chat/recommendation", "POST /chat/{at}/summary",
+                   "POST /chat/source-url"}
 
 # How long the HTTP API holds the browser's request before answering it with a gateway error.
 # The invocation outlives that (template.yaml ChatFunction Timeout), so a slower answer is still
@@ -60,6 +61,8 @@ def handler(event, context):
         return _service_unconfigured()
     if route == "POST /chat":
         return _ask(sub, claims["email"], json.loads(event["body"]), context)
+    if route == "POST /chat/recommendation":
+        return _recommend(sub, claims["email"], context)
     if route == "GET /chat":
         return response(200, {"turns": chat_history.turns(_history_table(), sub)})
     if route == "POST /chat/{at}/summary":
@@ -136,8 +139,7 @@ def _ask(sub, email, body, context):
     if refusal is not None:
         return refusal
 
-    store = Store(os.environ["DAYS_TABLE"], os.environ["MEALS_TABLE"], os.environ["STATE_TABLE"],
-                  os.environ["WEIGHTS_TABLE"])
+    store = _store()
     questionnaire = appconfig.load(os.environ["APP_CONFIG_PATH"]).questionnaire
     try:
         stored = _from_upstream(context, lambda budget: chat_question.answer(
@@ -148,6 +150,38 @@ def _ask(sub, email, body, context):
     except KeyError:
         return _no_turn(at)
     return response(200, stored)
+
+
+def _store():
+    return Store(os.environ["DAYS_TABLE"], os.environ["MEALS_TABLE"], os.environ["STATE_TABLE"],
+                 os.environ["WEIGHTS_TABLE"])
+
+
+def _recommend(sub, email, context):
+    """Asks for the caller's next meal on their behalf and stores the answer as their one
+    recommendation chat, replacing the previous one. A closed day has no next meal, so it is
+    refused before the allowance is touched. A recommendation deleted between the lookup and the
+    replace is a chat that no longer exists, and reads as such."""
+    day = today()
+    store = _store()
+    if store.has_day(sub, day):
+        return response(400, {"error": "היום כבר נסגר — אין ארוחה הבאה להמליץ עליה"})
+    refusal = _quota_refusal(sub, email)
+    if refusal is not None:
+        return refusal
+    questionnaire = appconfig.load(os.environ["APP_CONFIG_PATH"]).questionnaire
+    question = next_meal.compose(store.get_meals(sub, day), questionnaire, clock_time())
+    table = _history_table()
+    at = chat_history.find_recommendation(table, sub)
+    try:
+        stored = _from_upstream(context, lambda budget: chat_question.answer(
+            _rag_url(), _rag_key(), store, questionnaire, table, sub, question,
+            at=at, app=True, recommendation=True, timeout=budget))
+    except (urllib.error.URLError, TimeoutError) as error:
+        return _upstream_unavailable(error)
+    except KeyError:
+        return _no_turn(at)
+    return response(200, {"question": question, **stored})
 
 
 def _source_url(body):
@@ -222,6 +256,7 @@ def _summarize(sub, email, at, context):
     chat_history.summarize(table, sub, at, question, digest["answer"])
     return response(200, {"question": question, "answer": digest["answer"], "sources": [],
                           "summarized": True, "app": turn["app"],
+                          "recommendation": turn["recommendation"],
                           "visibility": turn["visibility"], "at": at})
 
 

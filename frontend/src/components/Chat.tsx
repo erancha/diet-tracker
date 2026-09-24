@@ -7,7 +7,7 @@ import { storePublicCount, storedPublicCount } from "../publicCount";
 import { instantLabel } from "../dates";
 import { dropped, flipped } from "../setToggle";
 import type { ChatAnswer as StoredAnswer, ChatCount, ChatSampleQuestion, ChatTurn, ExistingChat,
-  PublicChat } from "../types";
+  NextMealRecommendation, PublicChat } from "../types";
 import { fromUpstream } from "../upstream";
 import { AnswerFoot } from "./AnswerFoot";
 import { ChatAnswer } from "./ChatAnswer";
@@ -24,6 +24,11 @@ const SHARE_CONFIRM =
 // A stored chat's stamp is the server's clock and the ask's is the browser's; a chat this much
 // older than the ask still counts as its answer.
 const CLOCK_SKEW_MS = 60_000;
+const MS_PER_HOUR = 3_600_000;
+
+// What the pending row reads while a recommendation is asked for; the question itself is
+// composed on the server and arrives with the answer.
+const RECOMMENDING = "ממליץ על הארוחה הבאה…";
 
 // What a failed chat action tells: the server's own reason when it gave one — a refusal or an
 // outage in the server's words — else the failed action with the technical detail.
@@ -86,18 +91,26 @@ function composeFollowUp(target: ChatTurn, question: string): string {
 // than the ask under the asked question, the digest the chat marked summarized. A failure the
 // handler did give a reason for shows that reason alone.
 export function Chat({ email, api, sampleQuestions, answerPollSeconds,
-                       defaultTranscriptFolded = false, askCommand = null, onAskCommandTaken }: {
+                       defaultTranscriptFolded = false, askCommand = null, onAskCommandTaken,
+                       recommendCommand = null, onRecommendCommandTaken,
+                       reuseWithinHours = 0 }: {
   // The signed-in address, keying what this account's last visit saw of the others' chats.
   email: string;
-  api: Pick<Api, "ask" | "getChatTranscript" | "deleteChatTurn" | "summarizeChatTurn" | "sourceUrl"
-    | "setChatVisibility" | "clearChatVisibility" | "getPublicChats" | "getChatCount"
-    | "findExistingChat">;
+  api: Pick<Api, "ask" | "recommendNextMeal" | "getChatTranscript" | "deleteChatTurn"
+    | "summarizeChatTurn" | "sourceUrl" | "setChatVisibility" | "clearChatVisibility"
+    | "getPublicChats" | "getChatCount" | "findExistingChat">;
   sampleQuestions: ChatSampleQuestion[];
   // How often the transcript is read for a result the gateway gave up waiting for.
   answerPollSeconds: number;
   defaultTranscriptFolded?: boolean;
   askCommand?: string | null;
   onAskCommandTaken?: () => void;
+  // A next-meal recommendation the tracker asked for, as a fresh value per press, until the
+  // chat takes it; the same hand-off as askCommand.
+  recommendCommand?: number | null;
+  onRecommendCommandTaken?: () => void;
+  // A recommendation younger than this is shown again on a press instead of asked anew.
+  reuseWithinHours?: number;
 }) {
   // The stored transcript, or null until first unfolded; the count stands in for it meanwhile.
   const [turns, setTurns] = useState<ChatTurn[] | null>(null);
@@ -248,6 +261,58 @@ export function Chat({ email, api, sampleQuestions, answerPollSeconds,
     return found !== undefined && found.summarized ? found : null;
   };
 
+  // The recommendation chat once the server stored it after the press; null until then. The
+  // server replaces the previous recommendation in one transaction, so that chat stays in the
+  // transcript — under its old stamp — until the new one is stored; only a chat strictly newer
+  // than the one already there can be the replacement landing.
+  const landedRecommendation = async (
+    sentAt: number, previous: ChatTurn | undefined,
+  ): Promise<NextMealRecommendation | null> => {
+    const { turns: stored } = await api.getChatTranscript();
+    const found = stored.find((turn) => turn.recommendation
+      && (previous === undefined || turn.at > previous.at)
+      && Date.parse(turn.at) >= sentAt - CLOCK_SKEW_MS);
+    return found === undefined ? null : found;
+  };
+
+  // Asks for the next meal on the user's behalf. The answered chat leads the list and the
+  // previous recommendation leaves it, the server having replaced that one. A recommendation
+  // still younger than reuseWithinHours is opened again instead, spending no question.
+  const recommend = async () => {
+    setError(null);
+    setTranscriptFolded(false);
+    setFilter("all");
+    setQuery("");
+    setPendingQuestion(RECOMMENDING);
+    try {
+      const loaded = turns ?? (await api.getChatTranscript()).turns;
+      const previous = loaded.find((turn) => turn.recommendation);
+      if (previous !== undefined
+          && Date.now() - Date.parse(previous.at) < reuseWithinHours * MS_PER_HOUR) {
+        if (turns === null) setTurns(loaded);
+        setRevealAt(previous.at);
+        return;
+      }
+      const sentAt = Date.now();
+      const reply = await fromUpstream(
+        () => api.recommendNextMeal(),
+        () => landedRecommendation(sentAt, previous),
+        answerPollSeconds * 1000,
+        () => setAnswerPolled(true));
+      const answered: ChatTurn = { question: reply.question, answer: reply.answer, sources: reply.sources,
+                                   summarized: false, app: true, recommendation: true,
+                                   visibility: previous === undefined ? null : previous.visibility,
+                                   at: reply.at };
+      setTurns([answered, ...loaded.filter((turn) => !turn.recommendation && turn.at !== reply.at)]);
+      setExpanded((current) => new Set(current).add(reply.at));
+    } catch (thrown) {
+      setError(failureMessage("ההמלצה נכשלה", thrown as Error));
+    } finally {
+      setPendingQuestion(null);
+      setAnswerPolled(false);
+    }
+  };
+
   // Sends the question, as a follow-up on target when one is given. `app` marks a question the
   // app composed; a follow-up keeps whichever mark the chat it extends already carries.
   const send = async (question: string, target: ChatTurn | null, app = false) => {
@@ -273,6 +338,7 @@ export function Chat({ email, api, sampleQuestions, answerPollSeconds,
       // A follow-up stays shared as the chat it extends was; the server carries the mark over.
       const answered: ChatTurn = { question: asked, answer: reply.answer, sources: reply.sources,
                                    summarized: false, app: authored,
+                                   recommendation: target === null ? false : target.recommendation,
                                    visibility: target === null ? null : target.visibility,
                                    at: reply.at };
       // Fresh or followed-up, the answered chat leads — the order the server returns on reload.
@@ -363,6 +429,17 @@ export function Chat({ email, api, sampleQuestions, answerPollSeconds,
     void send(askCommand, null, true);
     // The command alone triggers this; the state send closes over must not resend it.
   }, [askCommand]);
+
+  useEffect(() => {
+    if (recommendCommand === null) return;
+    onRecommendCommandTaken!();
+    // A press while a request is in flight is dropped, not queued: the tracker's button stays
+    // enabled through the wait, so a second press must not spend a second question.
+    if (pendingQuestion !== null) return;
+    setReplyTo(null);
+    void recommend();
+    // The command alone triggers this; the state recommend closes over must not resend it.
+  }, [recommendCommand]);
 
   // Deletion is permanent — no undo — so it stands behind the same confirm dialog as the
   // history table's per-row delete. The chat leaves the view only once the server confirms.

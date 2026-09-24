@@ -116,6 +116,13 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, c
     setChatCollapsed(false);
     setAskCommand(question);
   };
+  // A next-meal recommendation the tracker asked for, stamped per press so two presses are two
+  // commands, until the chat takes it.
+  const [recommendCommand, setRecommendCommand] = useState<number | null>(null);
+  const recommendNextMeal = () => {
+    setChatCollapsed(false);
+    setRecommendCommand(Date.now());
+  };
   useFoldAllEffect(foldAll, trendsFold.set);
 
   // The history row whose read-only day view is open, or null when none is.
@@ -357,6 +364,7 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, c
             firstMealHour={firstMealHour}
             mealGapHours={mealGapHours}
             maxMealsPerDay={configQuery.data.meals.max_per_day}
+            suggestBeforeHours={configQuery.data.next_meal.suggest_before_hours}
             closeMinWindowHours={dayClose.min_window_hours}
             closeFrom={dayClose.close_from}
             stretchesUntil={dayClose.close_until}
@@ -370,6 +378,7 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, c
             // the day's list, so the figures it submits count that meal.
             savingMeal={mealMutation.isPending || updateMealMutation.isPending}
             onCloseDay={(answers) => submitMutation.mutate({ answers, date: activeDay.date })}
+            onRecommend={chatAvailable ? recommendNextMeal : undefined}
         />
         <CollapsibleSection title="מגמות" collapsed={trendsFold.collapsed}
                             onToggle={trendsFold.toggle}
@@ -431,7 +440,10 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, c
             <Chat email={email} api={api} sampleQuestions={configQuery.data.chat.sample_questions}
                   answerPollSeconds={configQuery.data.chat.answer_poll_seconds}
                   defaultTranscriptFolded={openedCondensed}
-                  askCommand={askCommand} onAskCommandTaken={() => setAskCommand(null)} />
+                  askCommand={askCommand} onAskCommandTaken={() => setAskCommand(null)}
+                  recommendCommand={recommendCommand}
+                  onRecommendCommandTaken={() => setRecommendCommand(null)}
+                  reuseWithinHours={configQuery.data.next_meal.reuse_within_hours} />
           </CollapsibleSection>
         )}
         {isAdmin && <AdminSection api={api} />}

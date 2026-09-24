@@ -137,19 +137,39 @@ export function beforeDailyCutoff(now: Date, cutoff: string): boolean {
 
 const MS_PER_HOUR = 3_600_000;
 
-// Milliseconds from the latest recorded meal to the clock. Meals are dated, not ordered, so the
-// latest is found by time. Requires at least one meal.
-function sinceLastMeal(now: Date, meals: readonly { at: string }[]): number {
-  return now.getTime() - Math.max(...meals.map((m) => Date.parse(m.at)));
+// Epoch millisecond of the latest recorded meal. Meals are dated, not ordered, so the latest is
+// found by time. Requires at least one meal.
+function latestMealAt(meals: readonly { at: string }[]): number {
+  return Math.max(...meals.map((m) => Date.parse(m.at)));
 }
 
-// A meal is overdue in two ways: a day still empty by firstMealHour, or a most recent meal
-// mealGapHours or more behind the clock — measured from when it was eaten, so a stale meal is
-// overdue however early in the day.
+// Milliseconds from the latest recorded meal to the clock. Requires at least one meal.
+function sinceLastMeal(now: Date, meals: readonly { at: string }[]): number {
+  return now.getTime() - latestMealAt(meals);
+}
+
+// When the next meal is due, as an epoch millisecond: firstMealHour of the clock's day while
+// nothing is recorded, else mealGapHours after the latest meal — measured from when it was
+// eaten, so a stale meal is due again however early in the day.
+export function nextMealDue(now: Date, firstMealHour: number, mealGapHours: number,
+                            meals: readonly { at: string }[]): number {
+  if (meals.length === 0) {
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate(), firstMealHour).getTime();
+  }
+  return latestMealAt(meals) + mealGapHours * MS_PER_HOUR;
+}
+
+// A meal is overdue once its due time is reached.
 export function mealOverdue(now: Date, firstMealHour: number, mealGapHours: number,
                             meals: readonly { at: string }[]): boolean {
-  if (meals.length === 0) return now.getHours() >= firstMealHour;
-  return sinceLastMeal(now, meals) >= mealGapHours * MS_PER_HOUR;
+  return now.getTime() >= nextMealDue(now, firstMealHour, mealGapHours, meals);
+}
+
+// Whether the next meal is near enough for a suggestion to be timely: within leadHours before
+// it is due, or any time after.
+export function nextMealNear(now: Date, firstMealHour: number, mealGapHours: number,
+                             leadHours: number, meals: readonly { at: string }[]): boolean {
+  return now.getTime() >= nextMealDue(now, firstMealHour, mealGapHours, meals) - leadHours * MS_PER_HOUR;
 }
 
 // Whether the latest recorded meal is still under minGapHours behind the clock — the next one

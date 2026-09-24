@@ -116,6 +116,15 @@ export interface ChatSettings {
   sample_questions: ChatSampleQuestion[];
 }
 
+// Frontend-only section, like ChatSettings.
+export interface NextMealSettings {
+  // How long before the next meal is due (nextMealDue in dates.ts) the tracker's recommendation
+  // button reads as timely rather than greyed.
+  suggest_before_hours: number;
+  // A recommendation younger than this is shown again on the next press instead of asked anew.
+  reuse_within_hours: number;
+}
+
 export interface MealsSettings {
   // Meals a day may hold. The tracker folds recording away at this count, matching the cap the
   // API enforces.
@@ -150,6 +159,7 @@ export interface AppConfigFile {
   questionnaire: Questionnaire;
   weight: WeightSettings;
   meals: MealsSettings;
+  next_meal: NextMealSettings;
   day_close: DayCloseSettings;
   treat_day: TreatDaySettings;
   chat: ChatSettings;
@@ -331,6 +341,12 @@ export interface ChatAnswer {
   at: string;
 }
 
+// The answer to a next-meal recommendation, with the question the app composed on the user's
+// behalf, since the client never saw it.
+export interface NextMealRecommendation extends ChatAnswer {
+  question: string;
+}
+
 // The visibilities a chat can be shared under: "public" is readable by every signed-in user.
 export type ChatVisibility = "public";
 
@@ -347,6 +363,9 @@ export interface ChatTurn {
   // panel puts to the chat — rather than the user typing it. It follows the chat through
   // follow-ups and digests.
   app: boolean;
+  // Whether this is the user's one next-meal recommendation chat, which each press of the
+  // tracker's button replaces. Follows the chat through follow-ups, like the app mark.
+  recommendation: boolean;
   // Who besides the asker may read the chat; null while the asker has not shared it. Follows
   // the chat through follow-ups and digests, like the app mark.
   visibility: ChatVisibility | null;

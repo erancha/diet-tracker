@@ -300,6 +300,10 @@
   "meals": {
     "max_per_day": 5
   },
+  "next_meal": {
+    "suggest_before_hours": 1,
+    "reuse_within_hours": 1
+  },
   "day_close": {
     "close_until": "02:00",
     "delete_until": "01:30",

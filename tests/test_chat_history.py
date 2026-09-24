@@ -44,7 +44,7 @@ def test_a_follow_up_replaces_the_turn_whole_under_a_fresh_key(table):
     assert returned > at
     (turn,) = chat_history.turns(table, "u1")
     assert turn == {"question": "שרשור מלא", "answer": "תשובה חדשה", "summarized": False,
-                    "app": False, "visibility": None,
+                    "app": False, "recommendation": False, "visibility": None,
                     "sources": [{"fileName": "מדריך.pdf", "score": 0.9}], "at": returned}
 
 
@@ -145,9 +145,10 @@ def test_get_returns_the_stored_turn(table):
     sources = [{"fileName": "מדריך.pdf", "score": 0.83}]
     at = chat_history.append(table, "u1", "שאלה?", "תשובה", sources)
 
-    assert chat_history.get(table, "u1", at) == {"question": "שאלה?", "answer": "תשובה",
-                                                 "sources": sources, "summarized": False,
-                                                 "app": False, "visibility": None, "at": at}
+    turn = chat_history.get(table, "u1", at)
+    assert turn == {"question": "שאלה?", "answer": "תשובה", "sources": sources,
+                    "summarized": False, "app": False, "recommendation": False,
+                    "visibility": None, "at": at}
 
 
 def test_get_of_a_missing_turn_raises(table):
@@ -165,7 +166,7 @@ def test_summarize_replaces_the_chain_in_place_under_the_same_key(table):
 
     (turn,) = chat_history.turns(table, "u1")
     assert turn == {"question": "מה מותר?", "answer": "השיחה עסקה במה שמותר לאכול",
-                    "sources": [], "summarized": True, "app": False, "visibility": None,
+                    "sources": [], "summarized": True, "app": False, "recommendation": False, "visibility": None,
                     "at": at}
 
 
@@ -315,10 +316,10 @@ def test_public_lists_other_users_public_chats_newest_first_with_their_askers(ta
 
     assert listed == [
         {"sub": "u3", "question": "חדשה של שלישי", "answer": "ת2", "sources": [],
-         "summarized": False, "app": False, "visibility": "public", "at": newer},
+         "summarized": False, "app": False, "recommendation": False, "visibility": "public", "at": newer},
         {"sub": "u2", "question": "ישנה של אחר", "answer": "ת1",
          "sources": [{"fileName": "מדריך.pdf", "score": 0.5}],
-         "summarized": False, "app": False, "visibility": "public", "at": older},
+         "summarized": False, "app": False, "recommendation": False, "visibility": "public", "at": older},
     ]
 
 
@@ -396,3 +397,38 @@ def test_find_public_returns_the_newest_other_users_public_chat_opened_alike(tab
     assert chat_history.find_public(table, "u1", "מה מותר בערב?") == {"sub": "u3", "at": newer}
     assert chat_history.find_public(table, "u1", "ובבוקר?") is None
     assert chat_history.find_public(table, "u3", "מה מותר בערב?") == {"sub": "u2", "at": older}
+
+
+def test_a_recommendation_is_stored_marked_and_found_by_its_mark(table):
+    chat_history.append(table, "u1", "שאלה רגילה", "ת", [])
+    at = chat_history.append(table, "u1", "המלצה", "ת", [], app=True, recommendation=True)
+
+    assert chat_history.find_recommendation(table, "u1") == at
+    marks = {turn["question"]: turn["recommendation"] for turn in chat_history.turns(table, "u1")}
+    assert marks == {"שאלה רגילה": False, "המלצה": True}
+
+
+def test_a_user_with_no_recommendation_finds_none(table):
+    chat_history.append(table, "u1", "שאלה רגילה", "ת", [])
+
+    assert chat_history.find_recommendation(table, "u1") is None
+
+
+def test_a_replace_carries_the_recommendation_mark_over_and_a_create_does_not_invent_it(table):
+    at = chat_history.append(table, "u1", "המלצה", "ת", [], app=True, recommendation=True)
+
+    replaced_at = chat_history.append(table, "u1", "שרשור", "ת2", [], at=at, app=True)
+    plain_at = chat_history.append(table, "u1", "שאלה", "ת3", [])
+
+    by_at = {turn["at"]: turn["recommendation"] for turn in chat_history.turns(table, "u1")}
+    assert by_at == {replaced_at: True, plain_at: False}
+    assert chat_history.find_recommendation(table, "u1") == replaced_at
+
+
+def test_a_corrupted_transcript_with_two_recommendations_raises_on_find(table):
+    chat_history.append(table, "u1", "המלצה", "ת", [], recommendation=True)
+    table.put_item(Item={"pk": "u1", "sk": "2026-09-24T12:00:00+00:00", "question": "ש",
+                         "answer": "ת", "sources": "[]", "recommendation": True})
+
+    with pytest.raises(ValueError):
+        chat_history.find_recommendation(table, "u1")
