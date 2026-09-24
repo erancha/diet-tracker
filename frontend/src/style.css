@@ -165,8 +165,10 @@ h1 .app-icon { width: 1em; height: 1em; vertical-align: middle; margin-inline-en
    both collapse to zero once the content fills the screen. The title takes hero treatment —
    centered, display-sized, viewport-capped to one line — while body copy stays start-aligned to
    read, as does the expanded view's title, which crowns a reading page rather than a splash. */
-/* The pitch is the whole screen here, so its card pads wider than the tracker's sections. */
-.landing-brief .landing-card { margin-top: auto; padding: 2rem; }
+/* The pitch is the whole screen here, so from tablet width its card pads wider than the tracker's
+   sections; on a phone that padding would eat the column, so the card keeps its base 1rem. */
+.landing-brief .landing-card { margin-top: auto; }
+@media (min-width: 48rem) { .landing-brief .landing-card { padding: 2rem; } }
 .landing-brief .app-heading { margin-inline: auto; }
 .landing-brief h1 { font-size: min(2.6rem, 11vw); }
 .landing-brief .landing-walkthrough { margin-top: auto; }
