@@ -29,6 +29,7 @@ _SECOND_SOURCE = "מקור פחמימה נוסף"
 _PORTION = "גודל המנה"
 _VEGETABLES = "ירקות"
 _FRUIT = "פרי"
+_FAT_SERVINGS = "מנות שומן"
 _ADDITIONS = "תוספות"
 _AMOUNT = "כמות"
 
@@ -100,7 +101,8 @@ def _tracking_scope(questionnaire) -> dict:
     return {
         # Each addition names the amount scale it is recorded on, so a quantified addition in
         # the meals above reads as the one field it is.
-        "ברישום ארוחה": [_TIME, _CARB_SOURCE, _SECOND_SOURCE, _PORTION, _VEGETABLES, _FRUIT]
+        "ברישום ארוחה": [_TIME, _CARB_SOURCE, _SECOND_SOURCE, _PORTION, _VEGETABLES, _FRUIT,
+                         _FAT_SERVINGS]
         + [f"{addition.label} ({_AMOUNT})" for addition in carbs.additions],
         "במעקב היומי": [question.day_heading for question in questionnaire.questions],
         "בנוסף": [weight.LABEL],
@@ -162,6 +164,8 @@ def _meal_entry(meal, grade_labels, addition_labels, portion_labels, amount_labe
         entry[_VEGETABLES] = True
     if meal["fruit"]:
         entry[_FRUIT] = True
+    if meal["fat_servings"]:
+        entry[_FAT_SERVINGS] = meal["fat_servings"]
     if meal["additions"]:
         entry[_ADDITIONS] = [_quantified_label(addition_labels, addition["id"],
                                                addition["amount"], amount_labels)

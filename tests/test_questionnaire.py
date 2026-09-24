@@ -22,7 +22,7 @@ def minimal(**overrides):
 
 def test_repo_config_loads_with_numeric_choices_and_threshold_rules():
     q = appconfig.load(APP_CONFIG).questionnaire
-    assert q.version == 15
+    assert q.version == 16
     carbs = q.question("carbs")
     assert carbs.type == "points" and carbs.max == 35
     # One bound defines a heavy meal, another a heavy day; the day bound lives on its rule.
@@ -46,7 +46,7 @@ def test_repo_config_loads_with_numeric_choices_and_threshold_rules():
     # it only from the threshold grade up.
     assert [p.percent for p in q.portions().options] == [60, 80, 100]
     assert q.portions().from_value == 4
-    assert q.addition_values() == {"sweet": 3, "alcohol": 3, "nuts": 2, "fat": 2}
+    assert q.addition_values() == {"sweet": 3, "alcohol": 3}
     # An addition's surcharge prices a routine amount, so its scale reaches past 100% and opens
     # on the step that charges the surcharge whole.
     assert [a.percent for a in q.amounts().options] == [50, 100, 150, 200]
@@ -54,16 +54,18 @@ def test_repo_config_loads_with_numeric_choices_and_threshold_rules():
     # Additions are accompaniments, never grades — they must not leak into the grade picker.
     assert not set(q.addition_values()) & set(q.carb_weights())
     assert {r.id for r in q.rules} == {
-        "low_drinking", "no_vegetables", "long_eating_window", "too_many_meals", "heavy_day"}
+        "low_drinking", "no_vegetables", "too_much_fat", "long_eating_window", "too_many_meals",
+        "heavy_day"}
 
 
 def test_repo_config_orders_questions_like_the_day_dashboard_with_carbs_last():
     # Question order drives the history table's columns and the order trend panels chart within
-    # their group. The two the table tabulates read in the day dashboard's order — the meal count
-    # before how many of those meals carried vegetables — with the carbs score closing the list.
+    # their group. The three the table tabulates read in the day dashboard's order — the meal
+    # count, how many of those meals carried vegetables, then the fat servings — with the carbs
+    # score closing the list.
     q = appconfig.load(APP_CONFIG).questionnaire
     assert [question.id for question in q.questions] == [
-        "drinking", "meals", "vegetables", "eating_window", "carbs"]
+        "drinking", "meals", "vegetables", "fat", "eating_window", "carbs"]
 
 
 def test_additions_missing_from_config_raises():
@@ -293,3 +295,12 @@ def test_repo_config_carries_the_grade_ladders_example_foods():
     # Only the grade ladder names foods; a daily question's choices are quantities of their own
     # unit, and nothing exemplifies them.
     assert all(choice.examples is None for choice in q.question("drinking").choices)
+
+
+def test_the_fat_question_sums_per_meal_servings_under_one_cap():
+    q = appconfig.load(APP_CONFIG).questionnaire
+    fat = q.question("fat")
+    assert fat.per_meal_max == 5
+    assert q.question("carbs").per_meal_max is None
+    (rule,) = [r for r in q.rules if r.question_id == "fat"]
+    assert rule.above == 3

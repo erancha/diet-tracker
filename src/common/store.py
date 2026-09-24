@@ -47,10 +47,16 @@ _LEGACY_LIGHT_SECOND_GRADES = frozenset({"carb_grade_1", "carb_grade_2"})
 # equivalents on the current shared scale. Frozen ids describing records already written.
 _RETIRED_PORTIONS = {"quarter": "small", "half": "medium"}
 
+# Additions retired into the fat-servings count: each one a stored meal carries reads as one
+# serving, whatever amount it recorded, since its routine amount was the program's serving.
+# Frozen ids describing records already written, like _RETIRED_PORTIONS: the API refuses them
+# on a new meal, so the fold only ever reads rows from before the count existed.
+_RETIRED_ADDITIONS = frozenset({"fat", "nuts"})
+
 # The attributes one stored meal carries beside its keys. Named once so the record written and the
 # API body it is projected from cannot drift apart.
-MEAL_ATTRIBUTES = ("at", "carbs_choice", "vegetables", "fruit", "additions", "portion",
-                   "second_source")
+MEAL_ATTRIBUTES = ("at", "carbs_choice", "vegetables", "fruit", "fat_servings", "additions",
+                   "portion", "second_source")
 
 # Sort key of the weights table's target item. It sorts past every ISO date, keeping the single
 # target and the dated measurements in one key space without a date range ever returning it.
@@ -82,9 +88,10 @@ def _meal_from_item(item) -> dict:
     """One stored meal in the shape the app reads it.
 
     Meals recorded before an attribute existed legally lack it: meals predate the fruit flag,
-    predate the small-portion flag in turn, and predate the second carb source after that, while
-    additions supersede the boolean sweet flag, so a legacy sweet meal reads as a single sweet
-    addition. A meal recorded under a grade the questionnaire has since retired reads as its
+    predate the small-portion flag in turn, predate the second carb source after that, and
+    predate the fat-servings count last, while additions supersede the boolean sweet flag, so a
+    legacy sweet meal reads as a single sweet addition. The fat and nuts additions the servings
+    count replaced fold into it, one serving each, and leave the additions. A meal recorded under a grade the questionnaire has since retired reads as its
     current equivalent — either of its sources — so nothing downstream is handed an id the config
     no longer knows.
 
@@ -113,9 +120,12 @@ def _meal_from_item(item) -> dict:
         portion = _RETIRED_PORTIONS.get(item["portion"], item["portion"])
     else:
         portion = "small" if item.get("small_portion", False) else None
+    servings = (_from_dynamo(item["fat_servings"]) if "fat_servings" in item else 0) + sum(
+        1 for addition in additions if addition["id"] in _RETIRED_ADDITIONS)
+    additions = [addition for addition in additions if addition["id"] not in _RETIRED_ADDITIONS]
     return {"id": item["sk"].split("#", 1)[1], "at": item["at"], "carbs_choice": carbs_choice,
             "vegetables": item["vegetables"], "fruit": item.get("fruit", False),
-            "additions": additions, "portion": portion,
+            "fat_servings": servings, "additions": additions, "portion": portion,
             "second_source": second}
 
 

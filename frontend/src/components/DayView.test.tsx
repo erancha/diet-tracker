@@ -10,7 +10,7 @@ describe("DayView", () => {
   it("shows the day's date, derived values and meals without any edit controls", () => {
     render(<DayView questionnaire={trackerQuestionnaire} treatDay={TREAT_DAY} day={trackedDay} onClose={vi.fn()} />);
     expect(screen.getByText(/יומן ה׳ 20\/08/)).toBeInTheDocument();
-    expect(dashboardFigure("ארוחות")).toHaveTextContent("ארוחות: 2");
+    expect(dashboardFigure("חלון")).toHaveTextContent("חלון: 5 שעות");
     expect(dashboardFigure("ציון")).toHaveTextContent("ציון: 4");
     expect(screen.getByText("09:10")).toBeInTheDocument();
     expect(screen.getByText(/דרגה 4/)).toBeInTheDocument();
@@ -29,10 +29,10 @@ describe("DayView", () => {
   it("states explicitly that a day without meals was not tracked", () => {
     render(<DayView questionnaire={trackerQuestionnaire} treatDay={TREAT_DAY}
                     day={{ date: "2026-08-19", meals: [],
-                           derived: { carbs: 0, meals: 0, vegetables: 0, eating_window: 0 } }}
+                           derived: { carbs: 0, meals: 0, vegetables: 0, eating_window: 0, fat: 0 } }}
                     onClose={vi.fn()} />);
     expect(screen.getByText("לא נרשמו ארוחות ביום זה")).toBeInTheDocument();
-    expect(screen.queryByText(/ארוחות:/)).toBeNull();
+    expect(screen.queryByText(/חלון:/)).toBeNull();
   });
 
   it("marks the points of a meal reaching the meal bound, and a score reaching the day rule", () => {
@@ -52,14 +52,14 @@ describe("DayView", () => {
   });
 
   it("prices a light grade beside its additions, not the grade alone", () => {
-    // Grade 0 with a sweet and a fat costs 6 — dearer than the grade 4 plate that reads heavier.
+    // Grade 0 with a sweet and a drink costs 8 — dearer than the grade 4 plate that reads heavier.
     const day = { ...trackedDay, meals: [
       { ...trackedDay.meals[0],
-        additions: [{ id: "sweet", amount: "regular" }, { id: "fat", amount: "regular" }] },
+        additions: [{ id: "sweet", amount: "regular" }, { id: "alcohol", amount: "regular" }] },
       trackedDay.meals[1]] };
     render(<DayView questionnaire={trackerQuestionnaire} treatDay={TREAT_DAY} day={day} onClose={vi.fn()} />);
     const points = Array.from(document.querySelectorAll(".meal-points"));
-    const laden = points.find((el) => el.textContent?.includes("6"))!;
+    const laden = points.find((el) => el.textContent?.includes("8"))!;
     expect(laden).toHaveClass("heavy-meal");
   });
 

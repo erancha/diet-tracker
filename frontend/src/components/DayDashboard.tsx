@@ -26,15 +26,14 @@ export function DayDashboard({ questionnaire, treatDay, date, derived, onScoreCl
       ? `value breach${softened}` : "value";
   return (
     <div className="tracker-dashboard">
-      {/* The window rides the meal count in parentheses: the two describe the same row of
-          recorded meals — how many, and the hours they span — so they read as one figure. */}
+      {/* No meal count: the meals themselves are listed right under the strip, open or folded. */}
       <span>
-        ארוחות: <span className="value">{derived.meals}</span>{" "}
-        (חלון: <span className={valueClass("eating_window", derived.eating_window)}>
-          {derived.eating_window}</span> שעות)
+        חלון: <span className={valueClass("eating_window", derived.eating_window)}>
+          {derived.eating_window}</span> שעות
       </span>
       <span>ירקות: <span className={valueClass("vegetables", derived.vegetables)}>
         {derived.vegetables}</span></span>
+      <span>שומן: <span className={valueClass("fat", derived.fat)}>{derived.fat}</span></span>
       <strong title={carbsQuestion.tooltip} className={heavy ? `heavy-day${softened}` : undefined}>
         ציון: {heavy && onScoreClick !== undefined
           ? <button type="button" className="score score-link" aria-label="פירוט הציון"

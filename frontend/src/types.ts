@@ -26,13 +26,16 @@ export interface Question {
   // documents when each applies.
   panel_title?: string;
   panel_qualifier?: string;
+  // Present only on a question whose day value sums a count each meal records: the most one
+  // meal may record.
+  per_meal_max?: number;
   max?: number;
   // Present only on points questions: what one meal must cost — its grade, second source,
   // escalated fruit and additions together — to count as heavy. The day-scope counterpart is this
   // question's rule threshold, so each scope states its bound once, priced the same way.
   heavy_meal?: number;
-  // Present only on the carbs question: the accompaniments a meal may carry (a sweet, alcohol,
-  // nuts), each with the point cost a routine amount of it adds on top of the meal's grade. Not
+  // Present only on the carbs question: the accompaniments a meal may carry (a sweet, alcohol),
+  // each with the point cost a routine amount of it adds on top of the meal's grade. Not
   // choices, so they never appear in the grade picker.
   additions?: Choice[];
   // Present only on the carbs question: the scale an addition's amount is recorded on, reaching
@@ -198,6 +201,9 @@ export interface Meal {
   carbs_choice: string;
   vegetables: boolean;
   fruit: boolean;
+  // Concentrated-fat servings the meal carried, by the program's serving definitions; the day
+  // sums them.
+  fat_servings: number;
   // The meal's additions, each with its amount; the server normalizes legacy sweet-flag and
   // bare-id records into this shape.
   additions: MealAddition[];
@@ -216,6 +222,7 @@ export type Derived = {
   meals: number;
   vegetables: number;
   eating_window: number;
+  fat: number;
 }
 
 export interface DayPayload {
@@ -302,6 +309,7 @@ export interface NewMeal {
   carbs_choice: string;
   vegetables: boolean;
   fruit: boolean;
+  fat_servings: number;
   additions: MealAddition[];
   portion: string | null;
   second_source: CarbSource | null;

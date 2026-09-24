@@ -81,6 +81,17 @@ def test_addition_amount_scale():
             assert f"| {cost:g} |" in row, f"{option['id']} row is missing {cost:g}"
 
 
+def test_fat_servings_budget_cap_and_serving_definitions():
+    # The form's hint and the guide both teach what a serving is, so the guide carries the
+    # config's wording verbatim and the meal ceiling and bounds it quotes are the config's.
+    fat = next(q for q in CONFIG["questionnaire"]["questions"] if q["id"] == "fat")
+    section = _doc_section("מנות שומן — מכסה, לא תוספת", level="### ")
+    assert fat["tooltip"].split(". ")[0] in section
+    assert f"עד {fat['per_meal_max']} מנות בארוחה" in section
+    assert f"מעל {RULES['too_much_fat']['above']} מנות" in section
+    assert f"פחות מ־{fat['warn_below']} מנות" in section
+
+
 def test_portion_choices():
     portions = CARBS["portions"]
     assert f"מדרגה {portions['from_value']} ומעלה" in DOC
@@ -110,6 +121,7 @@ def test_bounds_are_judged_day_by_day_with_no_streak():
         "heavy_day": "ציון יומי",
         "low_drinking": f"פחות מ־{RULES['low_drinking']['below']} ליטר",
         "no_vegetables": "אף ארוחה עם ירקות",
+        "too_much_fat": f"מעל {RULES['too_much_fat']['above']} מנות שומן",
         "long_eating_window": f"מעל {RULES['long_eating_window']['above']} שעות",
         "too_many_meals": f"מעל {RULES['too_many_meals']['at_least'] - 1} ארוחות",
     }

@@ -1,6 +1,6 @@
 {
   "questionnaire": {
-    "version": 15,
+    "version": 16,
     "questions": [
       {
         "id": "drinking",
@@ -94,6 +94,45 @@
         ]
       },
       {
+        "id": "fat",
+        "type": "single",
+        "text": "שומנים מרוכזים",
+        "day_title": "מנות שומן",
+        "unit": "מנות",
+        "warn_below": 2,
+        "norm": 2,
+        "per_meal_max": 5,
+        "tooltip": "מנת שומן = כף שמן, טחינה או חמאה · חצי אבוקדו · 15 זיתים · כפית חמאת בוטנים · 10 שקדים או אגוזים · 2 פרוסות לחם טחינה · ארוחה שעיקרה מזון עם מעל 15% שומן (בשר שמן, נקניקיות, גבינה שמנה). טיגון — לפי כמות השמן; בשר רזה, דג רזה או גבינה 9% אינם נספרים",
+        "choices": [
+          {
+            "id": "none",
+            "label": "ללא מנת שומן",
+            "value": 0
+          },
+          {
+            "id": "s1",
+            "label": "מנה אחת",
+            "value": 1
+          },
+          {
+            "id": "s2",
+            "label": "2 מנות",
+            "value": 2
+          },
+          {
+            "id": "s3",
+            "label": "3 מנות",
+            "value": 3
+          },
+          {
+            "id": "over_3",
+            "label": "מעל 3 מנות !!",
+            "value": 4,
+            "bound": true
+          }
+        ]
+      },
+      {
         "id": "eating_window",
         "type": "single",
         "text": "שכפ\"צ - פתיחת חלון אכילה",
@@ -157,16 +196,6 @@
             "id": "alcohol",
             "label": "כולל אלכוהול לא יבש",
             "value": 3
-          },
-          {
-            "id": "nuts",
-            "label": "כולל אגוזים או שקדים",
-            "value": 2
-          },
-          {
-            "id": "fat",
-            "label": "כולל שומן (אבוקדו | טחינה | גבינה שמנה | טיגון | 2+ נקניקיות)",
-            "value": 2
           }
         ],
         "amounts": {
@@ -279,6 +308,11 @@
         "id": "no_vegetables",
         "question_id": "vegetables",
         "below": 1
+      },
+      {
+        "id": "too_much_fat",
+        "question_id": "fat",
+        "above": 3
       },
       {
         "id": "long_eating_window",

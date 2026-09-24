@@ -169,7 +169,7 @@ function mealBreakdown(meals: Pick<Meal, "at" | "carbs_choice" | "fruit" | "addi
         weight = lifted;
       }
     }
-    // Additions (a sweet, alcohol, nuts) cost on top of the meal's sources (escalated or not),
+    // Additions (a sweet, alcohol) cost on top of the meal's sources (escalated or not),
     // so an excellent meal with a cookie stays cheaper than a heavy meal with one. Each costs its
     // surcharge at the amount it was recorded at, or the surcharge whole when it carries none.
     for (const addition of meal.additions) {
@@ -195,8 +195,8 @@ export function excludedPoints(meals: Pick<Meal, "at" | "carbs_choice" | "fruit"
     .reduce((sum, w) => sum + w.excluded, 0);
 }
 
-export function deriveDay(meals: Pick<Meal, "at" | "carbs_choice" | "vegetables" | "fruit" | "additions" | "portion" | "second_source">[], weights: Record<string, number>, additionValues: Record<string, number>, amounts: Amounts, portions: Portions, secondSource: SecondSourceRule, excluded: Excluded): Derived {
-  if (meals.length === 0) return { carbs: 0, meals: 0, vegetables: 0, eating_window: 0 };
+export function deriveDay(meals: Pick<Meal, "at" | "carbs_choice" | "vegetables" | "fruit" | "fat_servings" | "additions" | "portion" | "second_source">[], weights: Record<string, number>, additionValues: Record<string, number>, amounts: Amounts, portions: Portions, secondSource: SecondSourceRule, excluded: Excluded): Derived {
+  if (meals.length === 0) return { carbs: 0, meals: 0, vegetables: 0, eating_window: 0, fat: 0 };
   const ordered = [...meals].sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime());
   const window = new Date(ordered[ordered.length - 1].at).getTime() - new Date(ordered[0].at).getTime();
   return {
@@ -206,5 +206,6 @@ export function deriveDay(meals: Pick<Meal, "at" | "carbs_choice" | "vegetables"
     // Whole hours, rounded up like the server: the window never understates itself, so the
     // floor a submission must meet is the conservative bound of the recorded span.
     eating_window: Math.ceil(window / 3600_000),
+    fat: meals.reduce((sum, m) => sum + m.fat_servings, 0),
   };
 }

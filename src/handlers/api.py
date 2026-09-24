@@ -293,6 +293,12 @@ def _meal_rejection(body, allowed, stretch_until, questionnaire):
         return _response(400, {"error": "vegetables must be a boolean"})
     if not isinstance(body["fruit"], bool):
         return _response(400, {"error": "fruit must be a boolean"})
+    servings = body["fat_servings"]
+    per_meal_max = questionnaire.question("fat").per_meal_max
+    if (isinstance(servings, bool) or not isinstance(servings, int)
+            or not 0 <= servings <= per_meal_max):
+        return _response(400, {
+            "error": f"fat_servings must be an integer from 0 to {per_meal_max}"})
     portion = body["portion"]
     if portion is not None:
         rule = questionnaire.portions()

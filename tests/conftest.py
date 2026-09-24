@@ -48,7 +48,8 @@ class FakeSes:
 def meal(at, choice="carb_grade_2", **overrides):
     """One recorded meal in the shape the API stores, with only what a test cares about named."""
     return {"at": at, "carbs_choice": choice, "vegetables": False, "fruit": False,
-            "additions": [], "portion": None, "second_source": None, **overrides}
+            "fat_servings": 0, "additions": [], "portion": None, "second_source": None,
+            **overrides}
 
 
 def user_pool(monkeypatch):

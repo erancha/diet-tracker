@@ -11,7 +11,7 @@ from common import appconfig, notify, undelivered
 from common.dates import days_before, today
 from handlers import api
 
-ANSWERS = {"drinking": 3, "vegetables": 2, "eating_window": 13, "meals": 3, "carbs": 4}
+ANSWERS = {"drinking": 3, "vegetables": 2, "fat": 2, "eating_window": 13, "meals": 3, "carbs": 4}
 
 # Weigh-in stamp the API is pinned to below, so the payload assertions do not straddle the
 # minute boundary a real clock would cross mid-test.
@@ -49,17 +49,18 @@ def tomorrow():
 
 
 def meal_body(carbs_choice, vegetables, fruit, additions, at_time, portion, second_source,
-              day=None):
+              day=None, fat_servings=0):
     """The body both recording and correcting a meal take, so the two helpers cannot drift."""
     return {"at": f"{day or today()}T{at_time}+03:00", "carbs_choice": carbs_choice,
-            "vegetables": vegetables, "fruit": fruit, "additions": list(additions),
-            "portion": portion, "second_source": second_source}
+            "vegetables": vegetables, "fruit": fruit, "fat_servings": fat_servings,
+            "additions": list(additions), "portion": portion, "second_source": second_source}
 
 
 def add_meal(carbs_choice="carb_grade_3", vegetables=True, fruit=False, additions=(),
-             at_time="09:10:00", portion=None, second_source=None, day=None):
+             at_time="09:10:00", portion=None, second_source=None, day=None, fat_servings=0):
     return api.handler(request("POST /meals", meal_body(
-        carbs_choice, vegetables, fruit, additions, at_time, portion, second_source, day)), None)
+        carbs_choice, vegetables, fruit, additions, at_time, portion, second_source, day,
+        fat_servings)), None)
 
 
 def update_meal(meal_id, carbs_choice="carb_grade_3", vegetables=True, fruit=False, additions=(),
@@ -104,7 +105,7 @@ def test_submit_below_meal_floor_is_rejected_naming_the_field(env):
 def test_submit_at_exactly_the_floor_is_accepted(env):
     add_meal("carb_grade_7")
     add_meal("carb_grade_7", vegetables=False, at_time="19:34:00")
-    answers = {"drinking": 3, "vegetables": 1, "eating_window": 11, "meals": 2, "carbs": 16}
+    answers = {"drinking": 3, "vegetables": 1, "fat": 0, "eating_window": 11, "meals": 2, "carbs": 16}
     response = api.handler(request("POST /days", {"answers": answers}), None)
     assert response["statusCode"] == 200
 
@@ -114,7 +115,7 @@ def test_get_days_returns_today_and_yesterday_payloads(env):
     payload = body_of(api.handler(request("GET /days"), None))
     assert payload["today"]["date"] == today()
     assert [m["carbs_choice"] for m in payload["today"]["meals"]] == ["carb_grade_3"]
-    assert payload["today"]["derived"] == {"carbs": 3, "meals": 1, "vegetables": 1, "eating_window": 0}
+    assert payload["today"]["derived"] == {"carbs": 3, "meals": 1, "vegetables": 1, "eating_window": 0, "fat": 0}
     assert payload["yesterday"]["date"] == days_before(today(), 1)
     assert payload["yesterday"]["meals"] == []
 
@@ -229,7 +230,7 @@ def test_meals_for_a_submitted_yesterday_are_still_refused(env, monkeypatch):
 
 def test_add_meal_records_and_returns_recomputed_day(env):
     payload = body_of(add_meal("no_carbs"))
-    assert payload["derived"] == {"carbs": 0, "meals": 1, "vegetables": 1, "eating_window": 0}
+    assert payload["derived"] == {"carbs": 0, "meals": 1, "vegetables": 1, "eating_window": 0, "fat": 0}
     payload = body_of(add_meal("carb_grade_7", vegetables=False, at_time="13:30:00"))
     assert payload["derived"]["carbs"] == 7
     assert payload["derived"]["eating_window"] == 5
@@ -395,10 +396,25 @@ def test_add_meal_rejects_an_addition_that_is_not_an_id_beside_an_amount(env):
     assert stray["statusCode"] == 400
 
 
+def test_add_meal_stores_fat_servings_and_derives_the_days_fat(env):
+    response = add_meal("no_carbs", fat_servings=2)
+    assert response["statusCode"] == 200
+    assert body_of(response)["derived"]["fat"] == 2
+    assert body_of(response)["meals"][0]["fat_servings"] == 2
+
+
+def test_add_meal_rejects_fat_servings_outside_the_contract(env):
+    for bad in (True, -1, 1.5, "2", 6):
+        response = add_meal("no_carbs", fat_servings=bad)
+        assert response["statusCode"] == 400, bad
+        assert "fat_servings" in body_of(response)["error"]
+
+
 def test_add_meal_rejects_non_list_additions(env):
     response = api.handler(request("POST /meals", {
         "at": f"{today()}T09:00:00+03:00", "carbs_choice": "carb_grade_3",
-        "vegetables": False, "fruit": False, "additions": "sweet", "portion": None}), None)
+        "vegetables": False, "fruit": False, "fat_servings": 0, "additions": "sweet",
+        "portion": None}), None)
     assert response["statusCode"] == 400
     assert "additions" in body_of(response)["error"]
 
@@ -447,8 +463,8 @@ def test_update_meal_rejects_an_unknown_choice_and_a_naive_timestamp(env):
     assert unknown["statusCode"] == 400
     naive = api.handler(request("PUT /meals/{date}/{id}",
                                 {"at": f"{today()}T09:00:00", "carbs_choice": "carb_grade_3",
-                                 "vegetables": False, "fruit": False, "additions": [],
-                                 "portion": None},
+                                 "vegetables": False, "fruit": False, "fat_servings": 0,
+                                 "additions": [], "portion": None},
                                 path_params={"date": today(), "id": meal_id}), None)
     assert naive["statusCode"] == 400
 
@@ -472,7 +488,7 @@ def test_get_day_returns_any_past_days_meals_and_derived(env):
     payload = body_of(api.handler(request("GET /days/{date}", path_params={"date": old}), None))
     assert payload["date"] == old
     assert [m["carbs_choice"] for m in payload["meals"]] == ["carb_grade_3"]
-    assert payload["derived"] == {"carbs": 3, "meals": 1, "vegetables": 1, "eating_window": 0}
+    assert payload["derived"] == {"carbs": 3, "meals": 1, "vegetables": 1, "eating_window": 0, "fat": 0}
 
 
 def test_get_day_rejects_a_malformed_date(env):

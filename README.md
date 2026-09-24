@@ -22,7 +22,9 @@ closed from the tracker, and the week's trend over recorded history.
   else. A day closes only from the tracker, and one confirmation reopens a closed one.
 - Beyond the four principles, the same entries add up to a score for the day. Each meal costs
   points for the kind of carbohydrate it drew on, how big the helping was, and anything on the
-  side — a sweet, a drink, nuts, a lot of fat. A lower score is a better day.
+  side — a sweet, a drink. A lower score is a better day.
+- Fat is budgeted rather than scored, as the program has it: each meal records its fat servings,
+  and the day is marked past three.
 - Weight is tracked on its own weekly rhythm against a target you set. It is measured rather than
   scored, so it changes no day's score and raises no alert.
 - Under the log sit a 10-day chart and the recorded days as a table, so a week reads at a

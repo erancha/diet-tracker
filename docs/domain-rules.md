@@ -3,15 +3,17 @@
 ## Meal log and scoring
 
 Each meal is recorded as it happens with a timestamp, the carb source or sources it drew on,
-whether it included vegetables or fruit, and its additions (see below). Every carb grade carries a
+whether it included vegetables or fruit, its concentrated-fat servings, and its additions (see
+below). Every carb grade carries a
 point weight defined in `config/app.json`; the day's score is the sum of its meals' weights.
 Scoring is golf-style: lower is better.
 
-The day's four tracked values all derive from the meal log:
+The day's five tracked values all derive from the meal log:
 
 - **Daily score** — sum of the meals' carb-source weights, with the fruit escalation below.
 - **Meal count** — number of recorded meals.
 - **Vegetable meals** — number of meals that included vegetables.
+- **Fat servings** — sum of the servings the meals recorded (see Fat servings below).
 - **Eating window** — hours between the first and last meal, rounded to the nearest half hour.
 
 ## Carb sources on a plate
@@ -42,14 +44,14 @@ least that grade's weight, and never lowered when the meal's own grade is alread
 
 ## Additions
 
-A meal may carry additions — accompaniments that are not a grade of their own: a sweet, non-dry
-alcohol, nuts, or a load of fat. Each addition pays its configured surcharge (the carbs question's
+A meal may carry additions — accompaniments that are not a grade of their own: a sweet or
+non-dry alcohol. Each addition pays its configured surcharge (the carbs question's
 `additions` in the config) on top of the meal's carb sources, after any fruit escalation. The
 surcharge keeps the base grade meaningful: an excellent meal with a cookie stays cheaper than a
 heavy meal with one, while an addition on every meal still compounds into a poor day score.
 
-**Amount.** The surcharge prices a routine amount of the accompaniment — one cookie, one glass, a
-handful — so each recorded addition also names how much of it there was, from the carbs question's
+**Amount.** The surcharge prices a routine amount of the accompaniment — one cookie, one glass —
+so each recorded addition also names how much of it there was, from the carbs question's
 `amounts` scale, and pays the surcharge at that step's percentage. The scale reaches past 100%: a
 taste of a dessert costs less than the surcharge, an evening's worth more. A newly recorded
 addition carries the scale's `default`, the routine step the surcharge itself is written for, so a
@@ -58,17 +60,27 @@ save that leaves the amount untouched charges the surcharge whole.
 The amount is a second axis over the same surcharge, distinct from the helping scale the carb
 sources use: helpings only discount a grade already eaten, while an amount may also add to one.
 
-Fat is an addition rather than a grade because it is orthogonal to the carb scale — the grades
-rank a meal by its carb source, and a meal carries fat independently of which source it drew on.
-As a grade it could only be recorded on a meal with no carb source at all, leaving the fat in a
-plate of rice and avocado unscored.
-
 Meals stored under a shape the config has since moved past are read as their current equivalent:
 the legacy sweet flag maps to a single sweet addition, an addition stored as a bare id carries no
-amount and pays the whole surcharge, and the retired heavy no-carb grade maps to the plain
-no-carb grade carrying the fat addition. The mapping reaches either of a meal's carb
-sources. Each mapping preserves the meal's combined weight, so retiring a grade never restates a
-day's recorded score.
+amount and pays the whole surcharge, and a retired fat or nuts addition reads as one fat serving
+each and leaves the additions, so such a day's score carries no fat points either. The
+retired-grade mapping reaches either of a meal's carb sources and preserves the meal's combined
+weight, so retiring a grade never restates a day's recorded score.
+
+## Fat servings
+
+The program budgets concentrated fat rather than scoring it: 2 to 3 servings a day by stage and
+track, never under 2, and fat does not disturb the hormonal balance the carb grades guard. So
+fat is not an addition. Each meal records how many servings it carried, by the program's own
+serving definitions (a tablespoon of oil, butter or tahini, half an avocado, 15 olives, a
+teaspoon of nut butter, 10 nuts or almonds, two small slices of tahini bread), up to the fat
+question's `per_meal_max`. A meal built on food over 15% fat counts as one serving in itself: the
+program gives those avoiding animal protein a third serving and adds none to such a meal, so the
+fat inside fatty food covers part of the day's need, while lean meat, lean fish and 9% cheese
+record nothing. The day's figure is the sum, tabulated beside the vegetable meals. One rule bounds
+it from above (the program's shield line is a limit), and the question's `warn_below` shows a day
+under the floor as the history table's shortfall, never as a crossing: a short day is a habit to
+mend, not a breach to count.
 
 ## Heavy meals and heavy days
 

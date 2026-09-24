@@ -14,12 +14,14 @@ targets.
 
 Three of the four are answered by the meal log itself — vegetable meals, eating window and meal
 count are read off the recorded meals rather than asked. Water is the one meals cannot answer, so
-it is the one thing closing a day asks for.
+it is the one thing closing a day asks for. A fifth figure rides beside the four: the day's
+concentrated-fat servings, summed from what each meal recorded, since the program budgets fat at
+two to three servings a day rather than scoring it.
 
 ## The meal log and the daily score
 
 You log each meal as you eat it: its carb source or sources, the helping of each, whether it
-carried vegetables or fruit, and its additions. No calories are counted and no food is named — what
+carried vegetables or fruit, its fat servings, and its additions. No calories are counted and no food is named — what
 the log records is the character of the meal and the interval since the last one.
 
 From those entries comes the day's score: each meal priced by its carb grade at the helping
@@ -160,7 +162,7 @@ offering a control that cannot answer.
 The day tracker's "מה לאכול בארוחה הבאה?" button asks the knowledge base, on the user's behalf,
 for two quick recipes that complete today's meals under the program's rules, either the program's
 own recipes or equivalents to them: the app states today's counts — meals, meals with vegetables,
-meals with a fat addition, fruit, a heavy meal, the hour — and the documents decide what fits. A
+fat servings, fruit, a heavy meal, the hour — and the documents decide what fits. A
 recipe the program does not hold is marked in the answer as the answering service's own proposal,
 so the two kinds never blur. The button sits beside the add-meal heading and reads
 greyed until the next meal is within `next_meal.suggest_before_hours` of being due (the first-meal

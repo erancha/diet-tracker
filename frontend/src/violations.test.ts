@@ -81,7 +81,7 @@ describe("crossesScoreBound", () => {
   });
 
   it("judges a running day's figures the same way", () => {
-    const running: Derived = { carbs: 9, meals: 0, vegetables: 0, eating_window: 0 };
+    const running: Derived = { carbs: 9, meals: 0, vegetables: 0, eating_window: 0, fat: 0 };
     expect(crossesScoreBound(questionnaire, running)).toBe(true);
   });
 });

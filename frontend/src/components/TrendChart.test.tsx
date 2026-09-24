@@ -16,7 +16,7 @@ const TREAT_DAY = { weekday: "FRI" };
 // panels rather than the live stand-in. The chart spans the ten days ending on it, so its date is
 // what each case sets to choose the span it is written against.
 const todayOn = (date: string): DayPayload =>
-  ({ date, meals: [], derived: { carbs: 0, meals: 0, vegetables: 0, eating_window: 0 } });
+  ({ date, meals: [], derived: { carbs: 0, meals: 0, vegetables: 0, eating_window: 0, fat: 0 } });
 const emptyToday = todayOn("2026-08-19");
 
 // The fixture panels plus a carb-score points panel configured last, mirroring the production

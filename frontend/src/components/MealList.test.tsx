@@ -6,11 +6,11 @@ import { trackerQuestionnaire as questionnaire } from "../test-fixtures";
 
 const meals: Meal[] = [
   { id: "a", at: "2026-08-20T09:10:00+03:00", carbs_choice: "no_carbs", vegetables: true, fruit: false,
-    additions: [{ id: "fat", amount: "regular" }], portion: null, second_source: null },
+    fat_servings: 1, additions: [], portion: null, second_source: null },
   { id: "b", at: "2026-08-20T13:30:00+03:00", carbs_choice: "carb_grade_4", vegetables: false, fruit: true,
-    additions: [], portion: null, second_source: null },
+    fat_servings: 0, additions: [], portion: null, second_source: null },
   { id: "c", at: "2026-08-20T19:00:00+03:00", carbs_choice: "carb_grade_4", vegetables: false, fruit: false,
-    additions: [], portion: null, second_source: null },
+    fat_servings: 0, additions: [], portion: null, second_source: null },
 ];
 
 const renderList = (expandLabels = false) => {
@@ -27,10 +27,10 @@ describe("MealList marker legend", () => {
 
     fireEvent.click(screen.getByText("09:10"));
 
-    expect(screen.getByText("🥗 כולל ירקות · 🥑 כולל שומן")).toBeInTheDocument();
+    expect(screen.getByText("🥗 כולל ירקות · 🥑 כולל מנת שומן")).toBeInTheDocument();
     expect(screen.queryByText(/כולל פרי/)).toBeNull();
     act(() => vi.advanceTimersByTime(3999));
-    expect(screen.getByText("🥗 כולל ירקות · 🥑 כולל שומן")).toBeInTheDocument();
+    expect(screen.getByText("🥗 כולל ירקות · 🥑 כולל מנת שומן")).toBeInTheDocument();
     act(() => vi.advanceTimersByTime(1));
     expect(screen.queryByText(/כולל/)).toBeNull();
   });
@@ -48,7 +48,7 @@ describe("MealList marker legend", () => {
 
   it("spells out what the row's grades cover, both carb sources of a plate that drew on two", () => {
     const twoSource: Meal[] = [{ id: "d", at: "2026-08-20T21:40:00+03:00",
-      carbs_choice: "carb_grade_2", vegetables: true, fruit: false, additions: [], portion: "full",
+      carbs_choice: "carb_grade_2", vegetables: true, fruit: false, fat_servings: 0, additions: [], portion: "full",
       second_source: { carbs_choice: "carb_grade_7", portion: "full" } }];
     render(<MealList questionnaire={questionnaire} meals={twoSource} expandLabels={false} />);
 

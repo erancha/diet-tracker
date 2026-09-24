@@ -10,7 +10,7 @@ import { ChoiceFieldset } from "./ChoiceFieldset";
 import { CollapsibleSection } from "./CollapsibleSection";
 import { DayDashboard } from "./DayDashboard";
 import { Icon } from "./Icon";
-import { FRUIT_FLAG, VEGETABLES_FLAG } from "../mealMarkers";
+import { FAT_SERVINGS, FRUIT_FLAG, VEGETABLES_FLAG } from "../mealMarkers";
 import { MealList } from "./MealList";
 import { ScoreBreakdown } from "./ScoreBreakdown";
 
@@ -107,6 +107,7 @@ export function DayTracker({ questionnaire, treatDay, day, isToday = true, close
   suggestBeforeHours: number;
 }) {
   const carbsQuestion = questionnaire.questions.find((q) => q.id === "carbs")!;
+  const fatQuestion = questionnaire.questions.find((q) => q.id === "fat")!;
   const drinkingQuestion = questionnaire.questions.find((q) => q.id === "drinking")!;
   const { weights, additionValues, amounts: amountRule, portions: portionRule,
           secondSource: secondRule, excluded: excludedRule } = carbsScales(carbsQuestion);
@@ -120,6 +121,8 @@ export function DayTracker({ questionnaire, treatDay, day, isToday = true, close
   const [carbsChoiceId, setCarbsChoiceId] = useState<string | undefined>(undefined);
   const [vegetables, setVegetables] = useState(false);
   const [fruit, setFruit] = useState(false);
+  // Concentrated-fat servings of the meal being recorded; ticking the box records one.
+  const [fatServings, setFatServings] = useState(0);
   // The additions checked for the meal being recorded, each with the amount it was eaten at.
   const [pickedAdditions, setPickedAdditions] = useState<Map<string, string>>(new Map());
   const [portionId, setPortionId] = useState(defaultPortionId);
@@ -213,7 +216,8 @@ export function DayTracker({ questionnaire, treatDay, day, isToday = true, close
   // of it. Its baseline is the blank form recording opens on rather than a stored meal, and the
   // portion picker is not among the terms because it exists only once a grade is picked.
   const newMealDiverged = editing === undefined
-    && (carbsChoiceId !== undefined || vegetables || fruit || pickedAdditions.size > 0
+    && (carbsChoiceId !== undefined || vegetables || fruit || fatServings > 0
+        || pickedAdditions.size > 0
         || secondChoiceId !== undefined || mealTime !== pristineTime);
 
   // Whether the form holds work only saving or cancelling can settle — a half-composed new meal
@@ -291,6 +295,7 @@ export function DayTracker({ questionnaire, treatDay, day, isToday = true, close
   function submitMeal() {
     const meal: NewMeal = { at: mealAt,
                             carbs_choice: carbsChoiceId!, vegetables, fruit,
+                            fat_servings: fatServings,
                             additions: carbsQuestion.additions!
                               .filter((a) => pickedAdditions.has(a.id))
                               .map((a) => ({ id: a.id, amount: pickedAdditions.get(a.id)! })),
@@ -318,6 +323,7 @@ export function DayTracker({ questionnaire, treatDay, day, isToday = true, close
     return carbsChoiceId !== meal.carbs_choice
         || vegetables !== meal.vegetables
         || fruit !== meal.fruit
+        || fatServings !== meal.fat_servings
         || mealTime !== clockTimeOf(meal.at)
         || (offersPortion ? portionId : null) !== meal.portion
         || sourcesDiffer(secondSource, meal.second_source)
@@ -354,6 +360,7 @@ export function DayTracker({ questionnaire, treatDay, day, isToday = true, close
     setCarbsChoiceId(undefined);
     setVegetables(false);
     setFruit(false);
+    setFatServings(0);
     setPickedAdditions(new Map());
     setPortionId(defaultPortionId);
     clearSecondSource();
@@ -370,6 +377,7 @@ export function DayTracker({ questionnaire, treatDay, day, isToday = true, close
     setCarbsChoiceId(meal.carbs_choice);
     setVegetables(meal.vegetables);
     setFruit(meal.fruit);
+    setFatServings(meal.fat_servings);
     setPickedAdditions(new Map(meal.additions.map((a) => [a.id, recordedAmount(a)])));
     setPortionId(meal.portion === null ? defaultPortionId : meal.portion);
     setSecondChoiceId(meal.second_source === null ? undefined : meal.second_source.carbs_choice);
@@ -386,23 +394,32 @@ export function DayTracker({ questionnaire, treatDay, day, isToday = true, close
                         collapsed={sectionCollapsed}
                         onToggle={() => setSectionCollapsed((c) => !c)}
                         summary={
-      <DayDashboard questionnaire={questionnaire} treatDay={treatDay} date={day.date} derived={derived}
-                    // From a folded tracker the score opens the breakdown into view rather than
-                    // toggling a panel the fold would hide.
-                    onScoreClick={() => {
-                      setBreakdownOpen(sectionCollapsed || !breakdownOpen);
-                      setSectionCollapsed(false);
-                    }} />
+      <>
+        <DayDashboard questionnaire={questionnaire} treatDay={treatDay} date={day.date} derived={derived}
+                      // From a folded tracker the score opens the breakdown into view rather than
+                      // toggling a panel the fold would hide.
+                      onScoreClick={() => {
+                        setBreakdownOpen(sectionCollapsed || !breakdownOpen);
+                        setSectionCollapsed(false);
+                      }} />
+        {/* The fold hides the day's controls, not its record: the meals stay readable under the
+            strip, as in the history table's day view, and opening the journal brings their
+            controls back. */}
+        {sectionCollapsed && day.meals.length > 0 && (
+          <MealList questionnaire={questionnaire} meals={day.meals} expandLabels={expandLabels} />
+        )}
+      </>
     }
                         headerAside={
       /* Governs every grade name in the card — the pickers' and the meal rows' alike, the closed
          day's read-only rows included — from the far end of the day's heading row, where it
          reads as a setting on the whole log rather than as one of its controls. Offered only
-         while a meal row or the open inputs put a grade name on screen for it to act on; the
-         density lives outside the component, so withholding the switch keeps the reading.
-         Withheld as an empty aside rather than none, so the heading keeps its row — and the
-         focus of whoever just pressed it — instead of remounting as the switch comes and goes. */
-      !sectionCollapsed && !breakdownShown && (day.meals.length > 0 || !formCollapsed)
+         while a meal row — under a folded journal too — or the open inputs put a grade name on
+         screen for it to act on; the density lives outside the component, so withholding the
+         switch keeps the reading. Withheld as an empty aside rather than none, so the heading
+         keeps its row — and the focus of whoever just pressed it — instead of remounting as the
+         switch comes and goes. */
+      !breakdownShown && (day.meals.length > 0 || (!sectionCollapsed && !formCollapsed))
         ? <button type="button" className="secondary compact label-density"
                   onClick={() => setExpandLabels(!expandLabels)}>
             {expandLabels ? COLLAPSE_LABELS : EXPAND_LABELS}
@@ -509,6 +526,21 @@ export function DayTracker({ questionnaire, treatDay, day, isToday = true, close
                    onChange={(e) => setFruit(e.target.checked)} />
             {" "}{FRUIT_FLAG.label}
           </label>
+          <label>
+            <input type="checkbox" checked={fatServings > 0}
+                   onChange={(e) => setFatServings(e.target.checked ? 1 : 0)} />
+            {" "}{FAT_SERVINGS.label}
+            {/* The count rides inside the label like an addition's amount, and appears only once
+                there is a serving to count: ticking the box is the one-serving case. */}
+            {fatServings > 0 && (
+              <select className="addition-amount" aria-label={`מנות — ${FAT_SERVINGS.label}`}
+                      value={fatServings} onChange={(e) => setFatServings(Number(e.target.value))}>
+                {Array.from({ length: fatQuestion.per_meal_max! }, (_, n) => (
+                  <option key={n + 1} value={n + 1}>{n + 1}</option>
+                ))}
+              </select>
+            )}
+          </label>
           {carbsQuestion.additions!.map((addition) => (
             <label key={addition.id}>
               <input type="checkbox" checked={pickedAdditions.has(addition.id)}
@@ -534,6 +566,8 @@ export function DayTracker({ questionnaire, treatDay, day, isToday = true, close
             </label>
           ))}
         </div>
+        {/* What one serving is, from the config, at the moment the count is being decided. */}
+        {fatServings > 0 && <p className="meal-hint">{fatQuestion.tooltip}</p>}
         <label className="meal-time">
           שעת הארוחה{" "}
           <input type="time" value={mealTime} min={isToday ? stretchesUntil : undefined}

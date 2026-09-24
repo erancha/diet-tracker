@@ -5,12 +5,12 @@ import type { DayPayload, HistoryResponse, Meal, WeightPayload } from "./types";
 const emptyDay = (date: string): DayPayload => ({
   date,
   meals: [],
-  derived: { carbs: 0, meals: 0, vegetables: 0, eating_window: 0 },
+  derived: { carbs: 0, meals: 0, vegetables: 0, eating_window: 0, fat: 0 },
 });
 
 const meal: Meal = {
   id: "m1", at: "2026-08-28T09:00:00", carbs_choice: "c", vegetables: true, fruit: false,
-  additions: [], portion: null, second_source: null,
+  fat_servings: 0, additions: [], portion: null, second_source: null,
 };
 
 const EMPTY_HISTORY: HistoryResponse = {

@@ -96,7 +96,7 @@ class Excluded:
 
     The bound is a grade value rather than a list of grades so a regraded ladder keeps meaning
     it, and the additions are named individually because only some of them are excluded — a
-    sweet is, nuts are not."""
+    sweet is, alcohol is not."""
     grade: float
     additions: tuple[str, ...]
 
@@ -123,6 +123,9 @@ class Question:
     unit: str | None
     # Present only on questions charted as a trend panel.
     panel_title: str | None
+    # Present only on a question whose day value sums a count each meal records: the most one
+    # meal may record. Mirrors per_meal_max in frontend/src/types.ts.
+    per_meal_max: int | None
     # Present only on points questions: the day-end slider's top of scale. Meal sums may
     # legally exceed it; it caps the slider, not the stored value.
     max: float | None
@@ -131,8 +134,8 @@ class Question:
     # this question's rule threshold, so each scope states its bound once and neither is derived
     # from the other. Mirrors heavy_meal in frontend/src/types.ts.
     heavy_meal: float | None
-    # Present only on the carbs question: the accompaniments a meal may carry (a sweet, alcohol,
-    # nuts), each with the point cost a routine amount of it adds on top of the meal's grade. Not
+    # Present only on the carbs question: the accompaniments a meal may carry (a sweet, alcohol),
+    # each with the point cost a routine amount of it adds on top of the meal's grade. Not
     # choices, so they never appear in the grade picker or carb_weights().
     additions: tuple[Choice, ...] | None
     # Present only on the carbs question: the quantity axis the grade ladder does not carry.
@@ -312,6 +315,9 @@ def parse(raw: dict) -> Questionnaire:
         for a in q.get("additions", ()):
             if isinstance(a.get("value"), bool) or not isinstance(a.get("value"), Number):
                 raise ValueError(f"addition {a['id']!r} of question {q['id']!r} needs a numeric value")
+        if "per_meal_max" in q and (isinstance(q["per_meal_max"], bool)
+                                    or not isinstance(q["per_meal_max"], int)):
+            raise ValueError(f"question {q['id']!r} needs an integer per_meal_max")
         if "amounts" in q and all(o["id"] != q["amounts"]["default"]
                                   for o in q["amounts"]["options"]):
             raise ValueError(f"question {q['id']!r} defaults to undeclared amount "
@@ -323,7 +329,8 @@ def parse(raw: dict) -> Questionnaire:
                           for c in q["choices"]),
             day_title=q.get("day_title"), day_qualifier=q.get("day_qualifier"),
             unit=q.get("unit"),
-            panel_title=q.get("panel_title"), max=q.get("max"),
+            panel_title=q.get("panel_title"), per_meal_max=q.get("per_meal_max"),
+            max=q.get("max"),
             heavy_meal=q.get("heavy_meal"),
             additions=tuple(Choice(id=a["id"], label=a["label"], value=a["value"])
                             for a in q["additions"]) if "additions" in q else None,

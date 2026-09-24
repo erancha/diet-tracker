@@ -6,19 +6,25 @@ import type { Meal } from "./types";
 const carbs = trackerQuestionnaire.questions.find((q) => q.id === "carbs")!;
 const meal = (fields: Partial<Meal>): Meal => ({
   id: "m", at: "2026-08-20T09:10:00+03:00", carbs_choice: "no_carbs", vegetables: false, fruit: false,
-  additions: [], portion: null, second_source: null, ...fields,
+  fat_servings: 0, additions: [], portion: null, second_source: null, ...fields,
 });
 
 describe("mealMarkers", () => {
-  it("lists the flags a meal carries, then its additions under the questionnaire's labels", () => {
-    expect(mealMarkers(carbs, meal({ vegetables: true, fruit: true,
-                                     additions: [{ id: "nuts", amount: "regular" }, { id: "fat", amount: "much" }] })))
+  it("lists the flags a meal carries, its servings, then its additions under the questionnaire's labels", () => {
+    expect(mealMarkers(carbs, meal({ vegetables: true, fruit: true, fat_servings: 2,
+                                     additions: [{ id: "sweet", amount: "regular" }, { id: "alcohol", amount: "much" }] })))
       .toEqual([
         { marker: "🥗", label: "כולל ירקות" },
         { marker: "🍎", label: "כולל פרי" },
-        { marker: "🥜", label: "כולל אגוזים או שקדים" },
-        { marker: "🥑", label: "כולל שומן" },
+        { marker: "🥑×2", label: "כולל מנת שומן" },
+        { marker: "🍪", label: "כולל מתוק" },
+        { marker: "🍷", label: "כולל אלכוהול לא יבש" },
       ]);
+  });
+
+  it("marks a single serving with the bare avocado", () => {
+    expect(mealMarkers(carbs, meal({ fat_servings: 1 })))
+      .toEqual([{ marker: "🥑", label: "כולל מנת שומן" }]);
   });
 
   it("lists nothing for a bare meal", () => {

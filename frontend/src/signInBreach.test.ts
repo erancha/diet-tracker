@@ -23,7 +23,7 @@ const questionnaire: Questionnaire = {
 const CLEAN_ANSWERS = { carbs: 6, meals: 3, eating_window: 8, drinking: 3, vegetables: 2 };
 
 const open = (date: string, figures: Partial<DayPayload["derived"]> = {}): DayPayload =>
-  ({ date, meals: [], derived: { carbs: 0, meals: 0, vegetables: 0, eating_window: 0, ...figures } });
+  ({ date, meals: [], derived: { carbs: 0, meals: 0, vegetables: 0, eating_window: 0, fat: 0, ...figures } });
 
 const closed = (date: string, answers: Record<string, number> = {}): Day =>
   ({ date, answers: { ...CLEAN_ANSWERS, ...answers }, excluded: 0 });
@@ -68,7 +68,7 @@ describe("signInCrossedDays", () => {
 
   it("stays quiet on an open day whose meals crossed a bound other than the score's", () => {
     expect(signInCrossedDays(questionnaire,
-      history([], open(TODAY, { meals: 4, eating_window: 13 }), open(YESTERDAY))))
+      history([], open(TODAY, { meals: 4, eating_window: 13, fat: 0 }), open(YESTERDAY))))
       .toBeNull();
   });
 

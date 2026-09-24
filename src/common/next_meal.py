@@ -6,9 +6,6 @@ from them and the question only reports."""
 
 from common.derive import meal_weights
 
-# The addition whose count the fat budget is judged by; named in the question by its label.
-FAT_ADDITION = "fat"
-
 REQUEST = ("המלץ על הארוחה הבאה שלי היום, לפי כללי התוכנית: שני מתכונים קלים ומהירים, "
            "מהתוכנית או שקולים למתכוניה, הראשון המלצה והשני חלופה, שמשלימים את מה שאכלתי היום.")
 
@@ -20,14 +17,11 @@ def compose(meals: list, questionnaire, clock: str) -> str:
                            questionnaire.amounts(), questionnaire.portions(),
                            questionnaire.second_source(), questionnaire.excluded())
     heavy = any(weight.total >= carbs.heavy_meal for weight in weighed)
-    fat_label = next(addition.label for addition in carbs.additions
-                     if addition.id == FAT_ADDITION)
-    with_fat = sum(1 for meal in meals
-                   if any(addition["id"] == FAT_ADDITION for addition in meal["additions"]))
     facts = [
         f"ארוחות עד כה היום: {len(meals)}",
         f"ארוחות עם ירקות: {sum(1 for meal in meals if meal['vegetables'])}",
-        f'ארוחות עם "{fat_label}": {with_fat}',
+        f'{questionnaire.question("fat").day_heading} היום: '
+        f'{sum(meal["fat_servings"] for meal in meals)}',
         f"פרי היום: {_yes_no(any(meal['fruit'] for meal in meals))}",
         f"ארוחה כבדה היום: {_yes_no(heavy)}",
         f"השעה: {clock}",

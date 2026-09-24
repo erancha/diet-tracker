@@ -22,7 +22,7 @@ const CONFIG: AppConfigFile = {
 };
 
 function emptyDay(date: string): DayPayload {
-  return { date, meals: [], derived: { carbs: 0, meals: 0, vegetables: 0, eating_window: 0 } };
+  return { date, meals: [], derived: { carbs: 0, meals: 0, vegetables: 0, eating_window: 0, fat: 0 } };
 }
 
 // A day whose meals are worth targeting: one recorded meal, derived accordingly.
@@ -30,8 +30,8 @@ function trackedDay(date: string): DayPayload {
   return {
     date,
     meals: [{ id: "m", at: `${date}T21:00:00+03:00`, carbs_choice: "no_carbs", vegetables: false,
-              fruit: false, additions: [], portion: null, second_source: null }],
-    derived: { carbs: 0, meals: 1, vegetables: 0, eating_window: 0 },
+              fruit: false, fat_servings: 0, additions: [], portion: null, second_source: null }],
+    derived: { carbs: 0, meals: 1, vegetables: 0, eating_window: 0, fat: 0 },
   };
 }
 
@@ -522,10 +522,10 @@ describe("App", () => {
     const heavyDay: DayPayload = {
       date: todayStr,
       meals: [{ id: "a", at: `${todayStr}T08:00:00+03:00`, carbs_choice: "carb_grade_7", vegetables: false,
-                fruit: false, additions: [], portion: null, second_source: null },
+                fruit: false, fat_servings: 0, additions: [], portion: null, second_source: null },
               { id: "b", at: `${todayStr}T15:00:00+03:00`, carbs_choice: "carb_grade_7", vegetables: false,
-                fruit: false, additions: [], portion: null, second_source: null }],
-      derived: { carbs: 14, meals: 2, vegetables: 0, eating_window: 7 },
+                fruit: false, fat_servings: 0, additions: [], portion: null, second_source: null }],
+      derived: { carbs: 14, meals: 2, vegetables: 0, eating_window: 7, fat: 0 },
     };
     const client = api({ today: heavyDay });
     (client.submitDay as ReturnType<typeof vi.fn>).mockResolvedValue({ date: todayStr });
@@ -585,8 +585,8 @@ describe("App", () => {
     (client.getDay as ReturnType<typeof vi.fn>).mockResolvedValue({
       ...emptyDay(yesterdayStr),
       meals: [{ id: "m", at: `${yesterdayStr}T13:00:00+03:00`, carbs_choice: "carb_grade_7", vegetables: false,
-                fruit: false, additions: [{ id: "sweet", amount: null }], portion: null, second_source: null }],
-      derived: { carbs: 9, meals: 1, vegetables: 0, eating_window: 0 },
+                fruit: false, fat_servings: 0, additions: [{ id: "sweet", amount: null }], portion: null, second_source: null }],
+      derived: { carbs: 9, meals: 1, vegetables: 0, eating_window: 0, fat: 0 },
     });
     renderApp(false, client);
 

@@ -14,8 +14,8 @@ from common.store import Store
 from common.users import User
 from handlers import nudge
 
-VIOLATING = {"drinking": 3, "vegetables": 2, "eating_window": 13, "meals": 3, "carbs": 3}
-CLEAN = {"drinking": 3, "vegetables": 2, "eating_window": 10, "meals": 3, "carbs": 3}
+VIOLATING = {"drinking": 3, "vegetables": 2, "fat": 2, "eating_window": 13, "meals": 3, "carbs": 3}
+CLEAN = {"drinking": 3, "vegetables": 2, "fat": 2, "eating_window": 10, "meals": 3, "carbs": 3}
 
 INSIGHTS = "לשבוע הבא: להקדים את הארוחה האחרונה בשעה."
 SOURCES = [{"fileName": "week.pdf", "score": 0.51}]
@@ -324,8 +324,8 @@ def test_the_weigh_in_job_is_dispatchable_by_name(env, monkeypatch):
 
 def record_meal(store, sub, day, at_time="09:10:00"):
     store.add_meal(sub, day, {"at": f"{day}T{at_time}+03:00", "carbs_choice": "carb_grade_3",
-                             "vegetables": True, "fruit": False, "additions": [],
-                             "portion": None, "second_source": None})
+                             "vegetables": True, "fruit": False, "fat_servings": 0,
+                             "additions": [], "portion": None, "second_source": None})
 
 
 def test_last_call_tells_a_user_who_recorded_meals_that_the_day_is_still_open(env):

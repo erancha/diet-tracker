@@ -15,10 +15,10 @@ const questionnaire: Questionnaire = {
 // the second fruit must come last however the payload lists it.
 const meals: Meal[] = [
   { id: "late", at: "2026-08-20T19:00:00+03:00", carbs_choice: "carb_grade_2", vegetables: false, fruit: true,
-    additions: [{ id: "sweet", amount: "much" }, { id: "fat", amount: null }], portion: null,
+    fat_servings: 0, additions: [{ id: "sweet", amount: "much" }, { id: "alcohol", amount: null }], portion: null,
     second_source: { carbs_choice: "carb_grade_7", portion: "medium" } },
   { id: "early", at: "2026-08-20T09:00:00+03:00", carbs_choice: "carb_grade_7", vegetables: true, fruit: true,
-    additions: [], portion: "small", second_source: { carbs_choice: "carb_grade_2", portion: null } },
+    fat_servings: 0, additions: [], portion: "small", second_source: { carbs_choice: "carb_grade_2", portion: null } },
 ];
 
 // 2026-08-20 is a Thursday: an ordinary day under a Friday treat day, the treat day under a
@@ -43,16 +43,16 @@ describe("ScoreBreakdown", () => {
     expect(rows[0]).toHaveTextContent("דרגה 2 (קינואה)");
     expect(rows[0]).toHaveTextContent("+ 0");
     // 19:00: grade 2 (2) + grade 7 at a medium helping (5.6), then the second fruit lifts nothing
-    // past 7.6, then a heaped sweet (5) and fat (2): 14.6.
+    // past 7.6, then a heaped sweet (5) and a drink recorded before amounts (4): 16.6.
     expect(rows[1]).toHaveTextContent("מנה בינונית");
     expect(rows[1]).toHaveTextContent("5.6");
     expect(rows[1]).toHaveTextContent("פרי נוסף");
     expect(rows[1]).toHaveTextContent("כולל מתוק");
     expect(rows[1]).toHaveTextContent("הרבה");
     expect(rows[1]).toHaveTextContent("+ 5");
-    expect(rows[1]).toHaveTextContent("כולל שומן");
-    expect(rows[1]).toHaveTextContent("+ 2");
-    expect(rows[1]).toHaveTextContent("= 14.6");
+    expect(rows[1]).toHaveTextContent("כולל אלכוהול לא יבש");
+    expect(rows[1]).toHaveTextContent("+ 4");
+    expect(rows[1]).toHaveTextContent("= 16.6");
   });
 
   it("spells every grade out with its examples whatever density the tracker is set to", () => {
@@ -65,19 +65,19 @@ describe("ScoreBreakdown", () => {
   it("sums the day beside the rule bound the score crossed", () => {
     renderBreakdown();
     const foot = screen.getByText(/סה״כ/);
-    expect(foot).toHaveTextContent("18.8");
+    expect(foot).toHaveTextContent("20.8");
     expect(foot).toHaveTextContent("מעל 8");
   });
 
   it("paints the sum by the day rule, as the dashboard paints the score", () => {
     renderBreakdown();
-    expect(screen.getByText("18.8")).toHaveClass("heavy-day");
-    expect(screen.getByText("18.8")).not.toHaveClass("treat-day");
+    expect(screen.getByText("20.8")).toHaveClass("heavy-day");
+    expect(screen.getByText("20.8")).not.toHaveClass("treat-day");
   });
 
   it("softens the sum's mark on the treat day", () => {
     renderBreakdown(vi.fn(), "THU");
-    expect(screen.getByText("18.8")).toHaveClass("heavy-day", "treat-day");
+    expect(screen.getByText("20.8")).toHaveClass("heavy-day", "treat-day");
   });
 
   it("carries no control of its own: the score link that opened it is what closes it", () => {

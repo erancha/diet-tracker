@@ -4,8 +4,8 @@ from common import appconfig, weekly_recap
 
 # 2026-08-19 is a Wednesday, so the week below runs Wed-Fri with Friday the treat day.
 WEDNESDAY, THURSDAY, FRIDAY = "2026-08-19", "2026-08-20", "2026-08-21"
-HEAVY = {"carbs": 20, "drinking": 4, "vegetables": 2, "eating_window": 10, "meals": 3}
-CLEAN = {"carbs": 5, "drinking": 4, "vegetables": 2, "eating_window": 10, "meals": 3}
+HEAVY = {"carbs": 20, "drinking": 4, "vegetables": 2, "fat": 2, "eating_window": 10, "meals": 3}
+CLEAN = {"carbs": 5, "drinking": 4, "vegetables": 2, "fat": 2, "eating_window": 10, "meals": 3}
 
 
 def questionnaire():

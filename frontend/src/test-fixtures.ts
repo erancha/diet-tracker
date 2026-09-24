@@ -61,11 +61,12 @@ export const trackerQuestionnaire: Questionnaire = {
   questions: [
     { id: "drinking", type: "single", text: "שתיה",
       choices: [{ id: "l3", label: "3 ליטר", value: 3 }] },
+    // The fat question: the form's servings count runs up to its per_meal_max.
+    { id: "fat", type: "single", text: "שומנים מרוכזים", day_title: "מנות שומן", per_meal_max: 5,
+      tooltip: "מנת שומן = כף שמן", choices: [] },
     { id: "carbs", type: "points", text: "פחמימות", max: 30, heavy_meal: 4,
       additions: [{ id: "sweet", label: "כולל מתוק", value: 4 },
-                  { id: "alcohol", label: "כולל אלכוהול לא יבש", value: 4 },
-                  { id: "nuts", label: "כולל אגוזים או שקדים", value: 3 },
-                  { id: "fat", label: "כולל שומן", value: 2 }],
+                  { id: "alcohol", label: "כולל אלכוהול לא יבש", value: 4 }],
       amounts: { default: "regular",
                  options: [{ id: "little", label: "מעט", percent: 75 },
                            { id: "regular", label: "רגיל", percent: 100 },
@@ -98,8 +99,8 @@ export const trackerQuestionnaire: Questionnaire = {
 export const trackedDay: DayPayload = {
   date: "2026-08-20",
   meals: [
-    { id: "a", at: "2026-08-20T09:10:00+03:00", carbs_choice: "no_carbs", vegetables: true, fruit: false, additions: [], portion: null, second_source: null },
-    { id: "b", at: "2026-08-20T13:30:00+03:00", carbs_choice: "carb_grade_4", vegetables: false, fruit: true, additions: [], portion: null, second_source: null },
+    { id: "a", at: "2026-08-20T09:10:00+03:00", carbs_choice: "no_carbs", vegetables: true, fruit: false, fat_servings: 0, additions: [], portion: null, second_source: null },
+    { id: "b", at: "2026-08-20T13:30:00+03:00", carbs_choice: "carb_grade_4", vegetables: false, fruit: true, fat_servings: 0, additions: [], portion: null, second_source: null },
   ],
-  derived: { carbs: 4, meals: 2, vegetables: 1, eating_window: 5 },
+  derived: { carbs: 4, meals: 2, vegetables: 1, eating_window: 5, fat: 0 },
 };

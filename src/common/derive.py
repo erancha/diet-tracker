@@ -1,4 +1,4 @@
-"""Derives a day's four tracked questionnaire values from its recorded meals, and the part of
+"""Derives a day's five tracked questionnaire values from its recorded meals, and the part of
 its carb score that the program excludes from its six non-treat days. The same computation
 exists as frontend/src/derive.ts for live dashboard feedback; both implementations must satisfy
 config/derive-vectors.json, and the server's result is the authority (floors, submit
@@ -20,6 +20,8 @@ class Derived:
     meals: int
     vegetables: int
     eating_window: float
+    # Concentrated-fat servings summed over the meals, by the program's serving definitions.
+    fat: int
 
 
 def _source_weight(choice, portion_id, weights, portions) -> float:
@@ -87,7 +89,7 @@ def meal_weights(meals: list, weights: dict, addition_values: dict, amounts, por
             fruits += 1
             if fruits > 1:
                 weight = max(weight, weights[FRUIT_ESCALATION_CHOICE])
-        # Additions (a sweet, alcohol, nuts) cost on top of the meal's sources (escalated or not),
+        # Additions (a sweet, alcohol) cost on top of the meal's sources (escalated or not),
         # so an excellent meal with a cookie stays cheaper than a heavy meal with one.
         for addition in meal["additions"]:
             surcharge = _addition_weight(addition, addition_values, amounts)
@@ -101,7 +103,7 @@ def meal_weights(meals: list, weights: dict, addition_values: dict, amounts, por
 def derive(meals: list, weights: dict, addition_values: dict, amounts, portions,
            second_source, excluded) -> Derived:
     if not meals:
-        return Derived(carbs=0, meals=0, vegetables=0, eating_window=0)
+        return Derived(carbs=0, meals=0, vegetables=0, eating_window=0, fat=0)
     ordered = sorted(meals, key=lambda meal: datetime.fromisoformat(meal["at"]))
     window = (datetime.fromisoformat(ordered[-1]["at"])
               - datetime.fromisoformat(ordered[0]["at"]))
@@ -113,6 +115,7 @@ def derive(meals: list, weights: dict, addition_values: dict, amounts, portions,
         # Whole hours, rounded up: the window never understates itself, so the floor a
         # submission must meet is the conservative bound of the recorded span.
         eating_window=math.ceil(window.total_seconds() / 3600),
+        fat=sum(meal["fat_servings"] for meal in meals),
     )
 
 

@@ -28,7 +28,7 @@ def data_of(context):
 
 
 def test_recent_day_summaries_ride_in_the_context(store, questionnaire):
-    answers = {"drinking": 3, "vegetables": 2, "eating_window": 10, "meals": 3, "carbs": 12}
+    answers = {"drinking": 3, "vegetables": 2, "fat": 2, "eating_window": 10, "meals": 3, "carbs": 12}
     store.put_day("u1", "2026-08-26", answers, 12, "2026-08-26T22:00:00+03:00")
     store.put_day("u1", "2026-08-25", answers, 12, "2026-08-25T22:00:00+03:00")
 
@@ -45,7 +45,7 @@ def test_recent_day_summaries_ride_in_the_context(store, questionnaire):
 def test_today_and_yesterday_meals_are_detailed_with_hebrew_labels(store, questionnaire):
     store.add_meal("u1", TODAY, meal(f"{TODAY}T12:30:00+03:00", choice="carb_grade_2",
                                      additions=[{"id": "sweet", "amount": "little"}],
-                                     vegetables=True))
+                                     vegetables=True, fat_servings=2))
     store.add_meal("u1", YESTERDAY, meal(
         f"{YESTERDAY}T09:00:00+03:00", choice="carb_grade_4", portion="small",
         second_source={"carbs_choice": "carb_grade_7", "portion": "medium"}))
@@ -59,6 +59,7 @@ def test_today_and_yesterday_meals_are_detailed_with_hebrew_labels(store, questi
     assert entry["מקור פחמימה"] == "דרגה 2"
     assert entry["תוספות"] == ["כולל מתוק (מעט)"]
     assert entry["ירקות"] is True
+    assert entry["מנות שומן"] == 2
     assert "פרי" not in entry
 
     yesterday_detail = data["אתמול"]
@@ -67,10 +68,11 @@ def test_today_and_yesterday_meals_are_detailed_with_hebrew_labels(store, questi
     (entry,) = yesterday_detail["ארוחות"]
     assert entry["מקור פחמימה"] == "דרגה 4 (מנה קטנה)"
     assert entry["מקור פחמימה נוסף"] == "דרגה 7 (מנה בינונית)"
+    assert "מנות שומן" not in entry
 
 
 def test_a_tight_cap_sheds_meal_detail_before_day_summaries(store, questionnaire, monkeypatch):
-    answers = {"drinking": 3, "vegetables": 2, "eating_window": 10, "meals": 3, "carbs": 12}
+    answers = {"drinking": 3, "vegetables": 2, "fat": 2, "eating_window": 10, "meals": 3, "carbs": 12}
     store.put_day("u1", "2026-08-28", answers, 12, "2026-08-28T22:00:00+03:00")
     for i in range(30):
         store.add_meal("u1", TODAY, meal(f"{TODAY}T{10 + i // 6:02}:{i % 6}0:00+03:00",
@@ -98,6 +100,8 @@ def test_the_tracking_scope_of_the_app_rides_in_the_context(store, questionnaire
 
     assert 'שכפ"צ - שתיה (ליטר)' in scope["במעקב היומי"]
     assert "כולל מתוק (כמות)" in scope["ברישום ארוחה"]
+    assert "מנות שומן" in scope["ברישום ארוחה"]
+    assert "מנות שומן" in scope["במעקב היומי"]
     assert "מקור פחמימה" in scope["ברישום ארוחה"]
     assert "שעת הארוחה" in scope["ברישום ארוחה"]
     assert "משקל" in scope["בנוסף"]

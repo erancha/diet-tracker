@@ -6,11 +6,11 @@ from common.store import Store
 ANSWERS = {"drinking": 3, "vegetables": 2, "eating_window": 10.4, "meals": 3, "carbs": 12}
 
 
-def meal(at, carbs_choice, vegetables=False, fruit=False, additions=(), portion=None,
-         second_source=None):
+def meal(at, carbs_choice, vegetables=False, fruit=False, fat_servings=0, additions=(),
+         portion=None, second_source=None):
     """One meal in the shape the store writes, so each test spells out only what it is about."""
     return {"at": at, "carbs_choice": carbs_choice, "vegetables": vegetables, "fruit": fruit,
-            "additions": list(additions), "portion": portion,
+            "fat_servings": fat_servings, "additions": list(additions), "portion": portion,
             "second_source": second_source}
 
 
@@ -50,7 +50,8 @@ def test_meals_roundtrip_chronological_and_per_day(store):
     assert [m["id"] for m in meals] == [earlier, later]
     assert meals[0] == {"id": earlier, "at": "2026-08-20T09:10:00+03:00",
                         "carbs_choice": "no_carbs", "vegetables": True, "fruit": True,
-                        "additions": [], "portion": None, "second_source": None}
+                        "fat_servings": 0, "additions": [], "portion": None,
+                        "second_source": None}
     assert meals[1]["additions"] == [{"id": "sweet", "amount": "regular"}]
 
 
@@ -137,17 +138,38 @@ def test_meal_stored_with_the_legacy_sweet_flag_reads_as_a_sweet_addition(store,
 
 def test_an_addition_stored_as_a_bare_id_reads_as_carrying_no_amount(store, ddb):
     # Additions predate their amount scale; the whole surcharge is what a bare flag meant.
-    _store_meal(ddb, "carb_grade_3", ["sweet", "fat"])
+    _store_meal(ddb, "carb_grade_3", ["sweet", "alcohol"])
     assert store.get_meals("u1", "2026-08-20")[0]["additions"] == [
-        {"id": "sweet", "amount": None}, {"id": "fat", "amount": None}]
+        {"id": "sweet", "amount": None}, {"id": "alcohol", "amount": None}]
+
+
+def test_a_fat_or_nuts_addition_on_a_stored_meal_reads_as_one_serving_each(store, ddb):
+    # Both additions predate the servings count; whatever amount one carried, it stood for the
+    # program's serving.
+    _store_meal(ddb, "carb_grade_3", ["sweet", "fat", {"id": "nuts", "amount": "very_much"}])
+    stored = store.get_meals("u1", "2026-08-20")[0]
+    assert stored["additions"] == [{"id": "sweet", "amount": None}]
+    assert stored["fat_servings"] == 2
+
+
+def test_a_meal_stored_before_the_servings_count_reads_as_none(store, ddb):
+    _store_meal(ddb, "carb_grade_3", [])
+    assert store.get_meals("u1", "2026-08-20")[0]["fat_servings"] == 0
+
+
+def test_servings_roundtrip_as_an_integer(store):
+    store.add_meal("u1", "2026-08-20", meal("2026-08-20T13:30:00+03:00", "no_carbs",
+                                            fat_servings=2))
+    stored = store.get_meals("u1", "2026-08-20")[0]
+    assert stored["fat_servings"] == 2 and type(stored["fat_servings"]) is int
 
 
 def test_an_addition_roundtrips_with_the_amount_it_was_recorded_at(store):
     store.add_meal("u1", "2026-08-20", meal(
         "2026-08-20T13:30:00+03:00", "no_carbs",
-        additions=[{"id": "sweet", "amount": "little"}, {"id": "nuts", "amount": "very_much"}]))
+        additions=[{"id": "sweet", "amount": "little"}, {"id": "alcohol", "amount": "very_much"}]))
     assert store.get_meals("u1", "2026-08-20")[0]["additions"] == [
-        {"id": "sweet", "amount": "little"}, {"id": "nuts", "amount": "very_much"}]
+        {"id": "sweet", "amount": "little"}, {"id": "alcohol", "amount": "very_much"}]
 
 
 def test_meal_stored_before_the_second_source_reads_as_drawing_on_one(store, ddb):
@@ -226,14 +248,16 @@ def test_a_meal_under_a_retired_grade_reads_as_the_grade_that_replaced_it(store,
     _store_meal(ddb, "retired_heavy", [])
     meal = store.get_meals("u1", "2026-08-20")[0]
     assert meal["carbs_choice"] == "no_carbs"
-    assert meal["additions"] == [{"id": "fat", "amount": None}]
+    # The addition making up the difference is itself retired into the servings count.
+    assert meal["additions"] == [] and meal["fat_servings"] == 1
 
 
 def test_a_retired_grade_keeps_the_additions_already_recorded_beside_it(store, ddb, monkeypatch):
     monkeypatch.setitem(store_module._RETIRED_GRADES, "retired_heavy", ("no_carbs", "fat"))
     _store_meal(ddb, "retired_heavy", [{"id": "sweet", "amount": "little"}])
-    assert store.get_meals("u1", "2026-08-20")[0]["additions"] == [
-        {"id": "sweet", "amount": "little"}, {"id": "fat", "amount": None}]
+    stored = store.get_meals("u1", "2026-08-20")[0]
+    assert stored["additions"] == [{"id": "sweet", "amount": "little"}]
+    assert stored["fat_servings"] == 1
 
 
 def test_a_retired_grade_needing_no_addition_maps_to_the_grade_alone(store, ddb, monkeypatch):
@@ -253,7 +277,7 @@ def test_a_retired_grade_on_the_second_source_reads_as_its_replacement(store, dd
         "second_source": {"carbs_choice": "retired_heavy", "portion": None}})
     stored = store.get_meals("u1", "2026-08-20")[0]
     assert stored["second_source"] == {"carbs_choice": "no_carbs", "portion": None}
-    assert stored["additions"] == [{"id": "fat", "amount": None}]
+    assert stored["additions"] == [] and stored["fat_servings"] == 1
 
 
 def test_no_grade_is_retired_today_because_the_stored_meals_were_migrated(store):
@@ -285,7 +309,7 @@ def test_replace_meal_rewrites_every_field_and_reorders_an_edited_time(store):
     meals = store.get_meals("u1", "2026-08-20")
     assert [m["id"] for m in meals][0] == new_id
     assert meals[0] == {"id": new_id, "at": "2026-08-20T09:10:00+03:00", "carbs_choice": "no_carbs",
-                        "vegetables": True, "fruit": True,
+                        "vegetables": True, "fruit": True, "fat_servings": 0,
                         "additions": [{"id": "sweet", "amount": "little"}],
                         "portion": None, "second_source": None}
     assert len(meals) == 2

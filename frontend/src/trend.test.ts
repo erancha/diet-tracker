@@ -51,13 +51,13 @@ describe("liveTrendDay", () => {
     // decomposed in the browser, from the meals the app already holds.
     const day = { ...trackedDay, meals: [
       { ...trackedDay.meals[0], carbs_choice: "carb_grade_7",
-        additions: [{ id: "sweet", amount: "regular" }] }] };
+        fat_servings: 0, additions: [{ id: "sweet", amount: "regular" }] }] };
     expect(liveTrendDay(trackerQuestionnaire, day, [])!.excluded).toBe(11);
   });
 
   it("returns null before the first meal", () => {
     const noMeals = { ...trackedDay, meals: [],
-                      derived: { carbs: 0, meals: 0, vegetables: 0, eating_window: 0 } };
+                      derived: { carbs: 0, meals: 0, vegetables: 0, eating_window: 0, fat: 0 } };
     expect(liveTrendDay(trackerQuestionnaire, noMeals, [])).toBeNull();
   });
 

@@ -74,7 +74,8 @@ def test_returns_the_upstream_answer_and_sources(env, monkeypatch):
 def test_the_askers_tracked_data_rides_as_context_beside_the_bare_question(env, ddb, monkeypatch):
     Store("days", "meals", "state", "weights", dynamodb=ddb).add_meal("u1", today(), {
         "at": f"{today()}T12:30:00+03:00", "carbs_choice": "carb_grade_2", "vegetables": True,
-        "fruit": False, "additions": [], "portion": None, "second_source": None})
+        "fruit": False, "fat_servings": 0, "additions": [], "portion": None,
+        "second_source": None})
     asked = {}
     monkeypatch.setattr(chat_handler.chat, "ask", lambda api_url, key, question, context=None, timeout=None:
                         asked.update(question=question, context=context)
@@ -795,7 +796,8 @@ def recommendation_request(sub="u1", email="a@gmail.com"):
 def test_a_recommendation_asks_with_todays_facts_and_stores_one_marked_chat(env, ddb, monkeypatch):
     Store("days", "meals", "state", "weights", dynamodb=ddb).add_meal("u1", today(), {
         "at": f"{today()}T12:30:00+03:00", "carbs_choice": "carb_grade_2", "vegetables": True,
-        "fruit": False, "additions": [], "portion": None, "second_source": None})
+        "fruit": False, "fat_servings": 0, "additions": [], "portion": None,
+        "second_source": None})
     asked = {}
     monkeypatch.setattr(chat_handler.chat, "ask", lambda api_url, key, question, context=None, timeout=None:
                         asked.update(question=question, context=context)

@@ -7,22 +7,22 @@ import { dashboardFigure, trackedDay, trackerQuestionnaire as questionnaire } fr
 
 const emptyDay: DayPayload = {
   date: "2026-08-20", meals: [],
-  derived: { carbs: 0, meals: 0, vegetables: 0, eating_window: 0 },
+  derived: { carbs: 0, meals: 0, vegetables: 0, eating_window: 0, fat: 0 },
 };
 
 // A day whose single meal was recorded the given number of hours before the test runs.
 const dayWithMealHoursAgo = (hours: number): DayPayload => ({
   date: "2026-08-20",
   meals: [{ id: "m", at: new Date(Date.now() - hours * 3_600_000).toISOString(),
-            carbs_choice: "no_carbs", vegetables: false, fruit: false, additions: [], portion: null, second_source: null }],
-  derived: { carbs: 0, meals: 1, vegetables: 0, eating_window: 0 },
+            carbs_choice: "no_carbs", vegetables: false, fruit: false, fat_servings: 0, additions: [], portion: null, second_source: null }],
+  derived: { carbs: 0, meals: 1, vegetables: 0, eating_window: 0, fat: 0 },
 });
 
 // trackedDay with a derived copy that contradicts its meals: the tracker must recompute from
 // the meals it renders rather than trust the payload's copy.
 const staleDerivedDay: DayPayload = {
   ...trackedDay,
-  derived: { carbs: 99, meals: 9, vegetables: 9, eating_window: 9 },
+  derived: { carbs: 99, meals: 9, vegetables: 9, eating_window: 9, fat: 0 },
 };
 
 // A day wide enough to offer close-day: trackedDay's first meal pushed back into the morning for
@@ -39,8 +39,8 @@ const threeMealDay: DayPayload = {
   ...trackedDay,
   meals: [...trackedDay.meals,
           { id: "c", at: "2026-08-20T17:00:00+03:00", carbs_choice: "no_carbs", vegetables: false,
-            fruit: false, additions: [], portion: null, second_source: null }],
-  derived: { carbs: 4, meals: 3, vegetables: 1, eating_window: 8 },
+            fruit: false, fat_servings: 0, additions: [], portion: null, second_source: null }],
+  derived: { carbs: 4, meals: 3, vegetables: 1, eating_window: 8, fat: 0 },
 };
 
 // Pins the clock: the meal form's default time is derived from it, as are the future-time guard
@@ -130,9 +130,10 @@ describe("DayTracker", () => {
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     expect(dashboardFigure("ציון")).toHaveTextContent("ציון: 4");
-    expect(dashboardFigure("ארוחות")).toHaveTextContent("ארוחות: 2");
     expect(dashboardFigure("ירקות")).toHaveTextContent("ירקות: 1");
     expect(dashboardFigure("חלון")).toHaveTextContent("חלון: 5 שעות");
+    // The meals are listed right under the strip, so their count is not a figure of it.
+    expect(screen.queryByText(/ארוחות:/)).toBeNull();
   });
 
   it("close-day submits values derived from the recorded meals", () => {
@@ -146,7 +147,7 @@ describe("DayTracker", () => {
     fireEvent.click(screen.getByLabelText("3 ליטר"));
     fireEvent.click(screen.getByRole("button", { name: "אישור וסגירה" }));
     expect(onCloseDay).toHaveBeenCalledWith({
-      carbs: 4, meals: 2, vegetables: 1, eating_window: 7, drinking: 3 });
+      carbs: 4, meals: 2, vegetables: 1, eating_window: 7, fat: 0, drinking: 3 });
   });
 
   // trackedDay's two meals span under the six-hour window, so only the clock can open its close.
@@ -223,7 +224,7 @@ describe("DayTracker", () => {
     fireEvent.click(screen.getByRole("button", { name: "שמירת ארוחה" }));
     expect(onAddMeal).toHaveBeenCalledWith(expect.objectContaining({
       carbs_choice: "carb_grade_4", vegetables: true, fruit: true,
-      additions: [{ id: "sweet", amount: "regular" }, { id: "alcohol", amount: "regular" }],
+      fat_servings: 0, additions: [{ id: "sweet", amount: "regular" }, { id: "alcohol", amount: "regular" }],
       portion: null, second_source: null }));
     // Carries a UTC offset — the test runs on an arbitrary real date, with the clock unpinned.
     expect(onAddMeal.mock.calls[0][0].at).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$/);
@@ -241,11 +242,53 @@ describe("DayTracker", () => {
     // The amount belongs to one addition, so it appears only once that addition is checked.
     expect(screen.queryByLabelText("כמות — כולל מתוק")).toBeNull();
     fireEvent.click(screen.getByLabelText("כולל מתוק"));
-    fireEvent.click(screen.getByLabelText("כולל אגוזים או שקדים"));
+    fireEvent.click(screen.getByLabelText("כולל אלכוהול לא יבש"));
     fireEvent.change(screen.getByLabelText("כמות — כולל מתוק"), { target: { value: "little" } });
     fireEvent.click(screen.getByRole("button", { name: "שמירת ארוחה" }));
     expect(onAddMeal).toHaveBeenCalledWith(expect.objectContaining({
-      additions: [{ id: "sweet", amount: "little" }, { id: "nuts", amount: "regular" }] }));
+      additions: [{ id: "sweet", amount: "little" }, { id: "alcohol", amount: "regular" }] }));
+  });
+
+  it("records one fat serving on a tick, more from the count beside it, and clears after saving", () => {
+    const onAddMeal = vi.fn();
+    render(<DayTracker suggestBeforeHours={1} treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} closeFrom={CLOSE_FROM} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={emptyDay}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
+                       onAddMeal={onAddMeal} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    openMealForm();
+    fireEvent.click(screen.getByLabelText("דרגה 4"));
+    // The count and the serving hint appear only once there is a serving to count.
+    expect(screen.queryByLabelText("מנות — כולל מנת שומן")).toBeNull();
+    expect(screen.queryByText("מנת שומן = כף שמן")).toBeNull();
+    fireEvent.click(screen.getByLabelText("כולל מנת שומן"));
+    expect(screen.getByText("מנת שומן = כף שמן")).toBeInTheDocument();
+    expect(screen.getByLabelText("מנות — כולל מנת שומן")).toHaveValue("1");
+    fireEvent.change(screen.getByLabelText("מנות — כולל מנת שומן"), { target: { value: "3" } });
+    fireEvent.click(screen.getByRole("button", { name: "שמירת ארוחה" }));
+    expect(onAddMeal).toHaveBeenCalledWith(expect.objectContaining({ fat_servings: 3 }));
+    openMealForm();
+    expect(screen.getByLabelText("כולל מנת שומן")).not.toBeChecked();
+  });
+
+  it("opens a recorded meal's servings for correction and unticking drops them", () => {
+    const onUpdateMeal = vi.fn();
+    const servingsDay: DayPayload = {
+      ...trackedDay,
+      meals: [{ ...trackedDay.meals[0], fat_servings: 2 }, trackedDay.meals[1]],
+      derived: { ...trackedDay.derived, fat: 2 },
+    };
+    render(<DayTracker suggestBeforeHours={1} treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} closeFrom={CLOSE_FROM} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={servingsDay}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
+                       onAddMeal={vi.fn()} onUpdateMeal={onUpdateMeal}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "עריכת ארוחה 09:10" }));
+    expect(screen.getByLabelText("כולל מנת שומן")).toBeChecked();
+    expect(screen.getByLabelText("מנות — כולל מנת שומן")).toHaveValue("2");
+    fireEvent.click(screen.getByLabelText("כולל מנת שומן"));
+    fireEvent.click(screen.getByRole("button", { name: "שמירת ארוחה" }));
+    expect(onUpdateMeal).toHaveBeenCalledWith("a", expect.objectContaining({ fat_servings: 0 }));
   });
 
   it("prices a meal by the amount each addition was recorded at", () => {
@@ -254,9 +297,9 @@ describe("DayTracker", () => {
       date: "2026-08-20",
       meals: [{ id: "a", at: "2026-08-20T09:10:00+03:00", carbs_choice: "carb_grade_4",
                 vegetables: false, fruit: false,
-                additions: [{ id: "sweet", amount: "little" }], portion: null,
+                fat_servings: 0, additions: [{ id: "sweet", amount: "little" }], portion: null,
                 second_source: null }],
-      derived: { carbs: 7, meals: 1, vegetables: 0, eating_window: 0 },
+      derived: { carbs: 7, meals: 1, vegetables: 0, eating_window: 0, fat: 0 },
     };
     render(<DayTracker suggestBeforeHours={1} treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} closeFrom={CLOSE_FROM} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={day}
                        firstMealHour={NO_NUDGE_HOUR}
@@ -271,9 +314,9 @@ describe("DayTracker", () => {
       date: "2026-08-20",
       meals: [{ id: "a", at: "2026-08-20T09:10:00+03:00", carbs_choice: "carb_grade_4",
                 vegetables: false, fruit: false,
-                additions: [{ id: "sweet", amount: "much" }], portion: null,
+                fat_servings: 0, additions: [{ id: "sweet", amount: "much" }], portion: null,
                 second_source: null }],
-      derived: { carbs: 9, meals: 1, vegetables: 0, eating_window: 0 },
+      derived: { carbs: 9, meals: 1, vegetables: 0, eating_window: 0, fat: 0 },
     };
     render(<DayTracker suggestBeforeHours={1} treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} closeFrom={CLOSE_FROM} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={day}
                        firstMealHour={NO_NUDGE_HOUR}
@@ -419,7 +462,7 @@ describe("DayTracker", () => {
     expect(screen.getByRole("button", { name: "הרחבת שמות" })).toBeInTheDocument();
   });
 
-  it("seats the density switch on the day's heading row and folds it away with the tracker", () => {
+  it("seats the density switch on the day's heading row and keeps it over the folded rows", () => {
     atLocalTime(19, 5);
     render(<DayTracker suggestBeforeHours={1} treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} closeFrom={CLOSE_FROM} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={trackedDay}
                        firstMealHour={NO_NUDGE_HOUR}
@@ -429,9 +472,27 @@ describe("DayTracker", () => {
     const heading = screen.getByRole("button", { name: "יומן היום" });
     expect(screen.getByRole("button", { name: "הרחבת שמות" }).closest(".section-header"))
       .toContainElement(heading);
-    // Folded, the tracker puts no grade name on screen, so the switch goes with the rows.
+    // Folded, the rows stay on screen with their grade names, so the switch stays for them.
     fireEvent.click(heading);
-    expect(screen.queryByRole("button", { name: "הרחבת שמות" })).toBeNull();
+    expect(screen.getByRole("button", { name: "הרחבת שמות" })).toBeInTheDocument();
+  });
+
+  it("keeps the meals readable under a folded journal, without their controls", () => {
+    render(<DayTracker suggestBeforeHours={1} treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} closeFrom={CLOSE_FROM} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={trackedDay}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "יומן היום" }));
+    expect(screen.getByText("09:10")).toBeInTheDocument();
+    expect(screen.getByText("13:30")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /עריכת ארוחה/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /מחיקת ארוחה/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: "הוספת ארוחה" })).toBeNull();
+    // Opening the journal again renders the rows once, with their controls.
+    fireEvent.click(screen.getByRole("button", { name: "יומן היום" }));
+    expect(screen.getAllByText("09:10")).toHaveLength(1);
+    expect(screen.getByRole("button", { name: "עריכת ארוחה 13:30" })).toBeInTheDocument();
   });
 
   it("offers a second source only beside a light primary, over every grade but the plain no-carb one", () => {
@@ -698,7 +759,7 @@ describe("DayTracker", () => {
     fireEvent.click(screen.getByRole("button", { name: "שמירת ארוחה" }));
     expect(onUpdateMeal).toHaveBeenCalledWith("b", expect.objectContaining({
       carbs_choice: "carb_grade_4", vegetables: true, fruit: true,
-      additions: [{ id: "sweet", amount: "regular" }], portion: null, second_source: null }));
+      fat_servings: 0, additions: [{ id: "sweet", amount: "regular" }], portion: null, second_source: null }));
     expect(onUpdateMeal.mock.calls[0][1].at).toMatch(/T12:00:00[+-]\d{2}:\d{2}$/);
     expect(screen.queryByRole("button", { name: "עדכון ארוחה" })).toBeNull();
   });
@@ -792,7 +853,7 @@ describe("DayTracker", () => {
     expect(screen.getByRole("button", { name: "הוספת ארוחה" })).toBeInTheDocument();
   });
 
-  it("collapses to the dashboard alone and expands back on header toggle", () => {
+  it("collapses to the dashboard and the meal rows, and expands back on header toggle", () => {
     render(<DayTracker suggestBeforeHours={1} treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} closeFrom={CLOSE_FROM} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={wideWindowDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
@@ -807,7 +868,9 @@ describe("DayTracker", () => {
     expect(dashboardFigure("ציון")).toHaveTextContent("ציון: 4");
     expect(screen.queryByRole("button", { name: "שמירת ארוחה" })).toBeNull();
     expect(screen.queryByRole("button", { name: "סגירת יום" })).toBeNull();
-    expect(screen.queryByText("דרגה 4")).toBeNull();
+    // The recorded rows stay, read-only; the picker's grade radios are gone with the inputs.
+    expect(screen.getByText(/דרגה 4/)).toBeInTheDocument();
+    expect(screen.queryByRole("radio")).toBeNull();
 
     fireEvent.click(toggle);
     openMealForm();
@@ -1266,7 +1329,6 @@ describe("DayTracker", () => {
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={onDeleteMeal} onCloseDay={vi.fn()} />);
     expect(dashboardFigure("ציון")).toHaveTextContent("ציון: 4");
-    expect(dashboardFigure("ארוחות")).toHaveTextContent("ארוחות: 2");
     expect(dashboardFigure("חלון")).toHaveTextContent("חלון: 5 שעות");
     // The folded inputs leave the carbs picker unrendered, so the only grade text on screen is
     // the recorded meal's own.
@@ -1350,15 +1412,14 @@ describe("DayTracker", () => {
     expect(cell).toHaveAttribute("title", "המטרה היא ציון נמוך");
   });
 
-  it("shows a marker per addition on a recorded meal", () => {
+  it("shows a marker per addition on a recorded meal, and the fat servings with their count", () => {
     const additionsDay: DayPayload = {
       date: "2026-08-20",
       meals: [{ id: "a", at: "2026-08-20T09:10:00+03:00", carbs_choice: "carb_grade_4",
-                vegetables: false, fruit: false,
-                additions: [{ id: "sweet", amount: "regular" }, { id: "alcohol", amount: "regular" },
-                            { id: "nuts", amount: "regular" }, { id: "fat", amount: "regular" }],
+                vegetables: false, fruit: false, fat_servings: 2,
+                additions: [{ id: "sweet", amount: "regular" }, { id: "alcohol", amount: "regular" }],
                 portion: null, second_source: null }],
-      derived: { carbs: 17, meals: 1, vegetables: 0, eating_window: 0 },
+      derived: { carbs: 12, meals: 1, vegetables: 0, eating_window: 0, fat: 2 },
     };
     render(<DayTracker suggestBeforeHours={1} treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} closeFrom={CLOSE_FROM} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={additionsDay}
                        firstMealHour={NO_NUDGE_HOUR}
@@ -1366,7 +1427,7 @@ describe("DayTracker", () => {
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     expect(screen.getByText("09:10").closest("li"))
-      .toHaveTextContent("דרגה 4 · 🍪 · 🍷 · 🥜 · 🥑 · 17");
+      .toHaveTextContent("דרגה 4 · 🥑×2 · 🍪 · 🍷 · 12");
   });
 
   it("marks each meal's row controls with the glyph role", () => {
@@ -1391,7 +1452,7 @@ describe("DayTracker", () => {
     fireEvent.click(screen.getByLabelText("3 ליטר"));
     fireEvent.click(screen.getByRole("button", { name: "אישור וסגירה" }));
     expect(onCloseDay).toHaveBeenCalledWith({
-      carbs: 4, meals: 2, vegetables: 1, eating_window: 7, drinking: 3 });
+      carbs: 4, meals: 2, vegetables: 1, eating_window: 7, fat: 0, drinking: 3 });
   });
 
   it("the close-day button leaves once its panel opens, so the flow ends in the confirm", () => {
@@ -1509,7 +1570,7 @@ describe("DayTracker", () => {
     fireEvent.click(screen.getByLabelText("3 ליטר"));
     fireEvent.click(screen.getByRole("button", { name: "אישור וסגירה" }));
     expect(onCloseDay).toHaveBeenCalledWith({
-      carbs: 4, meals: 2, vegetables: 1, eating_window: 7, drinking: 3 });
+      carbs: 4, meals: 2, vegetables: 1, eating_window: 7, fat: 0, drinking: 3 });
   });
 
   it("close-day locks only while the composed meal cannot be saved yet", () => {
@@ -1557,7 +1618,7 @@ describe("DayTracker", () => {
     const singleMealDay: DayPayload = {
       date: "2026-08-20",
       meals: [trackedDay.meals[0]],
-      derived: { carbs: 0, meals: 1, vegetables: 1, eating_window: 0 },
+      derived: { carbs: 0, meals: 1, vegetables: 1, eating_window: 0, fat: 0 },
     };
     const { rerender } = render(
       <DayTracker suggestBeforeHours={1} treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} closeFrom={CLOSE_FROM} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={emptyDay}
@@ -1799,7 +1860,7 @@ describe("DayTracker", () => {
     renderWithMeals({
       ...emptyDay,
       meals: [{ id: "h", at: "2026-08-20T09:00:00+03:00", carbs_choice: "carb_grade_7",
-                vegetables: false, fruit: false, additions: [], portion: "small",
+                vegetables: false, fruit: false, fat_servings: 0, additions: [], portion: "small",
                 second_source: null }],
     });
     expect(dashboardFigure("ציון")).toHaveTextContent("ציון: 4");
@@ -1812,7 +1873,7 @@ describe("DayTracker score breakdown", () => {
   const heavyDay: DayPayload = {
     ...trackedDay,
     meals: [trackedDay.meals[0],
-            { ...trackedDay.meals[1], carbs_choice: "carb_grade_7", additions: [{ id: "sweet", amount: "much" }] }],
+            { ...trackedDay.meals[1], carbs_choice: "carb_grade_7", fat_servings: 0, additions: [{ id: "sweet", amount: "much" }] }],
   };
   const renderHeavy = () =>
     render(<DayTracker suggestBeforeHours={1} treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} closeFrom={CLOSE_FROM} stretchesUntil={STRETCHES_UNTIL}

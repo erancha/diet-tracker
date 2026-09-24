@@ -7,8 +7,7 @@ import { useReveal } from "../reveal";
 import { isHeavyMeal } from "../violations";
 import { Icon } from "./Icon";
 
-// How long a tapped meal's markers stay named, per marker: the line grows with the meal, and
-// the fat addition's label alone runs to a line of examples.
+// How long a tapped meal's markers stay named, per marker: the line grows with the meal.
 const LEGEND_MS_PER_MARKER = 1500;
 
 // A flat lead on top of the per-marker time, for the line to be found and begun before it counts
