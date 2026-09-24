@@ -2,7 +2,9 @@
 grade scale, addition points, portion percents, thresholds and day-close bounds. The chat's RAG
 service answers from an uploaded copy of the guide, so a doc that drifts from config becomes
 confidently wrong answers. Each test pins a quoted value to its config source; a config change
-that fails here is the reminder to update docs/kb/app-guide-he.md and re-upload it."""
+that fails here is the reminder to update docs/kb/app-guide-he.md and re-upload it. The guide's
+classification extension is pinned the same way to the record's fields and to the retrieval
+window it has to fit."""
 
 import json
 import re
@@ -204,3 +206,30 @@ def test_next_meal_hours():
     next_meal = CONFIG["next_meal"]
     assert f"עד שעה {next_meal['suggest_before_hours']} לפני" in DOC
     assert f"בת פחות משעה {next_meal['reuse_within_hours']} פותחת" in DOC
+
+
+def test_the_classification_doc_walks_every_meal_field_in_one_chunk():
+    """A user asking how to classify a dish records it from the answer, so the classification
+    extension has the chat walk every field of the meal record rather than leave fat servings or
+    additions for a follow-up. Retrieval embeds the question alone and the knowledge base splits
+    documents into windows of 2,000 characters, so the doc stays within one window to be
+    retrieved whole for a question that names only a dish."""
+    doc = (ROOT / "docs" / "kb" / "app-guide-classify-he.md").read_text()
+    assert len(doc) <= 2000
+    for field in ("מקור הפחמימה", "גודל המנה", "מקור פחמימה נוסף", "ירקות", "פרי",
+                  "מנות שומן", "תוספות"):
+        assert field in doc
+    # The app prices a meal the moment it is recorded, and the pricing rules live in guide
+    # sections retrieval does not always bring along, so the answer leaves the points out.
+    assert "אינה מחשבת את נקודות" in doc
+    assert "נקודות —" not in doc and 'סה"כ' not in doc
+    assert "בטווח" in doc
+    assert "הרחבה של סעיף 3" in doc
+    # The answer stays inside the record: it never proposes a field the app lacks, and the one
+    # common dish part with no field of its own, a coating, has a ruling.
+    assert "גם לא כהצעה" in doc
+    assert "**ציפוי**" in doc
+    # Portion percents stay out of the doc: the app never shows them, so an answer quoting
+    # one confuses.
+    assert "%" not in doc.replace("15% שומן", "")
+    assert "מדריך האפליקציה — איך לסווג ולרשום ארוחה" in _doc_section("3. סיווג מאכלים נפוצים — הכרעות האפליקציה")
