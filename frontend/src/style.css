@@ -637,8 +637,10 @@ main:not(.intro-0, .intro-1, .intro-2, .intro-3, .intro-4) .weight .section-togg
 /* Stands where the add-meal toggle stood once the day holds its quota, so it wears the same
    heading slot muted rather than styled as a control. */
 .meal-cap-note { color: var(--viz-muted); margin: 1rem 0 0.5rem; }
-/* Rides beside the add-meal heading; greyed while the next meal is still more than the
-   configured lead away, the same quiet shade the too-soon toggle wears. */
+/* Rides beside the add-meal heading, small enough to share its line on a phone; greyed while the
+   next meal is still more than the configured lead away, the same quiet shade the too-soon
+   toggle wears. */
+.next-meal { font-size: 0.8rem; padding: 0.2rem 0.5rem; }
 .next-meal.next-meal-early { --btn-fg: var(--viz-muted); --btn-border: var(--viz-muted); }
 /* Worn by an add-meal control — the form toggle's label or the closed day's reopen button —
    once one more meal would cross the meals bound: the same red the history paints after the

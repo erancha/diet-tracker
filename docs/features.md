@@ -158,9 +158,11 @@ A deployment that configures no answering service withholds the chat surface ent
 offering a control that cannot answer.
 
 The day tracker's "מה לאכול בארוחה הבאה?" button asks the knowledge base, on the user's behalf,
-for two quick program recipes that complete today's meals under the cleanup rules: the app states
-today's counts — meals, meals with vegetables, meals with a fat addition, fruit, a heavy meal, the
-hour — and the documents decide what fits. The button sits beside the add-meal heading and reads
+for two quick recipes that complete today's meals under the program's rules, either the program's
+own recipes or equivalents to them: the app states today's counts — meals, meals with vegetables,
+meals with a fat addition, fruit, a heavy meal, the hour — and the documents decide what fits. A
+recipe the program does not hold is marked in the answer as the answering service's own proposal,
+so the two kinds never blur. The button sits beside the add-meal heading and reads
 greyed until the next meal is within `next_meal.suggest_before_hours` of being due (the first-meal
 hour on an empty day, else the meal gap after the latest meal); it stays pressable meanwhile. The
 answer is one recommendation chat per user, marked as app-written like the recap and followed up

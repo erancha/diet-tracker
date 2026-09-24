@@ -1,16 +1,16 @@
 """Composes the question the app asks on a user's behalf for their next meal: today's facts the
 app is authoritative on, as counts in the questionnaire's vocabulary, then a fixed request for
-two quick program recipes under the cleanup rules. Which counts complete a day is the program
-documents' to decide, so the answering service reads that from them and the question only
-reports."""
+two quick recipes under the program's rules, the program's own or equivalents to them. Which
+counts complete a day is the program documents' to decide, so the answering service reads that
+from them and the question only reports."""
 
 from common.derive import meal_weights
 
 # The addition whose count the fat budget is judged by; named in the question by its label.
 FAT_ADDITION = "fat"
 
-REQUEST = ("המלץ על הארוחה הבאה שלי היום, לפי כללי שלב הניקוי: שני מתכונים קלים ומהירים "
-           "מהתוכנית, הראשון המלצה והשני חלופה, שמשלימים את מה שאכלתי היום.")
+REQUEST = ("המלץ על הארוחה הבאה שלי היום, לפי כללי התוכנית: שני מתכונים קלים ומהירים, "
+           "מהתוכנית או שקולים למתכוניה, הראשון המלצה והשני חלופה, שמשלימים את מה שאכלתי היום.")
 
 
 def compose(meals: list, questionnaire, clock: str) -> str:

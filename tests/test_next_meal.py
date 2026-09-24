@@ -13,8 +13,8 @@ FAT_LABEL = next(addition.label for addition in questionnaire.question("carbs").
 def test_a_day_with_no_meals_asks_for_the_first_meal_with_zero_facts():
     question = next_meal.compose([], questionnaire, "09:15")
 
-    assert question.startswith("המלץ על הארוחה הבאה שלי היום, לפי כללי שלב הניקוי: שני מתכונים "
-                               "קלים ומהירים מהתוכנית, הראשון המלצה והשני חלופה")
+    assert question.startswith("המלץ על הארוחה הבאה שלי היום, לפי כללי התוכנית: שני מתכונים "
+                               "קלים ומהירים, מהתוכנית או שקולים למתכוניה, הראשון המלצה והשני חלופה")
     assert "ארוחות עד כה היום: 0" in question
     assert "ארוחות עם ירקות: 0" in question
     assert f'ארוחות עם "{FAT_LABEL}": 0' in question
