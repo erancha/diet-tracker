@@ -266,8 +266,8 @@ button {
    list of meals reads as data rather than as a column of buttons. */
 .glyph { display: inline-flex; padding: 0.35rem; border-radius: 50%; }
 /* Rows too narrow for the full box trade padding for their labels — the chat samples, the label
-   density setting, an answer's foot. The inline figure is what lets the ten sample questions hold
-   two rows on a phone; widen it and they take three. Padding alone: type is the block's to set. */
+   density setting, an answer's foot. The inline figure is what lets the sample questions hold two
+   rows on a phone; widen it and they take three. Padding alone: type is the block's to set. */
 .compact { padding: 0.25rem 0.6rem; }
 .glyph.compact { padding: 0.15rem; }
 /* Darkening whatever the role painted keeps one hover rule for both boxed roles. The frameless
