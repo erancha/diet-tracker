@@ -86,7 +86,7 @@ export function Landing({ onSignIn, chatAvailable }: {
           {chatAvailable && (
             <p className="landing-condensed">
               יש גם <strong>עוזר AI</strong> — צ'אט בתוך האפליקציה שעונה על שאלות על התוכנית (ישירות מתוך מסמכי
-              המקור שלה) ואיך להשתמש באפליקציה, וממליץ <strong>מה לאכול בארוחה הבאה</strong> לפי מה שנאכל היום.
+              המקור שלה), איך להשתמש באפליקציה, וממליץ <strong>מה לאכול בארוחה הבאה</strong> לפי מה שנאכל היום.
               <br />
               ניתן לשתף צ'אט עם כל המשתמשים, ולקרוא צ'אטים שאחרים <strong>שיתפו</strong> עם כולם.
             </p>
