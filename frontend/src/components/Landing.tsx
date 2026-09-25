@@ -86,7 +86,7 @@ export function Landing({ onSignIn, chatAvailable }: {
           {chatAvailable && (
             <p className="landing-condensed">
               יש גם <strong>עוזר AI</strong> — צ'אט בתוך האפליקציה שעונה על שאלות על התוכנית (ישירות מתוך מסמכי
-              המקור שלה), איך להשתמש באפליקציה, וממליץ <strong>מה לאכול בארוחה הבאה</strong> לפי מה שנאכל היום.
+              המקור שלה), איך להשתמש באפליקציה, וממליץ <strong>מה לאכול בארוחה הבאה</strong>.
               <br />
               ניתן לשתף צ'אט עם כל המשתמשים, ולקרוא צ'אטים שאחרים <strong>שיתפו</strong> עם כולם.
             </p>
@@ -110,7 +110,7 @@ export function Landing({ onSignIn, chatAvailable }: {
         <p className="landing-intro">
           אפליקציית SaaS חינמית — יומן ארוחות יומי שעוזר לשמור על הרגלי אכילה בריאים לאורך זמן.
           לא סופרים קלוריות, אלא בוחנים את אופי כל ארוחה ואת המרווחים ביניהן, לפי ארבעת עקרונות
-          השכפ"צ (<a href={`#${PRINCIPLES_ID}`}>בטבלה שבסוף העמוד</a>):
+          השכפ"צ (<a href={`#${PRINCIPLES_ID}`}>ראה את הטבלה שבסוף העמוד</a>):
         </p>
         <ul className="landing-summary">
           <li>
