@@ -18,11 +18,21 @@ describe("Landing", () => {
     expect(screen.getByRole("button", { name: "התחברות עם Google" })).toBeInTheDocument();
   });
 
+  it("opens on the app's own name and offers the next-meal recommendation with the chat", () => {
+    const { container } = render(<Landing onSignIn={() => {}} chatAvailable />);
+
+    const paragraphs = [...container.querySelectorAll(".landing-condensed")]
+      .map((paragraph) => paragraph.textContent!);
+    expect(paragraphs[0]).toMatch(/^מעקב תזונה /);
+    expect(paragraphs[1]).toContain("מה לאכול בארוחה הבאה");
+  });
+
   it("withholds the chat from both views where no answering service is configured", async () => {
     const { container } = render(<Landing onSignIn={() => {}} chatAvailable={false} />);
 
     expect(container.querySelectorAll(".landing-condensed")).toHaveLength(2);
     expect(screen.queryByText(/עוזר AI/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/בארוחה הבאה/)).not.toBeInTheDocument();
 
     await expandLanding();
 

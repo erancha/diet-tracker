@@ -79,14 +79,14 @@ export function Landing({ onSignIn, chatAvailable }: {
           {/* Each habit's bold initial spells the acronym in place, the way the full view's table
               opens its rows. */}
           <p className="landing-condensed">
-            ניהול תזונה <strong>בלי לספור קלוריות</strong>: רושמים תיאור <strong>כללי</strong> של כל ארוחה,
+            מעקב תזונה <strong>בלי לספור קלוריות</strong>: רושמים תיאור <strong>כללי</strong> של כל ארוחה,
             והאפליקציה עוזרת לשמור על <strong>ארבעה הרגלים פשוטים</strong> — שכפ"צ (<strong>ש</strong>תיה,{" "}
             <strong>כ</strong>מות ירקות, <strong>פ</strong>תיחת חלון אכילה, <strong>צ</strong>מצום ארוחות).
           </p>
           {chatAvailable && (
             <p className="landing-condensed">
               יש גם <strong>עוזר AI</strong> — צ'אט בתוך האפליקציה שעונה על שאלות על התוכנית (ישירות מתוך מסמכי
-              המקור שלה) ואיך להשתמש באפליקציה.
+              המקור שלה) ואיך להשתמש באפליקציה, וממליץ <strong>מה לאכול בארוחה הבאה</strong> לפי מה שנאכל היום.
               <br />
               ניתן לשתף צ'אט עם כל המשתמשים, ולקרוא צ'אטים שאחרים <strong>שיתפו</strong> עם כולם.
             </p>
