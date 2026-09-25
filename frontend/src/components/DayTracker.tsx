@@ -11,6 +11,7 @@ import { CollapsibleSection } from "./CollapsibleSection";
 import { DayDashboard } from "./DayDashboard";
 import { Icon } from "./Icon";
 import { FAT_SERVINGS, FRUIT_FLAG, VEGETABLES_FLAG } from "../mealMarkers";
+import { useReveal } from "../reveal";
 import { MealList } from "./MealList";
 import { ScoreBreakdown } from "./ScoreBreakdown";
 
@@ -45,6 +46,10 @@ const REOPEN_PROMPT = "האם לפתוח את חלון האכילה מחדש?";
 // How long each of the nudge's escalating beats runs before the next takes over. The blink rate
 // itself is the style sheet's, keyed by the phase the section's class carries.
 const NUDGE_ESCALATION_MS = 10_000;
+
+// How long the fat-serving hint stays after the box is ticked: long enough to read the list of
+// what counts as one serving, then gone so the form is back to its controls.
+const FAT_HINT_MS = 30_000;
 
 // The day's one journal: records meals at the time they were eaten, shows the day's derived
 // values live, lists the day's meals for in-place correction or deletion, closes a fully
@@ -123,6 +128,8 @@ export function DayTracker({ questionnaire, treatDay, day, isToday = true, close
   const [fruit, setFruit] = useState(false);
   // Concentrated-fat servings of the meal being recorded; ticking the box records one.
   const [fatServings, setFatServings] = useState(0);
+  // The moment the fat-serving hint is showing, opened by a tick of its box.
+  const fatHint = useReveal<true>();
   // The additions checked for the meal being recorded, each with the amount it was eaten at.
   const [pickedAdditions, setPickedAdditions] = useState<Map<string, string>>(new Map());
   const [portionId, setPortionId] = useState(defaultPortionId);
@@ -532,7 +539,10 @@ export function DayTracker({ questionnaire, treatDay, day, isToday = true, close
           </label>
           <label>
             <input type="checkbox" checked={fatServings > 0}
-                   onChange={(e) => setFatServings(e.target.checked ? 1 : 0)} />
+                   onChange={(e) => {
+                     setFatServings(e.target.checked ? 1 : 0);
+                     if (e.target.checked) fatHint.reveal(true, FAT_HINT_MS);
+                   }} />
             {" "}{FAT_SERVINGS.label}
             {/* The count rides inside the label like an addition's amount, and appears only once
                 there is a serving to count: ticking the box is the one-serving case. */}
@@ -545,6 +555,12 @@ export function DayTracker({ questionnaire, treatDay, day, isToday = true, close
               </select>
             )}
           </label>
+          {/* What one serving is, from the config, on its own line right under the box that asks
+              for the count — shown for a moment after each tick, as a just-picked grade's list
+              is, and withdrawn with the serving if the box is cleared before then. */}
+          {fatServings > 0 && fatHint.revealed !== null && (
+            <p className="meal-hint revealed" style={fatHint.style}>{fatQuestion.tooltip}</p>
+          )}
           {carbsQuestion.additions!.map((addition) => (
             <label key={addition.id}>
               <input type="checkbox" checked={pickedAdditions.has(addition.id)}
@@ -570,8 +586,6 @@ export function DayTracker({ questionnaire, treatDay, day, isToday = true, close
             </label>
           ))}
         </div>
-        {/* What one serving is, from the config, at the moment the count is being decided. */}
-        {fatServings > 0 && <p className="meal-hint">{fatQuestion.tooltip}</p>}
         <label className="meal-time">
           שעת הארוחה{" "}
           <input type="time" value={mealTime} min={isToday ? stretchesUntil : undefined}

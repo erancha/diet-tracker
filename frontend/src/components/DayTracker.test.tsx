@@ -255,6 +255,7 @@ describe("DayTracker", () => {
   });
 
   it("records one fat serving on a tick, more from the count beside it, and clears after saving", () => {
+    vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout"] });
     const onAddMeal = vi.fn();
     render(<DayTracker suggestBeforeHours={1} treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} closeFrom={CLOSE_FROM} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={emptyDay}
                        firstMealHour={NO_NUDGE_HOUR}
@@ -267,7 +268,14 @@ describe("DayTracker", () => {
     expect(screen.queryByLabelText("מנות — כולל מנת שומן")).toBeNull();
     expect(screen.queryByText("מנת שומן = כף שמן")).toBeNull();
     fireEvent.click(screen.getByLabelText("כולל מנת שומן"));
+    const hint = screen.getByText("מנת שומן = כף שמן");
+    expect(hint.previousElementSibling).toBe(screen.getByLabelText("כולל מנת שומן").closest("label"));
+    expect(screen.getByLabelText("מנות — כולל מנת שומן")).toHaveValue("1");
+    // The hint stays for half a minute after the tick, then leaves the count on its own.
+    act(() => vi.advanceTimersByTime(29_999));
     expect(screen.getByText("מנת שומן = כף שמן")).toBeInTheDocument();
+    act(() => vi.advanceTimersByTime(1));
+    expect(screen.queryByText("מנת שומן = כף שמן")).toBeNull();
     expect(screen.getByLabelText("מנות — כולל מנת שומן")).toHaveValue("1");
     fireEvent.change(screen.getByLabelText("מנות — כולל מנת שומן"), { target: { value: "3" } });
     fireEvent.click(screen.getByRole("button", { name: "שמירת ארוחה" }));

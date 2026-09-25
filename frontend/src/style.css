@@ -679,8 +679,9 @@ main:not(.intro-0, .intro-1, .intro-2, .intro-3, .intro-4) .weight .section-togg
 .meal-flags label { display: inline-flex; align-items: center; gap: 0.3rem; }
 /* Sized down to read as the trailing detail of the addition label it sits inside. */
 .addition-amount { font-size: 0.85em; padding: 0 0.2rem; }
-/* Reads as a footnote to the flags row it follows, not as a notice demanding action. */
-.meal-hint { font-size: 0.85em; opacity: 0.8; margin: 0.25rem 0 0; }
+/* Reads as a footnote to the fat checkbox it follows, not as a notice demanding action. The full
+   basis breaks the flags row so the hint takes its own line. */
+.meal-hint { flex-basis: 100%; font-size: 0.85em; opacity: 0.8; margin: 0.25rem 0 0; }
 /* The meal-time picker takes its own line so the checkbox row above keeps its wrap layout. */
 .meal-time { display: block; margin-top: 0.75rem; }
 /* The row a form closes with: the primary control that commits beside the secondary ones that leave,
