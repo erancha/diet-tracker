@@ -224,6 +224,11 @@ label { display: block; padding: 0.35rem 0; cursor: pointer; }
 /* Radio groups run to eight options and the meal's flag checkboxes to six, so their rows close to
    half the standalone label rhythm to keep the whole form near one phone screen. */
 fieldset > label, .meal-flags label { padding: 0.175rem 0; }
+/* Condensed grade names are short enough to pair up, so the group runs in two columns and takes
+   half the height. Content-sized columns keep the one long name (no carb source) on a single
+   line at phone width, where equal halves would wrap it; a just-picked name spelling itself out
+   wraps inside its own cell. */
+fieldset.condensed { display: grid; grid-template-columns: auto auto; column-gap: 1rem; }
 /* Every control names one of four roles — primary, secondary, disclosure, glyph — and a role sets
    only the palette triple plus its own geometry. The shared interaction states below read those
    variables, so hover, focus and disabled are painted once for every role there is.

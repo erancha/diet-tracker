@@ -410,10 +410,13 @@ describe("DayTracker", () => {
     openMealForm();
     expect(screen.getByLabelText("דרגה 4")).toBeInTheDocument();
     expect(screen.getAllByText("דרגה 4")).not.toHaveLength(0);
+    // Condensed names pair up in two columns; the class is what the style sheet keys on.
+    expect(screen.getByLabelText("דרגה 4").closest("fieldset")).toHaveClass("condensed");
 
     fireEvent.click(screen.getByRole("button", { name: "הרחבת שמות" }));
     // One switch reaches the grade group and the recorded meal row alike.
     expect(screen.getByLabelText("דרגה 4 (אורז לבן)")).toBeInTheDocument();
+    expect(screen.getByLabelText("דרגה 4 (אורז לבן)").closest("fieldset")).not.toHaveClass("condensed");
     expect(screen.getAllByText("דרגה 4 (אורז לבן)")).not.toHaveLength(0);
     // A grade that lists nothing reads the same at either density.
     expect(screen.getByLabelText("דרגה 4!")).toBeInTheDocument();

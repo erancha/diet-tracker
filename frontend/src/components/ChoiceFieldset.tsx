@@ -70,7 +70,7 @@ export function ChoiceFieldset({ question, selectedId, floor, stored, scope = "d
     if (!expandLabels && choice.examples !== undefined) reveal.reveal(choice.id, PICK_REVEAL_MS);
   };
   return (
-    <fieldset>
+    <fieldset className={expandLabels ? undefined : "condensed"}>
       <legend>{questionTitle(question, scope)}</legend>
       {choices.map((choice) => {
         const revealed = choice.id === reveal.revealed;
