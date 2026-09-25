@@ -10,6 +10,8 @@ import json
 import re
 from pathlib import Path
 
+from common import appconfig
+
 ROOT = Path(__file__).parent.parent
 DOC = (ROOT / "docs" / "kb" / "app-guide-he.md").read_text()
 CONFIG = json.loads((ROOT / "config" / "app.json").read_text())
@@ -114,8 +116,7 @@ def test_score_bounds():
 
 # Hebrew day names for the scheduler weekday tokens the config declares, so a retargeted treat
 # day fails here rather than leaving the guide naming the wrong day.
-WEEKDAY_NAMES = {"SUN": "ראשון", "MON": "שני", "TUE": "שלישי", "WED": "רביעי", "THU": "חמישי",
-                 "FRI": "שישי", "SAT": "שבת"}
+WEEKDAY_NAMES = appconfig.WEEKDAY_NAMES
 
 
 def test_bounds_are_judged_day_by_day_with_no_streak():

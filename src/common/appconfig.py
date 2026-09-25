@@ -15,6 +15,10 @@ from common.questionnaire import Questionnaire, parse
 # are built from the configured treat day at deploy time.
 WEEKDAYS = ("SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT")
 
+# Each token's Hebrew name, as the app writes a weekday wherever a day is named to a reader.
+WEEKDAY_NAMES = {"SUN": "ראשון", "MON": "שני", "TUE": "שלישי", "WED": "רביעי", "THU": "חמישי",
+                 "FRI": "שישי", "SAT": "שבת"}
+
 # Spans the weight chart's range selector offers, in months. None is the whole series. The
 # configured opening span must name one of them, or the chart would open on a range the reader
 # has no control to return to.

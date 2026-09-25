@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 
 import boto3
 import pytest
@@ -80,15 +81,33 @@ def test_every_email_carries_a_right_to_left_html_body_beside_its_text():
 
 
 def test_html_body_sets_the_opening_line_in_bold_and_the_bullets_a_size_smaller():
-    # What the message came to is the one thing a reader should catch first; the findings under
-    # it sit a step below. The plain-text part carries neither mark, so Telegram is unaffected.
-    body = ("סיכום שבועי — נסגרו 7 מתוך 7 ימים.\n• ציון יומי — חריגה (מעל 12) ב-2 ימים.\n\n"
+    # What the message came to is the one thing a reader should catch first; a bulleted line
+    # under it sits a step below. The plain-text part carries neither mark, so Telegram is
+    # unaffected.
+    body = ("סיכום שבועי 18-24/09/2026 — נסגרו 7 מתוך 7 ימים.\n\n"
+            "תובנות לשבוע הבא:\n• להקדים את הארוחה האחרונה בשעה.\n\n"
             "הגרפים והטבלה של השבוע במסך המגמות באפליקציה.")
     html = notify.rtl_html(body)
-    assert "<strong>סיכום שבועי — נסגרו 7 מתוך 7 ימים.</strong>" in html
+    assert "<strong>סיכום שבועי 18-24/09/2026 — נסגרו 7 מתוך 7 ימים.</strong>" in html
     assert html.count("<strong>") == 1
-    assert '<span style="font-size: 14px">• ציון יומי — חריגה (מעל 12) ב-2 ימים.</span>' in html
+    assert '<span style="font-size: 14px">• להקדים את הארוחה האחרונה בשעה.</span>' in html
     assert html.count("<span") == 1
+
+
+def test_html_body_draws_consecutive_table_rows_as_one_table_under_its_heading():
+    # The plain text keeps the rows as pipe-separated lines, which Telegram and the chat show as
+    # written; the HTML part draws them as a table, header row first, with no break around it.
+    body = ("שורה ראשונה\n"
+            f"{notify.table_row(['', 'השבוע', 'שבוע שעבר'])}\n"
+            f"{notify.table_row(['ימים נקיים', '2', '1'])}\n\nהמשך")
+    html = notify.rtl_html(body)
+    bare = re.sub(r' style="[^"]*"', "", html)
+    assert "<strong>שורה ראשונה</strong><table" in bare
+    assert "<tr><th></th><th>השבוע</th><th>שבוע שעבר</th></tr>" in bare
+    assert "<tr><td>ימים נקיים</td><td>2</td><td>1</td></tr>" in bare
+    assert bare.count("<table") == 1
+    assert "|" not in bare
+    assert "</table><br>המשך" in bare
 
 
 def test_html_body_escapes_the_text_it_renders():

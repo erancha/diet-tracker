@@ -4,6 +4,7 @@ import pytest
 from conftest import APP_CONFIG, meal
 
 from common import appconfig, chat_context
+from common.dates import days_before
 from common.store import Store
 
 TODAY = "2026-09-01"
@@ -162,3 +163,114 @@ def test_the_whole_grade_ladder_rides_in_the_context(store, questionnaire):
 
     assert ladder["דרגה 2"] == "קינואה | כוסמת | שיבולת שועל עבה | ארטישוק ירושלמי"
     assert set(ladder) == {choice.label for choice in questionnaire.question("carbs").choices}
+
+
+# The recap's two weeks: the week ending Friday 2026-09-18 (the treat day) and the one before.
+WEEK_END = "2026-09-18"
+WEEK_START = "2026-09-12"
+SATURDAY, SUNDAY, MONDAY = "2026-09-12", "2026-09-13", "2026-09-14"
+LAST_SUNDAY = "2026-09-06"
+THREE_WEEKS_BACK = "2026-08-30"
+HEAVY = {"drinking": 3, "vegetables": 2, "fat": 2, "eating_window": 10, "meals": 3, "carbs": 15}
+QUIET = {"drinking": 3, "vegetables": 2, "fat": 2, "eating_window": 10, "meals": 3, "carbs": 5}
+BRIEF = "הנחיות לתשובה: לענות בקצרה."
+
+
+def week_data(questionnaire, days, excluded=None, weights=None, target=None):
+    context = chat_context.week_context(questionnaire, days, excluded or {}, WEEK_END, "FRI",
+                                        weights or {}, target, BRIEF)
+    return data_of(context)
+
+
+def test_the_week_context_carries_the_week_and_the_one_before_it_newest_first(questionnaire):
+    weeks = week_data(questionnaire, {SATURDAY: QUIET, LAST_SUNDAY: QUIET,
+                                      THREE_WEEKS_BACK: QUIET})["שבועות"]
+
+    # A day older than last week is out of view, the way the table never compares with it.
+    assert [(week["מ"], week["עד"]) for week in weeks] == [
+        ("2026-09-12", "2026-09-18"), ("2026-09-05", "2026-09-11")]
+    assert [week["ימים שנסגרו"] for week in weeks] == [1, 1]
+    assert list(weeks[0]["יום-יום"]) == [SATURDAY]
+    assert list(weeks[1]["יום-יום"]) == [LAST_SUNDAY]
+
+
+def test_a_day_names_its_weekday_its_answers_and_what_it_cost_in_flours_and_sugars(questionnaire):
+    days = week_data(questionnaire, {SATURDAY: QUIET, WEEK_END: HEAVY},
+                     excluded={SATURDAY: 4, WEEK_END: 9})["שבועות"][0]["יום-יום"]
+
+    assert days[SATURDAY]["יום"] == "שבת"
+    assert "יום פינוק" not in days[SATURDAY]
+    assert days[SATURDAY]['שכפ"צ - שתיה (ליטר)'] == 3
+    assert days[SATURDAY]["ציון יומי"] == 5
+    assert days[SATURDAY]["קמחים וסוכרים (נקודות)"] == 4
+    assert days[WEEK_END]["יום"] == "שישי"
+    assert days[WEEK_END]["יום פינוק"] is True
+
+
+def test_a_closed_day_without_meals_cost_nothing(questionnaire):
+    days = week_data(questionnaire, {SATURDAY: QUIET})["שבועות"][0]["יום-יום"]
+    assert days[SATURDAY]["קמחים וסוכרים (נקודות)"] == 0
+
+
+def test_the_days_a_week_left_unclosed_are_listed(questionnaire):
+    week = week_data(questionnaire, {SATURDAY: QUIET, MONDAY: QUIET})["שבועות"][0]
+    assert week["ימים שלא נסגרו"] == ["2026-09-13", "2026-09-15", "2026-09-16", "2026-09-17",
+                                      "2026-09-18"]
+
+
+def test_every_week_tallies_its_crossed_bounds_by_subject(questionnaire):
+    weeks = week_data(questionnaire, {SATURDAY: HEAVY, SUNDAY: HEAVY,
+                                      MONDAY: {**QUIET, "drinking": 1},
+                                      LAST_SUNDAY: HEAVY})["שבועות"]
+
+    assert weeks[0]["ימים עם חריגה"] == {"שתיה (ליטרים)": 1, "ציון יומי": 2}
+    assert weeks[1]["ימים עם חריגה"] == {"ציון יומי": 1}
+
+
+def test_clean_days_are_the_closed_days_off_the_treat_day_that_cost_nothing(questionnaire):
+    week = week_data(questionnaire, {SATURDAY: QUIET, SUNDAY: QUIET, WEEK_END: QUIET},
+                     excluded={SUNDAY: 3, WEEK_END: 12})["שבועות"][0]
+
+    # Saturday cost nothing; Sunday did; the Friday is the treat day and is neither clean nor not.
+    assert week["ימים נקיים מקמחים וסוכרים (מלבד יום פינוק)"] == 1
+
+
+def test_the_week_context_carries_the_weights_and_the_tracking_scope_but_no_meal_ladder(
+        questionnaire):
+    data = week_data(questionnaire, {SATURDAY: QUIET},
+                     weights={"2026-09-18": {"kg": 82.5, "at": "07:30"}}, target=78)
+
+    assert data["משקל"] == {"מדידות": {"2026-09-18": 82.5}, "יעד": 78}
+    assert "במעקב היומי" in data["תחומי המעקב של האפליקציה"]
+    assert chat_context._GRADE_LADDER not in data
+    assert "היום" not in data
+
+
+def test_the_week_context_opens_with_the_brief_and_then_the_labeled_data(questionnaire):
+    context = chat_context.week_context(questionnaire, {}, {}, WEEK_END, "FRI", {}, None, BRIEF)
+    assert context.startswith(f"{BRIEF}\n\nנתוני המעקב של השואל (JSON):\n")
+
+
+def test_a_tight_cap_sheds_last_weeks_days_before_this_weeks(questionnaire, monkeypatch):
+    days = {}
+    for back in range(14):
+        days[days_before(WEEK_END, back)] = HEAVY
+    full = len(chat_context.week_context(questionnaire, days, {}, WEEK_END, "FRI", {}, None,
+                                         BRIEF))
+    monkeypatch.setattr(chat_context, "MAX_CONTEXT_CHARS", full - 1)
+
+    context = chat_context.week_context(questionnaire, days, {}, WEEK_END, "FRI", {}, None, BRIEF)
+    weeks = data_of(context)["שבועות"]
+
+    # The brief counts against the cap like the data it precedes.
+    assert len(context) <= full - 1
+
+    assert "יום-יום" in weeks[0]
+    assert "יום-יום" not in weeks[1]
+    assert len(weeks) == 2
+
+
+def test_a_cap_too_small_for_even_the_tallies_yields_no_context(questionnaire, monkeypatch):
+    monkeypatch.setattr(chat_context, "MAX_CONTEXT_CHARS", 50)
+    assert chat_context.week_context(questionnaire, {}, {}, WEEK_END, "FRI", {}, None,
+                                     BRIEF) is None

@@ -25,6 +25,12 @@ def days_before(day: str, n: int) -> str:
     return (date.fromisoformat(day) - timedelta(days=n)).isoformat()
 
 
+def weekday_index(day: str) -> int:
+    """The date's weekday counted Sunday-first, the way appconfig.WEEKDAYS, the schedules and the
+    frontend all index a week; isoweekday() counts Monday as 1 and Sunday as 7."""
+    return date.fromisoformat(day).isoweekday() % 7
+
+
 def closing_day(until: str) -> str:
     """The day still open to closing: yesterday while the clock sits before the small-hours
     "HH:MM" bound the day-close config sets, today from then on."""

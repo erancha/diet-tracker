@@ -8,7 +8,7 @@ import pytest
 
 from conftest import APP_CONFIG, meal
 
-from common import appconfig, chat_history, rules, undelivered
+from common import appconfig, chat_history, notify, rules, undelivered
 from common.dates import days_before, today
 from common.store import Store
 from common.users import User
@@ -149,7 +149,7 @@ def test_a_rerun_follows_up_on_the_chat_a_crashed_run_left_behind(env):
     # chat and the redrive of a dead-lettered message is safe.
     e, sent = env
     e.store.put_day("u1", days_before(today(), 1), CLEAN, 1, "t")
-    title = nudge.weekly_recap.chat_title(days_before(today(), 7))
+    title = nudge.weekly_recap.chat_title(days_before(today(), 7), days_before(today(), 1))
     chat_history.append(e.chat_history, "u1", title, "ממצאי הריצה שקרסה", [], app=True)
     nudge._recap(e, User("u1", "a@gmail.com"), today())
     (stored,) = chat_history.turns(e.chat_history, "u1")
@@ -186,7 +186,8 @@ def test_weekly_ends_the_week_yesterday_while_the_day_it_runs_in_is_open(env):
     body = next(text for _, target, text in sent if target == "a@gmail.com")
     assert "נסגרו 7 מתוך 7 ימים." in body
     stored = chat_history.turns(e.chat_history, "u1")
-    assert nudge.weekly_recap.chat_title(days_before(today(), 7)) in stored[0]["question"]
+    title = nudge.weekly_recap.chat_title(days_before(today(), 7), days_before(today(), 1))
+    assert title in stored[0]["question"]
 
 
 def test_weekly_ends_the_week_today_once_the_user_has_closed_it(env):
@@ -199,10 +200,10 @@ def test_weekly_ends_the_week_today_once_the_user_has_closed_it(env):
     _run_weekly(e)
     body = next(text for _, target, text in sent if target == "a@gmail.com")
     assert "נסגרו 7 מתוך 7 ימים." in body
-    # Only today's breach is in the window; the one seven days back has fallen out of it.
-    assert "חלון אכילה (שעות) — חריגה (מעל 12) ביום אחד." in body
+    # Today's breach is this week's; the one seven days back now counts as last week's.
+    assert notify.table_row(["↔️", "חריגות חלון אכילה (שעות)", "1", "1"]) in body
     stored = chat_history.turns(e.chat_history, "u1")
-    assert nudge.weekly_recap.chat_title(days_before(today(), 6)) in stored[0]["question"]
+    assert nudge.weekly_recap.chat_title(days_before(today(), 6), today()) in stored[0]["question"]
 
 
 def test_each_user_gets_the_window_their_own_days_decide(env):
@@ -211,8 +212,9 @@ def test_each_user_gets_the_window_their_own_days_decide(env):
     e.store.put_day("u2", days_before(today(), 1), CLEAN, 1, "t")
     _run_weekly(e)
     titles = {sub: chat_history.turns(e.chat_history, sub)[0]["question"] for sub in ("u1", "u2")}
-    assert nudge.weekly_recap.chat_title(days_before(today(), 6)) in titles["u1"]
-    assert nudge.weekly_recap.chat_title(days_before(today(), 7)) in titles["u2"]
+    assert nudge.weekly_recap.chat_title(days_before(today(), 6), today()) in titles["u1"]
+    assert nudge.weekly_recap.chat_title(days_before(today(), 7),
+                                         days_before(today(), 1)) in titles["u2"]
 
 
 def test_weekly_stores_the_answered_follow_up_as_the_weeks_one_chat(env):
@@ -222,10 +224,9 @@ def test_weekly_stores_the_answered_follow_up_as_the_weeks_one_chat(env):
     stored = chat_history.turns(e.chat_history, "u1")
     # The follow-up replaces the recap it extends, so the week leaves one chat behind, holding the
     # conversation: the recap under the title that names its week, and the reading as the answer.
-    week_start = days_before(today(), 7)
+    title = nudge.weekly_recap.chat_title(days_before(today(), 7), days_before(today(), 1))
     assert len(stored) == 1
-    assert stored[0]["question"].startswith(
-        f"{chat_history.ORIGINAL_QUESTION_LABEL} {nudge.weekly_recap.chat_title(week_start)}")
+    assert stored[0]["question"].startswith(f"{chat_history.ORIGINAL_QUESTION_LABEL} {title}")
     assert stored[0]["question"].endswith(
         f"{chat_history.FOLLOW_UP_LABEL} {nudge.weekly_recap.INSIGHTS_QUESTION}")
     assert stored[0]["answer"] == INSIGHTS
@@ -238,18 +239,39 @@ def test_weekly_asks_the_service_the_follow_up_a_user_would_have_asked(env, answ
     e, _ = env
     for offset in range(1, 8):
         e.store.put_day("u1", days_before(today(), offset), VIOLATING, 1, "t")
+    e.store.put_day("u1", days_before(today(), 9), CLEAN, 1, "t")
+    e.store.put_day("u1", days_before(today(), 20), CLEAN, 1, "t")
     _run_weekly(e)
     # One question per user with a week to recap; u2 closed no day, so nothing is asked for it.
     assert len(answering) == 1
     question = answering[0]["question"]
     # Retrieval reads the question alone, so the week's findings have to ride inside it.
     assert "חלון אכילה" in question
+    # Last week closed a day and crossed nothing, so the row reads 7 against 0 and worse.
+    assert notify.table_row(["🔴", "חריגות חלון אכילה (שעות)", "7", "0"]) in question
     assert question.endswith(f"{chat_history.FOLLOW_UP_LABEL} "
                              f"{nudge.weekly_recap.INSIGHTS_QUESTION}")
-    # The asker's own tracked data rides beside it, as it does for a question typed in the app.
-    assert "נתוני המעקב של השואל" in answering[0]["context"]
+    # How to answer rides beside the data rather than in the stored question.
+    assert nudge.weekly_recap.INSIGHTS_BRIEF not in question
+    assert answering[0]["context"].startswith(nudge.weekly_recap.INSIGHTS_BRIEF)
+    # The week and the one before it ride beside the question, in place of the recent-data block
+    # a question typed in the app carries: a day three weeks back is out of view, and so are
+    # today's meals.
+    context = json.loads(answering[0]["context"].partition("(JSON):\n")[2])
+    assert [week["ימים שנסגרו"] for week in context["שבועות"]] == [7, 1]
+    assert "היום" not in context
     # Composing the reading outruns the client's default wait, so the job spends its own.
     assert answering[0]["timeout"] == nudge.RECAP_TIMEOUT_SECONDS
+
+
+def test_the_weekly_email_compares_the_week_with_the_one_before(env):
+    e, sent = env
+    for back in (1, 2, 8, 9, 10):
+        e.store.put_day("u1", days_before(today(), back), VIOLATING if back > 7 else CLEAN, 1, "t")
+    _run_weekly(e)
+    body = next(text for _, target, text in sent if target == "a@gmail.com")
+    assert body.split("\n")[1] == notify.table_row(["", "", "השבוע", "שבוע שעבר"])
+    assert notify.table_row(["✅", "חריגות חלון אכילה (שעות)", "0", "3"]) in body
 
 
 def test_the_weekly_email_carries_the_reading_under_the_findings(env):
@@ -273,7 +295,7 @@ def test_a_deployment_without_an_answering_service_sends_the_findings_alone(env,
     # The recap still lands in the transcript, where the user can ask the follow-up themselves.
     stored = chat_history.turns(e.chat_history, "u1")
     assert [turn["question"] for turn in stored] == [
-        nudge.weekly_recap.chat_title(days_before(today(), 7))]
+        nudge.weekly_recap.chat_title(days_before(today(), 7), days_before(today(), 1))]
 
 
 def test_an_unreachable_service_costs_only_the_reading(env, monkeypatch, caplog):
@@ -423,7 +445,7 @@ def test_muted_users_are_dropped_from_every_jobs_audience(env):
     assert nudge._notifiable(e.store, e.users) == [User("u2", "b@gmail.com")]
 
 
-def test_weekly_names_the_days_that_cost_flours_and_sugars(env):
+def test_weekly_counts_the_clean_days_off_the_treat_day(env):
     e, sent = env
     for back in (1, 2, 3):
         e.store.put_day("u1", days_before(today(), back), CLEAN, 1, "t")
@@ -437,7 +459,9 @@ def test_weekly_names_the_days_that_cost_flours_and_sugars(env):
     _run_weekly(e)
 
     body = next(text for _, target, text in sent if target == "a@gmail.com")
-    assert "• קמחים וסוכרים ביום אחד שאינו יום פינוק." in body
+    off_treat = sum(1 for back in (1, 2, 3)
+                    if not rules.falls_on(days_before(today(), back), e.treat_weekday))
+    assert notify.table_row(["", "ימים נקיים", str(off_treat - 1), "–"]) in body
 
 
 def test_a_week_inside_every_bound_names_no_finding(env):
@@ -447,8 +471,9 @@ def test_a_week_inside_every_bound_names_no_finding(env):
     _run_weekly(e)
 
     body = next(text for _, target, text in sent if target == "a@gmail.com")
-    assert body.startswith("סיכום שבועי — נסגרו 1 מתוך 7 ימים.")
-    assert "חריגה" not in body
+    title = nudge.weekly_recap.chat_title(days_before(today(), 7), days_before(today(), 1))
+    assert body.startswith(f"{title} — נסגרו 1 מתוך 7 ימים.")
+    assert "חריגות" not in body
 
 
 def test_an_empty_week_stores_no_chat(env):

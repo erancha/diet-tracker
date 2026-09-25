@@ -37,8 +37,7 @@ function band(rule: Rule): RuleBand {
 }
 
 // The configured bound of a question's rule, phrased for display beside the red violation
-// marks; undefined where no rule bounds the question. Mirrored by bound_label in
-// src/common/rules.py, which quotes the same bound in the weekly recap.
+// marks; undefined where no rule bounds the question.
 export function ruleBoundLabel(questionnaire: Questionnaire, questionId: string): string | undefined {
   const band = ruleBand(questionnaire, questionId);
   if (band === undefined) return undefined;

@@ -57,8 +57,9 @@ graph LR
 - **nudge** — woken by the clock rather than by a request. It sends the day's last call and the
   weekly weigh-in reminder, and queues the weekly recap, one message per user, returning in
   seconds whatever the pool size.
-- **weekly-recap** — answers one queued user at a time: reads their week, asks the answering
-  service for its reading of it, and sends the email. Each user has an invocation of their own,
+- **weekly-recap** — answers one queued user at a time: reads their week and the one before, asks
+  the answering service for its reading of them, and sends the email. Each user has an invocation of
+  their own,
   so a slow reading delays no one else, and a crash parks that one user's message in a
   dead-letter queue instead of dropping everyone queued behind them.
 

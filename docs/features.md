@@ -93,11 +93,15 @@ Messages reach you by email, and by Telegram where a bot token is configured:
   in practice and still inside it, and once more just after midnight, while the day that ended can
   still be closed.
 - **A weekly weigh-in reminder**, which skips anyone who already weighed in that day.
-- **A weekly recap** of the week that just ended: a line counting the days that were closed, then
-  one bullet per bound a day crossed — the findings the trend chart reddens — and flours and sugars
-  on any day but the treat day. Under them comes the answering service's reading of that week,
-  which the app asks for on the user's behalf as a follow-up on the recap itself. The exchange is
-  stored as one chat, so it appears in the chat list and can be continued there like any other.
+- **A weekly recap** of the week that just ended, named by its range of days in the subject, the
+  body and the chat list alike: a line counting the days that were closed, then a table with
+  this week's counts beside last week's — clean days, the bounds a day crossed (the findings the
+  trend chart reddens), and the weight. Under it comes the answering service's reading of the
+  two weeks, asked for on the user's behalf as a follow-up on the recap itself — one
+  question in the chat, the brief on how to answer riding beside the data — and written like the
+  program's coach: what the table says once the changes are weighed, and the one or two things
+  that matter most for the coming week, each with a concrete step. The exchange is stored as one
+  chat, so it appears in the chat list and can be continued there like any other.
 
 The account menu turns all of them off and back on with one switch. Opting out changes nothing
 inside the app: a muted account still sees its own violations on arrival, on closing a day, and in

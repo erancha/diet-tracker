@@ -15,8 +15,8 @@ from dataclasses import dataclass
 
 import boto3
 
-from common import (appconfig, chat, chat_history, chat_question, derive, notify, undelivered,
-                    users, weekly_recap, weight)
+from common import (appconfig, chat, chat_context, chat_history, chat_question, derive, notify,
+                    undelivered, users, weekly_recap, weight)
 from common.dates import closing_day, days_before, today
 from common.log import get_logger
 from common.store import Store
@@ -195,42 +195,54 @@ def _recap(env, user, day):
     the chance to close."""
     week_end = day if env.store.has_day(user.sub, day) else days_before(day, 1)
     week_start = days_before(week_end, 6)
-    history = env.store.get_days_range(user.sub, week_start, week_end)
-    # The clean-day count reads the meals themselves: what a day cost in flours and sugars is
-    # derived on read, never stored with the day.
+    # The reading is asked over the weeks behind the recap's, so the range read covers them all
+    # and the recap's own week is the newest slice of it. What a day cost in flours and sugars is
+    # derived from the meals on read, never stored with the day.
+    span_start = days_before(week_end, chat_context.RECAP_WEEKS * 7 - 1)
+    days = env.store.get_days_range(user.sub, span_start, week_end)
     excluded = derive.excluded_by_day(
-        env.questionnaire, env.store.get_meals_range(user.sub, week_start, week_end))
-    _send(env, user, f"{weekly_recap.TITLE} — {notify.APP_NAME}",
-          _weekly_body(env, user, history, excluded, week_start))
+        env.questionnaire, env.store.get_meals_range(user.sub, span_start, week_end))
+    weights = env.store.get_weights(user.sub)
+    context = chat_context.week_context(env.questionnaire, days, excluded, week_end,
+                                        env.treat_weekday, weights,
+                                        env.store.get_target(user.sub),
+                                        weekly_recap.INSIGHTS_BRIEF)
+    _send(env, user, f"{weekly_recap.chat_title(week_start, week_end)} — {notify.APP_NAME}",
+          _weekly_body(env, user, days, excluded, weights, week_start, week_end, context))
 
 
-def _weekly_body(env, user, history, excluded, week_start) -> str:
-    """The week's findings, and under them the answering service's reading of them.
+def _weekly_body(env, user, days, excluded, weights, week_start, week_end, context) -> str:
+    """The week's findings and its comparison with the week before, and under them the answering
+    service's reading of the weeks behind them, `context` being those weeks as the block the
+    service reads.
 
-    The findings are stored as a chat of the user's under the recap's short title, and the reading
-    is asked for as a follow-up on that chat — the same path the user's own follow-up takes, so the
+    The findings are stored as a chat of the user's under the recap's title, and the reading is
+    asked for as a follow-up on that chat — the same path the user's own follow-up takes, so the
     service is asked in the shape a user asks in and the answered conversation lands in the
-    transcript ready to be continued. Retrieval reads the question, which now carries the week's
-    actual findings, so the guidance that comes back is about what the week did.
+    transcript ready to be continued. Retrieval reads the question, which carries the week's
+    actual table, so the guidance that comes back is about what this user's weeks did; the brief
+    on how to read them opens the context block instead, out of the transcript.
 
     A week with no closed day has nothing to recap, and is neither stored nor asked about. A week
     whose chat the transcript already holds — a run that crashed after storing it, then redriven —
     is followed up on that chat rather than stored again, so a week never has two."""
-    findings = weekly_recap.text(env.questionnaire, history, excluded, env.treat_weekday)
-    if not history:
+    findings = weekly_recap.text(env.questionnaire, week_start, week_end, days, excluded,
+                                 env.treat_weekday, weights)
+    if not any(week_start <= day <= week_end for day in days):
         return findings
-    title = weekly_recap.chat_title(week_start)
+    title = weekly_recap.chat_title(week_start, week_end)
     at = chat_history.find(env.chat_history, user.sub, title)
     if at is None:
         at = chat_history.append(env.chat_history, user.sub, title, findings, [], app=True)
-    insights = _insights(env, user, week_start, findings, at)
+    insights = _insights(env, user, title, findings, at, context)
     if insights is None:
         return findings
-    return weekly_recap.text(env.questionnaire, history, excluded, env.treat_weekday, insights)
+    return weekly_recap.text(env.questionnaire, week_start, week_end, days, excluded,
+                             env.treat_weekday, weights, insights)
 
 
-def _insights(env, user, week_start, findings, at) -> str | None:
-    """The answering service's reading of the week, or None when there is none to be had — a
+def _insights(env, user, title, findings, at, context) -> str | None:
+    """The answering service's reading of the weeks, or None when there is none to be had — a
     deployment configuring no service, or a service that failed to answer.
 
     A failed call costs only the reading: the findings are the app's own and go out either way,
@@ -238,12 +250,11 @@ def _insights(env, user, week_start, findings, at) -> str | None:
     The wait is spent inside the consumer's own budget, one user per invocation."""
     if not chat.configured(env.rag_url):
         return None
-    question = chat_history.follow_up(weekly_recap.chat_title(week_start), findings,
-                                      weekly_recap.INSIGHTS_QUESTION)
+    question = chat_history.follow_up(title, findings, weekly_recap.INSIGHTS_QUESTION)
     try:
         return chat_question.answer(env.rag_url, env.rag_key, env.store, env.questionnaire,
                                     env.chat_history, user.sub, question, at=at, app=True,
-                                    timeout=RECAP_TIMEOUT_SECONDS)["answer"]
+                                    timeout=RECAP_TIMEOUT_SECONDS, context=context)["answer"]
     except (urllib.error.URLError, TimeoutError):
         logger.warning("weekly insights failed for %s; sending the findings alone", user.email,
                        exc_info=True)

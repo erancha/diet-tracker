@@ -58,9 +58,9 @@ recorded addition carries.
 ## Rules judge one value and name their own bound
 
 A threshold rule answers `violates(value)` for a single day's answer; `rules.violating_days` counts
-them across a history and `rules.bound_label` writes the bound the way the app shows it beside a
-mark. The trend chart's red dots, the history table's red cells and the weekly recap all ask the
-same rule rather than restating the comparison.
+them across a history and `rules.subject_name` names the subject a count is reported under. The
+trend chart's red dots, the history table's red cells and the weekly recap all ask the same rule
+rather than restating the comparison.
 
 ## Services outside the stack sit behind one client each
 
@@ -71,7 +71,9 @@ retry on the queue — belongs to the caller.
 
 `chat_question.answer` is the one flow that asks a question on a user's behalf: context block,
 upstream call, transcript write. The chat endpoint and the weekly recap both go through it, so a
-question the app composes reaches the service in the same shape a user's own question takes.
+question the app composes reaches the service in the same shape a user's own question takes; the
+recap alone hands over a context block of its own, the weeks behind it, in place of the asker's
+recent days.
 
 ## The frontend is handed what it uses
 

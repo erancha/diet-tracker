@@ -30,6 +30,29 @@ _BODY_FONT_PX = 15
 _BULLET_FONT_PX = _BODY_FONT_PX - 1
 _BULLET = "• "
 
+# A body line opening with this is one row of a table, its cells between the bars; consecutive
+# rows are one table whose first row is the header. The plain text keeps the bars, which
+# Telegram and the chat show as written, and the HTML part draws the rows as a table.
+_ROW = "|"
+_CELL_STYLE = "padding: 0.1em 0.6em; border: 1px solid #ccc; text-align: center"
+
+
+def table_row(cells) -> str:
+    """One table row as a body line: the cells between bars, so a message body can carry a table
+    the HTML email draws and every other surface still reads."""
+    return f"{_ROW} " + " | ".join(cells) + f" {_ROW}"
+
+
+def _table_html(rows) -> str:
+    """Consecutive row lines as one table, the first row its header. Cells are escaped like any
+    other body text."""
+    parsed = [[html.escape(cell.strip()) for cell in row.strip(_ROW).split(_ROW)] for row in rows]
+    header = "".join(f'<th style="{_CELL_STYLE}">{cell}</th>' for cell in parsed[0])
+    body = "".join("<tr>" + "".join(f'<td style="{_CELL_STYLE}">{cell}</td>' for cell in row)
+                   + "</tr>" for row in parsed[1:])
+    return (f'<table dir="rtl" style="border-collapse: collapse; margin: 0.3em 0">'
+            f"<tr>{header}</tr>{body}</table>")
+
 
 def _line_html(line, first) -> str:
     """One body line as HTML: the opening line in bold — every message this app sends leads with
@@ -59,10 +82,28 @@ def rtl_html(body) -> str:
 
     Every message this app sends is Hebrew. A text-only email leaves direction to the reader's
     mail client, which guesses per line and strands a trailing colon or a Latin number on the
-    wrong edge; declaring the direction once is what makes a bullet list read as written."""
-    lines = body.split("\n")
-    rendered = "<br>".join(_line_html(line, first=index == 0)
-                           for index, line in enumerate(lines))
+    wrong edge; declaring the direction once is what makes a bullet list read as written. A run
+    of table rows (see table_row) is drawn as one table."""
+    units = []  # each a line's HTML, or a whole table's, in body order
+    rows = []
+    for index, line in enumerate(body.split("\n")):
+        if line.startswith(_ROW):
+            rows.append(line)
+            continue
+        if rows:
+            units.append(_table_html(rows))
+            rows = []
+        units.append(_line_html(line, first=index == 0))
+    if rows:
+        units.append(_table_html(rows))
+    # Lines break between themselves; a table is a block of its own and needs no break beside it.
+    rendered = ""
+    for previous, unit in zip([None] + units, units):
+        beside_table = previous is not None and (previous.startswith("<table")
+                                                 or unit.startswith("<table"))
+        if previous is not None and not beside_table:
+            rendered += "<br>"
+        rendered += unit
     return _rtl_div(rendered, _BODY_FONT_PX)
 
 

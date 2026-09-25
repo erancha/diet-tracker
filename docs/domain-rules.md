@@ -252,25 +252,55 @@ Scheduled jobs (EventBridge Scheduler, Asia/Jerusalem) run alongside the tracker
   the weigh-in morning's weight as the freshest one. Each user's recap is produced in an invocation of its
   own, so one slow reading of a week delays no one else's email.
 
-  The email opens with one line — how many of the seven days were closed — and under it one
-  bullet per bound a day crossed, counted day by day the way the trend chart reddens a dot and the
-  history table marks the day, in the wording the chart legend gives that bound. Flours and sugars are
-  counted apart, over the six days the program means to keep clear of them; the treat day is what
-  they are for, so a day of it is never a finding. A week inside every bound says so in its one
-  line. Dates, single days' values and every weekly average stay in the app, a tap away, where the
-  closing line points, rather than spending the email's few lines.
+  The email opens with one line — the week's first and last day and how many of the seven were
+  closed — and under it a short table with this week's counts beside last week's: clean days,
+  the closed days off the treat day that spent nothing on flours and sugars (the treat day is
+  what the spending is for, so it is neither clean nor not); each bound a day crossed this week,
+  counted day by day the way the trend chart reddens a dot and the history table marks the day,
+  under the subject's own name; and the latest weighing against the latest one at least a week
+  older. A bound crossed last week alone earns a row only when this week crossed it two days
+  fewer or more (`weekly_recap.NOTABLE_DAYS`), so a single short day of water last week is never
+  dressed up as this week's finding. Each row opens, at the table's right edge, with its
+  standing: ✅ when the week meets the program's expectation in that row — no breach, or every
+  closed day clean — else 🟢 better than last week, 🔴 worse, ↔️ the same, by direction alone.
+  The weight row, each weighing dated, is 🟢 by any drop and 🔴 by any gain, and 👍 when the
+  drop passes one percent of the earlier weighing in the week
+  (`weekly_recap.ABOVE_EXPECTED_LOSS_PCT`) — guidance puts a sustainable loss at half a percent
+  to one percent of body weight a week, so past that is more than the program asks of a week. A
+  first week, with no closed day before it, shows last week's counts as absent and marks only
+  what is met. The table rides in the body as pipe-separated rows, a convention
+  `notify.rtl_html` draws as an HTML table in the email while the plain text, Telegram and the
+  chat show the rows as written. Dates, single days' values and every weekly average stay in the
+  app, a tap away, where the closing line points; the table is there to set up the reading, not
+  to restate the app.
 
-  Those findings are the app's own arithmetic. What follows them is the answering service's
-  reading of the week: the job stores the findings as a chat of the user's and asks that chat a
-  follow-up — "מהן התובנות לשבוע הבא?" — over the path a follow-up the user types takes
-  (`src/common/chat_question.py`), the asker's recent tracked data attached as the context block,
-  weight measurements and target included. Retrieval embeds the question alone, and the question
-  carries the week's findings, so what comes back is guidance about what this week did rather than
-  about the program at large.
+  That table is the app's own arithmetic. What follows it is the answering service's reading of
+  the two weeks: the job stores the line and the table as a chat of the user's and asks
+  that chat a follow-up over the path a follow-up the user types takes
+  (`src/common/chat_question.py`). The follow-up is one question — the insights for the coming
+  week, by the program's principles, named so retrieval matches them — and it is all the chat
+  list shows under the recap. How to answer rides beside the data instead, as a brief opening
+  the context block (`weekly_recap.INSIGHTS_BRIEF`): answer as the program's coach; behavior
+  is the way and the weight its outcome, so speak of the behaviors and cite the weight only as
+  confirming the direction or not; open by naming the largest change in behavior first, by its
+  subject and direction, then saying where the week went once the changes are weighed — one
+  day's difference alone is noise, several small moves the same way add up, two days is a real
+  change — as a conclusion, never quoting the rule it was weighed by; never name a breach without
+  the day it fell on and what was recorded; then pick the one or two behaviors that matter most
+  for the coming week, each with why it matters and one concrete, measurable step; do not repeat
+  the table's numbers or walk every bound, and stay within eight lines. Under the brief in that block
+  (`chat_context.week_context`) are the recap's week and the one before it day by day —
+  weekday, treat day, the submitted answers, what the day cost in flours and sugars — and the
+  weights with the target. Nothing older rides: the table compares two weeks, and a reading
+  given more never referred to it. Retrieval embeds the question
+  alone, and the question carries the week's table and the principles, so what comes back is
+  guidance about what this user's weeks did rather than about the program at large.
 
   The answer replaces the chat it extends, so the week leaves one chat holding the whole exchange,
-  titled with the recap's name and the day its week opened on — a transcript accumulating one a
-  week is not a column of identical rows. It lists, follows up and summarizes like any other chat.
+  titled with the recap's name and the range of days it covers — the same words that open the
+  email's subject and body, so a reader can place the week on any surface, and a transcript
+  accumulating one a week is not a column of identical rows. It lists, follows up and summarizes
+  like any other chat.
   The reading is the only part that can go missing: a deployment configuring no answering service,
   and one that fails to answer, both still mail the findings and still leave the recap in the
   transcript for the user to follow up themselves. It is asked outside the daily chat quota, which

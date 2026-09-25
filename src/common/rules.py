@@ -1,16 +1,13 @@
 """Judges per-day numeric answers against the questionnaire's rules: which days crossed a bound,
-and how a bound is named beside the mark.
-"""
-
-from datetime import date
+and what subject a bound is named under."""
 
 from common import appconfig
+from common.dates import weekday_index
 
 
 def falls_on(day: str, weekday: str) -> bool:
-    """Whether a date falls on the named weekday. WEEKDAYS is indexed Sunday-first, as the
-    schedules and the frontend both read it; isoweekday() counts Monday as 1 and Sunday as 7."""
-    return appconfig.WEEKDAYS[date.fromisoformat(day).isoweekday() % 7] == weekday
+    """Whether a date falls on the named weekday, given in appconfig.WEEKDAYS' three-letter form."""
+    return appconfig.WEEKDAYS[weekday_index(day)] == weekday
 
 
 def violating_days(rule, history: dict) -> int:
@@ -20,11 +17,28 @@ def violating_days(rule, history: dict) -> int:
                if rule.question_id in answers and rule.violates(answers[rule.question_id]))
 
 
-def bound_label(rule) -> str:
-    """The rule's bound as the app names it beside a violation. Mirrors ruleBoundLabel in
-    frontend/src/violations.ts, so a chart legend and the weekly recap quote one bound alike —
-    an at_least rule reads as `מעל` there too, and the wording is what both surfaces show."""
-    over = rule.at_least if rule.at_least is not None else rule.above
-    if over is not None:
-        return f"מעל {over:g}"
-    return f"פחות מ-{rule.below:g}"
+def crossed_days(questionnaire, history: dict) -> dict:
+    """How many days of `history` crossed each bound, keyed by the bound's subject name; a subject
+    no day crossed is absent."""
+    return {subject_name(questionnaire, rule): over
+            for rule in questionnaire.rules if (over := violating_days(rule, history))}
+
+
+def spent(excluded: dict, day: str):
+    """What the day spent on flours and sugars. `excluded` holds only days with meals, so a day
+    absent from it recorded none and spent nothing."""
+    return excluded[day] if day in excluded else 0
+
+
+def clean_days(history: dict, excluded: dict, treat_weekday: str) -> int:
+    """How many closed days off the treat day spent nothing on flours and sugars. The treat day
+    is neither clean nor not: it is what the spending is for."""
+    return sum(1 for day in history
+               if not falls_on(day, treat_weekday) and spent(excluded, day) == 0)
+
+
+def subject_name(questionnaire, rule) -> str:
+    """The subject a rule judges, named as the day view titles it — the words the weekly recap
+    and its context both count a crossed bound under."""
+    question = questionnaire.question(rule.question_id)
+    return question.day_title or question.panel_title or question.day_heading
