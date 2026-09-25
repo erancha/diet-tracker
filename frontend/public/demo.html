@@ -17,9 +17,10 @@
   not live reads. The narration names specific carb grades, scores and rule thresholds, so a later
   questionnaire version would relabel days that were never answered under it. The history is a
   week of real tracking adjusted to read as the program intends a week to go, six clean days
-  around the treat day; the weighings are as recorded, save the oldest one's hour, which was never
-  stored and is filled in here so the list reads as three weighings at one morning hour. The admin
-  section sits outside the replayed session and is not rebuilt here.
+  around the treat day; the weighings are as recorded, save their dates, moved onto the weigh-in
+  weekday so the list reads as one weekly rhythm, and the oldest one's hour, which was never stored
+  and is filled in here. The admin section sits outside the replayed session and is not rebuilt
+  here.
 -->
 <title>יום ביומן</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -586,7 +587,7 @@ body {
     </div>
     <div>
       <h3>השקילה</h3>
-      <p>יום חמישי, 10 בספטמבר, הוא יום השקילה שבהגדרות — ולכן הפאנל נפתח כאן מעצמו.</p>
+      <p>יום שישי, 25 בספטמבר, הוא יום השקילה שבהגדרות — ולכן הפאנל נפתח כאן מעצמו.</p>
     </div>
     <div>
       <h3>הצ'אט</h3>
@@ -734,7 +735,7 @@ const CHAT_SAMPLES = [
 /* The rest of config/app.json the rebuilt screen reads: the weekday the trend chart frames, and
    the weight log's schedule, opening chart span and accepted kilogram range. */
 const TREAT_DAY = { weekday: "FRI" };
-const WEIGHT_CFG = { weigh_in: { weekday: "THU", hour: 8 }, chart_months: 3,
+const WEIGHT_CFG = { weigh_in: { weekday: TREAT_DAY.weekday, hour: 8 }, chart_months: 3,
                      limits: { min_kg: 20, max_kg: 400 } };
 
 /* Recorded days, newest first, in the shape GET /days returns them: the day's answers, and the
@@ -745,15 +746,15 @@ const WEIGHT_CFG = { weigh_in: { weekday: "THU", hour: 8 }, chart_months: 3,
    Every figure here is a derivation of a meal list rather than a number written by hand, so the
    score, its excluded part and the eating window cannot disagree with one another. */
 const HISTORY = [
-  { date: "2026-09-09", excluded: 0, answers: { carbs: 8.4, drinking: 4, meals: 3, vegetables: 2, eating_window: 7 } },
-  { date: "2026-09-08", excluded: 0, answers: { carbs: 3.5, drinking: 4, meals: 3, vegetables: 2, eating_window: 7 } },
-  { date: "2026-09-07", excluded: 0, answers: { carbs: 9, drinking: 4, meals: 3, vegetables: 2, eating_window: 9 } },
-  { date: "2026-09-06", excluded: 0, answers: { carbs: 7, drinking: 4, meals: 3, vegetables: 2, eating_window: 7 } },
-  { date: "2026-09-05", excluded: 0, answers: { carbs: 7, drinking: 4, meals: 3, vegetables: 2, eating_window: 8 } },
-  { date: "2026-09-04", excluded: 10, answers: { carbs: 19, drinking: 4, meals: 3, vegetables: 2, eating_window: 8 } },
-  { date: "2026-09-03", excluded: 0, answers: { carbs: 9, drinking: 4, meals: 3, vegetables: 3, eating_window: 8 } },
-  { date: "2026-09-02", excluded: 0, answers: { carbs: 10, drinking: 4, meals: 3, vegetables: 3, eating_window: 8 } },
-  { date: "2026-09-01", excluded: 0, answers: { carbs: 10, drinking: 4, meals: 3, vegetables: 3, eating_window: 9 } }
+  { date: "2026-09-24", excluded: 0, answers: { carbs: 8.4, drinking: 4, meals: 3, vegetables: 2, eating_window: 7 } },
+  { date: "2026-09-23", excluded: 0, answers: { carbs: 3.5, drinking: 4, meals: 3, vegetables: 2, eating_window: 7 } },
+  { date: "2026-09-22", excluded: 0, answers: { carbs: 9, drinking: 4, meals: 3, vegetables: 2, eating_window: 9 } },
+  { date: "2026-09-21", excluded: 0, answers: { carbs: 7, drinking: 4, meals: 3, vegetables: 2, eating_window: 7 } },
+  { date: "2026-09-20", excluded: 0, answers: { carbs: 7, drinking: 4, meals: 3, vegetables: 2, eating_window: 8 } },
+  { date: "2026-09-19", excluded: 0, answers: { carbs: 9, drinking: 4, meals: 3, vegetables: 3, eating_window: 8 } },
+  { date: "2026-09-18", excluded: 10, answers: { carbs: 19, drinking: 4, meals: 3, vegetables: 2, eating_window: 8 } },
+  { date: "2026-09-17", excluded: 0, answers: { carbs: 10, drinking: 4, meals: 3, vegetables: 3, eating_window: 8 } },
+  { date: "2026-09-16", excluded: 0, answers: { carbs: 10, drinking: 4, meals: 3, vegetables: 3, eating_window: 9 } }
 ];
 
 /* The weight log as GET /weight returns it: the measurements oldest first, and the one current
@@ -762,8 +763,10 @@ const HISTORY = [
 const WEIGHT_LOG = {
   target: 95,
   entries: [
-    { date: "2026-08-27", kg: 106.7, at: "09:30" },
-    { date: "2026-09-03", kg: 105.4, at: "09:50" }
+    { date: "2026-08-28", kg: 106.7, at: "09:30" },
+    { date: "2026-09-04", kg: 105.4, at: "09:50" },
+    { date: "2026-09-11", kg: 105.1, at: "09:02" },
+    { date: "2026-09-18", kg: 106.6, at: "11:28" }
   ]
 };
 /* The series the section reads: what is stored, plus today's weighing once the replay records it. */
@@ -771,8 +774,8 @@ const weighings = () => state.weightRecorded === null
   ? WEIGHT_LOG.entries
   : [...WEIGHT_LOG.entries, { date: TODAY, kg: state.weightRecorded, at: "09:02" }];
 
-const TODAY = "2026-09-10";
-const YESTERDAY = "2026-09-09";
+const TODAY = "2026-09-25";
+const YESTERDAY = "2026-09-24";
 const EMAIL = "erancha@gmail.com";
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -1736,7 +1739,7 @@ const MATCH_HINT = "מידת הדמיון בין השאלה למסמך, לפי �
   + "בפועל הערכים נעים בערך בין 35% ל-80%, והמספר משמש בעיקר לדירוג המקורות ביניהם.";
 
 const DEMO_CHAT = {
-  at: "2026-09-10T07:39",
+  at: "2026-09-25T07:39",
   question: "איך השינה משפיעה על הרעב, על החשקים ועל הירידה במשקל? ולמה זה קורה?",
   answer: "שינה מלווה בהפרשת אנדורפינים.\n"
         + "אנדורפינים מפחיתים רעב רגשי ומשפרים מצב רוח.\n"
@@ -1862,7 +1865,7 @@ const BEATS = [
 
   /* ── Act 1: the weigh-in morning ── */
   { act: 1, hold: 4400, scroll: "top", flash: "weight",
-    cap: "ביום חמישי — יום השקילה המומלץ — פאנל המשקל נפתח מעצמו.",
+    cap: "ביום שישי — יום השקילה המומלץ — פאנל המשקל נפתח מעצמו.",
     apply() {} },
 
   { act: 1, hold: 4200, scroll: "weight", flash: "weight-rhythm",
@@ -1870,12 +1873,12 @@ const BEATS = [
     apply() {} },
 
   { act: 1, hold: 3200, tap: "weight-today", clock: "09:02",
-    cap: "המשקל של הבוקר: 105.1.",
-    apply() { state.weightDraft = "105.1"; } },
+    cap: "המשקל של הבוקר: 105.",
+    apply() { state.weightDraft = "105"; } },
 
   { act: 1, hold: 4600, tap: "weight-save",
     cap: "נרשמה, עם השעה שבה נמדדה: שקילה שבועית היא אפקטיבית רק כשהיא נעשית בערך באותה שעה.",
-    apply() { state.weightRecorded = 105.1; state.weightDraft = ""; } },
+    apply() { state.weightRecorded = 105; state.weightDraft = ""; } },
 
   { act: 1, hold: 5000, scroll: "weight-chart", flash: "weight-chart",
     cap: "",
@@ -1989,7 +1992,7 @@ const BEATS = [
     apply() {} },
 
   { act: 4, hold: 4800, scroll: "panel-carbs", flash: "panel-carbs",
-    cap: "הנקודה האדומה היחידה בעשרה ימים היא יום שישי, 4.9 — והיא בתוך המסגרת הירוקה: יום הפינוק שהתוכנית מכוונת אליו. התאריך שלו צבוע באותו ירוק גם בשורה למטה, כדי שאפשר יהיה למצוא את העמודה מכל פאנל.",
+    cap: "הנקודה האדומה היחידה בעשרה ימים היא יום שישי, 18.9 — והיא בתוך המסגרת הירוקה: יום הפינוק שהתוכנית מכוונת אליו. התאריך שלו צבוע באותו ירוק גם בשורה למטה, כדי שאפשר יהיה למצוא את העמודה מכל פאנל.",
     apply() {} },
 
   { act: 4, hold: 5000, scroll: "panel-carbs", flash: "panel-carbs",
