@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { activeSpan, ceilingWarning, chartDomain, entriesWithin, floorWarning, kgLabel,
          lastStepRises, offeredSpans, overTargetSeverity, parseKg, rhythmReading, risingEdges,
-         summarize, targetChangePrompt, trendShape, usualHour } from "./weight";
+         summarize, targetChangePrompt, trendShape } from "./weight";
 import type { WeightEntry } from "./types";
 
 const TODAY = new Date(2026, 7, 27); // 2026-08-27
@@ -110,7 +110,11 @@ describe("overTargetSeverity", () => {
   it("grades a measurement by how far it sits above the target", () => {
     expect(overTargetSeverity(105.4, 95)).toBe("far");
     expect(overTargetSeverity(104.9, 95)).toBe("over");
-    expect(overTargetSeverity(105, 95)).toBe("over");
+  });
+
+  it("reads exactly ten kilograms over as far, whatever the decimals subtract to", () => {
+    expect(overTargetSeverity(105, 95)).toBe("far");
+    expect(overTargetSeverity(105.3, 95.3)).toBe("far");
   });
 
   it("reads nothing at or below the target, or where the gap is too small to show", () => {
@@ -223,29 +227,6 @@ describe("targetChangePrompt", () => {
 const THU = "THU";
 const timed = (date: string, at: string | null): WeightEntry => ({ date, kg: 76, at });
 
-describe("usualHour", () => {
-  it("names the middle recorded time, so a stray late weighing does not become the rhythm", () => {
-    expect(usualHour([timed("2026-08-06", "07:20"), timed("2026-08-13", "22:40"),
-                      timed("2026-08-20", "07:30")])).toBe("07:30");
-  });
-
-  it("stays silent until enough weighings carry a time to call one usual", () => {
-    expect(usualHour([])).toBeNull();
-    expect(usualHour([timed("2026-08-13", "07:20"), timed("2026-08-20", "07:30")])).toBeNull();
-  });
-
-  it("reads past weighings recorded before the time was kept", () => {
-    expect(usualHour([timed("2026-07-30", null), timed("2026-08-06", "08:00"),
-                      timed("2026-08-13", "07:00"), timed("2026-08-20", "07:30")])).toBe("07:30");
-  });
-
-  it("follows a rhythm that has moved, rather than averaging in the one it left", () => {
-    const moved = [...Array(6)].map((_, i) => timed(`2026-06-0${i + 1}`, "22:00"))
-      .concat([...Array(8)].map((_, i) => timed(`2026-08-0${i + 1}`, "07:30")));
-    expect(usualHour(moved)).toBe("07:30");
-  });
-});
-
 // The sentence as the section reads it, with the linked word back in place; the tests that care
 // about the control itself assert on the parts instead.
 function rhythmText(entries: WeightEntry[], weekday: string, now: Date): string | null {
@@ -258,8 +239,9 @@ describe("rhythmReading", () => {
     expect(rhythmText([], THU, TODAY)).toBeNull();
   });
 
-  it("names the weigh-in day while the scale has not been stepped on", () => {
-    expect(rhythmText([timed("2026-08-20", null)], THU, TODAY)).toBe("היום יום השקילה המומלץ");
+  it("names the weigh-in day, and the program's moment for it, until the scale is stepped on", () => {
+    expect(rhythmText([timed("2026-08-20", null)], THU, TODAY))
+      .toBe("היום יום השקילה המומלץ · לפני הארוחה הראשונה");
   });
 
   it("says nothing on the weigh-in day once it has been answered", () => {
@@ -286,22 +268,7 @@ describe("rhythmReading", () => {
     expect(rhythmReading([timed("2026-08-11", null)], THU, TODAY)!.linked).toBe("");
   });
 
-  it("leaves the usual hour off the recommendation, which states the morning it advises", () => {
-    const wednesday = new Date(2026, 7, 26);
-    const timedSeries = [timed("2026-08-06", "13:20"), timed("2026-08-13", "13:40"),
-                         timed("2026-08-20", "13:30")];
-    expect(rhythmText(timedSeries, THU, wednesday))
-      .toBe("השקילה המומלצת הבאה היא בבוקר יום ה׳, 27/08");
-  });
-
   it("states how long it has been once a whole week has passed", () => {
-    expect(rhythmText([timed("2026-08-11", null)], THU, TODAY)).toBe("נשקלת לפני 16 ימים");
-  });
-
-  it("carries the usual hour once there is one, and only then", () => {
-    const timedSeries = [timed("2026-08-06", "07:20"), timed("2026-08-13", "07:40"),
-                         timed("2026-08-20", "07:30")];
-    expect(rhythmText(timedSeries, THU, TODAY)).toBe("היום יום השקילה המומלץ · בסביבות 07:30");
-    expect(rhythmText([timed("2026-08-20", "07:30")], THU, TODAY)).toBe("היום יום השקילה המומלץ");
+    expect(rhythmText([timed("2026-08-11", "07:30")], THU, TODAY)).toBe("נשקלת לפני 16 ימים");
   });
 });

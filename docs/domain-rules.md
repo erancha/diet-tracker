@@ -195,10 +195,9 @@ weight is something the chart shows rather than a nudge that fires.
   where the recorded series actually reaches past them.
 - **Weigh-in rhythm** — the recommendation the weight log serves is a weighing once a week, on the
   treat day and at about the same hour. The section reads back where the user stands in that
-  rhythm: the weigh-in day while it holds no weighing, the next weigh-in day otherwise, how long
-  it has been once a week has passed with none, and the usual hour once enough weighings carry a
-  time to name one. The usual hour is the middle recorded time of the last few weighings, so it
-  names an hour actually weighed at and one stray late weighing does not move it. The reading
+  rhythm: the weigh-in day while it holds no weighing, with the program's moment for it — before
+  the first meal — rather than any hour read back from earlier weighings, the next weigh-in day
+  otherwise, and how long it has been once a week has passed with none. The reading
   reports and never judges — a weight raises no alert, so a slipped rhythm is stated as elapsed
   days rather than flagged.
 - **Weigh-in fold** — the weight section rests folded and opens itself on the weigh-in day while

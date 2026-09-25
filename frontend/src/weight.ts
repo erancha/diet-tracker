@@ -2,7 +2,7 @@
 // line renders, the wording of the confirmations the section raises, and what a typed weight has
 // to satisfy to count. The components hold no arithmetic of their own.
 
-import { daysSince, ddmmLabel, isWeighInDay, minutesOfDay, nextWeekdayDate, parseIsoDate,
+import { daysSince, ddmmLabel, isWeighInDay, nextWeekdayDate, parseIsoDate,
          weekdayLetter } from "./dates";
 import type { ChartSpan, WeightEntry } from "./types";
 
@@ -82,18 +82,20 @@ export function kgLabel(kg: number): string {
 // distance it cannot show, and the trend reads a plateau rather than a direction.
 const SAME_KG = 0.05;
 
-// Kilograms above the target past which a measurement stops reading as merely over and starts
-// reading as far over.
+// Kilograms above the target from which a measurement reads as far over rather than merely over.
 const FAR_OVER_KG = 10;
 
 /**
- * How one measurement reads against the target: "far" when it exceeds the target by more than
- * FAR_OVER_KG, "over" when it exceeds it by enough to render as a distance at all, and null at or
+ * How one measurement reads against the target: "far" when it sits FAR_OVER_KG or more above the
+ * target, "over" when it exceeds it by enough to render as a distance at all, and null at or
  * below the target — or before a target has been set, when there is nothing to read against.
+ *
+ * Both edges are judged to the half-tenth the rendered distance resolves, so a gap that reads
+ * as 10.0 is far over even when subtracting the two decimals lands a hair under ten.
  */
 export function overTargetSeverity(kg: number, target: number | null): "over" | "far" | null {
   if (target === null || kg - target < SAME_KG) return null;
-  return kg - target > FAR_OVER_KG ? "far" : "over";
+  return kg - target > FAR_OVER_KG - SAME_KG ? "far" : "over";
 }
 
 /**
@@ -173,34 +175,6 @@ export function trendShape(entries: WeightEntry[]): TrendShape | null {
   return first === "flat" ? "flat" : first;
 }
 
-// Recent weighings the usual hour is read from: few enough to follow a rhythm that has genuinely
-// moved, many enough that one odd hour does not become the rhythm.
-const USUAL_HOUR_SAMPLE = 8;
-
-// Below this many timed weighings there is no habit to name, and reporting one from a couple of
-// readings would dress a coincidence up as a rhythm.
-const USUAL_HOUR_MIN = 3;
-
-function hhmmOf(minutes: number): string {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${pad(Math.floor(minutes / 60))}:${pad(minutes % 60)}`;
-}
-
-/**
- * The hour the user usually weighs at, or null before enough timed weighings exist to name one.
- * Weighings recorded before the time was kept carry none and sit this out.
- *
- * The middle recorded time rather than the average of them: the value shown is then an hour
- * actually weighed at, and one stray late-evening weighing moves it by nothing.
- */
-export function usualHour(entries: WeightEntry[]): string | null {
-  const recent = entries
-    .flatMap((entry) => (entry.at === null ? [] : [minutesOfDay(entry.at)]))
-    .slice(-USUAL_HOUR_SAMPLE);
-  if (recent.length < USUAL_HOUR_MIN) return null;
-  return hhmmOf([...recent].sort((a, b) => a - b)[Math.floor(recent.length / 2)]);
-}
-
 // Past a week without weighing, the rhythm has plainly been missed, and how long it has been is
 // worth more to the reader than which weekday comes round next.
 const STALE_DAYS = 7;
@@ -232,10 +206,9 @@ export function rhythmReading(entries: WeightEntry[], weekday: string,
                               now: Date): RhythmLine | null {
   if (entries.length === 0) return null;
   const since = daysSince(entries[entries.length - 1].date, now);
-  if (since > STALE_DAYS) return plainLine(withUsualHour(`נשקלת לפני ${since} ימים`, entries));
-  // A recommendation rather than a description, so it names the day and date the weigh-in is due
-  // and not the hour this reader has been weighing at. The morning it advises is the part of the
-  // day weigh_in.hour sits in, and moving that hour out of the morning would strand this wording.
+  if (since > STALE_DAYS) return plainLine(`נשקלת לפני ${since} ימים`);
+  // The morning it advises is the part of the day weigh_in.hour sits in, and moving that hour out
+  // of the morning would strand this wording.
   if (!isWeighInDay(now, weekday)) {
     return {
       before: "השקילה ",
@@ -245,14 +218,9 @@ export function rhythmReading(entries: WeightEntry[], weekday: string,
     };
   }
   if (since === 0) return null;
-  return plainLine(withUsualHour("היום יום השקילה המומלץ", entries));
-}
-
-// The hour this reader usually weighs at, appended where one has been established. It describes
-// the habit, so it rides only the readings that speak to a weighing already due or missed.
-function withUsualHour(base: string, entries: WeightEntry[]): string {
-  const hour = usualHour(entries);
-  return hour === null ? base : `${base} · בסביבות ${hour}`;
+  // The program's moment for the weighing, the same advice to every reader rather than an hour
+  // read back from the ones they happen to have weighed at.
+  return plainLine("היום יום השקילה המומלץ · לפני הארוחה הראשונה");
 }
 
 // Wording of the confirmations and notices the weight log raises, kept here so each reads the same
