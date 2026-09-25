@@ -46,7 +46,7 @@ const threeMealDay: DayPayload = {
 // Pins the clock: the meal form's default time is derived from it, as are the future-time guard
 // on the submit button, the hour that starts the add-meal nudge on an unrecorded day, and the
 // evening bound that opens close-day whatever the eating window — so cases about the window
-// gate pin an afternoon.
+// gate pin an afternoon, and every other case runs on the noon the describe pins.
 const atLocalTime = (hour: number, minute = 0, day = 20) => {
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date(2026, 7, day, hour, minute));
@@ -96,6 +96,11 @@ describe("DayTracker", () => {
   // Cases here spy on window.confirm; without a restore the spy and its call log outlive the case
   // that installed it, and a later one reads another case's dialog answer as its own.
   afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); });
+
+  // A running day's log starts at STRETCHES_UNTIL, so a form opened on the wall clock in the small
+  // hours defaults to a time before the day began and cannot save. Pinning noon keeps every case
+  // off that bound whatever hour the suite runs; cases about the clock pin their own.
+  beforeEach(() => atLocalTime(12));
 
   // Grade labels open spelled out by default, while the cases here read grades by their short
   // names; pinning the trimmed density keeps those readings stable, and the default itself is
