@@ -2024,8 +2024,26 @@ describe("next-meal recommendation", () => {
     expect(screen.getByRole("button", BUTTON)).not.toHaveClass("next-meal-early");
   });
 
-  it("withholds it without a handler, on yesterday, on a closed day, and at the meal cap", () => {
+  it("withholds it without a handler, while the form is open, on yesterday, on a closed day, and at the meal cap", () => {
     renderTracker(trackedDay, {});
+    expect(screen.queryByRole("button", BUTTON)).not.toBeInTheDocument();
+
+    cleanup();
+    renderTracker(trackedDay, { onRecommend: vi.fn() });
+    const toggle = screen.getByRole("button", { name: "הוספת ארוחה" });
+    toggle.focus();
+    fireEvent.click(toggle);
+    expect(screen.queryByRole("button", BUTTON)).not.toBeInTheDocument();
+    // The header keeps its shape, so the toggle just pressed is the same element, still focused.
+    expect(screen.getByRole("button", { name: "הוספת ארוחה" })).toBe(toggle);
+    expect(toggle).toHaveFocus();
+    fireEvent.click(toggle);
+    expect(screen.getByRole("button", BUTTON)).toBeInTheDocument();
+
+    cleanup();
+    renderTracker(trackedDay, { onRecommend: vi.fn() });
+    fireEvent.click(screen.getByRole("button", { name: "עריכת ארוחה 09:10" }));
+    expect(screen.getByRole("heading", { name: "עדכון ארוחה" })).toBeInTheDocument();
     expect(screen.queryByRole("button", BUTTON)).not.toBeInTheDocument();
 
     cleanup();

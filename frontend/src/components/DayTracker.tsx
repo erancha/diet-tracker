@@ -475,14 +475,18 @@ export function DayTracker({ questionnaire, treatDay, day, isToday = true, close
                           onToggle={toggleForm}
                           headerAside={
       /* The next meal's recommendation rides beside the add-meal heading, the question it
-         answers. Present whenever the section is, so the header keeps one shape open or folded;
-         greyed until the next meal is within the configured lead. */
-      onRecommend !== undefined && isToday
-        ? <button type="button" onClick={onRecommend}
-                  className={"secondary compact next-meal" + (suggestionTimely ? "" : " next-meal-early")}>
-            מה לאכול בארוחה הבאה?
-          </button>
-        : undefined
+         answers, greyed until the next meal is within the configured lead. It shows only while
+         the form is folded: open inputs are already composing that meal, or correcting a past
+         one. The header keeps its aside slot either way — an empty aside, not a missing one —
+         so opening the form does not restructure the header and remount the toggle mid-press. */
+      onRecommend === undefined || !isToday
+        ? undefined
+        : !formCollapsed
+          ? null
+          : <button type="button" onClick={onRecommend}
+                    className={"secondary compact next-meal" + (suggestionTimely ? "" : " next-meal-early")}>
+              מה לאכול בארוחה הבאה?
+            </button>
     }>
         {/* Sits in the frame's far corner via the style sheet rather than in the heading row:
             an aside there would restructure the header between open and folded, recreating the
