@@ -14,17 +14,17 @@ describe("mealMarkers", () => {
     expect(mealMarkers(carbs, meal({ vegetables: true, fruit: true, fat_servings: 2,
                                      additions: [{ id: "sweet", amount: "regular" }, { id: "alcohol", amount: "much" }] })))
       .toEqual([
-        { marker: "🥗", label: "כולל ירקות" },
-        { marker: "🍎", label: "כולל פרי" },
-        { marker: "🥑×2", label: "כולל מנת שומן" },
-        { marker: "🍪", label: "כולל מתוק" },
-        { marker: "🍷", label: "כולל אלכוהול לא יבש" },
+        { marker: "🥗", label: "ירקות" },
+        { marker: "🍎", label: "פרי" },
+        { marker: "🥑×2", label: "מנת שומן" },
+        { marker: "🍪", label: "מתוק" },
+        { marker: "🍷", label: "אלכוהול לא יבש" },
       ]);
   });
 
   it("marks a single serving with the bare avocado", () => {
     expect(mealMarkers(carbs, meal({ fat_servings: 1 })))
-      .toEqual([{ marker: "🥑", label: "כולל מנת שומן" }]);
+      .toEqual([{ marker: "🥑", label: "מנת שומן" }]);
   });
 
   it("lists nothing for a bare meal", () => {

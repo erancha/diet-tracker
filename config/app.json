@@ -189,12 +189,12 @@
         "additions": [
           {
             "id": "sweet",
-            "label": "כולל מתוק",
+            "label": "מתוק",
             "value": 3
           },
           {
             "id": "alcohol",
-            "label": "כולל אלכוהול לא יבש",
+            "label": "אלכוהול לא יבש",
             "value": 3
           }
         ],

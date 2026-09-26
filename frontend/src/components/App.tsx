@@ -8,6 +8,7 @@ import { lastStepRises, TARGET_UNSET_NOTICE } from "../weight";
 import { isFirstVisit } from "../firstVisit";
 import { signInCrossedDays } from "../signInBreach";
 import { storeCondensedView, storedCondensedView } from "../viewMode";
+import { useExpandedGradeLabels } from "../gradeLabels";
 import { AdminSection } from "./AdminSection";
 import { Alerts, type AlertItem } from "./Alerts";
 import { Chat } from "./Chat";
@@ -108,6 +109,9 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, c
   // tracker is the page's working surface and the chat keeps its composer on screen, folding
   // only its earlier chats — so both keep their own hand-toggled folds.
   const [foldAll, setFoldAll] = useState<FoldAllCommand>({ gen: 0, collapsed: openedCondensed });
+  // The menu's other display setting, how much of a grade's name the journal spells out, held
+  // here so the tracker and a history day's view read the same density.
+  const [expandLabels, setExpandLabels] = useExpandedGradeLabels();
   const [chatCollapsed, setChatCollapsed] = useState(false);
   // A question another panel asked the chat to send, until the chat takes it. Opening the chat
   // section is part of asking: the chat mounts with the command and the answer lands in view.
@@ -327,6 +331,7 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, c
               // The item names the view a press will switch to, read off the last command rather
               // than the sections' scattered states — hand-toggling sections does not rename it.
               nextViewCondensed={!foldAll.collapsed}
+              expandLabels={expandLabels} onSetExpandLabels={setExpandLabels}
               undelivered={data.undelivered}
               emailVerified={data.email_verified}
               onDismissUndelivered={(at) => dismissUndeliveredMutation.mutate(at)} />
@@ -356,6 +361,7 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, c
             questionnaire={questionnaire}
             treatDay={configQuery.data.treat_day}
             day={activeDay}
+            expandLabels={expandLabels}
             isToday={!targetsYesterday}
             closed={activeDaySubmitted}
             // Reopening deletes the closed record over the same mutation and windows the history
@@ -414,6 +420,7 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, c
             // Keyed by date so switching rows opens the next day on its meal list, not on a
             // breakdown the previous day left open.
             : <DayView key={viewedDate} questionnaire={questionnaire} treatDay={configQuery.data.treat_day}
+                      expandLabels={expandLabels}
                        day={viewedDayQuery.data}
                        onClose={() => setViewedDate(null)} />
           )}

@@ -61,8 +61,8 @@ export function MealList({ questionnaire, meals, expandLabels, onEdit, editLastO
         const grades = expandLabels ? [] : [choice, second].flatMap((c) =>
           c === undefined || c.examples === undefined ? [] : [choiceLabel(c, true)]);
         // A tap on any cell of the row but its controls names what the row carries. Markers are
-        // what offers it: a row with none has only its grades to spell out, and the label-density
-        // switch already does that for the whole list.
+        // what offers it: a row with none has only its grades to spell out, and the account
+        // menu's descriptions switch already does that for the whole list.
         const askLegend = markers.length === 0 ? {}
           : { onClick: () => legend.reveal(meal.id,
                                            LEGEND_LEAD_MS + LEGEND_MS_PER_MARKER * markers.length) };

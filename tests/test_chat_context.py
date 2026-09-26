@@ -58,7 +58,7 @@ def test_today_and_yesterday_meals_are_detailed_with_hebrew_labels(store, questi
     (entry,) = today_detail["ארוחות"]
     assert entry["שעת הארוחה"] == "12:30"
     assert entry["מקור פחמימה"] == "דרגה 2"
-    assert entry["תוספות"] == ["כולל מתוק (מעט)"]
+    assert entry["תוספות"] == ["מתוק (מעט)"]
     assert entry["ירקות"] is True
     assert entry["מנות שומן"] == 2
     assert "פרי" not in entry
@@ -100,7 +100,7 @@ def test_the_tracking_scope_of_the_app_rides_in_the_context(store, questionnaire
         store, questionnaire, "u1", TODAY))["תחומי המעקב של האפליקציה"]
 
     assert 'שכפ"צ - שתיה (ליטר)' in scope["במעקב היומי"]
-    assert "כולל מתוק (כמות)" in scope["ברישום ארוחה"]
+    assert "מתוק (כמות)" in scope["ברישום ארוחה"]
     assert "מנות שומן" in scope["ברישום ארוחה"]
     assert "מנות שומן" in scope["במעקב היומי"]
     assert "מקור פחמימה" in scope["ברישום ארוחה"]

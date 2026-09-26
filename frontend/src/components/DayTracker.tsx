@@ -3,7 +3,6 @@ import { beforeDayStart, clockTimeOf, mealInstant, mealOverdue, mealTooSoon, nex
 import { carbsScales, deriveDay, portionOffered } from "../derive";
 import { mayDiscardEdits } from "../edits";
 import { isViolating } from "../violations";
-import { useExpandedGradeLabels } from "../gradeLabels";
 import type { CarbSource, DayPayload, Meal, MealAddition, NewMeal, Question,
               Questionnaire, TreatDaySettings } from "../types";
 import { ChoiceFieldset } from "./ChoiceFieldset";
@@ -28,11 +27,6 @@ const NO_CARBS_CHOICE = "no_carbs";
 const SECOND_SOURCE_TITLE = "מקור פחמימה נוסף";
 const SECOND_SOURCE_ADD = "הוספת מקור פחמימה נוסף";
 const SECOND_SOURCE_REMOVE = "הסרת מקור פחמימה נוסף";
-
-// The one control over how much of a grade's name the app spells out, reading as the state it
-// moves to rather than the state it is in.
-const EXPAND_LABELS = "הרחבת שמות";
-const COLLAPSE_LABELS = "צמצום שמות";
 
 // The least the program spaces meals apart: until this long after the last one, the add-meal
 // toggle reads greyed, a quieter caution than the overdue nudge on the far side of the gap.
@@ -59,7 +53,7 @@ const FAT_HINT_MS = 30_000;
 // from the client-side derivation, held to the server's by the shared test vectors in
 // config/derive-vectors.json, so they always agree with the meal list rendered beside them — the
 // server re-derives on submit and stays the authority.
-export function DayTracker({ questionnaire, treatDay, day, isToday = true, closed = false, firstMealHour,
+export function DayTracker({ questionnaire, treatDay, day, expandLabels, isToday = true, closed = false, firstMealHour,
                              mealGapHours, maxMealsPerDay, closeMinWindowHours, closeFrom, stretchesUntil,
                              onAddMeal,
                              onUpdateMeal, onDeleteMeal, deletingMealId, savingMeal, onCloseDay,
@@ -68,6 +62,10 @@ export function DayTracker({ questionnaire, treatDay, day, isToday = true, close
   // The weekday whose breaches the dashboard paints softer.
   treatDay: TreatDaySettings;
   day: DayPayload;
+  // How much of a grade's name the card spells out — the pickers' and the meal rows' alike, the
+  // closed day's read-only rows included. The account menu holds the switch, so the density
+  // arrives set rather than being the tracker's to keep.
+  expandLabels: boolean;
   // False during the small-hours grace window, when the payload is the previous day's: the day
   // is over, so recorded times may run to its end, the overdue-meal nudge stays quiet, and the
   // title names yesterday.
@@ -149,7 +147,6 @@ export function DayTracker({ questionnaire, treatDay, day, isToday = true, close
   // clock, and a freshly derived one would read ten minutes on as a time the user had picked.
   const [pristineTime, setPristineTime] = useState(mealTime);
   const [editingId, setEditingId] = useState<string | undefined>(undefined);
-  const [expandLabels, setExpandLabels] = useExpandedGradeLabels();
   // The whole tracker's fold, distinct from the meal form's below. Neither answers to the
   // menu's view command: the tracker is the page's working surface, so even the condensed view
   // leaves it open, and only its own toggle folds it.
@@ -416,22 +413,6 @@ export function DayTracker({ questionnaire, treatDay, day, isToday = true, close
           <MealList questionnaire={questionnaire} meals={day.meals} expandLabels={expandLabels} />
         )}
       </>
-    }
-                        headerAside={
-      /* Governs every grade name in the card — the pickers' and the meal rows' alike, the closed
-         day's read-only rows included — from the far end of the day's heading row, where it
-         reads as a setting on the whole log rather than as one of its controls. Offered only
-         while a meal row — under a folded journal too — or the open inputs put a grade name on
-         screen for it to act on; the density lives outside the component, so withholding the
-         switch keeps the reading. Withheld as an empty aside rather than none, so the heading
-         keeps its row — and the focus of whoever just pressed it — instead of remounting as the
-         switch comes and goes. */
-      !breakdownShown && (day.meals.length > 0 || (!sectionCollapsed && !formCollapsed))
-        ? <button type="button" className="secondary compact label-density"
-                  onClick={() => setExpandLabels(!expandLabels)}>
-            {expandLabels ? COLLAPSE_LABELS : EXPAND_LABELS}
-          </button>
-        : null
     }>
       {breakdownShown ? (
         <ScoreBreakdown questionnaire={questionnaire} treatDay={treatDay} date={day.date} meals={day.meals}
@@ -526,7 +507,10 @@ export function DayTracker({ questionnaire, treatDay, day, isToday = true, close
             </button>
           </div>
         )}
-        <div className="meal-flags">
+        {/* What the meal held besides its carb source, each box named by the thing alone under
+            the one heading that says it was included. */}
+        <fieldset className="meal-flags">
+          <legend>כולל</legend>
           <label>
             <input type="checkbox" checked={vegetables}
                    onChange={(e) => setVegetables(e.target.checked)} />
@@ -585,7 +569,7 @@ export function DayTracker({ questionnaire, treatDay, day, isToday = true, close
               )}
             </label>
           ))}
-        </div>
+        </fieldset>
         <label className="meal-time">
           שעת הארוחה{" "}
           <input type="time" value={mealTime} min={isToday ? stretchesUntil : undefined}

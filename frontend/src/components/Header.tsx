@@ -24,10 +24,18 @@ const ACCOUNT_HINTS = {
   email: "הכתובת שאיתה התחברת",
   mute: "השתקת כל התזכורות וההתראות שנשלחות במייל",
   unmute: "חידוש התזכורות וההתראות שנשלחות במייל",
+  display: "הגדרות תצוגת העמוד",
   view: "פתיחה או קיפול של כל סעיפי העמוד יחד; הבחירה נשמרת לכניסה הבאה",
+  expandLabels: "הצגת דוגמאות לצד שמות דרגות הפחמימה ביומן; הבחירה נשמרת לכניסה הבאה",
+  collapseLabels: "הצגת שמות דרגות הפחמימה ביומן ללא דוגמאות; הבחירה נשמרת לכניסה הבאה",
   invite: "שיתוף קישור הזמנה לאפליקציה ב-WhatsApp",
   signOut: "יציאה מהחשבון",
 };
+
+// The descriptions switch reads as the density it moves to rather than the one it is in, like
+// the view item beside it.
+const EXPAND_LABELS = "הרחבת תיאורים";
+const COLLAPSE_LABELS = "צמצום תיאורים";
 
 // App chrome: the title, the account menu, and — while a message the app failed to email is
 // still awaiting the user — an alarm that survives reloads, unlike the transient post-submit
@@ -36,14 +44,15 @@ const ACCOUNT_HINTS = {
 // plain note, dated by the attempt that failed and dismissable once read.
 //
 // The account menu names the signed-in address and holds the account-level actions — signing
-// out, the reminder subscription, and the WhatsApp invite — plus the one page-wide control, the
-// condensed/full view toggle. The address is identification rather than chrome the page needs
-// standing, so it appears only when the menu it labels is open. Leaving is when a user decides
-// they are done being reminded, so the opt-out is offered alongside the exit; it reads as a
-// toggle, so the same menu is also the way back.
+// out, the reminder subscription, and the WhatsApp invite — plus the page-wide display settings,
+// gathered in a תצוגה group that unfolds in place: the condensed/full view toggle and the switch
+// over how much of a carb grade's name the journal spells out. The address is identification
+// rather than chrome the page needs standing, so it appears only when the menu it labels is
+// open. Leaving is when a user decides they are done being reminded, so the opt-out is offered
+// alongside the exit; it reads as a toggle, so the same menu is also the way back.
 export function Header({ email, muted, isAdmin, onSignOut, onSetMuted, onFoldAll,
-                         nextViewCondensed, undelivered, emailVerified,
-                         onDismissUndelivered }: {
+                         nextViewCondensed, expandLabels, onSetExpandLabels, undelivered,
+                         emailVerified, onDismissUndelivered }: {
   email: string; muted: boolean;
   // Picks the invite's opening voice: the admin invites as the app's developer.
   isAdmin: boolean;
@@ -51,6 +60,9 @@ export function Header({ email, muted, isAdmin, onSignOut, onSetMuted, onFoldAll
   onFoldAll: () => void;
   // The view a press of the item will switch to, naming the item for what the press does.
   nextViewCondensed: boolean;
+  // Whether the journal spells grade names out; the item names the density a press moves to.
+  expandLabels: boolean;
+  onSetExpandLabels: (expanded: boolean) => void;
   undelivered: UndeliveredMessage[];
   emailVerified: boolean;
   onDismissUndelivered: (at: string) => void;
@@ -107,11 +119,9 @@ export function Header({ email, muted, isAdmin, onSignOut, onSetMuted, onFoldAll
                   <Icon name={muted ? "alarm" : "alarmOff"} />
                   {muted ? "חידוש התראות" : "ביטול התראות"}
                 </button>
-                <button type="button" role="menuitem" className="menu-item" title={ACCOUNT_HINTS.view}
-                        onClick={choose(onFoldAll)}>
-                  <Icon name={nextViewCondensed ? "foldAll" : "unfoldAll"} />
-                  {nextViewCondensed ? "תצוגה מצומצמת" : "תצוגה מלאה"}
-                </button>
+                <DisplayGroup nextViewCondensed={nextViewCondensed} onFoldAll={onFoldAll}
+                              expandLabels={expandLabels} onSetExpandLabels={onSetExpandLabels}
+                              choose={choose} />
                 <a role="menuitem" className="menu-item" title={ACCOUNT_HINTS.invite}
                    href={whatsAppInviteUrl(isAdmin)} target="_blank"
                    rel="noreferrer" onClick={() => setMenuOpen(false)}>
@@ -153,6 +163,44 @@ export function Header({ email, muted, isAdmin, onSignOut, onSetMuted, onFoldAll
             <p className="undelivered-aside trailing">{UNDELIVERED_VERIFY_HINT}</p>
           )}
         </>
+      )}
+    </>
+  );
+}
+
+// The menu's תצוגה group: a head that unfolds the display settings in place, below it. The group
+// opens folded each time the menu does — its state lives here, and the menu unmounts it on
+// closing — so the menu always presents the same short list first.
+function DisplayGroup({ nextViewCondensed, onFoldAll, expandLabels, onSetExpandLabels, choose }: {
+  nextViewCondensed: boolean;
+  onFoldAll: () => void;
+  expandLabels: boolean;
+  onSetExpandLabels: (expanded: boolean) => void;
+  // The menu's own wrapper: a setting, once picked, dismisses the menu like any other item.
+  choose: (action: () => void) => () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button type="button" role="menuitem" className="menu-item menu-group-head"
+              aria-haspopup="menu" aria-expanded={open} title={ACCOUNT_HINTS.display}
+              onClick={() => setOpen((current) => !current)}>
+        <Icon name="display" />תצוגה
+      </button>
+      {open && (
+        <span role="menu" className="submenu" aria-label="תצוגה">
+          <button type="button" role="menuitem" className="menu-item" title={ACCOUNT_HINTS.view}
+                  onClick={choose(onFoldAll)}>
+            <Icon name={nextViewCondensed ? "foldAll" : "unfoldAll"} />
+            {nextViewCondensed ? "תצוגה מצומצמת" : "תצוגה מלאה"}
+          </button>
+          <button type="button" role="menuitem" className="menu-item"
+                  title={expandLabels ? ACCOUNT_HINTS.collapseLabels : ACCOUNT_HINTS.expandLabels}
+                  onClick={choose(() => onSetExpandLabels(!expandLabels))}>
+            <Icon name={expandLabels ? "descriptionsShort" : "descriptionsFull"} />
+            {expandLabels ? COLLAPSE_LABELS : EXPAND_LABELS}
+          </button>
+        </span>
       )}
     </>
   );

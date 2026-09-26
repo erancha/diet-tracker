@@ -1,7 +1,6 @@
 import { useState } from "react";
 import type { DayPayload, Questionnaire, TreatDaySettings } from "../types";
 import { weekdayDdmmLabel } from "../dates";
-import { useExpandedGradeLabels } from "../gradeLabels";
 import { DayDashboard } from "./DayDashboard";
 import { Icon } from "./Icon";
 import { MealList } from "./MealList";
@@ -11,16 +10,16 @@ import { ScoreBreakdown } from "./ScoreBreakdown";
 // the score's breakdown in the list's place while a heavy score is being accounted for. The view
 // always opens on the list; the breakdown is reached from its score alone, as in the tracker. A
 // day without recorded meals says so explicitly instead of showing an all-zero dashboard.
-export function DayView({ questionnaire, treatDay, day, onClose }: {
+export function DayView({ questionnaire, treatDay, day, expandLabels, onClose }: {
   questionnaire: Questionnaire;
   treatDay: TreatDaySettings;
   day: DayPayload;
+  // A history day's rows read at the density the account menu sets for the tracker, so the two
+  // never disagree on how a grade is named.
+  expandLabels: boolean;
   onClose: () => void;
 }) {
   const [breakdownOpen, setBreakdownOpen] = useState(false);
-  // A history day's rows read at the density the tracker was left at; the switch that sets it
-  // lives there, so this view follows rather than offering a second one.
-  const [expandLabels] = useExpandedGradeLabels();
   return (
     <section className="day-view">
       <header>

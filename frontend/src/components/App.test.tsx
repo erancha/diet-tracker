@@ -6,6 +6,7 @@ import { isoDate, weekdayDdmmLabel, yesterdayOf } from "../dates";
 import { trackerQuestionnaire } from "../test-fixtures";
 import type { AppConfigFile, DayPayload } from "../types";
 import { STORAGE_KEY } from "../viewMode";
+import { STORAGE_KEY as GRADE_LABELS_KEY } from "../gradeLabels";
 import { App } from "./App";
 import { VERIFY_MAIL_QUESTION } from "./Welcome";
 import { TARGET_FLASH_DELAY_MS } from "./useTargetUnsetFlash";
@@ -78,6 +79,17 @@ function weighed(target: number | null): Api {
     target, entries: [{ date: "2026-08-20", kg: 77, at: "07:30" }],
   });
   return client;
+}
+
+// Opens the account menu on its תצוגה group, where the display settings live.
+function openDisplayGroup() {
+  fireEvent.click(screen.getByRole("button", { name: "תפריט חשבון" }));
+  fireEvent.click(screen.getByRole("menuitem", { name: "תצוגה" }));
+}
+
+function chooseDisplay(item: string) {
+  openDisplayGroup();
+  fireEvent.click(screen.getByRole("menuitem", { name: item }));
 }
 
 function renderApp(isAdmin: boolean, client: Api = api(), isDev = false,
@@ -341,8 +353,7 @@ describe("App", () => {
     renderApp(false);
     await screen.findByRole("button", { name: "יומן היום" });
 
-    fireEvent.click(screen.getByRole("button", { name: "תפריט חשבון" }));
-    fireEvent.click(screen.getByRole("menuitem", { name: "תצוגה מצומצמת" }));
+    chooseDisplay("תצוגה מצומצמת");
     for (const name of ["משקל", "מגמות"])
       expect(screen.getByRole("button", { name })).toHaveAttribute("aria-expanded", "false");
     // The tracker is the page's working surface and the chat keeps its composer on screen, so
@@ -353,8 +364,7 @@ describe("App", () => {
       .toHaveAttribute("aria-expanded", "true");
 
     // The item now names the full view, which opens everything.
-    fireEvent.click(screen.getByRole("button", { name: "תפריט חשבון" }));
-    fireEvent.click(screen.getByRole("menuitem", { name: "תצוגה מלאה" }));
+    chooseDisplay("תצוגה מלאה");
     for (const name of ["משקל", "יומן היום", "מגמות", "שאלות על תוכנית התזונה 🥗"])
       expect(screen.getByRole("button", { name })).toHaveAttribute("aria-expanded", "true");
     // The nested meal form is an editing affordance, not a display section: opening everything
@@ -371,16 +381,14 @@ describe("App", () => {
     expect(chartedPanels()).toBe(2);
     expect(screen.getByText("שתיה (ליטרים)")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "תפריט חשבון" }));
-    fireEvent.click(screen.getByRole("menuitem", { name: "תצוגה מצומצמת" }));
+    chooseDisplay("תצוגה מצומצמת");
     // Opening the section by hand is not the full view: the condensed reading of the stack is
     // its headline panel, folded or open.
     fireEvent.click(screen.getByRole("button", { name: "מגמות" }));
     expect(chartedPanels()).toBe(1);
     expect(screen.queryByText("שתיה (ליטרים)")).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: "תפריט חשבון" }));
-    fireEvent.click(screen.getByRole("menuitem", { name: "תצוגה מלאה" }));
+    chooseDisplay("תצוגה מלאה");
     expect(chartedPanels()).toBe(2);
     expect(screen.getByText("שתיה (ליטרים)")).toBeInTheDocument();
   });
@@ -396,8 +404,7 @@ describe("App", () => {
     const panel = await screen.findByRole("button", { name: "פעילות משתמשים" });
     expect(panel).toHaveAttribute("aria-expanded", "true");
 
-    fireEvent.click(screen.getByRole("button", { name: "תפריט חשבון" }));
-    fireEvent.click(screen.getByRole("menuitem", { name: "תצוגה מצומצמת" }));
+    chooseDisplay("תצוגה מצומצמת");
     expect(panel).toHaveAttribute("aria-expanded", "true");
   });
 
@@ -410,7 +417,7 @@ describe("App", () => {
     expect(screen.getByRole("button", { name: "יומן היום" }))
       .toHaveAttribute("aria-expanded", "true");
     // The menu picks up mid-cycle, offering the way back to the full view.
-    fireEvent.click(screen.getByRole("button", { name: "תפריט חשבון" }));
+    openDisplayGroup();
     expect(screen.getByRole("menuitem", { name: "תצוגה מלאה" })).toBeInTheDocument();
   });
 
@@ -419,13 +426,30 @@ describe("App", () => {
     await screen.findByRole("button", { name: "יומן היום" });
 
     // No stored choice: the page opens condensed, so the menu offers the full view first.
-    fireEvent.click(screen.getByRole("button", { name: "תפריט חשבון" }));
-    fireEvent.click(screen.getByRole("menuitem", { name: "תצוגה מלאה" }));
+    chooseDisplay("תצוגה מלאה");
     expect(window.localStorage.getItem(STORAGE_KEY)).toBe("false");
 
-    fireEvent.click(screen.getByRole("button", { name: "תפריט חשבון" }));
-    fireEvent.click(screen.getByRole("menuitem", { name: "תצוגה מצומצמת" }));
+    chooseDisplay("תצוגה מצומצמת");
     expect(window.localStorage.getItem(STORAGE_KEY)).toBe("true");
+  });
+
+  it("trims the journal's grade names from the menu and remembers the density", async () => {
+    const today = trackedDay(isoDate(new Date()));
+    // A graded meal, so the journal has a name with examples to trim.
+    today.meals[0].carbs_choice = "carb_grade_4";
+    renderApp(false, api({ today }));
+    await screen.findByRole("button", { name: "יומן היום" });
+    // No stored choice: the journal opens spelled out, so the menu offers the trimmed reading.
+    expect(screen.getByText("דרגה 4 (אורז לבן)")).toBeInTheDocument();
+
+    chooseDisplay("צמצום תיאורים");
+    expect(screen.queryByText("דרגה 4 (אורז לבן)")).toBeNull();
+    expect(screen.getByText("דרגה 4")).toBeInTheDocument();
+    expect(window.localStorage.getItem(GRADE_LABELS_KEY)).toBe("false");
+
+    chooseDisplay("הרחבת תיאורים");
+    expect(screen.getByText("דרגה 4 (אורז לבן)")).toBeInTheDocument();
+    expect(window.localStorage.getItem(GRADE_LABELS_KEY)).toBe("true");
   });
 
   it("names the folded trends section's contents in a summary line that opens it", async () => {
@@ -450,8 +474,7 @@ describe("App", () => {
     renderApp(false, client);
     expect(await screen.findByText("שאלה ישנה")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "תפריט חשבון" }));
-    fireEvent.click(screen.getByRole("menuitem", { name: "תצוגה מצומצמת" }));
+    chooseDisplay("תצוגה מצומצמת");
 
     expect(screen.queryByText("שאלה ישנה")).toBeNull();
     expect(screen.getByRole("button", { name: "צ'אט קודם אחד שלי" }))

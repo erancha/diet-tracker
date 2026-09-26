@@ -19,6 +19,12 @@ const GLYPHS = {
              <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" /></>,
   menu: <><path d="M3 6h18" /><path d="M3 12h18" /><path d="M3 18h18" /></>,
   filter: <path d="M3 4h18l-7 8.5V19l-4 2v-8.5Z" />,
+  display: <><rect x="2" y="4" width="20" height="14" rx="2" /><path d="M8 21h8" />
+             <path d="M12 18v3" /></>,
+  // A grade with its description wraps onto a further line; trimmed to its name, it stays short.
+  descriptionsFull: <><path d="M3 6h18" /><path d="M3 12h15a3 3 0 0 1 0 6h-4" />
+               <path d="m16 16-2 2 2 2" /><path d="M3 18h7" /></>,
+  descriptionsShort: <><path d="M3 6h18" /><path d="M3 12h9" /><path d="M3 18h13" /></>,
   foldAll: <><path d="m7 20 5-5 5 5" /><path d="m7 4 5 5 5-5" /></>,
   unfoldAll: <><path d="m7 15 5 5 5-5" /><path d="m7 9 5-5 5 5" /></>,
   alarmOff: <><path d="M8.7 3A6 6 0 0 1 18 8a21.3 21.3 0 0 0 .6 5" />

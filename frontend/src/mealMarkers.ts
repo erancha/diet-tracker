@@ -3,10 +3,12 @@ import type { Meal, Question } from "./types";
 /** One row marker and what it stands for, as the legend names it. */
 export interface Marker { marker: string; label: string }
 
-// The per-meal flags and the servings count, worded as the meal form's checkboxes ask them.
-export const VEGETABLES_FLAG: Marker = { marker: "🥗", label: "כולל ירקות" };
-export const FRUIT_FLAG: Marker = { marker: "🍎", label: "כולל פרי" };
-export const FAT_SERVINGS: Marker = { marker: "🥑", label: "כולל מנת שומן" };
+// The per-meal flags and the servings count, worded as the meal form's checkboxes name them:
+// bare nouns, since the form asks them under one "כולל" heading and the row legend under its
+// markers.
+export const VEGETABLES_FLAG: Marker = { marker: "🥗", label: "ירקות" };
+export const FRUIT_FLAG: Marker = { marker: "🍎", label: "פרי" };
+export const FAT_SERVINGS: Marker = { marker: "🥑", label: "מנת שומן" };
 
 // Row marker per addition id.
 const ADDITION_MARKERS: Record<string, string> = { sweet: "🍪", alcohol: "🍷" };

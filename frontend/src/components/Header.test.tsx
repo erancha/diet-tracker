@@ -7,6 +7,7 @@ import { instantLabel } from "../dates";
 
 const props = { email: "a@b.com", muted: false, isAdmin: false, onSignOut: vi.fn(),
                 onSetMuted: vi.fn(), onFoldAll: vi.fn(), nextViewCondensed: true,
+                expandLabels: true, onSetExpandLabels: vi.fn(),
                 undelivered: [] as UndeliveredMessage[],
                 emailVerified: false,
                 onDismissUndelivered: vi.fn() };
@@ -22,6 +23,12 @@ async function openMenu() {
   await userEvent.click(screen.getByRole("button", { name: "תפריט חשבון" }));
 }
 
+// The display settings sit one fold in: opening the menu is not yet seeing them.
+async function openDisplayGroup() {
+  await openMenu();
+  await userEvent.click(screen.getByRole("menuitem", { name: "תצוגה" }));
+}
+
 describe("Header", () => {
   it("explains each account-menu item on hover, the mute item by its current state", async () => {
     render(<Header {...props} />);
@@ -29,8 +36,8 @@ describe("Header", () => {
 
     expect(screen.getByRole("menuitem", { name: "ביטול התראות" }))
       .toHaveAttribute("title", "השתקת כל התזכורות וההתראות שנשלחות במייל");
-    expect(screen.getByRole("menuitem", { name: "תצוגה מצומצמת" }))
-      .toHaveAttribute("title", "פתיחה או קיפול של כל סעיפי העמוד יחד; הבחירה נשמרת לכניסה הבאה");
+    expect(screen.getByRole("menuitem", { name: "תצוגה" }))
+      .toHaveAttribute("title", "הגדרות תצוגת העמוד");
     expect(screen.getByRole("menuitem", { name: "הזמנת חברים ב-WhatsApp" }))
       .toHaveAttribute("title", "שיתוף קישור הזמנה לאפליקציה ב-WhatsApp");
     expect(screen.getByRole("menuitem", { name: "התנתקות" }))
@@ -65,13 +72,51 @@ describe("Header", () => {
     expect(onSignOut).toHaveBeenCalledOnce();
   });
 
-  it("offers the view toggle from the account menu, named for the view it will switch to", async () => {
+  it("keeps the display settings folded under their group until it is pressed", async () => {
+    render(<Header {...props} />);
+
+    await openMenu();
+    const group = screen.getByRole("menuitem", { name: "תצוגה" });
+    expect(group).toHaveAttribute("aria-haspopup", "menu");
+    expect(group).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("menuitem", { name: "תצוגה מצומצמת" })).toBeNull();
+    expect(screen.queryByRole("menuitem", { name: "צמצום תיאורים" })).toBeNull();
+
+    await userEvent.click(group);
+    expect(group).toHaveAttribute("aria-expanded", "true");
+    // The group unfolds in place, its members reading as its own: they sit inside it, in the
+    // order the head lists them, and the menu around them stays put.
+    const settings = screen.getByRole("menu", { name: "תצוגה" });
+    expect(settings).toContainElement(screen.getByRole("menuitem", { name: "תצוגה מצומצמת" }));
+    expect(settings).toContainElement(screen.getByRole("menuitem", { name: "צמצום תיאורים" }));
+    expect(screen.getByRole("menuitem", { name: "התנתקות" })).toBeInTheDocument();
+
+    // Pressing the head again folds the group without leaving the menu.
+    await userEvent.click(group);
+    expect(screen.queryByRole("menuitem", { name: "תצוגה מצומצמת" })).toBeNull();
+    expect(screen.getByRole("menuitem", { name: "התנתקות" })).toBeInTheDocument();
+  });
+
+  it("opens the group folded again on the menu's next visit", async () => {
+    render(<Header {...props} />);
+
+    await openDisplayGroup();
+    await userEvent.keyboard("{Escape}");
+
+    await openMenu();
+    expect(screen.getByRole("menuitem", { name: "תצוגה" })).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("offers the view toggle from the display group, named for the view it will switch to", async () => {
     const onFoldAll = vi.fn();
     render(<Header {...props} onFoldAll={onFoldAll} nextViewCondensed />);
 
-    await openMenu();
+    await openDisplayGroup();
     expect(screen.queryByRole("menuitem", { name: "תצוגה מלאה" })).toBeNull();
-    await userEvent.click(screen.getByRole("menuitem", { name: "תצוגה מצומצמת" }));
+    const view = screen.getByRole("menuitem", { name: "תצוגה מצומצמת" });
+    expect(view).toHaveAttribute("title",
+      "פתיחה או קיפול של כל סעיפי העמוד יחד; הבחירה נשמרת לכניסה הבאה");
+    await userEvent.click(view);
 
     expect(onFoldAll).toHaveBeenCalledOnce();
     // The action fires with the menu already dismissed, like every other item.
@@ -81,9 +126,38 @@ describe("Header", () => {
   it("offers the way back to the full view while the condensed one stands", async () => {
     render(<Header {...props} nextViewCondensed={false} />);
 
-    await openMenu();
+    await openDisplayGroup();
     expect(screen.getByRole("menuitem", { name: "תצוגה מלאה" })).toBeInTheDocument();
     expect(screen.queryByRole("menuitem", { name: "תצוגה מצומצמת" })).toBeNull();
+  });
+
+  it("offers the descriptions switch beside the view toggle, named for the density it moves to", async () => {
+    const onSetExpandLabels = vi.fn();
+    render(<Header {...props} expandLabels onSetExpandLabels={onSetExpandLabels} />);
+
+    await openDisplayGroup();
+    expect(screen.queryByRole("menuitem", { name: "הרחבת תיאורים" })).toBeNull();
+    const names = screen.getByRole("menuitem", { name: "צמצום תיאורים" });
+    expect(names).toHaveAttribute("title",
+      "הצגת שמות דרגות הפחמימה ביומן ללא דוגמאות; הבחירה נשמרת לכניסה הבאה");
+    await userEvent.click(names);
+
+    expect(onSetExpandLabels).toHaveBeenCalledWith(false);
+    expect(screen.queryByRole("menuitem")).toBeNull();
+  });
+
+  it("offers the way back to the descriptions while the names read trimmed", async () => {
+    const onSetExpandLabels = vi.fn();
+    render(<Header {...props} expandLabels={false} onSetExpandLabels={onSetExpandLabels} />);
+
+    await openDisplayGroup();
+    expect(screen.queryByRole("menuitem", { name: "צמצום תיאורים" })).toBeNull();
+    const names = screen.getByRole("menuitem", { name: "הרחבת תיאורים" });
+    expect(names).toHaveAttribute("title",
+      "הצגת דוגמאות לצד שמות דרגות הפחמימה ביומן; הבחירה נשמרת לכניסה הבאה");
+    await userEvent.click(names);
+
+    expect(onSetExpandLabels).toHaveBeenCalledWith(true);
   });
 
   it("offers a subscribed account the way out of the reminders", async () => {

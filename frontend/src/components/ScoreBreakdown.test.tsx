@@ -48,10 +48,10 @@ describe("ScoreBreakdown", () => {
     expect(rows[1]).toHaveTextContent("מנה בינונית");
     expect(rows[1]).toHaveTextContent("5.6");
     expect(rows[1]).toHaveTextContent("פרי נוסף");
-    expect(rows[1]).toHaveTextContent("כולל מתוק");
+    expect(rows[1]).toHaveTextContent("מתוק");
     expect(rows[1]).toHaveTextContent("הרבה");
     expect(rows[1]).toHaveTextContent("+ 5");
-    expect(rows[1]).toHaveTextContent("כולל אלכוהול לא יבש");
+    expect(rows[1]).toHaveTextContent("אלכוהול לא יבש");
     expect(rows[1]).toHaveTextContent("+ 4");
     expect(rows[1]).toHaveTextContent("= 16.6");
   });

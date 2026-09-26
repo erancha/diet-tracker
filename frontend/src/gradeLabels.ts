@@ -2,8 +2,8 @@
 //
 // A carbs choice names itself and then lists what it covers, and the config holds the two apart;
 // the halves compose only at the expanded density. Eight composed labels — twice over, once the
-// second carb source group is open — are a lot for a phone, so the trimmed names-alone reading
-// stands one press away for a reader who already knows the grades.
+// second carb source group is open — are a lot for a phone, so the account menu's display
+// settings offer the trimmed names-alone reading for a reader who already knows the grades.
 
 import { useCallback, useState } from "react";
 import { readStored, STORAGE_PREFIX, writeStored } from "./localStore";
