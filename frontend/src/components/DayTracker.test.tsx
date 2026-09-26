@@ -1,6 +1,7 @@
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DayTracker } from "./DayTracker";
+import { PICK_REVEAL_MS } from "./ChoiceFieldset";
 import type { DayPayload } from "../types";
 import { STORAGE_KEY as GRADE_LABELS_KEY } from "../gradeLabels";
 import { dashboardFigure, trackedDay, trackerQuestionnaire as questionnaire } from "../test-fixtures";
@@ -433,7 +434,7 @@ describe("DayTracker", () => {
     expect(screen.getByLabelText("דרגה 4")).toBeInTheDocument();
   });
 
-  it("spells out the picked grade for a second in the picker while names are condensed", () => {
+  it("spells out the picked grade for a moment in the picker while names are condensed", () => {
     vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout"] });
     vi.setSystemTime(new Date(2026, 7, 20, 19, 5));
     render(<DayTracker suggestBeforeHours={1} treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} closeFrom={CLOSE_FROM} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={trackedDay}
@@ -450,9 +451,33 @@ describe("DayTracker", () => {
     expect(screen.getByLabelText("דרגה 4")).toBeInTheDocument();
     expect(screen.getAllByText("דרגה 4")).not.toHaveLength(0);
 
-    act(() => vi.advanceTimersByTime(1000));
+    act(() => vi.advanceTimersByTime(PICK_REVEAL_MS));
     expect(screen.getByLabelText("דרגה 2")).toBeChecked();
     expect(screen.queryByText("דרגה 2 (קינואה)")).toBeNull();
+  });
+
+  it("marks the picked grade revealed for a moment in the full reading too, so its line may wrap", () => {
+    vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout"] });
+    vi.setSystemTime(new Date(2026, 7, 20, 19, 5));
+    window.localStorage.removeItem(GRADE_LABELS_KEY);
+    render(<DayTracker suggestBeforeHours={1} treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} closeFrom={CLOSE_FROM} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={trackedDay}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    openMealForm();
+
+    fireEvent.click(screen.getByLabelText("דרגה 2 (קינואה)"));
+
+    const picked = screen.getByLabelText("דרגה 2 (קינואה)").closest("label");
+    expect(picked).toHaveClass("revealed");
+    expect(screen.getByLabelText("דרגה 4 (אורז לבן)").closest("label")).not.toHaveClass("revealed");
+    // A grade listing nothing has nothing to spell out, so it is never revealed.
+    fireEvent.click(screen.getByLabelText("דרגה 4!"));
+    expect(screen.getByLabelText("דרגה 4!").closest("label")).not.toHaveClass("revealed");
+
+    act(() => vi.advanceTimersByTime(PICK_REVEAL_MS));
+    expect(picked).not.toHaveClass("revealed");
   });
 
   it("withholds the density switch while no grade name is on screen", () => {
@@ -595,7 +620,7 @@ describe("DayTracker", () => {
     revealSecondSource();
     fireEvent.click(secondSourceGroup().getByLabelText("דרגה 7"));
     fireEvent.click(primaryGroup().getByLabelText("דרגה 4"));
-    // Just-picked grades read spelled out for a second, so the grade is matched by its opening.
+    // Just-picked grades read spelled out for a moment, so the grade is matched by its opening.
     expect(secondSourceGroup().getByLabelText(/^דרגה 7/)).toBeChecked();
   });
 

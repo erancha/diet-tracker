@@ -3,9 +3,10 @@ import { useReveal } from "../reveal";
 import type { Choice, Question } from "../types";
 import { questionTitle, valueLabel } from "../violations";
 
-// How long a choice just picked spells out what it covers while names are condensed, so
-// whoever picked it sees what the grade stands for before it trims back to the name alone.
-const PICK_REVEAL_MS = 1000;
+// How long a choice just picked reads in full — spelled out while names are condensed, wrapped
+// past its one-line cut while they are expanded — so whoever picked it sees what the grade
+// stands for before it trims back. Exported for tests that wait the moment out.
+export const PICK_REVEAL_MS = 2000;
 
 // The options a question offers: its configured choices, plus one synthesized option per value the
 // scale cannot express. Two such values arise, and they coincide whenever the tracker closed the
@@ -46,8 +47,10 @@ export function fieldsetChoices(question: Question, floor?: number, stored?: num
 // never invoked, since its message speaks the browser's UI language rather than the app's Hebrew.
 // Enclosing forms check their own answers before submitting.
 //
-// With names condensed, the choice just picked reads in full for a moment, highlighted, then
-// trims back; a choice listing nothing reads the same throughout, so it is never revealed.
+// A choice's text keeps to one line, cut with an ellipsis where the examples run past the
+// phone's width; the choice just picked reads in full for a moment, highlighted — spelled out
+// while names are condensed, wrapped while they are expanded — then trims back. A choice
+// listing nothing reads the same throughout, so it is never revealed.
 export function ChoiceFieldset({ question, selectedId, floor, stored, scope = "day",
                                 expandLabels = true, onPick }: {
   question: Question;
@@ -67,7 +70,7 @@ export function ChoiceFieldset({ question, selectedId, floor, stored, scope = "d
   const reveal = useReveal<string>();
   const pick = (choice: Choice) => {
     onPick(choice);
-    if (!expandLabels && choice.examples !== undefined) reveal.reveal(choice.id, PICK_REVEAL_MS);
+    if (choice.examples !== undefined) reveal.reveal(choice.id, PICK_REVEAL_MS);
   };
   return (
     <fieldset className={expandLabels ? undefined : "condensed"}>
@@ -85,7 +88,7 @@ export function ChoiceFieldset({ question, selectedId, floor, stored, scope = "d
               checked={selectedId === choice.id}
               onChange={() => pick(choice)}
             />
-            {" "}{choiceLabel(choice, expandLabels || revealed)}
+            <span className="choice-text">{choiceLabel(choice, expandLabels || revealed)}</span>
           </label>
         );
       })}

@@ -214,7 +214,10 @@ h1 .app-icon { width: 1em; height: 1em; vertical-align: middle; margin-inline-en
 .landing-principles th { font-size: calc(var(--cell-font-size) + 2px); }
 .range-picker { display: flex; gap: 1rem; align-items: center; margin-bottom: 0.75rem; font-size: 0.9rem; margin-top: 0.5rem; }
 .range-picker label { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0; cursor: pointer; }
-fieldset { border: 1px solid #ddd; border-radius: 8px; margin: 0 0 1rem; padding: 0.75rem 1rem; background: #fff; }
+/* A fieldset's browser minimum is its content's width, which would let a one-line choice below
+   widen it past the phone's screen instead of being cut; zeroed, the fieldset holds its column. */
+fieldset { border: 1px solid #ddd; border-radius: 8px; margin: 0 0 1rem; padding: 0.75rem 1rem; background: #fff;
+           min-inline-size: 0; }
 /* A legend keeps its heading on one line. The longest heading (the carbs meal grade) spans
    ~20em — wider than a phone viewport at 1rem — so below ~26rem the font scales with the
    viewport instead of wrapping; the slope keeps a few percent of clearance down to 320px-wide
@@ -222,8 +225,18 @@ fieldset { border: 1px solid #ddd; border-radius: 8px; margin: 0 0 1rem; padding
 legend { font-weight: 600; padding: 0 0.5rem; white-space: nowrap; font-size: min(1rem, 4.8vw - 6px); }
 label { display: block; padding: 0.35rem 0; cursor: pointer; }
 /* Radio groups run to eight options and the meal's flag checkboxes to six, so their rows close to
-   half the standalone label rhythm to keep the whole form near one phone screen. */
+   half the standalone label rhythm to keep the whole form near one phone screen; on phones the
+   options also give up a pixel of size, so more of a grade's examples fit before its line is cut. */
 fieldset > label, .meal-flags label { padding: 0.175rem 0; }
+@media (max-width: 47.99rem) {
+  fieldset > label, .meal-flags label { font-size: calc(1em - 1px); }
+}
+/* A choice holds to one line: the radio keeps its width and the text beside it takes the rest,
+   cut with an ellipsis where a grade's examples run past it. The choice just picked, while
+   revealed, wraps instead so the cut tail reads in full for its moment. */
+fieldset > label { display: flex; align-items: baseline; gap: 0.3rem; }
+fieldset > label > .choice-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+fieldset > label.revealed > .choice-text { white-space: normal; }
 /* Condensed grade names are short enough to pair up, so the group runs in two columns and takes
    half the height. Content-sized columns keep the one long name (no carb source) on a single
    line at phone width, where equal halves would wrap it; a just-picked name spelling itself out
