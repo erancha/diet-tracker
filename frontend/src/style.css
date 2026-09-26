@@ -670,10 +670,13 @@ main:not(.intro-0, .intro-1, .intro-2, .intro-3, .intro-4) .weight .section-togg
 .next-meal.next-meal-early { --btn-fg: var(--viz-muted); --btn-border: var(--viz-muted); }
 /* Worn by an add-meal control — the form toggle's label or the closed day's reopen button —
    once one more meal would cross the meals bound: the same red the history paints after the
-   fact, shown while the choice can still go differently. It also steps down to four fifths of
-   the body size the close-day button inherits, so closing reads as the next step and adding as
-   the smaller option. */
-.meal-add-warn { color: var(--danger); font-weight: 700; font-size: 0.8rem; }
+   fact, shown while the choice can still go differently. */
+.meal-add-warn { color: var(--danger); }
+/* On the open tracker's heading toggle the whole control — label and disclosure arrow — takes a
+   darker red, the label bold and 1px under the heading: a hint that one more meal is discouraged,
+   without shrinking away from its arrow. */
+.meal-form .section-toggle:has(.meal-add-warn) { --btn-fg: #8e1b1b; }
+.section-toggle .meal-add-warn { color: inherit; font-weight: 700; font-size: calc(1em - 1px); }
 /* Open, the form gains its own frame in the secondary controls' accent tint, so the editing surface
    reads as one bounded unit against the tracker card and its hairline fieldsets. The box takes
    over the heading's 1rem gap above, and the heading sits on the frame's padding instead. */
@@ -716,9 +719,11 @@ main:not(.intro-0, .intro-1, .intro-2, .intro-3, .intro-4) .weight .section-togg
    padding gives way to the text, which stays whole; a row that still cannot hold every control
    drops one to the next line rather than breaking a label or running off the edge. */
 .form-actions button { padding-inline: 1rem; white-space: nowrap; }
-/* Grows the same 1px the open tracker's add-meal toggle carries over its own base size — while
-   it is not warning; then the warn class's smaller size stands, as on the open tracker. */
-.reopen-toggle:not(.meal-add-warn) { font-size: calc(1rem + 1px); }
+/* Grows the same 1px the open tracker's add-meal toggle carries over its own base size. Once
+   warning, it turns bold and steps down to four fifths of the body size the close-day button
+   beside it inherits, so closing reads as the next step and adding as the smaller option. */
+.reopen-toggle { font-size: calc(1rem + 1px); }
+.reopen-toggle.meal-add-warn { font-size: 0.8rem; font-weight: 700; }
 /* Rides the closed tracker's action row beside the add-meal button, naming what that button
    does to a closed day; muted, because it explains rather than acts. */
 .reopen-hint { align-self: center; }
