@@ -36,7 +36,7 @@
      so the day log's title and the grade-names toggle sharing its row still fit side by side,
      with a few percent of clearance down to 320px-wide screens once the body and card paddings
      are taken out. */
-  --section-title-size: min(1.6rem, 7vw - 6px);
+  --section-title-size: min(calc(1.6rem + 4px), 7vw - 2px);
 }
 /* The top edge is tighter than the other three: both screens open on the app title, which sits
    directly on this padding with no heading margin of its own, so a full rem here would read as a
@@ -65,7 +65,7 @@ header { display: flex; justify-content: space-between; align-items: baseline; g
   padding-bottom: 1.35rem;
 }
 /* The alarm badge is the one thing wide enough to crowd the title: beside the account trigger
-   alone a narrow phone still has room to spare, but at the shared 9vw the title fills what is
+   alone a narrow phone still has room to spare, but at the shared size the title fills what is
    left exactly once the badge joins the row, so it sizes down only while the badge is there.
    Reserving the gap without this shrink would move the crowding into a wrapped second line. */
 header:has(.alarm) h1 { font-size: min(2.1rem, 7.5vw); }
@@ -142,7 +142,7 @@ header .alarm { --btn-bg: #ffebee; --btn-fg: var(--danger); --btn-border: #f3c9c
    below it — including the tracker's enlarged one — so the page opens on its name rather than on
    whichever section happens to shout loudest. The viewport term keeps it inside a narrow phone's
    width; the signed-in chrome tightens it further, where the account box shares the row. */
-h1 { font-size: min(2.1rem, 9vw); color: var(--accent); margin-top: 0; }
+h1 { font-size: min(calc(2.1rem + 2px), 9vw + 2px); color: var(--accent); margin-top: 0; }
 /* The app's own name where it sits inside a sentence, so a heading reads as "questions about X"
    rather than as one long phrase. Hebrew has no true italic — browsers synthesize a slant, which
    reads as a rendering fault — so the name is marked by color and weight instead. */
@@ -574,9 +574,8 @@ td.view-day { cursor: pointer; }
    side by side at all. */
 .section-header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 1rem; }
 .section-header h3 { margin: 0; }
-/* Both titles on the shared row read at one size, so the row is a single header line rather than a
-   title with a smaller tag beside it. */
-.day-tracker .section-header h3 { font-size: var(--section-title-size); }
+/* The add-meal title reads a step under the day log's own title, which it sits beneath. */
+.day-tracker .section-header h3 { font-size: calc(var(--section-title-size) - 4px); }
 /* A section header doubles as its fold's disclosure, taking its size from the heading it sits in.
    Semibold rather than the heading's full bold, so a pressable title reads a shade lighter than
    one that is only a title. */

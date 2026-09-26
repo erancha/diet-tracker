@@ -1470,6 +1470,23 @@ describe("DayTracker", () => {
     scrollIntoView.mockRestore();
   });
 
+  it("walks a saved meal back up to the top of the page", () => {
+    const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => {});
+    render(<DayTracker expandLabels={false} suggestBeforeHours={1} treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} closeFrom={CLOSE_FROM} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={emptyDay}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    openMealForm();
+    fireEvent.click(screen.getByLabelText("דרגה 4"));
+    expect(scrollTo).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "שמירת ארוחה" }));
+
+    expect(scrollTo).toHaveBeenCalledExactlyOnceWith({ top: 0, behavior: "smooth" });
+    scrollTo.mockRestore();
+  });
+
   it("the close flow does not linger past the close into a reopened day", () => {
     const props = { maxMealsPerDay: NO_CAP_MEALS, closeMinWindowHours: 6, closeFrom: CLOSE_FROM, stretchesUntil: STRETCHES_UNTIL, questionnaire, day: wideWindowDay,
                     firstMealHour: NO_NUDGE_HOUR, mealGapHours: NO_NUDGE_GAP_HOURS,

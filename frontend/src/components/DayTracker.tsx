@@ -591,7 +591,11 @@ export function DayTracker({ questionnaire, treatDay, day, expandLabels, isToday
       )}
       <div className="form-actions">
         {carbsChoiceId !== undefined && formHoldsUnsavedMeal && (
-          <button type="button" className="primary" disabled={!mealSaveable} onClick={submitMeal}>
+          <button type="button" className="primary" disabled={!mealSaveable} onClick={() => {
+            submitMeal();
+            // The open form runs well below the day's figures, so a save walks back up to them.
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}>
             שמירת ארוחה
           </button>
         )}
