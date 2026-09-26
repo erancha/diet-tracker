@@ -681,8 +681,11 @@ main:not(.intro-0, .intro-1, .intro-2, .intro-3, .intro-4) .weight .section-togg
 /* Open, the form gains its own frame in the secondary controls' accent tint, so the editing surface
    reads as one bounded unit against the tracker card and its hairline fieldsets. The box takes
    over the heading's 1rem gap above, and the heading sits on the frame's padding instead. */
-/* Lifted into the tracker's title row, the folded toggle sits on that row's baseline. */
-.day-tracker > .section-header .meal-form h3 { margin: 0; }
+/* Lifted into the tracker's title row, the folded toggle sits on that row's baseline, a further
+   2px under the add-meal title, with its arrow centred on the label rather than on the baseline. */
+.day-tracker > .section-header .meal-form h3 { margin: 0; font-size: calc(var(--section-title-size) - 6px); }
+.day-tracker > .section-header .meal-form .section-toggle { display: inline-flex; align-items: center;
+                                                             gap: 0.25em; }
 .meal-form-open { position: relative; border: 1px solid var(--accent-border); border-radius: 8px;
                   padding: 0.75rem 1rem 1rem; margin-top: 1rem; }
 .meal-form-open h3 { margin-top: 0; }
