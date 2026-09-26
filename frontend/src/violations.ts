@@ -65,8 +65,9 @@ const CROSSED = {
 
 export type CrossedDays = keyof typeof CROSSED;
 
-// Where a crossing is already on show, closing every sentence that reports one.
-const CROSSING_MARKED = "(מסומן באדום בגרפי המגמות ובטבלה)";
+// Where a crossing is already on show, closing every sentence that reports one. No color is
+// named: the surfaces paint a treat-day crossing amber and any other red.
+const CROSSING_MARKED = "(מסומן בצבע אחר במגמות)";
 
 // The sentence a surface reports a crossing in, so no two of them word it differently or point at
 // a different place than the others.

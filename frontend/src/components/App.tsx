@@ -167,7 +167,7 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, c
     greeted.current = true;
     const crossed = signInCrossedDays(config.questionnaire, history);
     if (crossed === null) return;
-    // Clears itself: it reports what the chart and the table already paint red, rather than
+    // Clears itself: it reports what the chart and the table already mark, rather than
     // anything the user is being asked to act on. Where yesterday is one of the days it names,
     // that word opens yesterday's day view.
     setAlerts([{
@@ -186,7 +186,7 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, c
       // A crossing day is still a saved day, so the confirmation leads either way — the closed
       // tracker would otherwise be the only sign the figures went through.
       const saved = `נשמר לתאריך ${result.date}!`;
-      // A score past its bound today is painted red in the trend graphs and the table beside the
+      // A score past its bound today is marked in the trend graphs and the table beside the
       // banner, so a clean-day claim there reads as a contradiction; the banner names the crossing
       // instead, as a notice. Any other answer's crossing keeps to its red cell.
       setAlerts(crossesScoreBound(configQuery.data!.questionnaire, answers)

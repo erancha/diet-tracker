@@ -144,7 +144,7 @@ describe("sign-in breach reminder", () => {
     // The strip carries the crossing on the same ground the panels tint above their limit.
     const banner = await screen.findByText(/חצה סף/);
     expect(banner).toHaveClass("crossing");
-    expect(banner).toHaveTextContent("אתמול חצה סף (מסומן באדום בגרפי המגמות ובטבלה)");
+    expect(banner).toHaveTextContent("אתמול חצה סף (מסומן בצבע אחר במגמות)");
   });
 
   it("opens yesterday's day view where a history row opens it, and reaches it", async () => {
@@ -515,7 +515,7 @@ describe("App", () => {
     expect(screen.queryByRole("button", { name: "יומן אתמול" })).toBeNull();
   });
 
-  it("names both trend graphs and the table as where a crossed bound shows on close", async () => {
+  it("names the trends section as where a crossed bound shows on close", async () => {
     // Two steepest-grade meals seven hours apart: wide enough to close, heavy enough to cross the
     // carbs rule's bound.
     const todayStr = isoDate(new Date());
@@ -538,7 +538,7 @@ describe("App", () => {
     // Today's meals already cross the bound, so the arrival reminder is on the strip before the
     // close. Waiting for the save confirmation pins the assertion to the batch the close raised.
     await screen.findByText(`נשמר לתאריך ${todayStr}!`);
-    expect(screen.getByText("היום חצה סף (מסומן באדום בגרפי המגמות ובטבלה)"))
+    expect(screen.getByText("היום חצה סף (מסומן בצבע אחר במגמות)"))
       .toHaveClass("crossing");
   });
 
