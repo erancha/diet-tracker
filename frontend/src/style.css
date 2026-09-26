@@ -649,6 +649,7 @@ main:not(.intro-0, .intro-1, .intro-2, .intro-3, .intro-4) .weight .section-togg
   .trends .section-toggle[aria-expanded="false"]::before { animation: none; }
   .weight :is(.weight-latest, .weight-chart-toggle) { animation: none; }
   .weight .section-toggle::before { animation: none; }
+  .weight-entries li:first-child { animation: none; }
   .section-waning, .section-folding { animation: none; }
   /* What is revealed still shows for its moment; only the highlight's fade goes. */
   .revealed { animation: none; }
@@ -890,15 +891,17 @@ main:not(.intro-0, .intro-1, .intro-2, .intro-3, .intro-4) .weight .section-togg
    a row gap, so two grounded rows in a run meet as one band. */
 .weight-entries { list-style: none; padding: 0; margin: 0.5rem 0 0; display: grid;
                   grid-template-columns: repeat(4, max-content); column-gap: 1rem;
-                  font-size: calc(1rem - 1px); }
+                  font-size: calc(1rem - 2px); }
 .weight-entries li { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid;
                      align-items: center; padding: 0.125rem 0.35rem; margin-inline: -0.35rem;
                      border-radius: 4px; }
 /* A row at either end of a stretch the weight climbed over, on the ground a crossing earns. */
 .weight-entries .weight-entry-gain { background: var(--breach-ground); }
-/* The newest weighing heads the list and is the one read; the measurements behind it are
-   set a pixel smaller, so the top row stands out without a rule or a heavier weight. */
-.weight-entries li:not(:first-child) { font-size: calc(1em - 1px); }
+/* The newest weighing heads the list and is the one read, so its frame flashes for its first two
+   seconds on screen — the same four half-second beats the folded weight line takes. Drawn as an
+   inset shadow rather than a border, so the flash moves no row. */
+.weight-entries li:first-child { animation: weight-entry-flash 0.5s ease-in-out 4; }
+@keyframes weight-entry-flash { 50% { box-shadow: inset 0 0 0 1px var(--accent); } }
 .weight-entries .weight-entry-date { font-weight: 600; }
 /* The weekday letters are not all the same width, so padding each out to a common one is what
    starts every date at the same place down the list. */
