@@ -1855,6 +1855,20 @@ describe("DayTracker", () => {
     expect(list.compareDocumentPosition(toggle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
+  // Once one more meal is discouraged, the folded toggle rides the tracker's title row; opened,
+  // the form returns below the record.
+  it("lifts the folded add-meal toggle into the title row once another meal would cross the bound", () => {
+    renderWithMeals(threeMealDay);
+    const toggle = screen.getByRole("button", { name: "הוספת ארוחה" });
+    expect(toggle.closest(".section-header")).toContainElement(screen.getByRole("button", { name: "יומן היום" }));
+
+    fireEvent.click(toggle);
+    const list = screen.getAllByText(/^\d\d:\d\d$/)[0].closest("ul")!;
+    const form = screen.getByRole("button", { name: "הוספת ארוחה" }).closest(".meal-form")!;
+    expect(form).toHaveClass("meal-form-open");
+    expect(list.compareDocumentPosition(form) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   // A small helping of grade 7 derives 4.2 points; the mark the dashboard shows reads whole.
   it("rounds the dashboard's mark to a whole number", () => {
     renderWithMeals({
@@ -1992,6 +2006,11 @@ describe("next-meal recommendation", () => {
     fireEvent.click(button);
 
     expect(onRecommend).toHaveBeenCalledTimes(1);
+  });
+
+  it("withholds it once another meal would cross the meals bound", () => {
+    renderTracker(threeMealDay, { onRecommend: vi.fn() });
+    expect(screen.queryByRole("button", BUTTON)).toBeNull();
   });
 
   afterEach(() => vi.useRealTimers());

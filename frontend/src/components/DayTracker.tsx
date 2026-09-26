@@ -393,10 +393,146 @@ export function DayTracker({ questionnaire, treatDay, day, expandLabels, isToday
     setFormCollapsed(false);
   }
 
+  // Once one more meal is discouraged, the folded toggle leaves the bottom of the list for the
+  // tracker's title row, so the list no longer walks the eye down to it. Opened, the form
+  // returns below the list, where its inputs have room.
+  const formInHeader = addMealWarns && formCollapsed && !atCap && !closed && !breakdownShown;
+  const mealForm = atCap && formCollapsed ? (
+    <p className="meal-cap-note">{`הושלמו ${maxMealsPerDay} ארוחות היום`}</p>
+  ) : (
+    <CollapsibleSection className={"meal-form"
+                          + (formCollapsed ? (nudging ? ` nudge-${nudgePhase}` : "") : " meal-form-open")
+                          + (tooSoon ? " meal-add-early" : "")}
+                        headingLevel={3}
+                        title={editing !== undefined ? "עדכון ארוחה" : addMealTitle}
+                        collapsed={formCollapsed}
+                        onToggle={toggleForm}
+                        headerAside={
+    /* The next meal's recommendation rides beside the add-meal heading, the question it
+       answers, greyed until the next meal is within the configured lead. It shows only while
+       the form is folded: open inputs are already composing that meal, or correcting a past
+       one. The header keeps its aside slot either way — an empty aside, not a missing one —
+       so opening the form does not restructure the header and remount the toggle mid-press.
+       Once one more meal is discouraged there is no next meal to recommend. */
+    onRecommend === undefined || !isToday || addMealWarns
+      ? undefined
+      : !formCollapsed
+        ? null
+        : <button type="button" onClick={onRecommend}
+                  className={"secondary compact next-meal" + (suggestionTimely ? "" : " next-meal-early")}>
+            מה לאכול בארוחה הבאה?
+          </button>
+  }>
+      {/* Sits in the frame's far corner via the style sheet rather than in the heading row:
+          an aside there would restructure the header between open and folded, recreating the
+          toggle mid-interaction and dropping keyboard focus with it. */}
+      <button type="button" className="glyph meal-form-close" aria-label="סגירת הטופס"
+              onClick={toggleForm}>
+        <Icon name="close" />
+      </button>
+      <CarbSourceFields question={carbsQuestion} selectedId={carbsChoiceId}
+                        expandLabels={expandLabels}
+                        onPick={(id) => setCarbsChoiceId(id)}>
+        {offersPortion && portionPicker(portionId, setPortionId)}
+      </CarbSourceFields>
+      {secondSourceOpen && (
+        <CarbSourceFields question={secondSourceQuestion} selectedId={secondChoiceId}
+                          expandLabels={expandLabels}
+                          onPick={(id) => setSecondChoiceId(id)}>
+          {secondIsHeavy && portionPicker(secondPortionId, setSecondPortionId)}
+        </CarbSourceFields>
+      )}
+      {/* A plate carrying a second carb source is the exception, so the group is revealed on
+          demand — and offered only beside a light primary grade, the one place the contract
+          admits one. An open group outlives every repick: this control is the only way one
+          goes, so correcting the primary never discards a source the user recorded. */}
+      {(offersSecondSource || secondSourceOpen) && (
+        <div className="form-actions">
+          <button type="button" className="secondary"
+                  onClick={() => (secondSourceOpen ? clearSecondSource() : setSecondSourceOpen(true))}>
+            {secondSourceOpen ? SECOND_SOURCE_REMOVE : SECOND_SOURCE_ADD}
+          </button>
+        </div>
+      )}
+      {/* What the meal held besides its carb source, each box named by the thing alone under
+          the one heading that says it was included. */}
+      <fieldset className="meal-flags">
+        <legend>כולל</legend>
+        <label>
+          <input type="checkbox" checked={vegetables}
+                 onChange={(e) => setVegetables(e.target.checked)} />
+          {" "}{VEGETABLES_FLAG.label}
+        </label>
+        <label>
+          <input type="checkbox" checked={fruit}
+                 onChange={(e) => setFruit(e.target.checked)} />
+          {" "}{FRUIT_FLAG.label}
+        </label>
+        <label>
+          <input type="checkbox" checked={fatServings > 0}
+                 onChange={(e) => {
+                   setFatServings(e.target.checked ? 1 : 0);
+                   if (e.target.checked) fatHint.reveal(true, FAT_HINT_MS);
+                 }} />
+          {" "}{FAT_SERVINGS.label}
+          {/* The count rides inside the label like an addition's amount, and appears only once
+              there is a serving to count: ticking the box is the one-serving case. */}
+          {fatServings > 0 && (
+            <select className="addition-amount" aria-label={`מנות — ${FAT_SERVINGS.label}`}
+                    value={fatServings} onChange={(e) => setFatServings(Number(e.target.value))}>
+              {Array.from({ length: fatQuestion.per_meal_max! }, (_, n) => (
+                <option key={n + 1} value={n + 1}>{n + 1}</option>
+              ))}
+            </select>
+          )}
+        </label>
+        {/* What one serving is, from the config, on its own line right under the box that asks
+            for the count — shown for a moment after each tick, as a just-picked grade's list
+            is, and withdrawn with the serving if the box is cleared before then. */}
+        {fatServings > 0 && fatHint.revealed !== null && (
+          <p className="meal-hint revealed" style={fatHint.style}>{fatQuestion.tooltip}</p>
+        )}
+        {carbsQuestion.additions!.map((addition) => (
+          <label key={addition.id}>
+            <input type="checkbox" checked={pickedAdditions.has(addition.id)}
+                   onChange={(e) => setPickedAdditions((prev) => {
+                     const next = new Map(prev);
+                     if (e.target.checked) next.set(addition.id, amountRule.default);
+                     else next.delete(addition.id);
+                     return next;
+                   })} />
+            {" "}{addition.label}
+            {/* The amount rides inside the addition's own label, so it reads as part of that
+                one accompaniment and appears only once there is something to quantify. */}
+            {pickedAdditions.has(addition.id) && (
+              <select className="addition-amount" aria-label={`כמות — ${addition.label}`}
+                      value={pickedAdditions.get(addition.id)}
+                      onChange={(e) => setPickedAdditions((prev) =>
+                        new Map(prev).set(addition.id, e.target.value))}>
+                {amountRule.options.map((amount) => (
+                  <option key={amount.id} value={amount.id}>{amount.label}</option>
+                ))}
+              </select>
+            )}
+          </label>
+        ))}
+      </fieldset>
+      <label className="meal-time">
+        שעת הארוחה{" "}
+        <input type="time" value={mealTime} min={isToday ? stretchesUntil : undefined}
+               max={isToday ? nowTime : undefined}
+               onChange={(e) => setMealTime(e.target.value)} />
+      </label>
+    </CollapsibleSection>
+  );
+
   return (
     <CollapsibleSection className="day-tracker" title={isToday ? "יומן היום" : "יומן אתמול"}
                         collapsed={sectionCollapsed}
                         onToggle={() => setSectionCollapsed((c) => !c)}
+                        // Always an aside, empty or not, so the header keeps one structure and
+                        // the tracker's own toggle is not remounted as the form moves in and out.
+                        headerAside={formInHeader && !sectionCollapsed ? mealForm : null}
                         summary={
       <>
         <DayDashboard questionnaire={questionnaire} treatDay={treatDay} date={day.date} derived={derived}
@@ -452,133 +588,7 @@ export function DayTracker({ questionnaire, treatDay, day, expandLabels, isToday
           saved sits right above the toggle that recorded it. */}
       <MealList questionnaire={questionnaire} meals={day.meals} expandLabels={expandLabels}
                 onEdit={startEdit} onDelete={onDeleteMeal} deletingId={deletingMealId} />
-      {atCap && formCollapsed ? (
-        <p className="meal-cap-note">{`הושלמו ${maxMealsPerDay} ארוחות היום`}</p>
-      ) : (
-      <CollapsibleSection className={"meal-form"
-                            + (formCollapsed ? (nudging ? ` nudge-${nudgePhase}` : "") : " meal-form-open")
-                            + (tooSoon ? " meal-add-early" : "")}
-                          headingLevel={3}
-                          title={editing !== undefined ? "עדכון ארוחה" : addMealTitle}
-                          collapsed={formCollapsed}
-                          onToggle={toggleForm}
-                          headerAside={
-      /* The next meal's recommendation rides beside the add-meal heading, the question it
-         answers, greyed until the next meal is within the configured lead. It shows only while
-         the form is folded: open inputs are already composing that meal, or correcting a past
-         one. The header keeps its aside slot either way — an empty aside, not a missing one —
-         so opening the form does not restructure the header and remount the toggle mid-press. */
-      onRecommend === undefined || !isToday
-        ? undefined
-        : !formCollapsed
-          ? null
-          : <button type="button" onClick={onRecommend}
-                    className={"secondary compact next-meal" + (suggestionTimely ? "" : " next-meal-early")}>
-              מה לאכול בארוחה הבאה?
-            </button>
-    }>
-        {/* Sits in the frame's far corner via the style sheet rather than in the heading row:
-            an aside there would restructure the header between open and folded, recreating the
-            toggle mid-interaction and dropping keyboard focus with it. */}
-        <button type="button" className="glyph meal-form-close" aria-label="סגירת הטופס"
-                onClick={toggleForm}>
-          <Icon name="close" />
-        </button>
-        <CarbSourceFields question={carbsQuestion} selectedId={carbsChoiceId}
-                          expandLabels={expandLabels}
-                          onPick={(id) => setCarbsChoiceId(id)}>
-          {offersPortion && portionPicker(portionId, setPortionId)}
-        </CarbSourceFields>
-        {secondSourceOpen && (
-          <CarbSourceFields question={secondSourceQuestion} selectedId={secondChoiceId}
-                            expandLabels={expandLabels}
-                            onPick={(id) => setSecondChoiceId(id)}>
-            {secondIsHeavy && portionPicker(secondPortionId, setSecondPortionId)}
-          </CarbSourceFields>
-        )}
-        {/* A plate carrying a second carb source is the exception, so the group is revealed on
-            demand — and offered only beside a light primary grade, the one place the contract
-            admits one. An open group outlives every repick: this control is the only way one
-            goes, so correcting the primary never discards a source the user recorded. */}
-        {(offersSecondSource || secondSourceOpen) && (
-          <div className="form-actions">
-            <button type="button" className="secondary"
-                    onClick={() => (secondSourceOpen ? clearSecondSource() : setSecondSourceOpen(true))}>
-              {secondSourceOpen ? SECOND_SOURCE_REMOVE : SECOND_SOURCE_ADD}
-            </button>
-          </div>
-        )}
-        {/* What the meal held besides its carb source, each box named by the thing alone under
-            the one heading that says it was included. */}
-        <fieldset className="meal-flags">
-          <legend>כולל</legend>
-          <label>
-            <input type="checkbox" checked={vegetables}
-                   onChange={(e) => setVegetables(e.target.checked)} />
-            {" "}{VEGETABLES_FLAG.label}
-          </label>
-          <label>
-            <input type="checkbox" checked={fruit}
-                   onChange={(e) => setFruit(e.target.checked)} />
-            {" "}{FRUIT_FLAG.label}
-          </label>
-          <label>
-            <input type="checkbox" checked={fatServings > 0}
-                   onChange={(e) => {
-                     setFatServings(e.target.checked ? 1 : 0);
-                     if (e.target.checked) fatHint.reveal(true, FAT_HINT_MS);
-                   }} />
-            {" "}{FAT_SERVINGS.label}
-            {/* The count rides inside the label like an addition's amount, and appears only once
-                there is a serving to count: ticking the box is the one-serving case. */}
-            {fatServings > 0 && (
-              <select className="addition-amount" aria-label={`מנות — ${FAT_SERVINGS.label}`}
-                      value={fatServings} onChange={(e) => setFatServings(Number(e.target.value))}>
-                {Array.from({ length: fatQuestion.per_meal_max! }, (_, n) => (
-                  <option key={n + 1} value={n + 1}>{n + 1}</option>
-                ))}
-              </select>
-            )}
-          </label>
-          {/* What one serving is, from the config, on its own line right under the box that asks
-              for the count — shown for a moment after each tick, as a just-picked grade's list
-              is, and withdrawn with the serving if the box is cleared before then. */}
-          {fatServings > 0 && fatHint.revealed !== null && (
-            <p className="meal-hint revealed" style={fatHint.style}>{fatQuestion.tooltip}</p>
-          )}
-          {carbsQuestion.additions!.map((addition) => (
-            <label key={addition.id}>
-              <input type="checkbox" checked={pickedAdditions.has(addition.id)}
-                     onChange={(e) => setPickedAdditions((prev) => {
-                       const next = new Map(prev);
-                       if (e.target.checked) next.set(addition.id, amountRule.default);
-                       else next.delete(addition.id);
-                       return next;
-                     })} />
-              {" "}{addition.label}
-              {/* The amount rides inside the addition's own label, so it reads as part of that
-                  one accompaniment and appears only once there is something to quantify. */}
-              {pickedAdditions.has(addition.id) && (
-                <select className="addition-amount" aria-label={`כמות — ${addition.label}`}
-                        value={pickedAdditions.get(addition.id)}
-                        onChange={(e) => setPickedAdditions((prev) =>
-                          new Map(prev).set(addition.id, e.target.value))}>
-                  {amountRule.options.map((amount) => (
-                    <option key={amount.id} value={amount.id}>{amount.label}</option>
-                  ))}
-                </select>
-              )}
-            </label>
-          ))}
-        </fieldset>
-        <label className="meal-time">
-          שעת הארוחה{" "}
-          <input type="time" value={mealTime} min={isToday ? stretchesUntil : undefined}
-                 max={isToday ? nowTime : undefined}
-                 onChange={(e) => setMealTime(e.target.value)} />
-        </label>
-      </CollapsibleSection>
-      )}
+      {!formInHeader && mealForm}
       {/* Sit outside the fold that hides the picker: they are the only account of why the submit
           button is disabled, and that button shows either way. */}
       {mealTimeIsFuture && <p className="notice">לא ניתן לרשום ארוחה בשעה עתידית</p>}
@@ -590,7 +600,7 @@ export function DayTracker({ questionnaire, treatDay, day, expandLabels, isToday
           {`מקור פחמימה נוסף מותר רק לצד דרגה קלה — עד דרגה ${secondRule.light_grade_max}`}
         </p>
       )}
-      <div className="form-actions">
+      <div className={"form-actions" + (formInHeader ? " actions-under-list" : "")}>
         {carbsChoiceId !== undefined && formHoldsUnsavedMeal && (
           <button type="button" className="primary" disabled={!mealSaveable} onClick={() => {
             submitMeal();

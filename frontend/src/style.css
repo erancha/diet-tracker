@@ -681,6 +681,8 @@ main:not(.intro-0, .intro-1, .intro-2, .intro-3, .intro-4) .weight .section-togg
 /* Open, the form gains its own frame in the secondary controls' accent tint, so the editing surface
    reads as one bounded unit against the tracker card and its hairline fieldsets. The box takes
    over the heading's 1rem gap above, and the heading sits on the frame's padding instead. */
+/* Lifted into the tracker's title row, the folded toggle sits on that row's baseline. */
+.day-tracker > .section-header .meal-form h3 { margin: 0; }
 .meal-form-open { position: relative; border: 1px solid var(--accent-border); border-radius: 8px;
                   padding: 0.75rem 1rem 1rem; margin-top: 1rem; }
 .meal-form-open h3 { margin-top: 0; }
@@ -720,6 +722,9 @@ main:not(.intro-0, .intro-1, .intro-2, .intro-3, .intro-4) .weight .section-togg
    padding gives way to the text, which stays whole; a row that still cannot hold every control
    drops one to the next line rather than breaking a label or running off the edge. */
 .form-actions button { padding-inline: 1rem; white-space: nowrap; }
+/* With the add-meal toggle lifted to the title row, the actions follow the meal list directly and
+   take an extra 1rem of air from it. */
+.form-actions.actions-under-list { padding-top: 1rem; }
 /* Grows the same 1px the open tracker's add-meal toggle carries over its own base size. Once
    warning, it turns bold and steps down to four fifths of the body size the close-day button
    beside it inherits, so closing reads as the next step and adding as the smaller option. */
