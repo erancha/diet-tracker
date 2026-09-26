@@ -659,7 +659,7 @@ main:not(.intro-0, .intro-1, .intro-2, .intro-3, .intro-4) .weight .section-togg
 /* Kept near body size against the tracker's larger heading, so the fold reads as a row inside
    the panel rather than as a section of its own; its top margin opens the gap under whatever
    precedes it — the day's meal rows, or the dashboard while none are recorded. */
-.meal-form h3 { font-size: calc(1.1rem + 2px); margin: 1.5rem 0 0.5rem; }
+.meal-form h3 { font-size: calc(1.1rem + 1px); margin: 1.5rem 0 0.5rem; }
 /* Stands where the add-meal toggle stood once the day holds its quota, so it wears the same
    heading slot muted rather than styled as a control. */
 .meal-cap-note { color: var(--viz-muted); margin: 1rem 0 0.5rem; }
@@ -716,9 +716,9 @@ main:not(.intro-0, .intro-1, .intro-2, .intro-3, .intro-4) .weight .section-togg
    padding gives way to the text, which stays whole; a row that still cannot hold every control
    drops one to the next line rather than breaking a label or running off the edge. */
 .form-actions button { padding-inline: 1rem; white-space: nowrap; }
-/* Grows the same 2px the open tracker's add-meal toggle carries over its own base size — while
+/* Grows the same 1px the open tracker's add-meal toggle carries over its own base size — while
    it is not warning; then the warn class's smaller size stands, as on the open tracker. */
-.reopen-toggle:not(.meal-add-warn) { font-size: calc(1rem + 2px); }
+.reopen-toggle:not(.meal-add-warn) { font-size: calc(1rem + 1px); }
 /* Rides the closed tracker's action row beside the add-meal button, naming what that button
    does to a closed day; muted, because it explains rather than acts. */
 .reopen-hint { align-self: center; }
