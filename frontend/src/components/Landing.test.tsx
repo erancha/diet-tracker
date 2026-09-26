@@ -117,7 +117,7 @@ describe("Landing", () => {
     const walkthrough = () => screen.getByRole("link", { name: "הדגמה" });
     expect(walkthrough()).toHaveAttribute("href", "demo.html");
     // The note rides beside the link rather than inside it, so the link's name stays the page's.
-    expect(walkthrough().parentElement).toHaveTextContent("(ניתן להאט את ההדגמה, מומלץ לראות במסך מחשב)");
+    expect(walkthrough().parentElement).toHaveTextContent("(ניתן להאט את ההדגמה; מומלץ לראות במסך מחשב)");
     // The footer links read walkthrough, invite, repo — the order the stylesheet spaces them in.
     expect(walkthrough().compareDocumentPosition(
       screen.getByRole("link", { name: "הזמנת חברים ב-WhatsApp" }),

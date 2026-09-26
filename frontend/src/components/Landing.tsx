@@ -50,7 +50,7 @@ export function Landing({ onSignIn, chatAvailable }: {
       {/* The replay opens at double speed and draws a phone on a workbench beside its narration,
           so both notes sit with the link rather than waiting to be discovered on the page they
           lead to. Outside the anchor, so the link's accessible name stays the walkthrough's own. */}
-      <span className="landing-walkthrough-hint">(ניתן להאט את ההדגמה, מומלץ לראות במסך מחשב)</span>
+      <span className="landing-walkthrough-hint">(ניתן להאט את ההדגמה; מומלץ לראות במסך מחשב)</span>
     </p>
   );
   // A visitor is not the developer, so the invite always speaks as a received recommendation.
