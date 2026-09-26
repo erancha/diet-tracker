@@ -33,7 +33,8 @@ export function DayView({ questionnaire, treatDay, day, expandLabels, onClose }:
       ) : (
         <>
           <DayDashboard questionnaire={questionnaire} treatDay={treatDay} date={day.date}
-                        derived={day.derived} onScoreClick={() => setBreakdownOpen((open) => !open)} />
+                        derived={day.derived} meals={day.meals}
+                        onScoreClick={() => setBreakdownOpen((open) => !open)} />
           {breakdownOpen
             ? <ScoreBreakdown questionnaire={questionnaire} treatDay={treatDay} date={day.date} meals={day.meals}
                         onExpire={() => setBreakdownOpen(false)} />

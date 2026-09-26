@@ -400,6 +400,7 @@ export function DayTracker({ questionnaire, treatDay, day, expandLabels, isToday
                         summary={
       <>
         <DayDashboard questionnaire={questionnaire} treatDay={treatDay} date={day.date} derived={derived}
+                      meals={day.meals}
                       // From a folded tracker the score opens the breakdown into view rather than
                       // toggling a panel the fold would hide.
                       onScoreClick={() => {

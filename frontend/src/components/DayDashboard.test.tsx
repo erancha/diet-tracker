@@ -2,7 +2,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { DayDashboard } from "./DayDashboard";
 import type { Questionnaire } from "../types";
-import { dashboardFigure } from "../test-fixtures";
+import { dashboardFigure, trackedDay, trackerQuestionnaire } from "../test-fixtures";
 
 // Every limit the dashboard can mark, one per figure: the window bounded from above by its rule,
 // vegetables bounded from below by theirs, and the score's own rule. The vegetables display floor
@@ -33,7 +33,7 @@ const TREAT = "2026-08-21";
 describe("DayDashboard", () => {
   it("marks a window past its bound and vegetables under their rule", () => {
     render(<DayDashboard questionnaire={questionnaire} treatDay={TREAT_DAY} date={ORDINARY}
-                         derived={{ carbs: 9, meals: 3, vegetables: 0, eating_window: 13, fat: 2 }} />);
+                         meals={[]} derived={{ carbs: 9, meals: 3, vegetables: 0, eating_window: 13, fat: 2 }} />);
 
     expect(screen.getByText("13")).toHaveClass("breach");
     expect(screen.getByText("0")).toHaveClass("breach");
@@ -42,33 +42,33 @@ describe("DayDashboard", () => {
 
   it("marks fat servings past their bound and leaves a shortfall unmarked", () => {
     render(<DayDashboard questionnaire={questionnaire} treatDay={TREAT_DAY} date={ORDINARY}
-                         derived={{ carbs: 5, meals: 3, vegetables: 2, eating_window: 8, fat: 4 }} />);
+                         meals={[]} derived={{ carbs: 5, meals: 3, vegetables: 2, eating_window: 8, fat: 4 }} />);
     expect(dashboardFigure("שומן")).toHaveTextContent("4");
     expect(screen.getByText("4")).toHaveClass("breach");
 
     cleanup();
     render(<DayDashboard questionnaire={questionnaire} treatDay={TREAT_DAY} date={ORDINARY}
-                         derived={{ carbs: 5, meals: 3, vegetables: 2, eating_window: 8, fat: 1 }} />);
+                         meals={[]} derived={{ carbs: 5, meals: 3, vegetables: 2, eating_window: 8, fat: 1 }} />);
     expect(screen.getByText("1")).not.toHaveClass("breach");
   });
 
   it("leaves vegetables under their display floor unmarked: the floor is the table's alone", () => {
     render(<DayDashboard questionnaire={questionnaire} treatDay={TREAT_DAY} date={ORDINARY}
-                         derived={{ carbs: 5, meals: 3, vegetables: 1, eating_window: 8, fat: 0 }} />);
+                         meals={[]} derived={{ carbs: 5, meals: 3, vegetables: 1, eating_window: 8, fat: 0 }} />);
 
     expect(screen.getByText("1")).not.toHaveClass("breach");
   });
 
   it("marks nothing on a day with no meals recorded yet", () => {
     render(<DayDashboard questionnaire={questionnaire} treatDay={TREAT_DAY} date={ORDINARY}
-                         derived={{ carbs: 0, meals: 0, vegetables: 0, eating_window: 0, fat: 0 }} />);
+                         meals={[]} derived={{ carbs: 0, meals: 0, vegetables: 0, eating_window: 0, fat: 0 }} />);
 
     expect(document.querySelectorAll(".breach")).toHaveLength(0);
   });
 
   it("leaves figures inside their limits unmarked", () => {
     render(<DayDashboard questionnaire={questionnaire} treatDay={TREAT_DAY} date={ORDINARY}
-                         derived={{ carbs: 5, meals: 3, vegetables: 2, eating_window: 12, fat: 0 }} />);
+                         meals={[]} derived={{ carbs: 5, meals: 3, vegetables: 2, eating_window: 12, fat: 0 }} />);
 
     expect(screen.getByText("12")).not.toHaveClass("breach");
     expect(screen.getByText("2")).not.toHaveClass("breach");
@@ -78,7 +78,7 @@ describe("DayDashboard", () => {
 
   it("marks a treat-day breach like any other, softened by the treat-day class", () => {
     render(<DayDashboard questionnaire={questionnaire} treatDay={TREAT_DAY} date={TREAT}
-                         derived={{ carbs: 9, meals: 3, vegetables: 0, eating_window: 13, fat: 2 }} />);
+                         meals={[]} derived={{ carbs: 9, meals: 3, vegetables: 0, eating_window: 13, fat: 2 }} />);
 
     expect(screen.getByText("13")).toHaveClass("breach", "treat-day");
     expect(screen.getByText("9").closest("strong")).toHaveClass("heavy-day", "treat-day");
@@ -87,7 +87,7 @@ describe("DayDashboard", () => {
 
   it("keeps the treat-day class off an ordinary day's marks", () => {
     render(<DayDashboard questionnaire={questionnaire} treatDay={TREAT_DAY} date={ORDINARY}
-                         derived={{ carbs: 9, meals: 3, vegetables: 1, eating_window: 13, fat: 0 }} />);
+                         meals={[]} derived={{ carbs: 9, meals: 3, vegetables: 1, eating_window: 13, fat: 0 }} />);
 
     expect(screen.getByText("13")).not.toHaveClass("treat-day");
     expect(screen.getByText("9").closest("strong")).not.toHaveClass("treat-day");
@@ -101,7 +101,7 @@ describe("DayDashboard score link", () => {
   it("turns a score past the day rule into the control that opens its breakdown", () => {
     const onScoreClick = vi.fn();
     render(<DayDashboard questionnaire={questionnaire} treatDay={TREAT_DAY} date={ORDINARY}
-                         derived={heavy} onScoreClick={onScoreClick} />);
+                         meals={[]} derived={heavy} onScoreClick={onScoreClick} />);
     const link = screen.getByRole("button", { name: "פירוט הציון" });
     expect(link).toHaveTextContent("9");
     link.click();
@@ -110,14 +110,30 @@ describe("DayDashboard score link", () => {
 
   it("leaves a score within the rule as plain text even when a handler is offered", () => {
     render(<DayDashboard questionnaire={questionnaire} treatDay={TREAT_DAY} date={ORDINARY}
-                         derived={light} onScoreClick={vi.fn()} />);
+                         meals={[]} derived={light} onScoreClick={vi.fn()} />);
     expect(screen.queryByRole("button", { name: "פירוט הציון" })).toBeNull();
     expect(screen.getByText("3")).toBeInTheDocument();
   });
 
   it("keeps a heavy score plain where no breakdown is offered", () => {
     render(<DayDashboard questionnaire={questionnaire} treatDay={TREAT_DAY} date={ORDINARY}
-                         derived={heavy} />);
+                         meals={[]} derived={heavy} />);
     expect(screen.queryByRole("button")).toBeNull();
+  });
+});
+
+describe("DayDashboard flour-and-sugar part", () => {
+  it("names the score's flour-and-sugar points beside it", () => {
+    const meals = [{ ...trackedDay.meals[1], carbs_choice: "carb_grade_7", fruit: false,
+                     additions: [{ id: "sweet", amount: null }] }];
+    render(<DayDashboard questionnaire={trackerQuestionnaire} treatDay={TREAT_DAY} date={ORDINARY}
+                         meals={meals} derived={{ ...trackedDay.derived, carbs: 11 }} />);
+    expect(screen.getByTitle("קמחים וסוכרים")).toHaveTextContent("(11)");
+  });
+
+  it("stays silent when no point came from flour or sugar", () => {
+    render(<DayDashboard questionnaire={trackerQuestionnaire} treatDay={TREAT_DAY} date={ORDINARY}
+                         meals={trackedDay.meals} derived={trackedDay.derived} />);
+    expect(screen.queryByTitle("קמחים וסוכרים")).toBeNull();
   });
 });

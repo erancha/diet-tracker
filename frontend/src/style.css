@@ -521,6 +521,7 @@ td.view-day { cursor: pointer; }
    with the button's frame stripped so the dashboard's line keeps its height and rhythm. */
 .score-link { text-decoration: underline; text-underline-offset: 0.2em; border: 0;
               line-height: inherit; }
+.score-excluded { font-weight: normal; }
 /* The breakdown stands where the meal list stood, and reads as a ledger: each meal's time
    heads its priced terms, every term's points on the far column so they add up down the page. */
 .score-breakdown h4 { margin: 0 0 0.4rem; }
