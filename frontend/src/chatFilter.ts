@@ -3,12 +3,12 @@
 // shared. Which chats each value admits is the chat list's own call; here lives only the choice,
 // persisting past the visit so the next sign-in opens on the side the filter last chose.
 
-import { readStored, writeStored } from "./localStore";
+import { readStored, STORAGE_PREFIX, writeStored } from "./localStore";
 
 export type ChatFilter = "all" | "mine" | "app" | "shared";
 
 // Exported for tests that pin the side a case opens on.
-export const STORAGE_KEY = "diet-tracker.chat-filter";
+export const STORAGE_KEY = `${STORAGE_PREFIX}chat-filter`;
 
 const FILTERS: ChatFilter[] = ["all", "mine", "app", "shared"];
 

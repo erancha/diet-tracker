@@ -2,6 +2,7 @@ import { act, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ScoreBreakdown } from "./ScoreBreakdown";
 import { trackerQuestionnaire } from "../test-fixtures";
+import { STORAGE_KEY as GRADE_LABELS_KEY } from "../gradeLabels";
 import type { Meal, Questionnaire } from "../types";
 
 // The tracker fixture plus the grade a second fruit escalates to, so the escalation term prices.
@@ -56,10 +57,10 @@ describe("ScoreBreakdown", () => {
   });
 
   it("spells every grade out with its examples whatever density the tracker is set to", () => {
-    window.localStorage.setItem("diet-tracker.expanded-grade-labels", "false");
+    window.localStorage.setItem(GRADE_LABELS_KEY, "false");
     renderBreakdown();
     expect(screen.getAllByText(/דרגה 7 \(קמח לבן\)/).length).toBeGreaterThan(0);
-    window.localStorage.removeItem("diet-tracker.expanded-grade-labels");
+    window.localStorage.removeItem(GRADE_LABELS_KEY);
   });
 
   it("sums the day beside the rule bound the score crossed", () => {

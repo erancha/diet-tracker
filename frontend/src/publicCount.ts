@@ -2,10 +2,10 @@
 // tell a count that grew since — chats the reader has not seen — from one that stood still.
 // Kept per signed-in address, so accounts sharing a browser keep their own last visit.
 
-import { readStored, writeStored } from "./localStore";
+import { readStored, STORAGE_PREFIX, writeStored } from "./localStore";
 
 // Exported for tests that pin what an account's last visit saw.
-export const storageKey = (email: string) => `diet-tracker.public-chat-count.${email}`;
+export const storageKey = (email: string) => `${STORAGE_PREFIX}public-chat-count.${email}`;
 
 // Null on a first visit, or where the stored value is not a number.
 export function storedPublicCount(email: string): number | null {
