@@ -4,7 +4,7 @@ import { WeightSection, WEIGHT_GLANCE_MS } from "./WeightSection";
 import { WIND_DOWN_SWEEP_MS } from "./useWindDownFold";
 import type { WeightPayload, WeightSettings } from "../types";
 import { DISCARD_EDITS_PROMPT } from "../edits";
-import { WEIGH_IN_CADENCE_QUESTION } from "../weight";
+import { offDayWeighingHint, WEIGH_IN_CADENCE_QUESTION } from "../weight";
 
 const NOW = new Date(2026, 7, 27); // 2026-08-27, a Thursday
 const TODAY = "2026-08-27";
@@ -387,7 +387,31 @@ describe("today's weighing", () => {
     fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
 
     expect(onRecord).toHaveBeenCalledWith(76.5);
-    expect(screen.getByLabelText("המשקל היום")).toBeInTheDocument();
+    expect(screen.getByLabelText("המשקל היום")).toHaveValue(null);
+  });
+
+  it("notes an off weigh-in day while a figure is typed, and still records", () => {
+    const onRecord = vi.fn();
+    show({}, { onRecord }, new Date(2026, 7, 26));
+    const input = screen.getByLabelText("המשקל היום");
+    const hint = offDayWeighingHint(WEIGH_IN_WEEKDAY);
+    expect(screen.queryByText(hint)).toBeNull();
+
+    fireEvent.change(input, { target: { value: "7" } });
+    expect(screen.getByText(hint)).toBeInTheDocument();
+    fireEvent.change(input, { target: { value: "" } });
+    expect(screen.queryByText(hint)).toBeNull();
+
+    fireEvent.change(input, { target: { value: "76.5" } });
+    fireEvent.click(screen.getByRole("button", { name: "שמירה" }));
+    expect(onRecord).toHaveBeenCalledWith(76.5);
+    expect(screen.queryByText(hint)).toBeNull();
+  });
+
+  it("adds no note on the weigh-in day", () => {
+    show();
+    fireEvent.change(screen.getByLabelText("המשקל היום"), { target: { value: "76.5" } });
+    expect(screen.queryByText(offDayWeighingHint(WEIGH_IN_WEEKDAY))).toBeNull();
   });
 
   it("offers an update, and shows the standing value, once the day holds one", () => {

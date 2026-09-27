@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import type { ChartSpan, WeightPayload, WeightSettings } from "../types";
 import { isWeighInDay, isoDate } from "../dates";
 import { mayDiscardEdits } from "../edits";
-import { activeSpan, ceilingWarning, entriesWithin, floorWarning, kgLabel, offeredSpans, parseKg,
-         rhythmReading, summarize, targetChangePrompt, trendShape, WEIGH_IN_CADENCE_QUESTION,
-         type TrendShape, type WeightSummary } from "../weight";
+import { activeSpan, ceilingWarning, entriesWithin, floorWarning, kgLabel, offDayWeighingHint,
+         offeredSpans, parseKg, rhythmReading, summarize, targetChangePrompt, trendShape,
+         WEIGH_IN_CADENCE_QUESTION, type TrendShape, type WeightSummary } from "../weight";
 import { CollapsibleSection } from "./CollapsibleSection";
 import { Icon, type IconName } from "./Icon";
 import { useGlobalFold } from "./useFoldAll";
@@ -148,22 +148,32 @@ const TREND_ICONS: Record<TrendShape, IconName> = {
 export const WEIGHT_GLANCE_MS = 2_500;
 
 // Today's weighing. The row marks itself on the weigh-in day, which is what the stylesheet sizes
-// it by: the day the rhythm asks for a weighing reads larger, and recording stays open on any.
-function TodayRow({ recorded, limits, due, onRecord }: {
-  recorded: number | null; limits: Limits; due: boolean; onRecord: (kg: number) => void;
+// it by: the day the rhythm asks for a weighing reads larger. Recording stays open on any day; off
+// the weigh-in day, the row says so as soon as a figure is being typed, rather than after it is
+// saved. A recorded weight empties the input, since the saved value reads beside it.
+function TodayRow({ recorded, limits, weighInWeekday, due, onRecord }: {
+  recorded: number | null; limits: Limits; weighInWeekday: string; due: boolean;
+  onRecord: (kg: number) => void;
 }) {
   const draft = useKgDraft(limits);
   const kg = draft.kg;
+  const record = (kg: number) => {
+    onRecord(kg);
+    draft.set("");
+  };
   return (
     <p className={due ? "weight-today weigh-in-due" : "weight-today"}>
       <span>המשקל היום:</span>
       <KgInput value={draft.text} warning={draft.warning} limits={limits} label="המשקל היום"
                onChange={draft.set} />
       <button type="button" className="primary" disabled={kg === null}
-              onClick={() => draft.submit(kg!, onRecord)}>
+              onClick={() => draft.submit(kg!, record)}>
         {recorded === null ? "שמירה" : "עדכון"}
       </button>
       {recorded !== null && <span className="weight-recorded">נרשם: {kgLabel(recorded)} ק״ג</span>}
+      {draft.text !== "" && !due && (
+        <span className="notice weight-off-day">{offDayWeighingHint(weighInWeekday)}</span>
+      )}
     </p>
   );
 }
@@ -252,7 +262,7 @@ export function WeightSection({ weight, settings, weighInWeekday, now, defaultEx
         </p>
       )}
       <TodayRow recorded={recordedToday?.kg ?? null} limits={settings.limits}
-                due={isWeighInDay(now, weighInWeekday)}
+                weighInWeekday={weighInWeekday} due={isWeighInDay(now, weighInWeekday)}
                 onRecord={(kg) => { fold.disarm(); onRecord(kg); }} />
       {weight.entries.length > 0 && (
         <WeightChart entries={plotted} target={weight.target} span={active} spans={spans}

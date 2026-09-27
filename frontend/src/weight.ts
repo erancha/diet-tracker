@@ -229,6 +229,10 @@ export function targetChangePrompt(kg: number, current: number | null): string {
   return `${verb} את משקל היעד ל-${kgLabel(kg)} ק״ג?`;
 }
 
+export function offDayWeighingHint(weekday: string): string {
+  return `היום אינו יום השקילה המומלץ (יום ${weekdayLetter(weekday)}׳)`;
+}
+
 // Raised when a weighing is recorded against no target: without one the chart draws no reference
 // line and the section's own line has no distance to state.
 export const TARGET_UNSET_NOTICE = "משקל היעד טרם נקבע — קבעו יעד כדי לעקוב אחר המרחק ממנו";

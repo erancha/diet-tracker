@@ -882,6 +882,11 @@ main:not(.intro-0, .intro-1, .intro-2, .intro-3, .intro-4) .weight .section-togg
 /* Already-recorded is a statement about the day, not a second value to act on, so it reads as
    chrome beside the input that would replace it. */
 .weight-recorded { font-size: 0.85rem; color: #5f5f5f; }
+/* Off the weigh-in day the note takes a line of its own under the controls, so the input keeps
+   its place while the note appears. It stands on the notice's amber ground in red ink: a weighing
+   today will not read against the weekly rhythm. */
+.weight-off-day { flex-basis: 100%; font-size: 0.85rem; color: var(--excluded);
+                  padding: 0.3rem 0.6rem; margin: 0; }
 /* The section reads as one line under the app title: the latest weight heads it, doubling as the
    toggle, and the distance to the target follows on the same row. The heading is sized to the
    body rather than to a section title, since the line is a status reading and not a banner; the
