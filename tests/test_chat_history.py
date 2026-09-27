@@ -119,6 +119,18 @@ def test_count_spans_the_users_whole_transcript(table):
     assert chat_history.count(table, "u3") == 0
 
 
+def test_count_follows_pagination_to_the_end():
+    # A fake table standing in for DynamoDB's 1MB page cap, which a COUNT query is bound by just
+    # as an item read is.
+    class PagedTable:
+        def query(self, **kwargs):
+            if kwargs.get("ExclusiveStartKey") is None:
+                return {"Count": 2, "LastEvaluatedKey": {"pk": "u1", "sk": "x"}}
+            return {"Count": 1}
+
+    assert chat_history.count(PagedTable(), "u1") == 3
+
+
 def test_turns_follows_pagination_to_the_end():
     # A fake table standing in for DynamoDB's 1MB page cap, which moto cannot be made to hit
     # at reasonable test cost.

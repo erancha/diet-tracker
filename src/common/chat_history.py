@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 
 from boto3.dynamodb.conditions import Attr, Key
 
-from common.paging import query_all
+from common.paging import count_all, query_all
 
 # The labels a conversation is chained under inside the stored question. frontend/src/chatChain.tsx
 # declares the same labels and Chat.tsx composes the same chain when the user follows a chat up,
@@ -247,7 +247,7 @@ def count_public(table, reader_sub) -> int:
 
 
 def _count(table, key_condition, **query) -> int:
-    return table.query(Select="COUNT", KeyConditionExpression=key_condition, **query)["Count"]
+    return count_all(table, KeyConditionExpression=key_condition, **query)
 
 
 def turns(table, sub):
