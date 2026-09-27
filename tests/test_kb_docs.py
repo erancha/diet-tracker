@@ -4,7 +4,8 @@ service answers from an uploaded copy of the guide, so a doc that drifts from co
 confidently wrong answers. Each test pins a quoted value to its config source; a config change
 that fails here is the reminder to update docs/kb/app-guide-he.md and re-upload it. The guide's
 classification extension, docs/kb/app-guide-classify-he.md, is pinned the same way to the meal
-record's fields and to the retrieval window it has to fit."""
+record's fields and to the retrieval window it has to fit, and so is its fat-servings extension,
+docs/kb/app-guide-fat-he.md."""
 
 import json
 import re
@@ -234,3 +235,14 @@ def test_the_classification_doc_walks_every_meal_field_in_one_chunk():
     # one confuses.
     assert "%" not in doc.replace("15% שומן", "")
     assert "מדריך האפליקציה — איך לסווג ולרשום ארוחה" in _doc_section("3. סיווג מאכלים נפוצים — הכרעות האפליקציה")
+
+
+def test_the_fat_doc_quotes_the_day_bounds_in_one_chunk():
+    """Whether a fatty cut is a fat serving is asked about a dish, which retrieval matches to the
+    program's dish lists rather than to the guide's prose, so the answer lives in its own doc,
+    within one retrieval window, and quotes the day's bounds the app judges by."""
+    doc = (ROOT / "docs" / "kb" / "app-guide-fat-he.md").read_text()
+    fat = next(q for q in CONFIG["questionnaire"]["questions"] if q["id"] == "fat")
+    assert len(doc) <= 2000
+    assert f"{fat['warn_below']}–{RULES['too_much_fat']['above']} מנות הן תקרה" in doc
+    assert f"אין לרדת מ־{fat['warn_below']} מנות ביום" in doc
