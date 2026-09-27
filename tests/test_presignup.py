@@ -6,8 +6,9 @@ from conftest import FakeSes
 from handlers import presignup
 
 
-def event(email):
-    return {"request": {"userAttributes": {"email": email}}, "response": {}}
+def event(email, trigger="PreSignUp_ExternalProvider"):
+    return {"triggerSource": trigger, "request": {"userAttributes": {"email": email}},
+            "response": {}}
 
 
 @pytest.fixture
@@ -92,3 +93,11 @@ def test_verification_request_failure_is_logged_and_does_not_block_signup(ses, m
         assert presignup.handler(event("newcomer@gmail.com"), None) == event("newcomer@gmail.com")
     assert "newcomer@gmail.com" in caplog.text
     assert len(ses.sent) == 1
+
+
+def test_account_the_operator_creates_skips_the_gate_verification_and_notice(ses, monkeypatch):
+    monkeypatch.setenv("ALLOWED_EMAILS", "a@gmail.com")
+    created = event("fictive-001@example.invalid", trigger="PreSignUp_AdminCreateUser")
+    assert presignup.handler(created, None) == created
+    assert ses.sent == []
+    assert ses.verification_requested == []

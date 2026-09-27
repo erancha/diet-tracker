@@ -19,6 +19,18 @@ def test_list_users_returns_sub_and_lowercased_email():
         assert result[0].sub
 
 
+
+def test_list_users_reads_past_cognitos_one_page_of_sixty():
+    with mock_aws():
+        cognito = boto3.client("cognito-idp", region_name="eu-central-1")
+        pool_id = cognito.create_user_pool(PoolName="p")["UserPool"]["Id"]
+        for n in range(61):
+            cognito.admin_create_user(
+                UserPoolId=pool_id, Username=f"user_{n}",
+                UserAttributes=[{"Name": "email", "Value": f"user{n}@gmail.com"}],
+            )
+        assert len(users.list_users(cognito, pool_id)) == 61
+
 def test_chat_id_for_unbound_user_is_loud():
     assert users.chat_id_for({"a@gmail.com": "111"}, "a@gmail.com") == "111"
     with pytest.raises(LookupError):

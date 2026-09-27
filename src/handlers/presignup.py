@@ -3,7 +3,10 @@ announcing each new user to the admin.
 
 ALLOWED_EMAILS is a single regex the email must fullmatch case-insensitively — alternation
 lists several addresses and ".*" opens sign-up to everyone. Raising here makes Cognito reject
-the sign-up."""
+the sign-up.
+
+An account the operator creates directly in the pool (AdminCreateUser) passes untouched: creating
+it already takes AWS credentials, and its address is not one SES should mail."""
 
 import os
 import re
@@ -17,6 +20,8 @@ logger = get_logger(__name__)
 
 
 def handler(event, context):
+    if event["triggerSource"] == "PreSignUp_AdminCreateUser":
+        return event
     email = event["request"]["userAttributes"]["email"].lower()
     if not re.fullmatch(os.environ["ALLOWED_EMAILS"], email, re.IGNORECASE):
         raise PermissionError(f"{email} is not on the diet-tracker allowlist")
