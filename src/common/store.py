@@ -10,6 +10,8 @@ from decimal import Decimal
 import boto3
 from boto3.dynamodb.conditions import Key
 
+from common.paging import count_all, query_all
+
 
 def _elapsed_in_day(day, at) -> str:
     """The "HH:MM:SS" a meal is keyed under within its day: hours elapsed from that day's own
@@ -165,10 +167,11 @@ class Store:
         return "Item" in self._days.get_item(Key={"pk": user_sub, "sk": day})
 
     def get_days_range(self, user_sub, start_day, end_day) -> dict:
-        response = self._days.query(
+        items = query_all(
+            self._days,
             KeyConditionExpression=Key("pk").eq(user_sub) & Key("sk").between(start_day, end_day))
         return {item["sk"]: {k: _from_dynamo(v) for k, v in item["answers"].items()}
-                for item in response["Items"]}
+                for item in items}
 
     def count_days_range(self, user_sub, start_day, end_day) -> int:
         """Recorded days across the inclusive range, counted inside DynamoDB so record content
@@ -197,7 +200,7 @@ class Store:
 
     @staticmethod
     def _count(table, key_condition) -> int:
-        return table.query(Select="COUNT", KeyConditionExpression=key_condition)["Count"]
+        return count_all(table, KeyConditionExpression=key_condition)
 
     def add_meal(self, user_sub, day, meal) -> str:
         """Stores one meal, returning its id. The meal is a mapping over MEAL_ATTRIBUTES, which is
@@ -213,18 +216,20 @@ class Store:
         return meal_id
 
     def get_meals(self, user_sub, day) -> list:
-        response = self._meals.query(
+        items = query_all(
+            self._meals,
             KeyConditionExpression=Key("pk").eq(user_sub) & Key("sk").begins_with(f"{day}#"))
-        return [_meal_from_item(item) for item in response["Items"]]
+        return [_meal_from_item(item) for item in items]
 
     def get_meals_range(self, user_sub, start_day, end_day) -> dict:
         """The meals of each day in the inclusive range that recorded any, keyed by day; a day
         with none is absent rather than empty. Spans the same sort keys count_meals_range counts."""
-        response = self._meals.query(
+        items = query_all(
+            self._meals,
             KeyConditionExpression=Key("pk").eq(user_sub)
             & Key("sk").between(f"{start_day}#", f"{end_day}#\xff"))
         by_day = {}
-        for item in response["Items"]:
+        for item in items:
             by_day.setdefault(item["sk"].split("#", 1)[0], []).append(_meal_from_item(item))
         return by_day
 
@@ -287,15 +292,15 @@ class Store:
     def get_weights(self, user_sub) -> dict:
         """Every weight the user has recorded, by day. The target sorts past every ISO date, so
         bounding the query below it selects the measurements alone."""
-        response = self._weights.query(
-            KeyConditionExpression=Key("pk").eq(user_sub) & Key("sk").lt(TARGET_KEY))
-        return _weights_by_day(response["Items"])
+        return _weights_by_day(query_all(
+            self._weights,
+            KeyConditionExpression=Key("pk").eq(user_sub) & Key("sk").lt(TARGET_KEY)))
 
     def get_weights_range(self, user_sub, start_day, end_day) -> dict:
         """Recorded weights by day across the inclusive range."""
-        response = self._weights.query(
-            KeyConditionExpression=Key("pk").eq(user_sub) & Key("sk").between(start_day, end_day))
-        return _weights_by_day(response["Items"])
+        return _weights_by_day(query_all(
+            self._weights,
+            KeyConditionExpression=Key("pk").eq(user_sub) & Key("sk").between(start_day, end_day)))
 
     def get_target(self, user_sub):
         """The user's target weight, or None when they have never set one."""
