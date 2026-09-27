@@ -97,12 +97,14 @@ export interface MealWeight {
  * only where the helping rule offers one (`portion` is null otherwise). A light second source
  * merges into the plate (`merged`) and costs only what it lifts the higher grade by; a heavy one
  * is added at its helping. The second fruit's escalation is what it lifts the plate's weight by,
- * and each addition its surcharge at the recorded amount. */
-export type ScoreTerm =
+ * and each addition its surcharge at the recorded amount. `excluded` marks a term priced from what
+ * the program excludes. */
+export type ScoreTerm = (
   | { kind: "source"; choice: string; portion: string | null; points: number }
   | { kind: "second_source"; choice: string; portion: string | null; merged: boolean; points: number }
   | { kind: "fruit_escalation"; points: number }
-  | { kind: "addition"; id: string; amount: string | null; points: number };
+  | { kind: "addition"; id: string; amount: string | null; points: number }
+) & { excluded: boolean };
 
 // Each meal's carb contribution broken into its priced terms, aligned with the input order so
 // callers can label the meals they passed in. The fruit escalation reads the day chronologically,
@@ -133,10 +135,11 @@ function mealBreakdown(meals: Pick<Meal, "at" | "carbs_choice" | "fruit" | "addi
     // prices a second fruit, not the helping of whatever else was on the plate, so a reduced
     // helping must not discount it.
     let weight = sourceWeight(meal.carbs_choice, meal.portion, weights, portions);
+    const sourceExcluded = excludesSource(weights[meal.carbs_choice]);
     terms.push({ kind: "source", choice: meal.carbs_choice,
                  portion: meal.portion !== null && portionOffered(portions, weights[meal.carbs_choice]) ? meal.portion : null,
-                 points: weight });
-    let part = excludesSource(weights[meal.carbs_choice]) ? weight : 0;
+                 points: weight, excluded: sourceExcluded });
+    let part = sourceExcluded ? weight : 0;
     // A plate drawing on two light carb sources is one method-approved plate, so the higher grade
     // speaks for both. A heavier second source — a slice of white bread beside a grade 2 bowl —
     // always carries a helping from the shared scale, adding its grade at that percentage.
@@ -148,13 +151,14 @@ function mealBreakdown(meals: Pick<Meal, "at" | "carbs_choice" | "fruit" | "addi
       if (secondWeight <= secondSource.light_grade_max) {
         const lifted = Math.max(weight, secondWeight);
         terms.push({ kind: "second_source", choice: meal.second_source.carbs_choice, portion: null,
-                     merged: true, points: lifted - weight });
+                     merged: true, points: lifted - weight, excluded: excludesSource(secondWeight) });
         weight = lifted;
         if (excludesSource(secondWeight)) part = Math.max(part, secondWeight);
       } else {
         const added = (secondWeight * scalePercent(portions.options, meal.second_source.portion!, "portion")) / 100;
         terms.push({ kind: "second_source", choice: meal.second_source.carbs_choice,
-                     portion: meal.second_source.portion, merged: false, points: added });
+                     portion: meal.second_source.portion, merged: false, points: added,
+                     excluded: excludesSource(secondWeight) });
         weight += added;
         if (excludesSource(secondWeight)) part += added;
       }
@@ -165,7 +169,7 @@ function mealBreakdown(meals: Pick<Meal, "at" | "carbs_choice" | "fruit" | "addi
         const escalation = weights[FRUIT_ESCALATION_CHOICE];
         if (escalation === undefined) throw new Error(`unknown carbs choice ${FRUIT_ESCALATION_CHOICE}`);
         const lifted = Math.max(weight, escalation);
-        terms.push({ kind: "fruit_escalation", points: lifted - weight });
+        terms.push({ kind: "fruit_escalation", points: lifted - weight, excluded: false });
         weight = lifted;
       }
     }
@@ -178,9 +182,11 @@ function mealBreakdown(meals: Pick<Meal, "at" | "carbs_choice" | "fruit" | "addi
       const surcharge = addition.amount === null
         ? value
         : (value * scalePercent(amounts.options, addition.amount, "amount")) / 100;
-      terms.push({ kind: "addition", id: addition.id, amount: addition.amount, points: surcharge });
+      const additionExcluded = excluded.additions.includes(addition.id);
+      terms.push({ kind: "addition", id: addition.id, amount: addition.amount, points: surcharge,
+                   excluded: additionExcluded });
       weight += surcharge;
-      if (excluded.additions.includes(addition.id)) part += surcharge;
+      if (additionExcluded) part += surcharge;
     }
     result[index] = { terms, excluded: part };
   }

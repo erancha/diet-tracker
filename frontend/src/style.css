@@ -2,6 +2,8 @@
   --accent: #2e7d32;
   --accent-border: #b6d0b8;
   --danger: #c62828;
+  /* Flours and sugars: darker than a breach's red, so the part reads apart from the verdict. */
+  --excluded: #8b1a1a;
   --muted-text: #8a8a84;
   /* A bound crossed on the treat day: still a crossing, painted amber rather than red because
      what that day costs is what it is for. */
@@ -521,7 +523,23 @@ td.view-day { cursor: pointer; }
    with the button's frame stripped so the dashboard's line keeps its height and rhythm. */
 .score-link { text-decoration: underline; text-underline-offset: 0.2em; border: 0;
               line-height: inherit; }
-.score-excluded { font-weight: normal; }
+/* When it appears the link takes six beats of the shared blink, three seconds telling the reader
+   the figure opens something. */
+@media (prefers-reduced-motion: no-preference) {
+  .score-link { animation: nudge-blink 0.5s ease-in-out 6; }
+}
+/* The score's flour-and-sugar part names itself inline where the line has room. A phone's line is
+   already full, so there the name stays off it and a tap floats it over the figure for a moment,
+   anchored at the figure's left edge, the side the line ends on. */
+.score-excluded { position: relative; font-weight: normal; border: 0; line-height: inherit;
+                  cursor: inherit; --btn-fg: var(--excluded); }
+.excluded-hint { display: none; }
+@media (max-width: 47.99rem) {
+  .score-excluded { cursor: pointer; }
+  .excluded-name { display: none; }
+  .excluded-hint { display: block; position: absolute; bottom: calc(100% + 0.3rem); left: 0;
+                   z-index: 10; font-weight: normal; }
+}
 /* The breakdown stands where the meal list stood, and reads as a ledger: each meal's time
    heads its priced terms, every term's points on the far column so they add up down the page. */
 .score-breakdown h4 { margin: 0 0 0.4rem; }
@@ -534,6 +552,9 @@ td.view-day { cursor: pointer; }
    the inherited size keep the ledger's text quieter than the figures it prices. */
 .breakdown-label { font-size: calc(1em - 2px); }
 .breakdown-points { white-space: nowrap; font-variant-numeric: tabular-nums; }
+/* The breakdown's flour-and-sugar terms wear the dashboard part's color, so they visibly add up
+   to it. */
+.breakdown-points.excluded { color: var(--excluded); }
 .breakdown-meal-total { border-top: 1px solid #ddd; padding-top: 0.15rem; }
 .breakdown-sum { margin: 0.8rem 0 0; font-weight: 800; }
 

@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { DayDashboard } from "./DayDashboard";
 import type { Questionnaire } from "../types";
@@ -128,12 +128,25 @@ describe("DayDashboard flour-and-sugar part", () => {
                      additions: [{ id: "sweet", amount: null }] }];
     render(<DayDashboard questionnaire={trackerQuestionnaire} treatDay={TREAT_DAY} date={ORDINARY}
                          meals={meals} derived={{ ...trackedDay.derived, carbs: 11 }} />);
-    expect(screen.getByTitle("קמחים וסוכרים")).toHaveTextContent("(11)");
+    expect(screen.getByRole("button", { name: /קמחים וסוכרים/ })).toHaveTextContent("(קמחים וסוכרים: 11)");
+  });
+
+  it("floats the part's name over its figure for two seconds when tapped", () => {
+    vi.useFakeTimers();
+    const meals = [{ ...trackedDay.meals[1], carbs_choice: "carb_grade_7", fruit: false,
+                     additions: [{ id: "sweet", amount: null }] }];
+    render(<DayDashboard questionnaire={trackerQuestionnaire} treatDay={TREAT_DAY} date={ORDINARY}
+                         meals={meals} derived={{ ...trackedDay.derived, carbs: 11 }} />);
+    act(() => screen.getByRole("button", { name: /קמחים וסוכרים/ }).click());
+    expect(screen.getByRole("tooltip")).toHaveTextContent("קמחים וסוכרים");
+    act(() => vi.advanceTimersByTime(2000));
+    expect(screen.queryByRole("tooltip")).toBeNull();
+    vi.useRealTimers();
   });
 
   it("stays silent when no point came from flour or sugar", () => {
     render(<DayDashboard questionnaire={trackerQuestionnaire} treatDay={TREAT_DAY} date={ORDINARY}
                          meals={trackedDay.meals} derived={trackedDay.derived} />);
-    expect(screen.queryByTitle("קמחים וסוכרים")).toBeNull();
+    expect(screen.queryByRole("button", { name: /קמחים וסוכרים/ })).toBeNull();
   });
 });

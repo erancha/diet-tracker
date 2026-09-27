@@ -2,6 +2,10 @@ import type { Derived, Meal, Questionnaire, TreatDaySettings } from "../types";
 import { fallsOn } from "../dates";
 import { carbsScales, excludedPoints } from "../derive";
 import { EXCLUDED_LABEL, isViolating, scoreLabel } from "../violations";
+import { useReveal } from "../reveal";
+
+// How long a tap on a phone keeps the flour-and-sugar part's name over its figure.
+const EXCLUDED_HINT_MS = 2000;
 
 // One-line summary of a day's derived values, shared by the live tracker header (client-derived)
 // and the read-only history view (server-derived). Every figure is its own element so color can
@@ -18,6 +22,7 @@ export function DayDashboard({ questionnaire, treatDay, date, derived, meals, on
   // has nothing to account for, so it stays plain text even when a handler is supplied.
   onScoreClick?: () => void;
 }) {
+  const excludedHint = useReveal<true>();
   const carbsQuestion = questionnaire.questions.find((q) => q.id === "carbs")!;
   const softened = fallsOn(date, treatDay.weekday) ? " treat-day" : "";
   const heavy = isViolating(questionnaire, carbsQuestion.id, derived.carbs);
@@ -46,7 +51,12 @@ export function DayDashboard({ questionnaire, treatDay, date, derived, meals, on
                     onClick={onScoreClick}>{scoreLabel(derived.carbs)}</button>
           : <span className="score">{scoreLabel(derived.carbs)}</span>}
         {excluded > 0 && <>
-          {" "}<span className="score-excluded" title={EXCLUDED_LABEL}>({scoreLabel(excluded)})</span>
+          {" "}<button type="button" className="score-excluded"
+                       onClick={() => excludedHint.reveal(true, EXCLUDED_HINT_MS)}>
+            (<span className="excluded-name">{EXCLUDED_LABEL}: </span>{scoreLabel(excluded)})
+            {excludedHint.revealed && <span className="trend-tooltip excluded-hint" role="tooltip">
+              {EXCLUDED_LABEL}</span>}
+          </button>
         </>}
       </strong>
     </div>

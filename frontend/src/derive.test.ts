@@ -68,28 +68,36 @@ describe("mealTerms", () => {
         expect(terms.reduce((sum, t) => sum + t.points, 0)).toBeCloseTo(perMeal[index].total);
       });
     });
+
+    it(`excluded terms add up to each meal's excluded part — ${vector.name}`, () => {
+      const perMeal = mealWeights(vector.meals, ...scales);
+      mealTerms(vector.meals, ...scales).forEach((terms, index) => {
+        expect(terms.filter((t) => t.excluded).reduce((sum, t) => sum + t.points, 0))
+          .toBeCloseTo(perMeal[index].excluded);
+      });
+    });
   }
 
   it("names the helping a discounted grade was eaten at and the helping of a heavy second source", () => {
     const meal = { at: "2026-08-20T13:00:00+03:00", carbs_choice: "carb_grade_6", vegetables: false, fruit: false, fat_servings: 0, additions: [], portion: "small", second_source: { carbs_choice: "carb_grade_4", portion: "medium" } };
     expect(mealTerms([meal], ...scales)).toEqual([[
-      { kind: "source", choice: "carb_grade_6", portion: "small", points: 3.6 },
-      { kind: "second_source", choice: "carb_grade_4", portion: "medium", merged: false, points: 3.2 },
+      { kind: "source", choice: "carb_grade_6", portion: "small", points: 3.6, excluded: true },
+      { kind: "second_source", choice: "carb_grade_4", portion: "medium", merged: false, points: 3.2, excluded: false },
     ]]);
   });
 
   it("names a light second source as merged, priced at what it lifts the plate by", () => {
     const meal = { at: "2026-08-20T13:00:00+03:00", carbs_choice: "carb_grade_1", vegetables: false, fruit: false, fat_servings: 0, additions: [], portion: null, second_source: { carbs_choice: "carb_grade_2", portion: null } };
     expect(mealTerms([meal], ...scales)).toEqual([[
-      { kind: "source", choice: "carb_grade_1", portion: null, points: 1 },
-      { kind: "second_source", choice: "carb_grade_2", portion: null, merged: true, points: 1 },
+      { kind: "source", choice: "carb_grade_1", portion: null, points: 1, excluded: false },
+      { kind: "second_source", choice: "carb_grade_2", portion: null, merged: true, points: 1, excluded: false },
     ]]);
   });
 
   it("drops a recorded helping below the offered grade, where it never discounts", () => {
     const meal = { at: "2026-08-20T13:00:00+03:00", carbs_choice: "carb_grade_2", vegetables: false, fruit: false, fat_servings: 0, additions: [], portion: "small", second_source: null };
     expect(mealTerms([meal], ...scales)).toEqual([[
-      { kind: "source", choice: "carb_grade_2", portion: null, points: 2 },
+      { kind: "source", choice: "carb_grade_2", portion: null, points: 2, excluded: false },
     ]]);
   });
 
@@ -100,12 +108,12 @@ describe("mealTerms", () => {
     ];
     expect(mealTerms(meals, ...scales)).toEqual([
       [
-        { kind: "source", choice: "no_carbs", portion: null, points: 0 },
-        { kind: "fruit_escalation", points: 5 },
-        { kind: "addition", id: "sweet", amount: "much", points: 4.5 },
-        { kind: "addition", id: "alcohol", amount: null, points: 3 },
+        { kind: "source", choice: "no_carbs", portion: null, points: 0, excluded: false },
+        { kind: "fruit_escalation", points: 5, excluded: false },
+        { kind: "addition", id: "sweet", amount: "much", points: 4.5, excluded: true },
+        { kind: "addition", id: "alcohol", amount: null, points: 3, excluded: false },
       ],
-      [{ kind: "source", choice: "carb_grade_1", portion: null, points: 1 }],
+      [{ kind: "source", choice: "carb_grade_1", portion: null, points: 1, excluded: false }],
     ]);
   });
 });

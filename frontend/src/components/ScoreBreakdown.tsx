@@ -50,7 +50,8 @@ export function ScoreBreakdown({ questionnaire, treatDay, date, meals, onExpire 
               {terms[index].map((term, i) => (
                 <div key={i} className="breakdown-term">
                   <span className="breakdown-label">{termLabel(carbsQuestion, term)}</span>
-                  <span className="breakdown-points">{i === 0 ? "" : "+ "}{pointsLabel(term.points)}</span>
+                  <span className={term.excluded ? "breakdown-points excluded" : "breakdown-points"}>
+                    {i === 0 ? "" : "+ "}{pointsLabel(term.points)}</span>
                 </div>
               ))}
               <div className="breakdown-term breakdown-meal-total">

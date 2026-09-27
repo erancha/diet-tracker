@@ -56,6 +56,13 @@ describe("ScoreBreakdown", () => {
     expect(rows[1]).toHaveTextContent("= 16.6");
   });
 
+  it("marks the flour-and-sugar terms, the ones the dashboard's part adds up", () => {
+    renderBreakdown();
+    // Grade 7 at a small helping, grade 7 as the heavy second source, and the heaped sweet.
+    expect([...document.querySelectorAll(".breakdown-points.excluded")].map((e) => e.textContent))
+      .toEqual(["4.2", "+ 5.6", "+ 5"]);
+  });
+
   it("spells every grade out with its examples whatever density the tracker is set to", () => {
     window.localStorage.setItem(GRADE_LABELS_KEY, "false");
     renderBreakdown();
