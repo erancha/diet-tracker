@@ -29,7 +29,7 @@ describe("entriesWithin", () => {
 describe("offeredSpans", () => {
   it("drops a span that would redraw what a narrower one already shows", () => {
     // Every entry falls inside a year, so הכל redraws the same points as שנה.
-    expect(offeredSpans(SERIES, TODAY)).toEqual([1, 3, 6, 12]);
+    expect(offeredSpans(SERIES, TODAY)).toEqual([1, 3, 12]);
   });
 
   it("drops a span reaching no point at all", () => {

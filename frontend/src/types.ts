@@ -93,7 +93,7 @@ export interface Questionnaire {
 
 // Months the weight chart may span. null is the whole series; the values mirror CHART_SPANS in
 // src/common/appconfig.py, which rejects a configured span the selector cannot offer.
-export type ChartSpan = 1 | 3 | 6 | 12 | null;
+export type ChartSpan = 1 | 3 | 12 | null;
 
 export interface WeightSettings {
   // The hour the weigh-in reminder fires at; its weekday is the treat day's.

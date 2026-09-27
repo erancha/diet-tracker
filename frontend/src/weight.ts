@@ -11,7 +11,6 @@ import type { ChartSpan, WeightEntry } from "./types";
 export const CHART_SPANS: { months: ChartSpan; label: string }[] = [
   { months: 1, label: "חודש" },
   { months: 3, label: "3 חודשים" },
-  { months: 6, label: "חצי שנה" },
   { months: 12, label: "שנה" },
   { months: null, label: "הכל" },
 ];

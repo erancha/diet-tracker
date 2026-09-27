@@ -22,7 +22,7 @@ WEEKDAY_NAMES = {"SUN": "ראשון", "MON": "שני", "TUE": "שלישי", "WED
 # Spans the weight chart's range selector offers, in months. None is the whole series. The
 # configured opening span must name one of them, or the chart would open on a range the reader
 # has no control to return to.
-CHART_SPANS = (1, 3, 6, 12, None)
+CHART_SPANS = (1, 3, 12, None)
 
 
 @dataclass(frozen=True)
