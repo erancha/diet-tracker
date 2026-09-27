@@ -603,8 +603,6 @@ td.view-day { cursor: pointer; }
    side by side at all. */
 .section-header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 1rem; }
 .section-header h3 { margin: 0; }
-/* The add-meal title reads a step under the day log's own title, which it sits beneath. */
-.day-tracker .section-header h3 { font-size: calc(var(--section-title-size) - 4px); }
 /* A section header doubles as its fold's disclosure, taking its size from the heading it sits in.
    Semibold rather than the heading's full bold, so a pressable title reads a shade lighter than
    one that is only a title. */
@@ -706,8 +704,8 @@ main:not(.intro-0, .intro-1, .intro-2, .intro-3, .intro-4) .weight .section-togg
    without shrinking away from its arrow. */
 .meal-form .section-toggle:has(.meal-add-warn) { --btn-fg: #8e1b1b; }
 .section-toggle .meal-add-warn { color: inherit; font-weight: 700; font-size: calc(1em - 1px); }
-/* Lifted into the tracker's title row, the folded toggle sits on that row's baseline, a further
-   2px under the add-meal title, with its arrow centred on the label rather than on the baseline. */
+/* Lifted into the tracker's title row, the folded toggle sits on that row's baseline, 6px under
+   the section-title size, with its arrow centred on the label rather than on the baseline. */
 .day-tracker > .section-header .meal-form h3 { margin: 0; font-size: calc(var(--section-title-size) - 6px); }
 .day-tracker > .section-header .meal-form .section-toggle { display: inline-flex; align-items: center;
                                                              gap: 0.25em; }
