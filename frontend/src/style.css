@@ -229,8 +229,8 @@ h1 .app-icon { width: 1em; height: 1em; vertical-align: middle; margin-inline-en
    stay subordinate to their answers; here that reading is inverted, so the row is set above the
    values it names instead. */
 .landing-principles th { font-size: calc(var(--cell-font-size) + 2px); }
-.range-picker { display: flex; gap: 1rem; align-items: center; margin-bottom: 0.75rem; font-size: 0.9rem; margin-top: 0.5rem; }
-.range-picker label { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0; cursor: pointer; }
+.range-picker { display: flex; flex-wrap: wrap; gap: 0.4rem 1rem; align-items: center; margin-bottom: 0.75rem; font-size: 0.9rem; margin-top: 0.5rem; }
+.range-picker label { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0; cursor: pointer; white-space: nowrap; }
 /* A fieldset's browser minimum is its content's width, which would let a one-line choice below
    widen it past the phone's screen instead of being cut; zeroed, the fieldset holds its column. */
 fieldset { border: 1px solid #ddd; border-radius: 8px; margin: 0 0 1rem; padding: 0.75rem 1rem; background: #fff;
@@ -836,7 +836,7 @@ main:not(.intro-0, .intro-1, .intro-2, .intro-3, .intro-4) .weight .section-togg
    where a phone cannot hold them side by side. It is a paragraph, so the vertical margin is set
    rather than left to the browser's 1em — the section is a handful of short rows and reads as one
    block at half that. */
-.weight-today { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin: 0.5rem 0; }
+.weight-today { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin: 0.5rem 0 1.5rem; }
 /* The height the target input and today's row are both cut to, named once so the two agree by
    construction. */
 .weight { --weight-input-height: 1.75rem; }
@@ -923,6 +923,7 @@ main:not(.intro-0, .intro-1, .intro-2, .intro-3, .intro-4) .weight .section-togg
 /* The word that opens the chat sits inside the sentence rather than beside it, so it reads as a
    link in running text: the sentence's own colour, marked by the underline alone. */
 .weight-rhythm button { text-decoration: underline; text-underline-offset: 2px; }
+.weight .trend { margin-bottom: 0.5rem; }
 /* The measurements behind the chart: one grid whose columns — date, hour, weight, delete — each
    sit at their widest content, aligned down the list with no cell stretched. Each row is a
    subgrid spanning the four columns, so its cells line up with every other row's while the row
