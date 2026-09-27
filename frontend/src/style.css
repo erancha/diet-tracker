@@ -538,7 +538,7 @@ td.view-day { cursor: pointer; }
 /* The score's flour-and-sugar part names itself inline where the line has room. A phone's line is
    already full, so there the name stays off it and a tap floats it over the figure for a moment,
    anchored at the figure's left edge, the side the line ends on. */
-.score-excluded { position: relative; font-weight: normal; border: 0; line-height: inherit;
+.score-excluded { position: relative; font-weight: inherit; border: 0; line-height: inherit;
                   cursor: inherit; --btn-fg: var(--excluded); }
 .excluded-hint { display: none; }
 @media (max-width: 47.99rem) {
