@@ -25,27 +25,11 @@ import { useWelcomeIntro } from "./useWelcomeIntro";
 import { WeightSection } from "./WeightSection";
 import { Welcome } from "./Welcome";
 
-// Top-level screen: owns the server data (app config, day history, the tracked day's and
-// yesterday's meal payloads, on-demand past-day payloads, the weight log) and every mutation —
-// meal recording and deletion, the day's closing through the tracker, day deletion, weight
-// recording, retargeting and deletion, and the account's reminder opt-out — plus the close →
-// alerts flow, the menu's condensed/full view command with its browser-remembered choice, and
-// the empty history panel's timed wind-down fold; apart from the chat and admin sections, which
-// own their reads, the components below it hold no server state of their own.
-//
-// The tracker is the only way a day closes, and the day it targets is decided here: today,
-// except during the small-hours grace window while yesterday's meals still leave something to
-// act on — closing a day whose record is missing, or reopening one whose record is still
-// deletable. The tracker never leaves the screen: a closed day shows read-only behind a single
-// reopen gate. The grace bounds come from app.json, the same file the API reads, so both ends
-// enforce one window.
-//
-// The admin account is not a dieter: its screen keeps the chat and the per-user activity panel
-// and drops the tracking sections a regular account opens on.
-//
-// It also reads whether the account has recorded anything yet, because the greeting, the weight
-// section's opening fold and the first-visit intro all answer to that one reading and must not
-// disagree about it.
+// Top-level screen: owns every server read and mutation except the chat's and the admin panel's,
+// the alert strip, and the menu's condensed/full view command. The day-close grace bounds come
+// from app.json, the file the API also reads, so both ends enforce one window. Whether the
+// account has recorded anything is read once here, so the greeting, the weight section's fold
+// and the first-visit intro cannot disagree about it.
 export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, chatAvailable,
                       onSignOut }: {
   email: string; api: Api; firstMealHour: number; mealGapHours: number;

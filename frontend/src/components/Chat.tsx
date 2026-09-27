@@ -48,48 +48,11 @@ function composeFollowUp(target: ChatTurn, question: string): string {
   return `${chain}\n${ANSWER_LABEL} ${target.answer}\n${FOLLOW_UP_LABEL} ${question}`;
 }
 
-// Q&A over the diet knowledge base: a composer over the user's stored transcript, newest first,
-// behind a count-labeled toggle with a filter beside it — every chat, only the ones the user
-// asked, or only the ones the app wrote — the count following the filter and a held-back count
-// beside it. Below the transcript a toggle of the same kind unfolds what other users shared,
-// read-only. Only the counts are read on mount; either list is fetched once first unfolded, so
-// the folded condensed sign-in never pays for a transcript nobody opens, and the counts stand
-// in for the lists until then. The others' count is highlighted when it grew since the last
-// visit (publicCount), until the list is unfolded. The filter choice outlives the visit
-// (chatFilter); sending a question widens it back to every chat. The menu's condensed/full
-// command folds the transcript, the condensed sign-in starts it folded, and sending always
-// reveals it. Folding either list closes every answer open in it, so it reopens with only the
-// questions in view. A question commanded from elsewhere (askCommand) is sent at once on the
-// app's side of the filter and handed back through onAskCommandTaken, so a remount cannot ask
-// twice; a follow-up inherits the side and the visibility of the chat it extends.
-//
-// A funnel above both lists unfolds a search box whose words narrow each of them to the chats
-// holding them, question and answer alike (chatSearch). The open box takes the place of the
-// sample questions and the composer rather than stacking above them, the two boxes being a phone
-// screen apart otherwise; closing it gives them back without lifting the words. It applies within
-// the side filter, and opens and loads both lists — words can only be read against chats that are
-// in. Each count then names the matches with the rest beside it, and sending a question drops the
-// words as it widens the side. The words last the visit alone, a search being a momentary act
-// rather than the standing preference the side filter is.
-//
-// A standalone typed question is first looked up: when the user, or another user who shared the
-// chat, already asked it, an offer under the composer opens that chat — loading and unfolding
-// its list as needed — or sends the question anyway. Follow-ups and commanded questions skip
-// the lookup, being meant for a fresh answer.
-//
-// An open answer's foot offers reply, summarize, share and close. Reply moves the composer under
-// the answer and the answered chat re-keys to the top. Summarizing trades the chain for a digest
-// for good, so it confirms first and shows a waiting indicator; a digest offers it disabled.
-// Sharing opens the chat to every user under the asker's address, so it confirms too; unsharing
-// just goes. A shared chat carries a marker on its row. Closing hands focus back to the question.
-// While a question is in flight the composer withdraws behind the thinking indicator. Sample
-// questions only fill the input.
-//
-// An answer or a digest can take longer than the API's gateway waits. The request then fails
-// without a reason from the handler, and the ask or the summary is read from the transcript
-// instead (upstream.ts), its indicator saying so meanwhile; the stored chat is the one newer
-// than the ask under the asked question, the digest the chat marked summarized. A failure the
-// handler did give a reason for shows that reason alone.
+// Q&A over the diet knowledge base: a composer, the user's stored transcript with a side filter,
+// a search over both lists, and a read-only list of chats other users shared. Only the counts
+// load on mount; each list is fetched when first unfolded, so a condensed sign-in never pays for
+// a transcript nobody opens. An answer that outlasts the gateway's wait is read from the
+// transcript instead (upstream.ts).
 export function Chat({ email, api, sampleQuestions, answerPollSeconds,
                        defaultTranscriptFolded = false, askCommand = null, onAskCommandTaken,
                        recommendCommand = null, onRecommendCommandTaken,
@@ -139,7 +102,8 @@ export function Chat({ email, api, sampleQuestions, answerPollSeconds,
   const [transcriptFolded, setTranscriptFolded] = useState(defaultTranscriptFolded);
   const [filter, setFilter] = useState<ChatFilter>(storedChatFilter);
   // The words both lists are narrowed to, or "" while the whole of each is listed. Only the
-  // submitted query narrows; the draft is what the form holds meanwhile.
+  // submitted query narrows; the draft is what the form holds meanwhile. Unlike the side filter,
+  // the words are not stored: a search is a momentary act, not a standing preference.
   const [query, setQuery] = useState("");
   const [queryDraft, setQueryDraft] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -155,6 +119,7 @@ export function Chat({ email, api, sampleQuestions, answerPollSeconds,
   // The shared chat the others' list is to open and scroll to once it renders, or null.
   const [revealOthersAt, setRevealOthersAt] = useState<string | null>(null);
   useGlobalFold(setTranscriptFolded);
+  // A folded transcript reopens with only the questions in view.
   useEffect(() => {
     if (transcriptFolded) setExpanded(new Set());
   }, [transcriptFolded]);
@@ -423,6 +388,7 @@ export function Chat({ email, api, sampleQuestions, answerPollSeconds,
 
   useEffect(() => {
     if (askCommand === null) return;
+    // Handed back before sending, so a remount cannot ask twice.
     onAskCommandTaken!();
     // A commanded question stands alone: a reply the user had begun is dropped, not chained.
     setReplyTo(null);
@@ -612,6 +578,8 @@ export function Chat({ email, api, sampleQuestions, answerPollSeconds,
   const searchable = (ownTotal !== undefined && ownTotal > 0)
     || (othersTotal !== undefined && othersTotal > 0);
 
+  // The open search box takes the place of the sample questions and the composer: stacked, the
+  // two boxes would sit a phone screen apart.
   const search = (
     <div className="chat-search">
       {!searchOpen && sampleQuestions.length > 0 && (

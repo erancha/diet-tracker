@@ -2,9 +2,10 @@
 timestamp of the last answer, so a key-ordered query reads newest first. The item holds the
 whole conversation — the question text carries the chain of questions and answers — and a
 follow-up replaces it whole under a fresh timestamp. Sparse marks record a digest in place of
-the chain (`summarized`), a chat the app wrote (`app`), and who else may read it
-(`visibility`, "public" so far); the visibility is the partition key of an index over the same
-timestamp, so the chats shared under one visibility are one query across every user.
+the chain (`summarized`), a chat the app wrote (`app`), the user's one next-meal recommendation
+(`recommendation`), and who else may read it (`visibility`, "public" so far); the visibility is
+the partition key of an index over the same timestamp, so the chats shared under one visibility
+are one query across every user.
 
 Source scores are floats, which the DynamoDB document layer refuses, so the sources list rides
 as a JSON string attribute and is parsed back on read."""
@@ -16,9 +17,9 @@ from boto3.dynamodb.conditions import Attr, Key
 
 from common.paging import query_all
 
-# The labels a conversation is chained under inside the stored question. Chat.tsx composes the
-# same chain when the user follows a chat up, so the wording is a cross-runtime contract rather
-# than presentation.
+# The labels a conversation is chained under inside the stored question. frontend/src/chatChain.tsx
+# declares the same labels and Chat.tsx composes the same chain when the user follows a chat up,
+# so the wording is a cross-runtime contract rather than presentation.
 ORIGINAL_QUESTION_LABEL = "השאלה המקורית:"
 ANSWER_LABEL = "התשובה:"
 FOLLOW_UP_LABEL = "שאלת המשך:"

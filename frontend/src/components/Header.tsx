@@ -37,19 +37,10 @@ const ACCOUNT_HINTS = {
 const EXPAND_LABELS = "הרחבת תיאורים";
 const COLLAPSE_LABELS = "צמצום תיאורים";
 
-// App chrome: the title, the account menu, and — while a message the app failed to email is
-// still awaiting the user — an alarm that survives reloads, unlike the transient post-submit
-// banner. The alarm starts closed so the presence of notices is visible without leading every
-// visit with their full texts. Each message is what the inbox should have carried and reads as a
-// plain note, dated by the attempt that failed and dismissable once read.
-//
-// The account menu names the signed-in address and holds the account-level actions — signing
-// out, the reminder subscription, and the WhatsApp invite — plus the page-wide display settings,
-// gathered in a תצוגה group that unfolds in place: the condensed/full view toggle and the switch
-// over how much of a carb grade's name the journal spells out. The address is identification
-// rather than chrome the page needs standing, so it appears only when the menu it labels is
-// open. Leaving is when a user decides they are done being reminded, so the opt-out is offered
-// alongside the exit; it reads as a toggle, so the same menu is also the way back.
+// App chrome: the title, the account menu, and — while a message the app failed to email awaits
+// the user — an alarm that survives reloads. The alarm opens closed, so it signals pending
+// messages without leading every visit with their full texts. The reminder opt-out sits beside
+// sign-out, since leaving is when a user decides they are done being reminded.
 export function Header({ email, muted, isAdmin, onSignOut, onSetMuted, onFoldAll,
                          nextViewCondensed, expandLabels, onSetExpandLabels, undelivered,
                          emailVerified, onDismissUndelivered }: {

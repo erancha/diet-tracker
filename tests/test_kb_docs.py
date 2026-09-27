@@ -3,8 +3,8 @@ grade scale, addition points, portion percents, thresholds and day-close bounds.
 service answers from an uploaded copy of the guide, so a doc that drifts from config becomes
 confidently wrong answers. Each test pins a quoted value to its config source; a config change
 that fails here is the reminder to update docs/kb/app-guide-he.md and re-upload it. The guide's
-classification extension is pinned the same way to the record's fields and to the retrieval
-window it has to fit."""
+classification extension, docs/kb/app-guide-classify-he.md, is pinned the same way to the meal
+record's fields and to the retrieval window it has to fit."""
 
 import json
 import re
@@ -155,7 +155,7 @@ def test_trend_chart_excluded_line():
 def test_additions_name_the_one_the_excluded_line_counts():
     # The additions section is where a user decides whether to mark something, so it has to name
     # which addition also lands in the chart's flour-and-sugar line — otherwise that consequence
-    # is reachable only from section 14, which nobody reads while recording a meal.
+    # is reachable only from the trend chart's section, which nobody reads while recording a meal.
     section = _doc_section("מה התוספת עושה ומה לא", level="### ")
     for addition in CARBS["additions"]:
         quoted = '"{}"'.format(addition["label"])

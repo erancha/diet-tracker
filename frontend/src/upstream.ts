@@ -3,7 +3,7 @@
 
 import { ApiError } from "./api";
 
-// How long the chat Lambda waits on the answering service (template.yaml ChatFunction Timeout):
+// How long the chat Lambda waits on the answering service (ChatFunction's Timeout in scripts/template.yaml):
 // an answer lands in the transcript within it or not at all.
 const ANSWER_WAIT_MS = 60_000;
 // Room past that for storing the answer and for the poll that finds it.

@@ -1,5 +1,5 @@
-"""Loads config/app.json — the app's single versioned config, holding the questionnaire alongside
-the weight settings, and read by the API Lambda, the nudge jobs, and the frontend alike.
+"""Loads config/app.json — the app's single versioned config, holding the questionnaire beside
+the weight, meals, day-close and treat-day settings, and shared by the Lambdas and the frontend.
 
 Every value the file declares is required. A malformed config is a deployment fault that must
 surface at load, before the first schedule fires or the first request is served."""

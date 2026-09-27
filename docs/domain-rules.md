@@ -4,8 +4,8 @@
 
 Each meal is recorded as it happens with a timestamp, the carb source or sources it drew on,
 whether it included vegetables or fruit, its concentrated-fat servings, and its additions (see
-below). Every carb grade carries a
-point weight defined in `config/app.json`; the day's score is the sum of its meals' weights.
+below). Every carb grade carries a point weight defined in `config/app.json`; the day's score is
+the sum of its meals' weights.
 Scoring is golf-style: lower is better.
 
 The day's five tracked values all derive from the meal log:
@@ -14,7 +14,7 @@ The day's five tracked values all derive from the meal log:
 - **Meal count** — number of recorded meals.
 - **Vegetable meals** — number of meals that included vegetables.
 - **Fat servings** — sum of the servings the meals recorded (see Fat servings below).
-- **Eating window** — hours between the first and last meal, rounded to the nearest half hour.
+- **Eating window** — hours between the first and last meal, rounded up to a whole hour.
 
 ## Carb sources on a plate
 
@@ -134,11 +134,11 @@ view's score.
   stays the tracker's target — its late meals can still be recorded or corrected, and its closing
   still lands on it. A day's eating stretches to that same bound, so a meal timed past midnight
   carries the new date while staying in the record of the day that ran into it: it sorts last in
-  that day's log and widens its eating window rather than opening the next day's. A just-closed yesterday stays on as well, reopenable,
-  until the delete bound. Past what applies, the tracker hands over to today. Deleting
-  yesterday's record shuts earlier, at `day_close.delete_until`, which never
-  outlives the close bound — so no deletion can leave a day that could not be re-closed. The API
-  enforces the same two windows from the same config values.
+  that day's log and widens its eating window rather than opening the next day's. A just-closed
+  yesterday stays on as well, reopenable, until the delete bound. Past what applies, the tracker
+  hands over to today. Deleting yesterday's record shuts earlier, at `day_close.delete_until`,
+  which never outlives the close bound — so no deletion can leave a day that could not be
+  re-closed. The API enforces the same two windows from the same config values.
 - **Overdue meal** — the tracker's meal inputs sit folded behind the day's figures and its meal
   list, and open expanded when a meal is overdue. A day is overdue in two ways: it passes its
   first-meal hour (the stack's `FirstMealHour`) with nothing recorded, or its most recent meal
@@ -151,9 +151,8 @@ view's score.
 
 The derivation exists as one implementation per language: `src/common/derive.py` in the Python
 backend as the authority, `frontend/src/derive.ts` in the browser for live dashboard feedback.
-Both implementations
-must satisfy the shared test vectors in `config/derive-vectors.json`, keeping the two runtimes in
-lockstep.
+Both implementations must satisfy the shared test vectors in `config/derive-vectors.json`, keeping
+the two runtimes in lockstep.
 
 - **Excluded points** — the same meal walk also decomposes the day's score: per meal, the
   weighed contribution of any carb source graded at or above the carbs question's
@@ -164,9 +163,8 @@ lockstep.
   the subtotal is also a term of the score, and the fruit escalation, which belongs to no carb
   source, lifts the score alone. The history payload carries the subtotal per day, read from the
   stored meals rather than written with the day, so every recorded day carries it with nothing
-  to backfill;
-  the trend chart plots it beside the score, where the gap between the two lines is the part of
-  the day that stayed within the program.
+  to backfill; the trend chart plots it beside the score, where the gap between the two lines
+  is the part of the day that stayed within the program.
 - **The treat day** — `treat_day` in the config names the weekday the program's week turns on:
   the treat meal is aimed at it, the weekly weigh-in falls on it, and the weekly recap goes out
   on it. The trend chart frames that column. Nothing marks a stored day as a treat day and no
@@ -203,10 +201,10 @@ weight is something the chart shows rather than a nudge that fires.
 - **Weigh-in fold** — the weight section rests folded and opens itself on the weigh-in day while
   the day holds no weighing, the same treatment an overdue meal gives the tracker's meal inputs.
 - **Weigh-in reminder** — a weekly nudge on the treat day at the configured hour, skipping only a
-  user who already recorded a weight that day. The job runs on the weigh-in weekday, so weighing on it
-  is the thing being asked for; a weighing on any other day is the drift the weekly rhythm loses
-  itself to and excuses nothing. It reaches the user by email, and by Telegram where that channel
-  is configured, rather than waiting in the app.
+  user who already recorded a weight that day. The job runs on the weigh-in weekday, so weighing
+  on it is the thing being asked for; a weighing on any other day is the drift the weekly
+  rhythm loses itself to and excuses nothing. It reaches the user by email, and by Telegram
+  where that channel is configured, rather than waiting in the app.
 
 ## Versioned configuration
 
@@ -249,8 +247,8 @@ Scheduled jobs (EventBridge Scheduler, Asia/Jerusalem) run alongside the tracker
   has it counted in the week it ends instead; one still open would be reported as missing however
   diligent the user was. Each user's own days decide, so the same run reports one user's week
   through the weigh-in day and another's through the day before it. Either way the recap reads
-  the weigh-in morning's weight as the freshest one. Each user's recap is produced in an invocation of its
-  own, so one slow reading of a week delays no one else's email.
+  the weigh-in morning's weight as the freshest one. Each user's recap is produced in an
+  invocation of its own, so one slow reading of a week delays no one else's email.
 
   The email opens with one line — the week's first and last day and how many of the seven were
   closed — and under it a short table with this week's counts beside last week's: clean days,

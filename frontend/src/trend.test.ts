@@ -68,7 +68,7 @@ describe("liveTrendDay", () => {
 });
 
 describe("treatDayColumns", () => {
-  // 2026-08-14 is a Friday, so a week ending on the Thursday after it holds exactly one.
+  // Thursday 2026-08-13 through Wednesday 2026-08-19: the week holds exactly one Friday, the 14th.
   const week = ["2026-08-13", "2026-08-14", "2026-08-15", "2026-08-16", "2026-08-17",
                 "2026-08-18", "2026-08-19"];
 

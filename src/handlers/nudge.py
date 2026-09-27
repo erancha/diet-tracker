@@ -33,7 +33,7 @@ OPEN_DAY_TEXT = "רשמת היום ארוחות ולא סגרת את היום �
 
 # How long the weekly recap waits for its reading of the week: just under the 60s the answering
 # service's API Gateway and the Lambda behind it both allow. The follow-up carries the whole recap
-# in its question, and composing the reading runs past the client's default wait. No browser waits
+# in its question, and composing the reading runs past chat.TIMEOUT_SECONDS. No browser waits
 # on this job; the budget it spends is the recap consumer's own timeout, one user per invocation.
 RECAP_TIMEOUT_SECONDS = 55
 
@@ -49,7 +49,7 @@ class NudgeEnv:
     treat_weekday: str  # the week's treat day, left out of the recap's clean-day count
     close_until: str  # the small-hours bound until which the last call still addresses yesterday
     sender: str
-    app_url: str  # the deployed frontend, cited in every email's mute footnote
+    app_url: str  # the deployed frontend, cited under every user-facing email's body
     rag_url: str  # empty when the deployment configures no answering service
     rag_key: str | None  # None exactly when rag_url is empty
     recap_queue: object  # SQS queue the weekly job hands one message per user to
@@ -131,8 +131,8 @@ def _send(env, user, subject, text) -> bool:
 
     SES refusing the message outright is the one failure retrying cannot mend, so the message is
     kept for the recipient to read in the app instead of ending in the logs alone. The body is
-    kept as the job wrote it, before send_email closes it with the mute footnote and the app's
-    address — in the app, both are already at hand."""
+    kept as the job wrote it, before send_email closes it with the app's address and the mute
+    footnote — in the app, both are already at hand."""
     try:
         if env.telegram is not None:
             bot_token, chat_map = env.telegram

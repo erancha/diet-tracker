@@ -10,7 +10,7 @@
 # Usage: bash scripts/set-rag-key.sh [api-key-id]   (default: Summaries.AI's production stack's key)
 # The sourced aws-config.sh credentials serve both calls — the two apps share one AWS account;
 # SRC_PROFILE and DST_PROFILE name AWS CLI profiles overriding the key fetch and the SSM write
-# respectively, for when they no longer do.
+# respectively, for when the two apps sit in separate accounts.
 set -euo pipefail
 export PATH="$HOME/.local/bin:$PATH"
 source scripts/aws-config.sh

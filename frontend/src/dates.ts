@@ -24,12 +24,13 @@ export function ddmmLabel(s: string): string {
   return `${d}/${m}`;
 }
 
-// Hebrew names the weekdays by the numeral letters א–ו, with שבת abbreviated ש; the geresh marks
-// all seven as day names rather than stray letters. Index matches Date.getDay(), Sunday first.
+// Hebrew names the weekdays by the numeral letters א–ו, with שבת abbreviated ש. Index matches
+// Date.getDay(), Sunday first.
 const WEEKDAY_LETTERS = ["א", "ב", "ג", "ד", "ה", "ו", "ש"];
 
-// The weekday a calendar date falls on, e.g. "ג׳". Distinct from weekdayLetter below, which names
-// a configured weekday token rather than a date and carries no geresh.
+// The weekday a calendar date falls on, e.g. "ג׳"; the geresh marks the letter as a day name
+// rather than a stray letter. Distinct from weekdayLetter below, which names a configured weekday
+// token rather than a date and carries no geresh.
 export function weekdayLabel(s: string): string {
   return `${WEEKDAY_LETTERS[parseIsoDate(s).getDay()]}׳`;
 }
@@ -159,7 +160,6 @@ export function nextMealDue(now: Date, firstMealHour: number, mealGapHours: numb
   return latestMealAt(meals) + mealGapHours * MS_PER_HOUR;
 }
 
-// A meal is overdue once its due time is reached.
 export function mealOverdue(now: Date, firstMealHour: number, mealGapHours: number,
                             meals: readonly { at: string }[]): boolean {
   return now.getTime() >= nextMealDue(now, firstMealHour, mealGapHours, meals);

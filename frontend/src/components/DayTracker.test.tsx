@@ -1506,7 +1506,7 @@ describe("DayTracker", () => {
   });
 
   it("offers closing at whatever minimum window the config sets", () => {
-    // trackedDay spans 4.5 hours: under the repo's six-hour bound, over a configured four.
+    // trackedDay spans 4 hours 20 minutes: under the repo's six-hour bound, over a configured four.
     render(<DayTracker expandLabels={false} suggestBeforeHours={1} treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={4} closeFrom={CLOSE_FROM} stretchesUntil={STRETCHES_UNTIL}
                        questionnaire={questionnaire} day={trackedDay}
                        firstMealHour={NO_NUDGE_HOUR}
@@ -1882,8 +1882,8 @@ describe("DayTracker", () => {
 });
 
 describe("DayTracker score breakdown", () => {
-  // trackedDay with its second meal steepened: grade 7 beside the day's fruit is 7, over the
-  // fixture's day rule of 8 once the heaped sweet is priced in.
+  // trackedDay with its second meal steepened: grade 7 alone stays under the fixture's day rule
+  // of 8, and the heaped sweet (4 × 125%) lifts the day to 12.
   const heavyDay: DayPayload = {
     ...trackedDay,
     meals: [trackedDay.meals[0],

@@ -3,7 +3,8 @@ Summaries.AI RAG service and stores the reply in the caller's transcript (common
 The caller is the verified JWT claim alone; the body never names a user.
 
 Routes: POST /chat asks (with `at`, as a follow-up replacing that chat under a fresh timestamp;
-with `app`, marked as the app's own question); GET /chat serves the transcript; POST
+with `app`, marked as the app's own question); POST /chat/recommendation asks for the caller's
+next meal, replacing their one recommendation chat; GET /chat serves the transcript; POST
 /chat/{at}/summary replaces a chat with its digest; DELETE /chat/{at} removes one. PUT and
 DELETE /chat/{at}/visibility share a chat with every user and take it back; GET /chat/public
 lists what others shared, each under its asker's address, and GET /chat/count sizes both lists
@@ -261,8 +262,9 @@ def _summarize(sub, email, at, context):
 
 
 def _conversation(turn):
-    """A stored chat as the text the digest is made from. Its question half arrived under the
-    question cap, half the context cap, so the answer has the other half."""
+    """A stored chat as the context block the digest is made from. Its question was sent under
+    chat.MAX_QUESTION_CHARS, half of chat.MAX_CONTEXT_CHARS, leaving the other half for the
+    answer."""
     return chat_history.conversation(turn["question"], turn["answer"])
 
 

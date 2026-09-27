@@ -50,26 +50,11 @@ function KgInput({ value, warning, limits, label, onChange }: {
   );
 }
 
-// What follows the weight on the section's one line: how far it sits from the target, and the
-// control that sets it. The weight itself heads the section, so it is not repeated here. The line
-// already names the target to say how far away the weight is, so that word carries the control
-// and the value beside it — the section spends no row on a value revised a few times a year. The
-// prefix letter (מעל ה… / מתחת ל… / ב…) stays outside the control, so the clickable word is the
-// same token in every reading.
-//
-// A target that has never been set opens the editor itself: unset, the control is one word in a
-// header line, easy to walk past on the way to the weighing input below it — and a weighing with
-// no target behind it charts nothing to aim at.
-//
-// The check mark stands only once the input reads a different weight from the standing target,
-// so there is nothing to commit that would change nothing. Committing asks for confirmation —
-// replacing a standing target is not the same act as discarding an untouched draft. Closing on a
-// value that was actually typed raises the discard guard the forms elsewhere share; an untouched
-// input closes silently.
-//
-// A close glyph stands beside the input only while it holds a value. An empty input, the state a
-// never-set target opens in, closes instead on a press anywhere outside the line: the editor was
-// opened for the reader rather than by them, so carrying on with the page dismisses it.
+// The header line's tail after the weight: its distance from the target, and the word "יעד",
+// which opens the target editor — no row is spent on a value revised a few times a year. An unset
+// target opens the editor on mount, and while empty the editor closes on any press outside the
+// line. Committing a changed value asks for confirmation; closing over a typed value raises the
+// shared discard guard.
 function TargetReading({ summary, limits, onSet }: {
   summary: WeightSummary; limits: Limits; onSet: (kg: number) => void;
 }) {
@@ -183,23 +168,11 @@ function TodayRow({ recorded, limits, due, onRecord }: {
   );
 }
 
-// The weight log's whole surface: today's weighing, the chart, and the measurements behind it,
-// under one line opening the page above the day tracker. That line is the section's own heading —
-// the latest weight, which is what the reader came for, doubling as the control that opens the
-// rest — followed by the distance to the target, the control that sets it, and a framed button
-// opening the same fold the heading does. All of it sits outside the fold, which is where the
-// section normally rests: weight moves weekly while the tracker below it moves through the day,
-// so the line reports and the rest opens on demand, with the target settable either way. Whether
-// that resting fold is the right one for the account is the caller's reading, not this section's;
-// a section the caller opened stands until a toggle or the menu's global fold closes it. Saving a
-// weighing leaves it open: the chart is what the new measurement is worth reading against.
-//
-// A glance is the one opening the section takes on its own account: a few seconds with the chart
-// on screen, for a gain the reader should not walk past, then the timed fold shuts it unless a
-// toggle, the global fold or a saved weighing has taken it over meanwhile.
-//
-// The rhythm line above the chart carries the one word that opens the chat, so a reader who wonders
-// why the weighing is weekly can ask without leaving the section.
+// The weight log: today's weighing, the chart and the measurements, folded under one header line
+// carrying the latest weight (the fold's toggle), the target reading and a chart button. Weight
+// moves weekly, so the section normally rests folded; the caller decides when it opens. A glance
+// opens it for a few seconds on a gain, then folds it unless a toggle, the menu's fold or a saved
+// weighing took it over.
 export function WeightSection({ weight, settings, weighInWeekday, now, defaultExpanded, glance,
                                 onRecord, onSetTarget, onDelete, onAskChat }: {
   weight: WeightPayload;

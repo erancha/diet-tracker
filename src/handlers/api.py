@@ -103,7 +103,8 @@ def _grace_window(until):
 
 
 def _reject_outside_window(chosen, allowed):
-    """Returns the 400 response for a date outside the backfill window, or None when it is legal."""
+    """Returns the 400 response for a date outside the allowed grace-window days, or None when it
+    is legal."""
     if chosen in allowed:
         return None
     return _response(400, {"error": f"date must be one of {sorted(allowed)}"})

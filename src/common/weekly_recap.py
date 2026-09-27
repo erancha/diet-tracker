@@ -190,8 +190,8 @@ def _weight_status(kg, was) -> str:
 
 def _weighings_a_week_apart(weights) -> tuple | None:
     """The latest weighing and the latest one dated at least seven days before it, each as
-    (day, kg); None when either is missing. A weekly weigh-in pairs one Friday with the one
-    before, and a daily weigher is still read a week apart rather than against yesterday."""
+    (day, kg); None when either is missing. A weekly weigh-in pairs one weigh-in day with the
+    one before, and a daily weigher is still read a week apart rather than against yesterday."""
     if not weights:
         return None
     latest = max(weights)

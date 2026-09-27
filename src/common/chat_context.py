@@ -68,9 +68,9 @@ def user_context(store, questionnaire, sub, day) -> str | None:
     None when the block is still too long once every droppable section is gone, telling the
     caller to send no context.
 
-    While the block is too long, whole sections are dropped in _bounded's fixed order of
-    decreasing bulk, the weight block last because it is small.
-    The tracking scope and the grade ladder are never dropped: the first keeps absent data
+    While the block is too long, whole sections are dropped in a fixed order of decreasing bulk,
+    the weight block last because it is small. The tracking scope and the grade ladder are never
+    dropped: the first keeps absent data
     readable as a missing field rather than an unrecorded habit, the second keeps the grades the
     meals are recorded in from arriving undefined. Absent data is a legal domain state and still
     rides (empty summaries let the LLM say nothing was tracked); false meal flags, empty addition

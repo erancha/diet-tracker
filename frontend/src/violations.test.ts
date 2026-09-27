@@ -111,7 +111,8 @@ describe("valueLabel", () => {
     expect(valueLabel(carbs, 17)).toBe("17");
   });
 
-  // Reduced helpings derive fractional points; the day's mark still reads whole in every display path.
+  // Reduced helpings derive fractional points; the day's mark still reads whole in every display
+  // path.
   it("rounds a fractional score to a whole mark", () => {
     expect(valueLabel(carbs, 29.5)).toBe("30");
     expect(headedValue(carbs, 29.5)).toBe("30");

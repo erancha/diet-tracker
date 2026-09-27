@@ -11,11 +11,9 @@ const BREAKDOWN_MS = 30_000;
 
 // The day's carb score shown as the sum it is: every meal in time order, each priced term by term
 // — grade at its helping, second source, second-fruit escalation, additions at their amounts —
-// down to the day's total beside the bound it crossed. Grades read at full length with their
-// examples whatever density the tracker is set to: the point here is to name what cost what. The
-// score link that opened it is the one control that puts the meal list back, so the card reads as
-// a page of figures rather than a dialog; it also asks to close after half a minute, so a reader
-// who wandered off finds the log back.
+// down to the day's total beside the bound it crossed. Grades read at full length whatever the
+// tracker's density, since the point is to name what cost what. The score link that opened it
+// puts the meal list back, and so does BREAKDOWN_MS passing.
 export function ScoreBreakdown({ questionnaire, treatDay, date, meals, onExpire }: {
   questionnaire: Questionnaire;
   treatDay: TreatDaySettings;

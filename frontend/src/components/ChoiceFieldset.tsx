@@ -8,17 +8,11 @@ import { questionTitle, valueLabel } from "../violations";
 // stands for before it trims back. Exported for tests that wait the moment out.
 export const PICK_REVEAL_MS = 2000;
 
-// The options a question offers: its configured choices, plus one synthesized option per value the
-// scale cannot express. Two such values arise, and they coincide whenever the tracker closed the
-// day: a floor topping every choice, so that a group disabled end to end still has something
-// pickable — the server accepts the exact floor off-scale, and an all-disabled group would
-// otherwise leave the question unanswerable, blocking the submission that validates it; and a
-// stored answer no choice carries, so that reopening a recorded day shows the figure actually
-// saved rather than a blank group that would drop it on resubmission.
-//
-// Each synthesized option is seated before the first choice worth more than it, so a group reads
-// as one ordered scale rather than a list with a stray value after its end. Configured choices
-// keep their config order, which is the only thing that ranks choices a config prices alike.
+// A question's configured choices plus one synthesized option per value the scale cannot express:
+// a floor topping every choice, so a group disabled end to end stays answerable (the server
+// accepts the exact floor off-scale), and a stored answer no choice carries, so a reopened day
+// shows the saved figure rather than a blank group that would drop it on resubmission. Each
+// synthesized option sits before the first choice worth more, so the group reads as one scale.
 export function fieldsetChoices(question: Question, floor?: number, stored?: number): Choice[] {
   const offScale: number[] = [];
   if (floor !== undefined && question.choices.every((choice) => choice.value < floor)) {
@@ -37,20 +31,10 @@ export function fieldsetChoices(question: Question, floor?: number, stored?: num
   return choices;
 }
 
-// One single-type question as a radio group storing the picked choice's id. Distinct choices can
-// share a numeric value (e.g. two carbs choices both worth 4 points), so the id — not the value —
-// is what identifies the selection. Choices below the tracked floor are disabled: recorded meals
-// are evidence, and the day-end answer can only admit more, never less. The scope prop picks which
-// heading qualifier the legend carries (a day's summed answer vs. one meal's grade).
-//
-// The required marking states the obligation to assistive tech; the browser's own enforcement is
-// never invoked, since its message speaks the browser's UI language rather than the app's Hebrew.
-// Enclosing forms check their own answers before submitting.
-//
-// A choice's text keeps to one line, cut with an ellipsis where the examples run past the
-// phone's width; the choice just picked reads in full for a moment, highlighted — spelled out
-// while names are condensed, wrapped while they are expanded — then trims back. A choice
-// listing nothing reads the same throughout, so it is never revealed.
+// One single-type question as a radio group storing the picked choice's id, since distinct
+// choices can share a value. Choices below the tracked floor are disabled: recorded meals are
+// evidence, so the day-end answer can only admit more. `required` informs assistive tech only;
+// enclosing forms validate themselves, since the browser's own message would not be in Hebrew.
 export function ChoiceFieldset({ question, selectedId, floor, stored, scope = "day",
                                 expandLabels = true, onPick }: {
   question: Question;
@@ -62,6 +46,7 @@ export function ChoiceFieldset({ question, selectedId, floor, stored, scope = "d
   // The day's saved answer when a recorded day is open for editing, so an off-scale figure still
   // has an option to check.
   stored?: number;
+  // Whether the legend heads a day's summed answer or one meal's grade.
   scope?: "day" | "meal";
   onPick: (choice: Choice) => void;
 }) {

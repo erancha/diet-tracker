@@ -171,7 +171,8 @@ describe("sign-in breach reminder", () => {
     expect(await screen.findByRole("heading",
       { name: `יומן ${weekdayDdmmLabel(yesterdayStr)}` })).toBeInTheDocument();
     expect(client.getDay).toHaveBeenCalledWith(yesterdayStr);
-    // The view lives inside the trends fold, which the page opens condensed.
+    // The day view lives inside the trends fold, which the condensed view keeps folded until
+    // the day view is reached.
     expect(screen.getByRole("button", { name: "מגמות" }))
       .toHaveAttribute("aria-expanded", "true");
     expect(scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "start" });
@@ -330,7 +331,7 @@ describe("App", () => {
   });
 
   it("holds the weight section open on the weigh-in morning, gain or no gain", async () => {
-    // The Friday treat day is the weigh-in day, a week past the newest weighing.
+    // The Friday treat day is the weigh-in day, eight days past the newest weighing.
     vi.useFakeTimers({ shouldAdvanceTime: true });
     vi.setSystemTime(new Date(2026, 7, 28, 10, 0));
     renderApp(false, gained());

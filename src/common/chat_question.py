@@ -24,7 +24,7 @@ def answer(rag_url, key, store, questionnaire, history_table, sub, question,
     does with the weeks behind it. The upstream errors reach the caller as they are — an
     unreachable service raises URLError or TimeoutError, and an `at` naming no chat of this
     user's raises KeyError — because what to do about either is the caller's to decide. The
-    timeout is the caller's own budget for the wait, as it is for the client."""
+    timeout is the caller's own budget for the wait, as it is for chat.ask."""
     if context is None:
         context = chat_context.user_context(store, questionnaire, sub, today())
     reply = chat.ask(rag_url, key, question, context, timeout=timeout)

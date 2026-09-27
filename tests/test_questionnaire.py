@@ -255,9 +255,8 @@ def test_validate_answers_accepts_tracked_floors_above_the_choice_scale():
 
 
 def test_value_label_carries_the_unit_on_a_value_no_choice_names():
-    # The eating window is derived and rounded to the half hour, so it routinely lands between
-    # the whole-hour choices; without the unit it reads as a bare number beside labelled
-    # neighbours in the same history column.
+    # A closed day's eating window can hold a value no choice names; without the unit it reads as
+    # a bare number beside labelled neighbours in the same history column.
     q = appconfig.load(APP_CONFIG).questionnaire.question("eating_window")
     assert q.value_label(8) == "8 שעות"
     assert q.value_label(7.5) == "7.5 שעות"

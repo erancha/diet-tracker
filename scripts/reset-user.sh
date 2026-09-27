@@ -11,7 +11,7 @@
 # Options:
 #   --keep-account   Delete the user's data only, keeping the Cognito account and its sub
 #   --yes, -y        Skip the prompt for an account holding no data; a reset that would destroy
-#                    days, meals, weighings or nudge state asks either way
+#                    days, meals, weighings, undelivered messages or nudge state asks either way
 #   --env <suffix>   Target an isolated stack pair (same suffix as deploy.sh)
 #   --help, -h       Show this usage
 #

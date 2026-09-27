@@ -21,8 +21,9 @@ two to three servings a day rather than scoring it.
 ## The meal log and the daily score
 
 You log each meal as you eat it: its carb source or sources, the helping of each, whether it
-carried vegetables or fruit, its fat servings, and its additions. No calories are counted and no food is named — what
-the log records is the character of the meal and the interval since the last one.
+carried vegetables or fruit, its fat servings, and its additions. No calories are counted and no
+food is named — what the log records is the character of the meal and the interval since the last
+one.
 
 From those entries comes the day's score: each meal priced by its carb grade at the helping
 recorded for it, plus its additions at the amount recorded for each, summed over the day.
@@ -170,11 +171,12 @@ fat servings, fruit, a heavy meal, the hour — and the documents decide what fi
 recipe the program does not hold is marked in the answer as the answering service's own proposal,
 so the two kinds never blur. The button sits beside the add-meal heading and reads
 greyed until the next meal is within `next_meal.suggest_before_hours` of being due (the first-meal
-hour on an empty day, else the meal gap after the latest meal); it stays pressable meanwhile. The
-answer is one recommendation chat per user, marked as app-written like the recap and followed up
-or deleted like any chat. A press while that chat is younger than `next_meal.reuse_within_hours`
-opens it again and spends nothing; otherwise the press asks anew, replacing the chat and spending
-one question of the daily cap.
+hour on an empty day, else the meal gap after the latest meal); it stays pressable meanwhile. Once
+one more meal would cross the meals rule, the button is gone: there is no next meal to recommend.
+The answer is one recommendation chat per user, marked as app-written like the recap and
+followed up or deleted like any chat. A press while that chat is younger than
+`next_meal.reuse_within_hours` opens it again and spends nothing; otherwise the press asks anew,
+replacing the chat and spending one question of the daily cap.
 
 ## User activity (admin)
 

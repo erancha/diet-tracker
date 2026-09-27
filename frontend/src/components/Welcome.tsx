@@ -7,22 +7,10 @@ export const VERIFY_MAIL_QUESTION =
   "איך מאשרים את כתובת המייל כדי לקבל את התזכורות, ואיך מונעים מהן להגיע לספאם?";
 
 /**
- * The steps still outstanding for the account, and nothing it has already done.
- *
- * trackingSteps carries the three that start the tracking, in the order they are taken; they are
- * shown to an account that has recorded nothing, where all three are outstanding together, and
- * the first weighing or meal retires the set as a whole. mailStep carries the one that makes the
- * reminders deliverable — confirming the address-verification request the sign-up sends through
- * Amazon Web Services, which the user will often find in spam — and it stands on its own for as
- * long as the address is undeliverable, however far into tracking the account is. Its button asks
- * the chat to explain it.
- *
- * The heading names whichever set is showing, since a greeting reads wrong to an account that has
- * been tracking for weeks and only owes the mail step.
- *
- * The caller reports the end of the first-visit intro through autoFold, which tucks the steps
- * behind the heading — unless a hand toggle already claimed the fold, which then keeps it for the
- * visit. The panel stores nothing; what retires it is the steps running out.
+ * The account's outstanding steps: the three that start tracking, shown until anything is
+ * recorded, and confirming the address-verification mail, shown while the address is
+ * undeliverable. autoFold tucks the steps away once the first-visit intro ends, unless a hand
+ * toggle already claimed the fold for the visit.
  */
 export function Welcome({ autoFold, trackingSteps, mailStep, onAskChat }: {
   autoFold: boolean;

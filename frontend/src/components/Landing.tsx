@@ -1,18 +1,8 @@
 /**
- * Signed-out screen. Opens condensed — friendly paragraphs naming what the app is about (no
- * calorie counting, the שכפ"צ habits spelled in place, the in-app chat where a deployment
- * configures the service answering it, progress graphs and weight tracking) over the more and
- * sign-in buttons — and a click on "יותר" swaps in the full summary: a Hebrew,
- * functionality-only rundown of the app. The same toggle reads "פחות" there, holding its spot
- * above the sign-in button, and folds the page back to the condensed intro.
- * The full summary's bullets mirror the root README's overview and must stay aligned with it, and
- * they name the שכפ"צ principle each tracked value serves — the carb score, which serves none,
- * kept in a bullet of its own so the acronym's count reads straight. A closing table spells the
- * acronym out — the questionnaire and history headers carry it as a bare prefix, and the condensed
- * intro names the words without their daily targets — and sits past the sign-in button so the
- * summary above stays about what the app does, with the acronym's first mention linking down
- * to it.
- * Rendered in place of the signed-in screen until sign-in completes.
+ * Signed-out screen: a condensed pitch over the sign-in button, and a "יותר" toggle that swaps in
+ * the full summary with a שכפ"צ reference table below it.
+ * The full summary's bullets mirror the root README's overview and must stay aligned with it. The
+ * carb score, which serves no שכפ"צ principle, keeps a bullet of its own.
  */
 import { useState } from "react";
 import { whatsAppInviteUrl } from "../invite";

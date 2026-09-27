@@ -35,9 +35,8 @@ def _from_dynamo(value):
 
 # Carb grades the questionnaire has retired, each mapped to the grade that now expresses it and
 # the addition, if any, making up the difference — so a stored meal recorded under a retired id is
-# still readable and a re-derived day keeps its score. Empty because the meals recorded under the
-# grades retired so far were rewritten to the current ids in the table itself; an id retired from
-# here on has a home again without one.
+# still readable and a re-derived day keeps its score. Empty while every stored meal carries a
+# current grade id; a grade retired without rewriting its stored meals is mapped here.
 _RETIRED_GRADES: dict[str, tuple[str, str | None]] = {}
 
 # Grades that priced as light — merged rather than summed, no helping recorded — under every
@@ -93,9 +92,9 @@ def _meal_from_item(item) -> dict:
     predate the small-portion flag in turn, predate the second carb source after that, and
     predate the fat-servings count last, while additions supersede the boolean sweet flag, so a
     legacy sweet meal reads as a single sweet addition. The fat and nuts additions the servings
-    count replaced fold into it, one serving each, and leave the additions. A meal recorded under a grade the questionnaire has since retired reads as its
-    current equivalent — either of its sources — so nothing downstream is handed an id the config
-    no longer knows.
+    count replaced fold into it, one serving each, and leave the additions. A meal recorded under
+    a grade the questionnaire has since retired reads as its current equivalent — either of its
+    sources — so nothing downstream is handed an id the config no longer knows.
 
     Additions predate their amount scale, so one recorded as a bare id reads as carrying no
     amount — the whole surcharge, which is what a bare flag meant.

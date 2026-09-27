@@ -116,7 +116,7 @@ def test_refuses_beyond_the_daily_limit_without_asking_upstream(env, monkeypatch
 @pytest.fixture
 def admin_ses(monkeypatch):
     """Fake SES capturing the admin notice. Every boto3 client resolves to the fake: besides SES
-    the handler only builds the SSM client, which the stubbed chat.api_key never touches."""
+    the ask route only builds the SSM client, which the stubbed chat.api_key never touches."""
     fake = FakeSes()
     monkeypatch.setattr(chat_handler.boto3, "client", lambda service: fake)
     monkeypatch.setenv("SES_SENDER", "sender@example.com")

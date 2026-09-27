@@ -40,8 +40,9 @@ Parameters:
       under weight.weigh_in
   AdminEmail:
     Type: String
-    Description: Address whose authenticated caller the API recognizes as the admin — the one
-      account allowed the per-user activity listing; passed by scripts/deploy.sh from params.sh
+    Description: The admin's address — the one account allowed the per-user activity listing,
+      and the recipient of the chat's daily-limit notices; passed by scripts/deploy.sh from
+      params.sh
   BotTokenParam:
     Type: String
     Default: /diet-tracker/telegram/bot-token
@@ -553,8 +554,8 @@ Resources:
             TableName: !Ref UndeliveredTable
         - !Ref NotifyPolicy
 
-  # The right to enumerate the user pool, shared by the nudge job (its recipients) and the API's
-  # admin activity listing.
+  # The right to enumerate the user pool, shared by the nudge job (its recipients), the API's
+  # admin activity listing and the chat's public listing (each asker's address).
   ListUsersPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:

@@ -64,8 +64,6 @@ def test_meals_range_groups_each_day_and_closes_over_the_last_days_ids(store):
     by_day = store.get_meals_range("u1", "2026-08-19", "2026-08-20")
     assert sorted(by_day) == ["2026-08-19", "2026-08-20"]
     assert [m["carbs_choice"] for m in by_day["2026-08-20"]] == ["no_carbs", "carb_grade_4"]
-    # A day with nothing recorded is absent rather than empty, and one meal's shape is the same
-    # the single-day read returns.
     assert by_day["2026-08-19"] == store.get_meals("u1", "2026-08-19")
 
 

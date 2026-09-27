@@ -3,21 +3,10 @@ import { ddmmLabel, weekdayLabel } from "../dates";
 import { deleteWeightPrompt, kgLabel, overTargetSeverity, risingEdges } from "../weight";
 import { Icon } from "./Icon";
 
-// The plotted measurements as a list, newest first — the chart's own reading order is oldest
-// first, but a reader looking for the entry to remove starts from the most recent. Each row
-// carries the hour it was weighed at, which is what makes a weekly rhythm legible; a weighing
-// stored without an hour holds a dash, keeping the columns aligned. Each value is read
-// against the target the way the section's heading is — the colour lands on the number alone,
-// leaving the unit as chrome. The weekday and the value each carry their own span so the
-// stylesheet can pad them to a common width, which is what holds the columns straight.
-//
-// The rows at both ends of a stretch the weight climbed over stand on the breach ground, the
-// same ground the chart above lays under that stretch, so the list and the chart mark one gain
-// the same way.
-//
-// Deletion is offered at every date, however old. A weight feeds no day score and no rule judgment,
-// so removing one restates nothing; a measurement logged against the wrong day would otherwise
-// have no way out of the chart.
+// The plotted weighings as a list, newest first, since a reader looking for one to remove starts
+// from the latest. Each value is colored against the target like the section heading, and both
+// ends of a climb stand on the breach ground the chart lays under it. Deletion is offered at
+// every date: a weight feeds no day score, so removing one restates nothing.
 export function WeightEntries({ entries, target, onDelete }: {
   entries: WeightEntry[];
   target: number | null;

@@ -66,7 +66,7 @@ export interface Question {
   // What the question measures. Named once in the day-scope heading, so the values under it are
   // free to read as bare numbers instead of repeating it per row.
   unit?: string;
-  // Hover explanation shown wherever the question text is a heading (form legend, history header).
+  // Hover explanation shown wherever the question text is a heading.
   tooltip?: string;
   // Day-scope heading (see questionTitle). day_title is a full standalone heading, for a day
   // value that is not the question's subject — the carbs question's day value is the whole

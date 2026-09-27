@@ -1,6 +1,6 @@
 # Design patterns
 
-The same few shapes recur throughout the code: one gateway per store, a dispatch table behind each
+The same few shapes recur throughout the code: one gateway per store, one dispatch behind each
 door, values parsed once into frozen objects, and every dependency handed in rather than reached
 for. [Architecture](architecture.md) describes where the pieces run; this describes how they are
 put together inside.
@@ -24,12 +24,12 @@ vocabulary in the table. `store.py` maps those ids to their current equivalents 
 `_RETIRED_GRADES`, `_LEGACY_LIGHT_SECOND_GRADES`, `_RETIRED_PORTIONS` — so a re-derived day keeps
 its score and nothing above the store branches on which version wrote a meal.
 
-## One door, one dispatch table
+## One door, one dispatch
 
-Each Lambda has a single `handler` that maps its event to a private function and raises on anything
-unmapped: `api.py` on the API Gateway `routeKey`, `nudge.py` on the `{"job": ...}` the scheduler
-sends. An unrecognised route is a deployment mismatch between the template and the code, so it
-fails loudly rather than returning an empty success.
+Each door's `handler` maps its event to a private function and raises on anything unmapped:
+`api.py` and `chat.py` on the API Gateway `routeKey`, `nudge.py` on the `{"job": ...}` the
+scheduler sends. An unrecognised route is a deployment mismatch between the template and the
+code, so it fails loudly rather than returning an empty success.
 
 What the handlers keep is only the work an HTTP request or a schedule brings — reading a body,
 spending a quota, turning a failure into a status code. `webapi.response` is the one JSON envelope

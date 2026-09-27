@@ -1474,8 +1474,8 @@ describe("Chat", () => {
     await userEvent.selectOptions(screen.getByRole("combobox", { name: "סינון הצ'אטים" }), "app");
     expect(screen.getAllByText(/^השאלה המקורית/)).toHaveLength(1);
   });
-  // The lookup that precedes a standalone question, answering that the user asked it before
-  // (own), that another user asked and shared it (shared), or both.
+  // The lookup that precedes a standalone question, answering that the user asked it before,
+  // that another user asked and shared it, or both.
   function existing(own: string | null, shared: string | null) {
     return vi.fn().mockResolvedValue({
       own: own === null ? null : { at: own },

@@ -23,7 +23,8 @@ graphify-out/
 # the simulation named, regenerated on demand
 /tmp/
 
-# Session AWS credentials — tracked only as aws-config.example.sh
+# Machine-local deploy inputs, tracked only as their .example.sh templates, and the config.js
+# scripts/deploy.sh generates from them
 /scripts/aws-config.sh
 /scripts/params.sh
 /frontend/public/config.js

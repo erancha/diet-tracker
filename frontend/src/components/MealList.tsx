@@ -84,12 +84,9 @@ export function MealList({ questionnaire, meals, expandLabels, onEdit, editLastO
               )}
               {markers.map((m) => ` · ${m.marker}`).join("")}
             </span>
-            {/* A bare number reads as nothing in particular; the carbs tooltip is what says it is
-                this meal's contribution to the day's score. The heavy mark rides this figure and
-                not the grade name because it is the plate's cost that is being judged: the grade
-                is one term of a price that also carries the second source, the escalated fruit
-                and the additions, so a light grade with a drink and fat outprices a steep grade
-                eaten small. */}
+            {/* The carbs tooltip says this figure is the meal's share of the day's score. The heavy
+                mark sits here, not on the grade name, because it judges the plate's whole price:
+                second source, extra fruit and additions included. */}
             {points !== undefined && (
               <span className={isHeavyMeal(carbsQuestion, points[index].total)
                       ? "meal-points score heavy-meal" : "meal-points score"}

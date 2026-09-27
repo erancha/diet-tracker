@@ -22,7 +22,9 @@ graph LR
     API --> CHATL[chat Lambda]
     APIL --> DB[(DynamoDB<br/>days · meals · nudge state · weights)]
     APIL --> UND[(DynamoDB<br/>undelivered)]
-    CHATL --> CDB[(DynamoDB<br/>chat quota · chat history)]
+    APIL --> CDB[(DynamoDB<br/>chat quota · chat history)]
+    CHATL --> CDB
+    CHATL --> DB
     CHATL --> RAG[Summaries.AI<br/>RAG API]
     SCH[EventBridge Scheduler<br/>Asia/Jerusalem] --> NUDGE[nudge Lambda]
     NUDGE --> DB
@@ -58,10 +60,9 @@ graph LR
   weekly weigh-in reminder, and queues the weekly recap, one message per user, returning in
   seconds whatever the pool size.
 - **weekly-recap** — answers one queued user at a time: reads their week and the one before, asks
-  the answering service for its reading of them, and sends the email. Each user has an invocation of
-  their own,
-  so a slow reading delays no one else, and a crash parks that one user's message in a
-  dead-letter queue instead of dropping everyone queued behind them.
+  the answering service for its reading of them, and sends the email. Each user has an
+  invocation of their own, so a slow reading delays no one else, and a crash parks that one
+  user's message in a dead-letter queue instead of dropping everyone queued behind them.
 
 ## Scoring lives in two languages
 
@@ -89,7 +90,7 @@ depends on it.
 ## Storage
 
 Seven DynamoDB tables, each holding one kind of item under plain keys, with the user's Cognito
-`sub` as the partition key: the day records, the meals, the nudge state, the weights, the chat
-quota, the chat history, and the messages that could not be delivered. There are no joins, and no
-table is ever scanned across users — even the admin listing takes its list of accounts from
-Cognito and then reads each user's own partition.
+`sub` leading the partition key (the chat quota appends the day to it): the day records, the
+meals, the nudge state, the weights, the chat quota, the chat history, and the messages that
+could not be delivered. There are no joins, and no table is ever scanned across users — even the
+admin listing takes its list of accounts from Cognito and then reads each user's own partition.

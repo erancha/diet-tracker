@@ -45,14 +45,11 @@ const NUDGE_ESCALATION_MS = 10_000;
 // what counts as one serving, then gone so the form is back to its controls.
 const FAT_HINT_MS = 30_000;
 
-// The day's one journal: records meals at the time they were eaten, shows the day's derived
-// values live, lists the day's meals for in-place correction or deletion, closes a fully
-// tracked day by asking only for water, and holds a closed day read-only behind its reopen
-// gate. Normally the day is today; during the small-hours grace window it is yesterday, still
-// open for its late meals, its closing or its reopening. The dashboard and close-day values come
-// from the client-side derivation, held to the server's by the shared test vectors in
-// config/derive-vectors.json, so they always agree with the meal list rendered beside them — the
-// server re-derives on submit and stays the authority.
+// The day's journal: records meals as they are eaten, shows the derived figures live, lists the
+// meals for correction, closes a fully tracked day by asking only for water, and holds a closed
+// day read-only behind a reopen gate. The figures come from the client-side derivation, held to
+// the server's by config/derive-vectors.json; the server re-derives on submit and stays the
+// authority.
 export function DayTracker({ questionnaire, treatDay, day, expandLabels, isToday = true, closed = false, firstMealHour,
                              mealGapHours, maxMealsPerDay, closeMinWindowHours, closeFrom, stretchesUntil,
                              onAddMeal,
@@ -293,8 +290,7 @@ export function DayTracker({ questionnaire, treatDay, day, expandLabels, isToday
     return () => escalations.forEach(clearTimeout);
   }, [nudging]);
 
-  // Only reachable through the submit button, which renders only once a grade is picked and is
-  // disabled unless mealSaveable above holds.
+  // Reached from the save button and the close-day button, each only while mealSaveable holds.
   // Additions are sent in config order so the recorded list is deterministic.
   function submitMeal() {
     const meal: NewMeal = { at: mealAt,
@@ -665,9 +661,8 @@ export function DayTracker({ questionnaire, treatDay, day, expandLabels, isToday
   );
 }
 
-// One carb source's inputs: its grade group, and under it whatever quantity control that source
-// carries — the main grade's small-portion box, or a heavy second source's helping picker. The
-// control belongs to the grade above it, so this pairing is what says which grade it reduces.
+// One carb source's inputs: its grade group, and under it the helping picker when that source
+// offers one. The picker belongs to the grade above it, so this pairing says which grade it sizes.
 function CarbSourceFields({ question, selectedId, expandLabels, onPick, children }: {
   question: Question;
   selectedId: string | undefined;
