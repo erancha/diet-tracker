@@ -33,6 +33,10 @@
   --page-pad-top: 0.6rem;
   --page-pad-bottom: 1rem;
   --page-bg: #fafafa;
+  /* The signed-in header's band and the hairline along its bottom: a faint wash of the accent, so
+     the chrome reads apart from the white section cards without a frame of its own. */
+  --header-ground: #f1f7f1;
+  --header-edge: #dde9dd;
   /* One size for every section heading on the main page, so the day log, trends and chat titles
      read as peers. Below ~28rem it scales with the viewport — the slope the fieldset legends use —
      so the day log's title and the grade-names toggle sharing its row still fit side by side,
@@ -55,16 +59,19 @@ html { scroll-padding-top: 4.5rem; }
 header { display: flex; justify-content: space-between; align-items: baseline; gap: 0.75rem; }
 /* The app's chrome stays put while the day scrolls under it: the title says which screen this is,
    the alarm badge keeps waiting notices in sight and the account menu stays one press away,
-   wherever the reader has scrolled to. It paints the page's own ground so the content passing
-   beneath never shows through, and it swallows the body's top padding — pulled up by it, restored
-   as its own — so nothing is visible in the strip above it either. The air parting the title row
-   from the first content is padding rather than margin for the same reason: it belongs to the
-   painted block, so a line sliding under the header disappears at the gap's edge rather than at
-   the account buttons. */
+   wherever the reader has scrolled to. It paints an opaque band so the content passing beneath
+   never shows through, and it swallows the body's top padding — pulled up by it, restored as its
+   own — so nothing is visible in the strip above it either. The band and its bottom hairline are
+   drawn as a border image pushed out sideways by a viewport width, so they run to the screen's
+   edges past the centered column without widening the page's scroll area. The gap to the first
+   content is split: padding keeps air under the version line inside the band, margin opens the
+   rest below it. */
 #root > header {
-  position: sticky; top: 0; z-index: 5; background: var(--page-bg);
+  position: sticky; top: 0; z-index: 5;
+  border-image: linear-gradient(to top, var(--header-edge) 1px, var(--header-ground) 1px)
+                fill 0 / 0 / 0 100vw;
   margin-top: calc(-1 * var(--page-pad-top)); padding-top: var(--page-pad-top);
-  padding-bottom: 1.35rem;
+  padding-bottom: 0.7rem; margin-bottom: 0.65rem;
 }
 /* The alarm badge is the one thing wide enough to crowd the title: beside the account trigger
    alone a narrow phone still has room to spare, but at the shared size the title fills what is
