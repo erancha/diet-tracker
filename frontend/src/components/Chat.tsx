@@ -112,8 +112,11 @@ export function Chat({ email, api, sampleQuestions, answerPollSeconds,
   const [others, setOthers] = useState<PublicChat[] | null>(null);
   // The chats already opened with the draft, offered instead of sending it; null while no offer
   // stands. Editing the draft withdraws the offer. While it stands, both lists fold and the
-  // submit is held back, so opening the offered chat is the one way on.
+  // submit is held back, so the way on is opening the offered chat or asking anyway.
   const [existing, setExisting] = useState<ExistingChat | null>(null);
+  // Whether the draft is a question another panel asked, so sending it anyway still records the
+  // chat as the app's. Typing into the draft makes it the user's own.
+  const [draftFromApp, setDraftFromApp] = useState(false);
   // The own chat to open and scroll to once the transcript renders it, or null.
   const [revealAt, setRevealAt] = useState<string | null>(null);
   // The shared chat the others' list is to open and scroll to once it renders, or null.
@@ -320,8 +323,30 @@ export function Chat({ email, api, sampleQuestions, answerPollSeconds,
     }
   };
 
-  // A standalone question is sent only once the lookup finds no chat opened with it; otherwise
-  // the offer stands and the draft stays for the user's decision.
+  // A standalone question — typed, or asked by another panel — is sent only once the lookup finds
+  // no chat opened with it. Otherwise it stays in the draft for the user's decision: under the
+  // offer, or beside the failure when the lookup itself failed. Resolves whether it was sent.
+  const sendUnlessAskedBefore = async (question: string, app: boolean): Promise<boolean> => {
+    setError(null);
+    let found: ExistingChat | null = null;
+    try {
+      found = await api.findExistingChat(question);
+    } catch (thrown) {
+      setError(`בדיקת הצ'אטים הקודמים נכשלה (${(thrown as Error).message})`);
+    }
+    if (found !== null && found.own === null && found.shared === null) {
+      void send(question, null, app);
+      return true;
+    }
+    setDraft(question);
+    setDraftFromApp(app);
+    if (found !== null) {
+      foldLists();
+      setExisting(found);
+    }
+    return false;
+  };
+
   const sendDraft = async () => {
     const question = draft.trim();
     if (!question) return;
@@ -330,28 +355,14 @@ export function Chat({ email, api, sampleQuestions, answerPollSeconds,
       void send(question, replyTo);
       return;
     }
-    setError(null);
-    let found: ExistingChat;
-    try {
-      found = await api.findExistingChat(question);
-    } catch (thrown) {
-      setError(`בדיקת הצ'אטים הקודמים נכשלה (${(thrown as Error).message})`);
-      return;
-    }
-    if (found.own === null && found.shared === null) {
-      setDraft("");
-      void send(question, null);
-      return;
-    }
-    foldLists();
-    setExisting(found);
+    if (await sendUnlessAskedBefore(question, draftFromApp)) setDraft("");
   };
 
   const askAnyway = () => {
     const question = draft.trim();
     setExisting(null);
     setDraft("");
-    void send(question, null);
+    void send(question, null, draftFromApp);
   };
 
   // Opens the offered chat: the user's own when there is one, else the shared one. Either list
@@ -392,8 +403,9 @@ export function Chat({ email, api, sampleQuestions, answerPollSeconds,
     onAskCommandTaken!();
     // A commanded question stands alone: a reply the user had begun is dropped, not chained.
     setReplyTo(null);
-    void send(askCommand, null, true);
-    // The command alone triggers this; the state send closes over must not resend it.
+    void sendUnlessAskedBefore(askCommand, true);
+    // The command alone triggers this; the state sendUnlessAskedBefore closes over must not
+    // resend it.
   }, [askCommand]);
 
   useEffect(() => {
@@ -500,6 +512,7 @@ export function Chat({ email, api, sampleQuestions, answerPollSeconds,
             value={draft}
             onChange={(event) => {
               setDraft(event.target.value);
+              setDraftFromApp(false);
               setExisting(null);
             }}
             placeholder={replyTo === null ? "שאלה על תוכנית התזונה 🥗…" : "שאלת המשך…"}

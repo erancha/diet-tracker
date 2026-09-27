@@ -1618,13 +1618,32 @@ describe("Chat", () => {
     expect(chatApi.ask).toHaveBeenCalledTimes(1);
   });
 
-  it("sends a commanded question without looking for an earlier chat", async () => {
+  it("looks for an earlier chat before sending a commanded question", async () => {
     const chatApi = api({ ask: vi.fn().mockResolvedValue({ answer: "תשובה", sources: [], at: "2026-09-01T10:00:00" }) });
     render(<Chat email="a@gmail.com" api={chatApi} answerPollSeconds={POLL_SECONDS} sampleQuestions={[]} askCommand="שאלה מבחוץ"
                  onAskCommandTaken={vi.fn()} />);
 
     expect(await screen.findByText("תשובה")).toBeInTheDocument();
-    expect(chatApi.findExistingChat).not.toHaveBeenCalled();
+    expect(chatApi.findExistingChat).toHaveBeenCalledWith("שאלה מבחוץ");
+    expect(screen.getByRole("textbox")).toHaveValue("");
+  });
+
+  it("offers the earlier chat for a commanded question, and still sends it as the app's anyway",
+     async () => {
+    const chatApi = api({
+      findExistingChat: existing("2026-09-01T10:00:01", null),
+      ask: vi.fn().mockResolvedValue({ answer: "תשובה", sources: [], at: "2026-09-01T11:00:00" }),
+    });
+    render(<Chat email="a@gmail.com" api={chatApi} answerPollSeconds={POLL_SECONDS} sampleQuestions={[]} askCommand="שאלה מבחוץ"
+                 onAskCommandTaken={vi.fn()} />);
+
+    expect(await screen.findByText("כבר שאלת את השאלה הזו")).toBeInTheDocument();
+    expect(chatApi.ask).not.toHaveBeenCalled();
+    expect(screen.getByRole("textbox")).toHaveValue("שאלה מבחוץ");
+    await userEvent.click(screen.getByRole("button", { name: "לשאול בכל זאת" }));
+
+    expect(await screen.findByText("תשובה")).toBeInTheDocument();
+    expect(chatApi.ask).toHaveBeenCalledWith("שאלה מבחוץ", undefined, true);
   });
 
   it("shows what failed when the lookup fails, keeping the question unsent", async () => {
