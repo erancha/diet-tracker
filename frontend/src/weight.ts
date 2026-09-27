@@ -76,6 +76,21 @@ export function kgLabel(kg: number): string {
   return `${Number(kg.toFixed(1))}`;
 }
 
+// The move from the first plotted weight to the last, in kilograms and as a whole percent of the
+// first, each with its sign spelled out ("-2.5", "-3%"), and which way it went as rendered — a
+// move that rounds to 0 kg reads as neither. Null under two weighings, where there is no move to
+// state.
+export function spanChange(entries: WeightEntry[]):
+    { kg: string; percent: string; direction: "down" | "up" | null } | null {
+  if (entries.length < 2) return null;
+  const first = entries[0].kg;
+  const kg = Number((entries[entries.length - 1].kg - first).toFixed(1));
+  const percent = Math.round((kg / first) * 100);
+  const signed = (value: number) => `${value > 0 ? "+" : ""}${value}`;
+  return { kg: signed(kg), percent: `${signed(percent)}%`,
+           direction: kg < 0 ? "down" : kg > 0 ? "up" : null };
+}
+
 // Half a tenth of a kilogram: two weights closer than this render as the same one-decimal number,
 // so nothing may report a move between them — the summary line reads arrival rather than a
 // distance it cannot show, and the trend reads a plateau rather than a direction.

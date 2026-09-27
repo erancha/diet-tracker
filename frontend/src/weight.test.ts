@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { activeSpan, ceilingWarning, chartDomain, entriesWithin, floorWarning, kgLabel,
          lastStepRises, offeredSpans, overTargetSeverity, parseKg, rhythmReading, risingEdges,
-         summarize, targetChangePrompt, trendShape } from "./weight";
+         spanChange, summarize, targetChangePrompt, trendShape } from "./weight";
 import type { WeightEntry } from "./types";
 
 const TODAY = new Date(2026, 7, 27); // 2026-08-27
@@ -78,6 +78,22 @@ describe("kgLabel", () => {
     expect(kgLabel(76)).toBe("76");
     expect(kgLabel(76.5)).toBe("76.5");
     expect(kgLabel(76.44)).toBe("76.4");
+  });
+});
+
+describe("spanChange", () => {
+  const at = (...kgs: number[]) =>
+    kgs.map((kg, i) => ({ date: `2026-08-${10 + i}`, kg, at: null }));
+
+  it("states the first-to-last move in signed kilograms and a whole signed percent", () => {
+    expect(spanChange(at(94.1, 95, 91.6)))
+      .toEqual({ kg: "-2.5", percent: "-3%", direction: "down" });
+    expect(spanChange(at(80, 81.7))).toEqual({ kg: "+1.7", percent: "+2%", direction: "up" });
+    expect(spanChange(at(80, 80))).toEqual({ kg: "0", percent: "0%", direction: null });
+  });
+
+  it("has nothing to state under two weighings", () => {
+    expect(spanChange(at(80))).toBeNull();
   });
 });
 

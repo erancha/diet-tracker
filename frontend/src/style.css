@@ -953,6 +953,9 @@ main:not(.intro-0, .intro-1, .intro-2, .intro-3, .intro-4) .weight .section-togg
 .weight-entries .weight-entry-weekday { display: inline-block; min-width: 1.3em; }
 .weight-entries .weight-entry-at { opacity: 0.7; font-variant-numeric: tabular-nums; }
 .weight-entries .weight-entry-kg { font-weight: 600; }
+/* The move across the listed span, after the newest row's weight. */
+.weight-entries .weight-entry-change-down { color: var(--accent); }
+.weight-entries .weight-entry-change-up { color: var(--danger); }
 /* Padding the number out to a common width is what puts the units in a column and stacks the
    digits: five characters covers a three-digit weight carrying a decimal, and tabular figures
    make every digit the same width. Aligned to the end — the unit's side — so the padding falls

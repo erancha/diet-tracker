@@ -17,6 +17,14 @@ describe("WeightEntries", () => {
     expect(rows[1]).toHaveTextContent("77.4 ק״ג");
   });
 
+  it("states the listed span's move after the newest weight only", () => {
+    render(<WeightEntries entries={ENTRIES} target={null} onDelete={() => {}} />);
+    const rows = screen.getAllByRole("listitem");
+    expect(rows[0]).toHaveTextContent("76 ק״ג: -1.4 (-2%)");
+    expect(rows[0].querySelector(".weight-entry-change-down")).not.toBeNull();
+    expect(rows[1]).not.toHaveTextContent(":");
+  });
+
   it("deletes only after the confirmation naming the entry is accepted", () => {
     const onDelete = vi.fn();
     const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
