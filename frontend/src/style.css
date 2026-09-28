@@ -1088,11 +1088,11 @@ main:not(.intro-0, .intro-1, .intro-2, .intro-3, .intro-4) .weight .section-togg
 }
 @keyframes border-sweep { from { --sweep: 0deg; opacity: 1; } 85% { opacity: 1; }
                           to { --sweep: calc(var(--sweep-seconds) * var(--sweep-pace) * 360deg); opacity: 0; } }
-/* The offer to open an already asked chat arrives outlined, in the secondary look, with the accent
-   arc sweeping its edge, and fills green only once the sweep is done: the sweep says look here
-   before the fill says press this. */
-.chat .existing-chat .primary { --sweep-seconds: 2; --sweep-color: var(--accent);
-                                animation: settle-primary 0.5s ease calc(var(--sweep-seconds) * 1s) backwards; }
+/* A primary control that arrives outlined, in the secondary look, with the accent arc sweeping its
+   edge, and fills green only once the sweep is done: the sweep says look here before the fill says
+   press this. */
+.border-sweep.fill-after-sweep { --sweep-seconds: 2; --sweep-color: var(--accent);
+                                 animation: settle-primary 0.5s ease calc(var(--sweep-seconds) * 1s) backwards; }
 @keyframes settle-primary { from { background-color: #fff; color: var(--accent);
                                    border-color: var(--accent-border); } }
 /* Closing costs nothing and changes nothing, so it sits apart from the pair that spends a

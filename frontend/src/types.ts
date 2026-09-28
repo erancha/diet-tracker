@@ -144,6 +144,8 @@ export interface DayCloseSettings {
   // Evening "HH:MM" from which the tracker offers closing a day holding any meal, whatever its
   // eating window.
   close_from: string;
+  // Evening "HH:MM", no earlier than close_from, from which the tracker draws the eye to closing.
+  highlight_from: string;
 }
 
 // The weekday the program's week turns on, as one of the EventBridge Scheduler tokens

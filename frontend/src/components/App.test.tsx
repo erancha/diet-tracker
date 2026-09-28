@@ -17,7 +17,7 @@ const CONFIG: AppConfigFile = {
   weight: { chart_months: 3, limits: { min_kg: 40, max_kg: 200 } },
   meals: { max_per_day: 4 },
   next_meal: { suggest_before_hours: 1, reuse_within_hours: 1 },
-  day_close: { close_until: "02:00", delete_until: "01:30", min_window_hours: 6, close_from: "20:00" },
+  day_close: { close_until: "02:00", delete_until: "01:30", min_window_hours: 6, close_from: "20:00", highlight_from: "22:00" },
   treat_day: { weekday: "FRI" },
   chat: { answer_poll_seconds: 3, sample_questions: [] },
 };

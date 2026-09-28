@@ -51,7 +51,7 @@ const FAT_HINT_MS = 30_000;
 // the server's by config/derive-vectors.json; the server re-derives on submit and stays the
 // authority.
 export function DayTracker({ questionnaire, treatDay, day, expandLabels, isToday = true, closed = false, firstMealHour,
-                             mealGapHours, maxMealsPerDay, closeMinWindowHours, closeFrom, stretchesUntil,
+                             mealGapHours, maxMealsPerDay, closeMinWindowHours, closeFrom, highlightCloseFrom, stretchesUntil,
                              onAddMeal,
                              onUpdateMeal, onDeleteMeal, deletingMealId, savingMeal, onCloseDay,
                              onReopenDay, onRecommend, suggestBeforeHours }: {
@@ -83,6 +83,8 @@ export function DayTracker({ questionnaire, treatDay, day, expandLabels, isToday
   // window: a short eating day is a legitimate day once the evening is in. A yesterday still on
   // screen in the small hours is past this bound by definition.
   closeFrom: string;
+  // Evening "HH:MM" (day_close.highlight_from) from which the close-day offer draws the eye.
+  highlightCloseFrom: string;
   // Small-hours "HH:MM" an eating day runs to past midnight (day_close.close_until): the bound
   // that tells a late-night pick on the previous day's log from an early-morning one.
   stretchesUntil: string;
@@ -196,6 +198,7 @@ export function DayTracker({ questionnaire, treatDay, day, expandLabels, isToday
   const secondSourceBarred = secondSource !== null && !offersSecondSource;
   const nowTime = clockTime(minutesOfDay(new Date()));
   const pastEveningBound = !isToday || nowTime >= closeFrom;
+  const closeHighlighted = !isToday || nowTime >= highlightCloseFrom;
   const closable = derived.eating_window >= closeMinWindowHours
     || (day.meals.length > 0 && pastEveningBound);
   // The instant the form would record, which is also what decides whether the picked time is
@@ -393,14 +396,16 @@ export function DayTracker({ questionnaire, treatDay, day, expandLabels, isToday
   // tracker's title row, so the list no longer walks the eye down to it. Opened, the form
   // returns below the list, where its inputs have room.
   const formInHeader = addMealWarns && formCollapsed && !atCap && !closed && !breakdownShown;
-  // Closing sits on the tracker's title row, at the top of what it ends. A meal still being
+  // Closing sits on the tracker's title row, at the top of what it ends. Late in the evening it
+  // sweeps and fills to draw the eye, as the night's reminders to close begin. A meal still being
   // composed would go with the closed day — the tracker goes with it — so closing folds it in
   // rather than stopping over it: a saveable meal is saved by this very click and the flow
   // continues into the panel. Only a meal the form cannot save yet holds the button, with the
   // notice under the action row saying why. Once the panel is open the button leaves: the flow
   // runs forward to the confirmation, not back through a toggle.
   const closeDayButton = closable && !closing && !closed && !breakdownShown ? (
-    <button type="button" className="secondary compact"
+    <button type="button"
+            className={closeHighlighted ? "primary compact border-sweep fill-after-sweep" : "secondary compact"}
             disabled={formHoldsUnsavedMeal && !mealSaveable}
             onClick={() => {
               if (formHoldsUnsavedMeal) submitMeal();

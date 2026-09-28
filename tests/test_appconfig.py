@@ -9,7 +9,7 @@ from common import appconfig
 LEGAL_MEALS = {"max_per_day": 5}
 
 LEGAL_DAY_CLOSE = {"close_until": "02:00", "delete_until": "01:30", "min_window_hours": 6,
-                   "close_from": "20:00"}
+                   "close_from": "20:00", "highlight_from": "22:00"}
 
 
 LEGAL_TREAT_DAY = {"weekday": "FRI"}
@@ -54,6 +54,7 @@ def test_repo_config_carries_every_section():
     assert config.day_close.delete_until == "01:30"
     assert config.day_close.min_window_hours == 6
     assert config.day_close.close_from == "20:00"
+    assert config.day_close.highlight_from == "22:00"
 
 
 def test_day_close_bounds_must_be_padded_wall_clock_times(tmp_path):
@@ -164,3 +165,9 @@ def test_repo_config_names_the_treat_day_the_recap_counts_around():
     from conftest import APP_CONFIG
 
     assert appconfig.load(APP_CONFIG).treat_day.weekday == "FRI"
+
+
+def test_day_close_highlight_may_not_precede_the_evening_close(tmp_path):
+    path = write(tmp_path, LEGAL_WEIGHT, day_close={**LEGAL_DAY_CLOSE, "highlight_from": "19:59"})
+    with pytest.raises(ValueError, match="highlight_from"):
+        appconfig.load(path)

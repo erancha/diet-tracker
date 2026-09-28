@@ -367,6 +367,7 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, c
             suggestBeforeHours={configQuery.data.next_meal.suggest_before_hours}
             closeMinWindowHours={dayClose.min_window_hours}
             closeFrom={dayClose.close_from}
+            highlightCloseFrom={dayClose.highlight_from}
             stretchesUntil={dayClose.close_until}
             onAddMeal={(meal) => mealMutation.mutate(meal)}
             onUpdateMeal={(id, meal) => updateMealMutation.mutate({ date: activeDay.date, id, meal })}

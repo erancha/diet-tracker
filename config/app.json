@@ -342,7 +342,8 @@
     "close_until": "02:00",
     "delete_until": "01:30",
     "min_window_hours": 6,
-    "close_from": "20:00"
+    "close_from": "20:00",
+    "highlight_from": "22:00"
   },
   "treat_day": {
     "weekday": "FRI"
