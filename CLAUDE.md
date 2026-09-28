@@ -15,8 +15,9 @@ means the shell didn't source that file — not an expired session. The aws CLI 
 - `aws-helper.sh` — resolves stable Lambda targets to the deployed resources and works with
   their CloudWatch logs; `--help` lists targets and options. Fastest health check of a function:
   `scripts/aws-helper.sh --logs <target> --errors --since 1d`. Targets are aliases (api, nudge,
-  recap — the weekly recap's per-user consumer, presignup, rag — Summaries.AI's RAG lambda
-  serving the in-app chat) or `<stack>:<logical-id>`
+  questions — the per-user consumer answering the app's own questions, the weekly recap and the
+  morning debrief, presignup, rag —
+  Summaries.AI's RAG lambda serving the in-app chat) or `<stack>:<logical-id>`
   for any Lambda the credentials can describe.
 - `test.sh [pytest args]` — venv + pytest wrapper; creates and populates `.venv` on first run.
 - `deploy.sh` / `sync-frontend.sh` — full stack deploy vs frontend-only publish. `config/app.json`
@@ -29,6 +30,7 @@ means the shell didn't source that file — not an expired session. The aws CLI 
   (dismissing it in the app deletes the row). `--weekly-recap <email>` runs the weekly recap job
   now, on the working tree's code against the deployed data, printing the email and the chat it
   would store; the answering service is asked for real either way, since its reading of the week
-  is most of what there is to preview. `--send` delivers and stores them for that one user. `--verify <email>`
+  is most of what there is to preview. `--debrief <email>` does the same for the morning debrief
+  of that user's yesterday, when it earned one. `--send` delivers and stores them for that one user. `--verify <email>`
   really asks SES to mail the address its verification request again — the only way back for an
   address whose 24-hour link expired, since sign-up requests it once and never resends.

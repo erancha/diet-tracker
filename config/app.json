@@ -347,10 +347,14 @@
   "treat_day": {
     "weekday": "FRI"
   },
+  "morning_notifications": {
+    "hour": 8,
+    "debrief": {
+      "score_factor": 1.5,
+      "treat_day_score_factor": 2
+    }
+  },
   "weight": {
-    "weigh_in": {
-      "hour": 8
-    },
     "chart_months": 3,
     "limits": {
       "min_kg": 40,

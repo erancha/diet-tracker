@@ -11,7 +11,6 @@ const TODAY = "2026-08-27";
 const WEIGH_IN_WEEKDAY = "THU";
 
 const SETTINGS: WeightSettings = {
-  weigh_in: { hour: 8 },
   chart_months: 3,
   limits: { min_kg: 20, max_kg: 400 },
 };

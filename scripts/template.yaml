@@ -25,19 +25,20 @@ Parameters:
     Description: Hours a day may go without a meal before the next one counts as overdue,
       measured from when the most recent meal was eaten. Read by the frontend through its
       generated config
-  WeighInWeekday:
+  TreatDayWeekday:
     Type: String
     AllowedValues: [SUN, MON, TUE, WED, THU, FRI, SAT]
     Default: FRI
-    Description: The program's treat day, on which the weekly weigh-in reminder fires and the
-      weekly recap goes out at midday, so it reads that morning's weight. Declared in
+    Description: The program's treat day, on which the weekly recap goes out at midday, so it
+      reads that morning's weight; the morning job sends the weigh-in reminder on it. Declared in
       config/app.json under treat_day; scripts/deploy.sh passes it here because an EventBridge
       cron expression is fixed at deploy time
-  WeighInHour:
+  MorningHour:
     Type: Number
     Default: 8
-    Description: Asia/Jerusalem hour of the weekly weigh-in reminder, declared in config/app.json
-      under weight.weigh_in
+    Description: Asia/Jerusalem hour of the daily morning notifications — the weigh-in reminder
+      on the treat day, and the debrief of a heavy yesterday — declared in config/app.json under
+      morning_notifications
   AdminEmail:
     Type: String
     Description: The admin's address — the one account allowed the per-user activity listing,
@@ -99,7 +100,7 @@ Globals:
         CHAT_DAILY_LIMIT_OVERRIDES: !Ref ChatDailyLimitOverrides
         RAG_API_URL: !Ref RagApiUrl
         RAG_API_KEY_PARAM: !Ref RagApiKeyParam
-        WEEKLY_RECAP_QUEUE_URL: !Ref WeeklyRecapQueue
+        APP_QUESTION_QUEUE_URL: !Ref AppQuestionQueue
 
 Resources:
   DaysTable:
@@ -468,7 +469,8 @@ Resources:
       Handler: handlers/nudge.handler
       # Every job loops the whole user pool inside one invocation, sending per user, so its run
       # time scales with the pool rather than with one request — the global 30s cannot cover it. The
-      # weekly job only queues, one message per user; its waits are spent by WeeklyRecapFunction.
+      # jobs that ask the answering service — the weekly recap, the morning debrief — only queue,
+      # one message per user; their waits are spent by AppQuestionFunction.
       Timeout: 300
       Policies:
         - DynamoDBCrudPolicy:
@@ -483,14 +485,15 @@ Resources:
         - DynamoDBWritePolicy:
             TableName: !Ref UndeliveredTable
         - SQSSendMessagePolicy:
-            QueueName: !GetAtt WeeklyRecapQueue.QueueName
+            QueueName: !GetAtt AppQuestionQueue.QueueName
         - !Ref NotifyPolicy
         - !Ref ListUsersPolicy
 
-  # The weekly job's hand-off: one message per pool member, answered by WeeklyRecapFunction in an
-  # invocation of its own, so a slow reading of one user's week delays no one else and a crash
-  # takes one user with it.
-  WeeklyRecapQueue:
+  # The hand-off of the jobs that ask the answering service — the weekly recap for every pool
+  # member, the morning debrief for whoever earned one: one message per user, naming the job,
+  # answered by AppQuestionFunction in an invocation of its own, so a slow answer for one user
+  # delays no one else and a crash takes one user with it.
+  AppQuestionQueue:
     Type: AWS::SQS::Queue
     Properties:
       # How long a received message stays hidden from every other receiver. It has to outlast the
@@ -501,33 +504,34 @@ Resources:
       # next attempt.
       VisibilityTimeout: 540
       RedrivePolicy:
-        deadLetterTargetArn: !GetAtt WeeklyRecapDeadLetterQueue.Arn
+        deadLetterTargetArn: !GetAtt AppQuestionDeadLetterQueue.Arn
         # A crash is a bug to look at, not a transient to retry through: the consumer already
         # absorbs a failed reading and a failed send. So the message goes straight to the
-        # dead-letter queue, where the user's sub and night wait to be redriven by hand once the
-        # cause is fixed; the rerun finds the chat the crashed run stored and answers it.
+        # dead-letter queue, where the user's sub and day wait to be redriven by hand once the
+        # cause is fixed; the rerun finds the chat the crashed run stored — a recap answers it,
+        # a debrief leaves it.
         maxReceiveCount: 1
 
   # Holds a crashed user's message for the two weeks SQS allows at most — long enough that the
-  # following week's run has made it moot.
-  WeeklyRecapDeadLetterQueue:
+  # following week's run, or the next morning's, has made it moot.
+  AppQuestionDeadLetterQueue:
     Type: AWS::SQS::Queue
     Properties:
       MessageRetentionPeriod: 1209600
 
-  WeeklyRecapFunction:
+  AppQuestionFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: ../build/lambda
-      Handler: handlers/nudge.recap_handler
-      # One user's recap: the answering service's wait (RECAP_TIMEOUT_SECONDS, 55s) plus the
-      # reads and the send around it.
+      Handler: handlers/nudge.queued_handler
+      # One user's recap or debrief: the answering service's wait (APP_QUESTION_TIMEOUT_SECONDS,
+      # 55s) plus the reads and the send around it.
       Timeout: 90
       Events:
-        Recap:
+        AppQuestion:
           Type: SQS
           Properties:
-            Queue: !GetAtt WeeklyRecapQueue.Arn
+            Queue: !GetAtt AppQuestionQueue.Arn
             # One user per invocation, so a crash requeues no one else and no partial-batch
             # bookkeeping is needed.
             BatchSize: 1
@@ -537,8 +541,8 @@ Resources:
             ScalingConfig:
               MaximumConcurrency: 2
       Policies:
-        # A recap reads the user's week and the tracked data the question's context block
-        # carries: days, meals, weights and target.
+        # A recap reads the user's week, and a debrief the heavy day, beside the tracked data the
+        # question's context block carries: days, meals, weights and target.
         - DynamoDBReadPolicy:
             TableName: !Ref DaysTable
         - DynamoDBReadPolicy:
@@ -651,14 +655,14 @@ Resources:
         RoleArn: !GetAtt SchedulerRole.Arn
         Input: '{"job": "last_call"}'
 
-  # Fires at midday on the weigh-in day: late enough that the morning's weighing is the freshest
+  # Fires at midday on the treat day: late enough that the morning's weighing is the freshest
   # weight the recap reads, early enough that the weighing day is normally still open in the
   # tracker, which is what keeps it out of the week reported. That week ends on the day before,
   # whose own close window (day_close.close_until, 02:00) shut that morning.
   WeeklySchedule:
     Type: AWS::Scheduler::Schedule
     Properties:
-      ScheduleExpression: !Sub 'cron(0 12 ? * ${WeighInWeekday} *)'
+      ScheduleExpression: !Sub 'cron(0 12 ? * ${TreatDayWeekday} *)'
       ScheduleExpressionTimezone: Asia/Jerusalem
       FlexibleTimeWindow:
         Mode: 'OFF'
@@ -667,17 +671,20 @@ Resources:
         RoleArn: !GetAtt SchedulerRole.Arn
         Input: '{"job": "weekly"}'
 
-  WeighInSchedule:
+  # Fires every morning, after the small-hours window in which yesterday could still be closed
+  # (day_close.close_until, 02:00): the job reads which weekday it is for the weigh-in reminder,
+  # and judges the closed record of yesterday for the debrief.
+  MorningSchedule:
     Type: AWS::Scheduler::Schedule
     Properties:
-      ScheduleExpression: !Sub 'cron(0 ${WeighInHour} ? * ${WeighInWeekday} *)'
+      ScheduleExpression: !Sub 'cron(0 ${MorningHour} * * ? *)'
       ScheduleExpressionTimezone: Asia/Jerusalem
       FlexibleTimeWindow:
         Mode: 'OFF'
       Target:
         Arn: !GetAtt NudgeFunction.Arn
         RoleArn: !GetAtt SchedulerRole.Arn
-        Input: '{"job": "weigh_in"}'
+        Input: '{"job": "morning_notifications"}'
 
   FrontendBucket:
     Type: AWS::S3::Bucket

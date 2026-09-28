@@ -8,7 +8,7 @@ import pytest
 
 from conftest import APP_CONFIG, meal
 
-from common import appconfig, chat_history, notify, rules, undelivered
+from common import appconfig, chat_history, debrief, notify, rules, undelivered
 from common.dates import days_before, today
 from common.store import Store
 from common.users import User
@@ -54,6 +54,7 @@ def env(monkeypatch, ddb, answering):
         questionnaire=appconfig.load(APP_CONFIG).questionnaire,
         treat_weekday=appconfig.load(APP_CONFIG).treat_day.weekday,
         close_until=appconfig.load(APP_CONFIG).day_close.close_until,
+        debrief=appconfig.load(APP_CONFIG).morning_notifications.debrief,
         users=[User("u1", "a@gmail.com"), User("u2", "b@gmail.com")],
         telegram=("TOKEN", {"a@gmail.com": "111", "b@gmail.com": "222"}),
         # A real (mocked) SES client, not a stub: _send classifies a refusal by the client's own
@@ -63,19 +64,42 @@ def env(monkeypatch, ddb, answering):
         chat_history=ddb.Table("chat_history"),
         sender="me@x.com", app_url="https://app.example",
         rag_url="https://rag.example", rag_key="the-key",
-        recap_queue=boto3.resource("sqs", region_name="eu-central-1").create_queue(
-            QueueName="weekly-recap"),
+        question_queue=boto3.resource("sqs", region_name="eu-central-1").create_queue(
+            QueueName="app-question"),
     )
     return e, sent
 
 
+def _consume(e):
+    """Answers every queued message the way the consumer does, one user at a time, dispatching
+    on the job the message names."""
+    jobs = {"recap": nudge._recap, "debrief": nudge._debrief}
+    for message in e.question_queue.receive_messages(MaxNumberOfMessages=10):
+        body = json.loads(message.body)
+        jobs[body["job"]](e, User(body["sub"], body["email"]), body["day"])
+
+
 def _run_weekly(e):
     """The weekly job end to end: the scheduler's half queues one message per user, then each
-    message is answered the way the consumer answers it, one user at a time."""
+    message is answered the way the consumer answers it."""
     nudge._weekly(e)
-    for message in e.recap_queue.receive_messages(MaxNumberOfMessages=10):
-        body = json.loads(message.body)
-        nudge._recap(e, User(body["sub"], body["email"]), body["day"])
+    _consume(e)
+
+
+def _queued(e) -> list:
+    messages = e.question_queue.receive_messages(MaxNumberOfMessages=10)
+    return sorted((json.loads(m.body) for m in messages), key=lambda body: body["sub"])
+
+
+# Fixed days for the morning job, whose behavior turns on the weekday: the repo config's treat day
+# is Friday, so 2026-09-25 is a treat day, 2026-09-26 the day after it and 2026-09-28 a Monday.
+TREAT_DAY, AFTER_TREAT_DAY, MONDAY = "2026-09-25", "2026-09-26", "2026-09-28"
+
+
+def _morning_on(e, monkeypatch, day):
+    """Runs the morning job as if `day` were today."""
+    monkeypatch.setattr(nudge, "today", lambda: day)
+    nudge._morning_notifications(e)
 
 
 def test_handler_logs_job_start_and_completion(env, monkeypatch, caplog):
@@ -115,32 +139,31 @@ def test_weekly_queues_one_recap_per_user_and_sends_nothing_itself(env):
     # produced by its own invocation, off the queue, so one slow reading delays no one else.
     e, sent = env
     nudge._weekly(e)
-    messages = e.recap_queue.receive_messages(MaxNumberOfMessages=10)
-    queued = sorted((json.loads(m.body) for m in messages), key=lambda body: body["sub"])
-    assert queued == [{"sub": "u1", "email": "a@gmail.com", "day": today()},
-                      {"sub": "u2", "email": "b@gmail.com", "day": today()}]
+    assert _queued(e) == [{"job": "recap", "sub": "u1", "email": "a@gmail.com", "day": today()},
+                          {"job": "recap", "sub": "u2", "email": "b@gmail.com", "day": today()}]
     assert sent == []
 
 
-def test_the_recap_consumer_answers_the_one_user_its_message_names(env, monkeypatch):
+def test_the_consumer_answers_the_one_user_its_message_names(env, monkeypatch):
     e, sent = env
     monkeypatch.setattr(nudge, "_build_env",
                         lambda audience: dataclasses.replace(e, users=audience(e.store)))
     e.store.put_day("u2", days_before(today(), 1), CLEAN, 1, "t")
-    nudge.recap_handler({"Records": [{"body": json.dumps(
-        {"sub": "u2", "email": "b@gmail.com", "day": today()})}]}, None)
+    nudge.queued_handler({"Records": [{"body": json.dumps(
+        {"job": "recap", "sub": "u2", "email": "b@gmail.com", "day": today()})}]}, None)
     assert [target for _, target, _ in sent] == ["222", "b@gmail.com"]
     assert "נסגרו 1 מתוך 7 ימים." in sent[1][2]
 
 
-def test_the_recap_consumer_takes_exactly_one_message_per_invocation(env, monkeypatch):
+def test_the_consumer_takes_exactly_one_message_per_invocation(env, monkeypatch):
     # The event source mapping is configured to hand over one message at a time; a batch would
     # make one user's crash requeue the others, so the consumer refuses to guess at one.
     e, _ = env
     monkeypatch.setattr(nudge, "_build_env", lambda audience: e)
-    record = {"body": json.dumps({"sub": "u1", "email": "a@gmail.com", "day": today()})}
+    record = {"body": json.dumps({"job": "recap", "sub": "u1", "email": "a@gmail.com",
+                                  "day": today()})}
     with pytest.raises(ValueError):
-        nudge.recap_handler({"Records": [record, record]}, None)
+        nudge.queued_handler({"Records": [record, record]}, None)
 
 
 def test_a_rerun_follows_up_on_the_chat_a_crashed_run_left_behind(env):
@@ -261,7 +284,7 @@ def test_weekly_asks_the_service_the_follow_up_a_user_would_have_asked(env, answ
     assert [week["ימים שנסגרו"] for week in context["שבועות"]] == [7, 1]
     assert "היום" not in context
     # Composing the reading outruns the client's default wait, so the job spends its own.
-    assert answering[0]["timeout"] == nudge.RECAP_TIMEOUT_SECONDS
+    assert answering[0]["timeout"] == nudge.APP_QUESTION_TIMEOUT_SECONDS
 
 
 def test_the_weekly_email_compares_the_week_with_the_one_before(env):
@@ -337,11 +360,138 @@ def test_a_weighing_earlier_in_the_week_no_longer_excuses_the_reminder(env):
     assert [target for _, target, _ in sent] == ["111", "a@gmail.com", "222", "b@gmail.com"]
 
 
-def test_the_weigh_in_job_is_dispatchable_by_name(env, monkeypatch):
+def test_the_morning_job_is_dispatchable_by_name(env, monkeypatch):
     e, sent = env
     monkeypatch.setattr(nudge, "_build_env", lambda audience: e)
-    nudge.handler({"job": "weigh_in"}, None)
+    monkeypatch.setattr(nudge, "today", lambda: TREAT_DAY)
+    nudge.handler({"job": "morning_notifications"}, None)
     assert len(sent) == 4
+
+
+def test_the_morning_sends_the_weigh_in_reminder_on_the_treat_day_alone(env, monkeypatch):
+    # One daily job carries both morning messages, so the weekly one has to read the weekday
+    # itself: the reminder goes out on the treat day, the weigh-in's day, and on no other.
+    e, sent = env
+    _morning_on(e, monkeypatch, MONDAY)
+    assert sent == []
+    _morning_on(e, monkeypatch, TREAT_DAY)
+    assert [text for _, _, text in sent] == [nudge.weight.REMINDER_TEXT] * 4
+
+
+def test_the_morning_queues_a_debrief_for_a_yesterday_at_the_factor_of_the_heavy_bound(env,
+                                                                                       monkeypatch):
+    # The heavy-day bound is 12 and the factor 1.5, so a yesterday closed at 18 earns the debrief
+    # and one closed just under it does not. The debrief waits on the answering service, so it is
+    # queued for the consumer rather than produced here, and the message names the heavy day.
+    e, sent = env
+    yesterday = days_before(MONDAY, 1)
+    e.store.put_day("u1", yesterday, {**CLEAN, "carbs": 18}, 1, "t")
+    e.store.put_day("u2", yesterday, {**CLEAN, "carbs": 17.9}, 1, "t")
+    _morning_on(e, monkeypatch, MONDAY)
+    assert _queued(e) == [{"job": "debrief", "sub": "u1", "email": "a@gmail.com",
+                           "day": yesterday}]
+    assert sent == []
+
+
+def test_a_treat_day_yesterday_earns_the_debrief_only_at_its_own_factor(env, monkeypatch):
+    # The treat meal is expected to cost, so the treat day's factor is 2: a Friday closed at 23 is
+    # not debriefed on Saturday morning, one closed at 24 is.
+    e, _ = env
+    e.store.put_day("u1", TREAT_DAY, {**CLEAN, "carbs": 23}, 1, "t")
+    e.store.put_day("u2", TREAT_DAY, {**CLEAN, "carbs": 24}, 1, "t")
+    _morning_on(e, monkeypatch, AFTER_TREAT_DAY)
+    assert [body["sub"] for body in _queued(e)] == ["u2"]
+
+
+def test_an_unclosed_yesterday_earns_no_debrief(env, monkeypatch):
+    # The debrief judges the closed record alone: meals left in an open day are never scored into
+    # one by this job.
+    e, _ = env
+    record_meal(e.store, "u1", days_before(MONDAY, 1))
+    _morning_on(e, monkeypatch, MONDAY)
+    assert _queued(e) == []
+
+
+def test_a_deployment_without_an_answering_service_queues_no_debrief(env, monkeypatch):
+    e, _ = env
+    e = dataclasses.replace(e, rag_url="", rag_key=None)
+    e.store.put_day("u1", days_before(MONDAY, 1), {**CLEAN, "carbs": 30}, 1, "t")
+    _morning_on(e, monkeypatch, MONDAY)
+    assert _queued(e) == []
+
+
+def test_the_debrief_asks_over_the_users_recent_data_and_stores_the_answer_as_an_app_chat(
+        env, answering):
+    e, sent = env
+    yesterday = days_before(today(), 1)
+    e.store.put_day("u1", yesterday, {**CLEAN, "carbs": 22.5}, 1, "t")
+    record_meal(e.store, "u1", yesterday, "23:55:00")
+    nudge._debrief(e, User("u1", "a@gmail.com"), yesterday)
+
+    (ask,) = answering
+    asked = debrief.question(yesterday, 22.5)
+    assert ask["question"] == asked
+    # The question names the day and its score, so the stored chat stands on its own, and asks
+    # the way a user asks about a fall, since retrieval reads the question alone.
+    assert f"{debrief.day_label(yesterday)} נסגר בציון 22.5" in asked
+    assert "למה נפלתי" in asked
+    # The fields the night-fall page reads the cause from ride in the question, so retrieval
+    # matches that page rather than the guide's eating-window section.
+    for field in ("שעת הארוחה הראשונה", "ירקות", "מנות השומן", "דרגה גבוהה"):
+        assert field in asked
+    assert asked.endswith("ומה הצעד האחד ליום שאחריו?")
+    # The heavy day rides as yesterday in the asker's own recent-data block.
+    context = json.loads(ask["context"].partition("(JSON):\n")[2])
+    assert [meal["שעת הארוחה"] for meal in context["אתמול"]["ארוחות"]] == ["23:55"]
+    assert ask["timeout"] == nudge.APP_QUESTION_TIMEOUT_SECONDS
+
+    (stored,) = chat_history.turns(e.chat_history, "u1")
+    assert (stored["question"], stored["answer"], stored["app"]) == (asked, INSIGHTS, True)
+    assert stored["sources"] == SOURCES
+    # The email carries the question and the answer, the same two the chat holds.
+    assert [(kind, target) for kind, target, _ in sent] == [("tg", "111"), ("mail", "a@gmail.com")]
+    assert sent[1][2] == f"{asked}\n{INSIGHTS}"
+
+
+def test_a_redriven_debrief_finds_its_chat_and_sends_nothing_again(env, answering):
+    e, sent = env
+    yesterday = days_before(today(), 1)
+    e.store.put_day("u1", yesterday, {**CLEAN, "carbs": 22.5}, 1, "t")
+    nudge._debrief(e, User("u1", "a@gmail.com"), yesterday)
+    nudge._debrief(e, User("u1", "a@gmail.com"), yesterday)
+    assert len(answering) == 1
+    assert len(chat_history.turns(e.chat_history, "u1")) == 1
+    assert len(sent) == 2
+
+
+def test_an_unreachable_service_costs_the_whole_debrief(env, monkeypatch, caplog):
+    # Unlike the recap, the debrief has no findings of the app's own to send alone: without an
+    # answer there is nothing to store or mail, and the failure is logged against the user.
+    e, sent = env
+
+    def unreachable(api_url, key, question, context=None, timeout=None):
+        raise urllib.error.URLError("down")
+
+    monkeypatch.setattr(nudge.chat, "ask", unreachable)
+    yesterday = days_before(today(), 1)
+    e.store.put_day("u1", yesterday, {**CLEAN, "carbs": 22.5}, 1, "t")
+    with caplog.at_level(logging.WARNING):
+        nudge._debrief(e, User("u1", "a@gmail.com"), yesterday)
+    assert sent == []
+    assert chat_history.turns(e.chat_history, "u1") == []
+    assert "a@gmail.com" in caplog.text
+
+
+def test_the_consumer_dispatches_a_queued_debrief(env, monkeypatch):
+    e, sent = env
+    monkeypatch.setattr(nudge, "_build_env",
+                        lambda audience: dataclasses.replace(e, users=audience(e.store)))
+    yesterday = days_before(today(), 1)
+    e.store.put_day("u2", yesterday, {**CLEAN, "carbs": 20}, 1, "t")
+    nudge.queued_handler({"Records": [{"body": json.dumps(
+        {"job": "debrief", "sub": "u2", "email": "b@gmail.com", "day": yesterday})}]}, None)
+    assert [target for _, target, _ in sent] == ["222", "b@gmail.com"]
+    assert sent[1][2].startswith(debrief.TITLE)
 
 
 def record_meal(store, sub, day, at_time="09:10:00"):

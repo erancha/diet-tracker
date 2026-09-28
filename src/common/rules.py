@@ -10,6 +10,11 @@ def falls_on(day: str, weekday: str) -> bool:
     return appconfig.WEEKDAYS[weekday_index(day)] == weekday
 
 
+def weekday_name(day: str) -> str:
+    """The Hebrew name of the weekday a date falls on, as the app names a day to a reader."""
+    return appconfig.WEEKDAY_NAMES[appconfig.WEEKDAYS[weekday_index(day)]]
+
+
 def violating_days(rule, history: dict) -> int:
     """How many days in `history` crossed the rule's bound on their own — the per-day test the
     trend chart's red dots and the history table's red cells apply, the treat day included."""

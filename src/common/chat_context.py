@@ -21,9 +21,8 @@ grade ladder, so a grade in a meal entry reads as food rather than a bare rung."
 import json
 
 from common import rules, weight
-from common.appconfig import WEEKDAY_NAMES, WEEKDAYS
 from common.chat import MAX_CONTEXT_CHARS
-from common.dates import days_before, weekday_index
+from common.dates import days_before
 from common.derive import derive
 
 SUMMARY_DAYS = 7
@@ -163,7 +162,7 @@ def _week(questionnaire, days, excluded, end, treat_weekday) -> dict:
 def _day_entry(questionnaire, date, answers, excluded, treat_weekday) -> dict:
     """One closed day: its weekday, the treat day marked as such, the submitted answers under
     their day headings, and what it cost in flours and sugars."""
-    entry = {_WEEKDAY: WEEKDAY_NAMES[WEEKDAYS[weekday_index(date)]]}
+    entry = {_WEEKDAY: rules.weekday_name(date)}
     if rules.falls_on(date, treat_weekday):
         entry[_TREAT_DAY] = True
     entry.update(_labeled_history(questionnaire, {date: answers})[date])

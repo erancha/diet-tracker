@@ -70,8 +70,8 @@ deploy_main() {
       AdminEmail="$ADMIN_EMAIL" \
       UserPoolId="$user_pool_id" \
       UserPoolClientId="$user_pool_client_id" \
-      WeighInWeekday="$(app_config "['treat_day']['weekday']")" \
-      WeighInHour="$(app_config "['weight']['weigh_in']['hour']")" \
+      TreatDayWeekday="$(app_config "['treat_day']['weekday']")" \
+      MorningHour="$(app_config "['morning_notifications']['hour']")" \
       RagApiUrl="${RAG_API_URL:-}" \
       ChatDailyLimit="$CHAT_DAILY_LIMIT" \
       ChatDailyLimitOverrides="$CHAT_DAILY_LIMIT_OVERRIDES"

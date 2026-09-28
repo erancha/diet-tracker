@@ -29,11 +29,12 @@ closed from the tracker, and the week's trend over recorded history.
   scored, so it changes no day's score and raises no alert.
 - Under the log sit a 10-day chart and the recorded days as a table, so a week reads at a
   glance.
-- Email tells you what the app cannot: a day you have not closed yet, the weekly weighing, and
-  a summary of the week just gone — how many of its days were closed, the limits they crossed
-  beside the week before, and the answering service's reading of it, kept as a chat you can
-  follow up. Telegram too, if you set up a bot for it. One switch in the account menu stops
-  all of it.
+- Email tells you what the app cannot: a day you have not closed yet, the weekly weighing, a
+  morning debrief of a day that went far over the heavy-day bound — why it fell and the one
+  step for today, read from your own data — and a summary of the week just gone — how many of
+  its days were closed, the limits they crossed beside the week before, and the answering
+  service's reading of it. The debrief and the summary are kept as chats you can follow up.
+  Telegram too, if you set up a bot for it. One switch in the account menu stops all of it.
 - You can ask the app questions about the diet and get answers drawn from the diet's own written
   material, with the documents each answer came from. The answering is done by a separate service,
   [Summaries.AI](https://github.com/erancha/Summaries.AI-public), and every question sends your own

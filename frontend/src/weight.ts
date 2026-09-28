@@ -221,8 +221,9 @@ export function rhythmReading(entries: WeightEntry[], weekday: string,
   if (entries.length === 0) return null;
   const since = daysSince(entries[entries.length - 1].date, now);
   if (since > STALE_DAYS) return plainLine(`נשקלת לפני ${since} ימים`);
-  // The morning it advises is the part of the day weigh_in.hour sits in, and moving that hour out
-  // of the morning would strand this wording.
+  // The morning it advises is the part of the day the weigh-in reminder goes out in
+  // (morning_notifications.hour in config/app.json), and moving that hour out of the morning
+  // would strand this wording.
   if (!isWeighInDay(now, weekday)) {
     return {
       before: "השקילה ",

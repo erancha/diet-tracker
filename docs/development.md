@@ -37,9 +37,10 @@ narration names specific carb grades and scores.
 `config/app.json` is read by both runtimes — the Lambda package carries it, `sync-frontend.sh`
 publishes it at the site origin root, and the Vite dev server serves it from the same source file.
 Every edit to it needs a `deploy.sh` run: the Lambdas read the copy inside their package, so a
-frontend sync alone changes only what the browser reads. The weigh-in weekday and hour also reach
-the EventBridge schedules through that deploy — the weekday drives both the weigh-in reminder and
-the day the weekly recap goes out on.
+frontend sync alone changes only what the browser reads. The treat-day weekday and the morning
+hour also reach the EventBridge schedules through that deploy — the weekday drives the day the
+weekly recap goes out on, and the hour the daily morning job that sends the weigh-in reminder on
+the treat day and queues the debrief of a heavy yesterday.
 
 ## Backend tests
 

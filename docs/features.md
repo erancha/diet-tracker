@@ -93,7 +93,13 @@ Messages reach you by email, and by Telegram where a bot token is configured:
 - **A last call** for a day still unclosed: twice in the evening, late enough that the day is over
   in practice and still inside it, and once more just after midnight, while the day that ended can
   still be closed.
-- **A weekly weigh-in reminder**, which skips anyone who already weighed in that day.
+- **A weekly weigh-in reminder**, on the treat-day morning, which skips anyone who already
+  weighed in that day.
+- **A debrief of a heavy day**, the morning after a day closed far over the heavy-day bound — at
+  one and a half times it, or twice it when the day was the treat day. The app asks the answering
+  service on your behalf why the day fell and what the one step for today is, over your own
+  recent data, and mails you the question with its answer. The exchange is stored as a chat the
+  app wrote, so it can be followed up in the chat list like the recap.
 - **A weekly recap** of the week that just ended, named by its range of days in the subject, the
   body and the chat list alike: a line counting the days that were closed, then a table with
   this week's counts beside last week's — clean days, the bounds a day crossed (the findings the
@@ -133,7 +139,7 @@ external answering service and the LLM behind it.**
 Questions are capped per user per day, because each one spends money upstream; the cap is consumed
 before the upstream call, and the admin is notified when a user reaches it. Every answered chat is
 stored per user, so the transcript survives reloads and follows its user across devices, and a chat
-the app wrote — the weekly recap — is marked as such in the list.
+the app wrote — the weekly recap, the debrief of a heavy day — is marked as such in the list.
 
 Both lists — the user's own chats and the ones others shared — are narrowed by two filters. One
 picks a side of the own transcript: every chat, only the ones the user asked, only the ones the

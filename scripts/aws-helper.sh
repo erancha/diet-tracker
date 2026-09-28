@@ -8,7 +8,7 @@
 #   scripts/aws-helper.sh --log-group <target>
 #   scripts/aws-helper.sh --functions
 #
-# A target is an alias (api, nudge, recap, presignup, rag) or <stack>:<logical-id> for any
+# A target is an alias (api, nudge, questions, presignup, rag) or <stack>:<logical-id> for any
 # Lambda the configured credentials can describe.
 #
 # Options:
@@ -70,11 +70,11 @@ resolve() {
   case "$1" in
     api)       STACK="$APP";           LOGICAL=ApiFunction ;;
     nudge)     STACK="$APP";           LOGICAL=NudgeFunction ;;
-    recap)     STACK="$APP";           LOGICAL=WeeklyRecapFunction ;;
+    questions) STACK="$APP";           LOGICAL=AppQuestionFunction ;;
     presignup) STACK="${APP}-cognito"; LOGICAL=PreSignupFunction ;;
     rag)       STACK=sum;              LOGICAL=RagQueryFunction ;;
     *:*)       STACK="${1%%:*}";       LOGICAL="${1#*:}" ;;
-    *)         echo "unknown target: $1 (expected api, nudge, recap, presignup, rag, or <stack>:<logical-id>)" >&2
+    *)         echo "unknown target: $1 (expected api, nudge, questions, presignup, rag, or <stack>:<logical-id>)" >&2
                exit 1 ;;
   esac
 }

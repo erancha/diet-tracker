@@ -7,12 +7,15 @@
 # Usage:
 #   scripts/emails-helper.sh --rejected <email> [--subject <text>] [--body <text>] [--env <suffix>]
 #   scripts/emails-helper.sh --weekly-recap <email> [--send] [--env <suffix>]
+#   scripts/emails-helper.sh --debrief <email> [--send] [--env <suffix>]
 #   scripts/emails-helper.sh --verify <email> [--env <suffix>]
 #
 # Simulations:
 #   --rejected <email>      Show that user a message as one SES refused to deliver
 #   --weekly-recap <email>  Run the weekly recap job for that user now, rather than on its schedule
 #                           (asks the answering service for real; only sending and storing are not)
+#   --debrief <email>       Run the morning debrief of that user's yesterday now, when it earned
+#                           one (asks the answering service for real, like --weekly-recap)
 #
 # Real actions:
 #   --verify <email>        Ask SES to mail that address its verification request again
@@ -20,7 +23,8 @@
 # Options:
 #   --subject <text>  With --rejected: subject to show (default: the nightly reminder's)
 #   --body <text>     With --rejected: body to show (default: the nightly reminder's)
-#   --send            With --weekly-recap: really answer, deliver and store, instead of printing
+#   --send            With --weekly-recap or --debrief: really answer, deliver and store, instead
+#                     of printing
 #   --env <suffix>    Target an isolated stack pair (same suffix as deploy.sh)
 #   --help, -h        Show this usage
 #
@@ -29,6 +33,7 @@
 #   scripts/emails-helper.sh --rejected someone@gmail.com --subject 'סיכום שבועי' --body 'שבוע טוב'
 #   scripts/emails-helper.sh --weekly-recap someone@gmail.com          # what the week would send
 #   scripts/emails-helper.sh --weekly-recap someone@gmail.com --send   # send it, to that user only
+#   scripts/emails-helper.sh --debrief someone@gmail.com               # yesterday's debrief, if due
 #   scripts/emails-helper.sh --verify someone@gmail.com                # re-request a dead link
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -49,11 +54,11 @@ while [ $# -gt 0 ]; do
   # Every flag below that names a value, checked once here so a missing one prints the usage
   # rather than tripping over set -u.
   case "$1" in
-    --rejected|--weekly-recap|--verify|--subject|--body|--env)
+    --rejected|--weekly-recap|--debrief|--verify|--subject|--body|--env)
       [ $# -ge 2 ] || { echo "$1 needs a value" >&2; usage 1; } ;;
   esac
   case "$1" in
-    --rejected|--weekly-recap|--verify) ACTION="${1#--}"; EMAIL="$2"; shift 2 ;;
+    --rejected|--weekly-recap|--debrief|--verify) ACTION="${1#--}"; EMAIL="$2"; shift 2 ;;
     --subject) SUBJECT="$2"; shift 2 ;;
     --body)    BODY="$2"; shift 2 ;;
     --send)    SEND=1; shift ;;
@@ -100,15 +105,15 @@ rejected() {
   echo "Open the app and press the alarm bell in the header; dismissing it there deletes the row."
 }
 
-# Runs the scheduled job's own code, from the working tree, with its audience narrowed to the one
-# account — so what a rule or config edit will send can be read before it is deployed. The AWS
-# inputs come from the deployed NudgeFunction's environment, leaving config/app.json as the only
-# input read from the working tree. Without --send both delivery channels and the transcript write
-# are replaced by prints, but the answering service is still asked — its reading of the week is
-# most of what there is to preview, and it cannot be had without the call. With --send, the recap
-# lands in that user's mail and chat list, where it can be followed up and deleted like any other
-# chat.
-weekly_recap() {
+# Runs a queued job's own code — the weekly recap or the morning debrief, by ACTION — from the
+# working tree, with its audience narrowed to the one account, so what a rule or config edit will
+# send can be read before it is deployed. The AWS inputs come from the deployed NudgeFunction's
+# environment, leaving config/app.json as the only input read from the working tree. Without
+# --send both delivery channels and the transcript write are replaced by prints, but the answering
+# service is still asked — its answer is most of what there is to preview, and it cannot be had
+# without the call. With --send, the recap or debrief lands in that user's mail and chat list,
+# where it can be followed up and deleted like any other chat.
+answering_job() {
   [ -x .venv/bin/python ] \
     || { echo "no .venv — run scripts/test.sh once to create it" >&2; exit 1; }
 
@@ -125,15 +130,17 @@ for name, value in json.load(sys.stdin).items():
     print(f"export {name}={shlex.quote(value)}")')"
   export APP_CONFIG_PATH=config/app.json
 
-  EMAIL="$EMAIL" SEND="$SEND" PYTHONPATH=src .venv/bin/python - <<'PY'
+  ACTION="$ACTION" EMAIL="$EMAIL" SEND="$SEND" PYTHONPATH=src .venv/bin/python - <<'PY'
 import os
 
 from handlers import nudge
 
+action = os.environ["ACTION"]
 send = bool(os.environ["SEND"])
 
-# A week with no closed day has nothing to recap and stores no chat. Recording the write is what
-# lets this run report whether the week produced one.
+# A week with no closed day has nothing to recap and stores no chat, and a debrief already in the
+# transcript is not stored twice. Recording the write is what lets this run report whether the job
+# produced one.
 stored = []
 store_chat = nudge.chat_history.append
 
@@ -160,16 +167,33 @@ audience = [user for user in env.users if user.email == os.environ["EMAIL"]]
 if not audience:
     raise SystemExit(f"{os.environ['EMAIL']} is not in the notifiable pool — unknown address, "
                      "or notifications muted in the account menu")
-# The recap is produced in this process, as the consumer produces it off the queue, so the
+# The job is produced in this process, as the consumer produces it off the queue, so the
 # preview's prints and --send's delivery both happen here.
-nudge._recap(env, audience[0], nudge.today())
-if not stored:
-    raise SystemExit("No day was closed in the week, so the opening line alone "
-                     f"{'went out' if send else 'would go out'} and no chat was stored.")
+user = audience[0]
+if action == "weekly-recap":
+    nudge._recap(env, user, nudge.today())
+    if not stored:
+        raise SystemExit("No day was closed in the week, so the opening line alone "
+                         f"{'went out' if send else 'would go out'} and no chat was stored.")
+else:
+    # The morning job's own selection, so a yesterday that earned no debrief is reported as the
+    # reason nothing happened rather than debriefed regardless.
+    yesterday = nudge.days_before(nudge.today(), 1)
+    closed = env.store.get_days_range(user.sub, yesterday, yesterday)
+    if yesterday not in closed:
+        raise SystemExit(f"{yesterday} was not closed by {user.email}, so no debrief is due.")
+    on_treat_day = nudge.rules.falls_on(yesterday, env.treat_weekday)
+    if not nudge.debrief.qualifies(env.questionnaire, env.debrief, closed[yesterday], on_treat_day):
+        raise SystemExit(f"{yesterday} closed at a score of {closed[yesterday]['carbs']}, under "
+                         "the debrief's bound, so no debrief is due.")
+    nudge._debrief(env, user, yesterday)
+    if not stored:
+        raise SystemExit("No debrief was stored: the day's chat already exists from an earlier "
+                         "run, or the answering service failed (see the warning above).")
 PY
 
   if [ -n "$SEND" ]; then
-    echo "Sent the weekly recap to $EMAIL and stored it as a chat; open the app's chat list to"
+    echo "Sent the $ACTION to $EMAIL and stored it as a chat; open the app's chat list to"
     echo "read it, follow it up, or delete it."
   else
     echo "Dry run — nothing was sent or stored, though the answering service was asked."
@@ -209,7 +233,7 @@ verify() {
 }
 
 case "$ACTION" in
-  rejected)     rejected ;;
-  weekly-recap) weekly_recap ;;
-  verify)       verify ;;
+  rejected)              rejected ;;
+  weekly-recap|debrief)  answering_job ;;
+  verify)                verify ;;
 esac

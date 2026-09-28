@@ -177,6 +177,18 @@ def test_weekly_recap_names_the_night_it_is_sent_on():
     assert f"ונשלח ביום {weekday}" in _doc_line("הסיכום השבועי מתייחס")
 
 
+def test_the_reminders_section_quotes_the_debrief_factors_and_its_chat_title():
+    # The guide is what the chat answers "why did the app ask me this" from, so the factors it
+    # quotes are the config's and the title it names is the one the transcript shows.
+    from common import debrief
+    debrief_config = CONFIG["morning_notifications"]["debrief"]
+    section = _doc_section("16. תזכורות")
+    assert f"פי {debrief_config['score_factor']:g} ומעלה מסף היום הכבד" in section
+    assert f"פי {debrief_config['treat_day_score_factor']:g} ומעלה כשהיום היה יום הפינוק" in section
+    assert f'"{debrief.TITLE}"' in section
+    assert "מדריך האפליקציה — נפלתי בלילה" in section
+
+
 def test_day_close_bounds():
     day_close = CONFIG["day_close"]
     assert f"עד {day_close['close_until']} בלילה" in DOC

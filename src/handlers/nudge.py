@@ -1,12 +1,14 @@
-"""Scheduled nudge jobs: the night's last call, weekly recap, weekly weigh-in.
+"""Scheduled nudge jobs: the night's last call, the weekly recap, and the morning notifications —
+the weekly weigh-in reminder on the treat day and the debrief of a heavy yesterday.
 
 Two entry points, each deployed as a Lambda function of its own from this one module. The nudge
 function's handler is invoked by EventBridge Scheduler with {"job": ...}, and the named job
-addresses every user in the pool who has not opted out of notifications — except the weekly
-job, which only puts one SQS message per user on the recap queue. The weekly-recap function's
-recap_handler is invoked by that queue with one message, and produces that one user's recap:
-the week's findings, the answering service's reading of them, the email. NudgeEnv gathers all
-AWS-derived inputs once so job logic stays pure and testable."""
+addresses every user in the pool who has not opted out of notifications. The jobs that ask the
+answering service on a user's behalf — the weekly recap, and the morning debrief for whoever
+earned one — only put one SQS message per user on the app-question queue, naming the job; the
+app-question function's queued_handler is invoked by that queue with one message and produces
+that one user's recap or debrief: the question, the service's answer, the stored chat, the email.
+NudgeEnv gathers all AWS-derived inputs once so job logic stays pure and testable."""
 
 import json
 import os
@@ -15,8 +17,8 @@ from dataclasses import dataclass
 
 import boto3
 
-from common import (appconfig, chat, chat_context, chat_history, chat_question, derive, notify,
-                    undelivered, users, weekly_recap, weight)
+from common import (appconfig, chat, chat_context, chat_history, chat_question, debrief, derive,
+                    notify, rules, undelivered, users, weekly_recap, weight)
 from common.dates import closing_day, days_before, today
 from common.log import get_logger
 from common.store import Store
@@ -31,11 +33,11 @@ REMINDER_TEXT = "עדיין לא רשמת ארוחות היום 🌙"
 OPEN_DAY_SUBJECT = "תזכורת — היום עדיין פתוח"
 OPEN_DAY_TEXT = "רשמת היום ארוחות ולא סגרת את היום 🌙 אפשר לסגור אותו עכשיו ביומן"
 
-# How long the weekly recap waits for its reading of the week: just under the 60s the answering
-# service's API Gateway and the Lambda behind it both allow. The follow-up carries the whole recap
-# in its question, and composing the reading runs past chat.TIMEOUT_SECONDS. No browser waits
-# on this job; the budget it spends is the recap consumer's own timeout, one user per invocation.
-RECAP_TIMEOUT_SECONDS = 55
+# How long a queued job waits for the answering service: just under the 60s the service's API
+# Gateway and the Lambda behind it both allow. The recap's follow-up carries the whole recap in
+# its question, and composing the reading runs past chat.TIMEOUT_SECONDS. No browser waits on
+# these jobs; the budget they spend is the consumer's own timeout, one user per invocation.
+APP_QUESTION_TIMEOUT_SECONDS = 55
 
 @dataclass(frozen=True)
 class NudgeEnv:
@@ -45,38 +47,42 @@ class NudgeEnv:
     telegram: tuple | None  # (bot_token, chat_map) when the Telegram channel is active, else None
     ses: object
     undelivered: object  # table the messages SES refuses are kept in, for the app to show
-    chat_history: object  # transcript table the weekly recap is stored in, as a chat the app wrote
-    treat_weekday: str  # the week's treat day, left out of the recap's clean-day count
+    chat_history: object  # transcript table the recap and the debrief are stored in, as app chats
+    treat_weekday: str  # the week's treat day: the weigh-in's day, outside the clean-day count
     close_until: str  # the small-hours bound until which the last call still addresses yesterday
+    debrief: object  # appconfig.DebriefConfig: when a closed day earns the morning debrief
     sender: str
     app_url: str  # the deployed frontend, cited under every user-facing email's body
     rag_url: str  # empty when the deployment configures no answering service
     rag_key: str | None  # None exactly when rag_url is empty
-    recap_queue: object  # SQS queue the weekly job hands one message per user to
+    question_queue: object  # SQS queue the recap and debrief jobs hand one message per user to
 
 
 def handler(event, context):
-    jobs = {"last_call": _last_call, "weekly": _weekly, "weigh_in": _weigh_in}
+    jobs = {"last_call": _last_call, "weekly": _weekly,
+            "morning_notifications": _morning_notifications}
     env = _build_env(_notifiable_pool)
     logger.info("job=%s starting users=%d", event["job"], len(env.users))
     jobs[event["job"]](env)
     logger.info("job=%s completed", event["job"])
 
 
-def recap_handler(event, context):
-    """One user's weekly recap, from the message the weekly job queued for them.
+def queued_handler(event, context):
+    """One user's recap or debrief, from the message a scheduled job queued for them, which
+    names the job and the day it is about.
 
-    The event source mapping hands over one message per invocation, so a slow reading of one
-    user's week is that invocation's alone and a crash dead-letters that one message. The night
-    the job ran on rides in the message, so every user's week is measured from the same night
-    however late their message is answered."""
+    The event source mapping hands over one message per invocation, so a slow answer for one
+    user is that invocation's alone and a crash dead-letters that one message. The day rides in
+    the message, so every user is measured from the same day however late their message is
+    answered."""
+    jobs = {"recap": _recap, "debrief": _debrief}
     (record,) = event["Records"]
     message = json.loads(record["body"])
     user = users.User(message["sub"], message["email"])
     env = _build_env(lambda store: [user])
-    logger.info("recap starting user=%s day=%s", user.email, message["day"])
-    _recap(env, user, message["day"])
-    logger.info("recap completed user=%s", user.email)
+    logger.info("%s starting user=%s day=%s", message["job"], user.email, message["day"])
+    jobs[message["job"]](env, user, message["day"])
+    logger.info("%s completed user=%s", message["job"], user.email)
 
 
 def _notifiable(store, pool) -> list:
@@ -100,14 +106,15 @@ def _build_env(audience) -> NudgeEnv:
     store = Store(os.environ["DAYS_TABLE"], os.environ["MEALS_TABLE"], os.environ["STATE_TABLE"],
                   os.environ["WEIGHTS_TABLE"])
     config = appconfig.load(os.environ["APP_CONFIG_PATH"])
-    # Only the weekly recap's follow-up asks the answering service; every other job runs whether
-    # or not the deployment configures one.
+    # Only the recap's follow-up and the debrief ask the answering service; every other job runs
+    # whether or not the deployment configures one.
     rag_url = os.environ["RAG_API_URL"]
     return NudgeEnv(
         store=store,
         questionnaire=config.questionnaire,
         treat_weekday=config.treat_day.weekday,
         close_until=config.day_close.close_until,
+        debrief=config.morning_notifications.debrief,
         users=audience(store),
         telegram=notify.telegram_config(ssm, os.environ["BOT_TOKEN_PARAM"], os.environ["CHAT_MAP_PARAM"]),
         ses=boto3.client("ses"),
@@ -118,7 +125,7 @@ def _build_env(audience) -> NudgeEnv:
         rag_url=rag_url,
         rag_key=chat.api_key(ssm, os.environ["RAG_API_KEY_PARAM"])
                 if chat.configured(rag_url) else None,
-        recap_queue=boto3.resource("sqs").Queue(os.environ["WEEKLY_RECAP_QUEUE_URL"]),
+        question_queue=boto3.resource("sqs").Queue(os.environ["APP_QUESTION_QUEUE_URL"]),
     )
 
 
@@ -172,15 +179,70 @@ def _last_call(env):
 
 
 def _weekly(env):
-    """Queues one recap per user, for recap_handler to answer each in an invocation of its own.
+    """Queues one recap per user, for queued_handler to answer each in an invocation of its own.
 
     The message names the user and the night the job ran on: the consumer reads the week itself,
     so the payload stays small, and the night fixes the window however late the message is
     answered."""
     day = today()
     for user in env.users:
-        env.recap_queue.send_message(MessageBody=json.dumps(
-            {"sub": user.sub, "email": user.email, "day": day}))
+        _queue(env, "recap", user, day)
+
+
+def _queue(env, job, user, day):
+    """Hands one user's `job` about `day` to the consumer."""
+    env.question_queue.send_message(MessageBody=json.dumps(
+        {"job": job, "sub": user.sub, "email": user.email, "day": day}))
+
+
+def _morning_notifications(env):
+    """The morning's messages, fired daily at the configured hour: the weekly weigh-in reminder
+    when the day is the treat day, and the debrief of yesterday for whoever closed it far over
+    the heavy-day bound — queued, since each debrief waits on the answering service."""
+    day = today()
+    if rules.falls_on(day, env.treat_weekday):
+        _weigh_in(env)
+    _queue_debriefs(env, day)
+
+
+def _queue_debriefs(env, day):
+    """Queues a debrief of the day before `day` for each user whose closed record of it qualifies
+    (debrief.qualifies). A day left unclosed has no record to judge and earns none, and a
+    deployment without an answering service has no one to ask, so nothing is queued."""
+    if not chat.configured(env.rag_url):
+        return
+    yesterday = days_before(day, 1)
+    on_treat_day = rules.falls_on(yesterday, env.treat_weekday)
+    for user in env.users:
+        closed = env.store.get_days_range(user.sub, yesterday, yesterday)
+        if yesterday in closed and debrief.qualifies(env.questionnaire, env.debrief,
+                                                    closed[yesterday], on_treat_day):
+            _queue(env, "debrief", user, yesterday)
+
+
+def _debrief(env, user, day):
+    """One user's debrief of `day`, the heavy day the morning job queued them for: the app's
+    question about it, answered over the user's recent data the way a question typed in the app
+    is, stored as a chat of theirs and emailed with its answer.
+
+    The transcript is what makes a rerun safe: a message redriven after a crash finds the day's
+    chat already stored and does nothing again. A service that fails to answer costs the whole
+    debrief — the question has no findings of the app's own to send alone — and the failure is
+    logged; the morning's other messages are unaffected."""
+    score = env.store.get_days_range(user.sub, day, day)[day]["carbs"]
+    asked = debrief.question(day, score)
+    if chat_history.find(env.chat_history, user.sub, asked) is not None:
+        logger.info("debrief of %s already stored for %s", day, user.email)
+        return
+    try:
+        answered = chat_question.answer(env.rag_url, env.rag_key, env.store, env.questionnaire,
+                                        env.chat_history, user.sub, asked, app=True,
+                                        timeout=APP_QUESTION_TIMEOUT_SECONDS)
+    except (urllib.error.URLError, TimeoutError):
+        logger.warning("debrief of %s failed for %s; nothing sent", day, user.email,
+                       exc_info=True)
+        return
+    _send(env, user, debrief.subject(day), debrief.email_body(asked, answered["answer"]))
 
 
 def _recap(env, user, day):
@@ -254,7 +316,7 @@ def _insights(env, user, title, findings, at, context) -> str | None:
     try:
         return chat_question.answer(env.rag_url, env.rag_key, env.store, env.questionnaire,
                                     env.chat_history, user.sub, question, at=at, app=True,
-                                    timeout=RECAP_TIMEOUT_SECONDS, context=context)["answer"]
+                                    timeout=APP_QUESTION_TIMEOUT_SECONDS, context=context)["answer"]
     except (urllib.error.URLError, TimeoutError):
         logger.warning("weekly insights failed for %s; sending the findings alone", user.email,
                        exc_info=True)
@@ -262,10 +324,9 @@ def _insights(env, user, title, findings, at, context) -> str | None:
 
 
 def _weigh_in(env):
-    """Weekly weigh-in reminder. The schedule fires on the configured weigh-in weekday, so the day
-    this job runs is that weekday — and weighing on it is the thing being asked for. A weighing on
-    any other day is the drift the weekly rhythm loses itself to, so only the day's own weighing
-    excuses the reminder."""
+    """Weekly weigh-in reminder, sent by the morning job on the treat day — the weigh-in's day, and
+    weighing on it is the thing being asked for. A weighing on any other day is the drift the
+    weekly rhythm loses itself to, so only the day's own weighing excuses the reminder."""
     day = today()
     for user in env.users:
         if env.store.get_weights_range(user.sub, day, day):

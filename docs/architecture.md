@@ -31,8 +31,8 @@ graph LR
     NUDGE --> UND
     NUDGE --> SES[SES email]
     NUDGE -.optional.-> TG[Telegram bot]
-    NUDGE --> Q[(SQS<br/>weekly recap)]
-    Q --> RECAP[weekly-recap Lambda]
+    NUDGE --> Q[(SQS<br/>app questions:<br/>recap · debrief)]
+    Q --> RECAP[app-question Lambda]
     RECAP --> DB
     RECAP --> CDB
     RECAP --> UND
@@ -56,13 +56,17 @@ graph LR
   the HTTP API holds a browser's request for, because the answering service may take that long:
   when the gateway gives up on the request, the invocation keeps waiting and stores the answer,
   and the app reads it from the transcript.
-- **nudge** — woken by the clock rather than by a request. It sends the day's last call and the
-  weekly weigh-in reminder, and queues the weekly recap, one message per user, returning in
-  seconds whatever the pool size.
-- **weekly-recap** — answers one queued user at a time: reads their week and the one before, asks
-  the answering service for its reading of them, and sends the email. Each user has an
-  invocation of their own, so a slow reading delays no one else, and a crash parks that one
-  user's message in a dead-letter queue instead of dropping everyone queued behind them.
+- **nudge** — woken by the clock rather than by a request. It sends the day's last call and, on
+  the treat-day morning, the weekly weigh-in reminder, and it queues the jobs that ask the
+  answering service — the weekly recap for every user, and the morning debrief for whoever
+  closed yesterday far over the heavy-day bound — one message per user, returning in seconds
+  whatever the pool size.
+- **app-question** — answers one queued user at a time, the message naming which job it is: for
+  a recap it reads their week and the one before and asks the answering service for its reading
+  of them; for a debrief it asks why yesterday fell and what today's one step is, over the
+  user's recent data. Either way it stores the exchange as a chat and sends the email. Each user
+  has an invocation of their own, so a slow answer delays no one else, and a crash parks that
+  one user's message in a dead-letter queue instead of dropping everyone queued behind them.
 
 ## Scoring lives in two languages
 
@@ -77,12 +81,12 @@ Two implementations of one rule can drift, so both are held to the same shared t
 ## Configuration both sides read
 
 `config/app.json` is the single file that describes the questions, their values, the alert
-thresholds, the closing windows, the weigh-in schedule and the weekday the trend chart frames.
-Both runtimes read the same file: the deployed package carries it, and the browser fetches it from
-the site's own origin.
+thresholds, the closing windows, the morning notifications' hour and debrief factors, and the
+weekday the trend chart frames. Both runtimes read the same file: the deployed package carries it,
+and the browser fetches it from the site's own origin.
 
-One part is lifted out at deploy time rather than read at run time — the weigh-in weekday and hour,
-because a scheduled job's timing is fixed when the stack deploys.
+One part is lifted out at deploy time rather than read at run time — the treat-day weekday and the
+morning hour, because a scheduled job's timing is fixed when the stack deploys.
 
 [Versioned configuration](domain-rules.md#versioned-configuration) specifies each element and what
 depends on it.

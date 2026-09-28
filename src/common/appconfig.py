@@ -1,5 +1,6 @@
 """Loads config/app.json — the app's single versioned config, holding the questionnaire beside
-the weight, meals, day-close and treat-day settings, and shared by the Lambdas and the frontend.
+the weight, meals, day-close, treat-day and morning-notification settings, and shared by the
+Lambdas and the frontend.
 
 Every value the file declares is required. A malformed config is a deployment fault that must
 surface at load, before the first schedule fires or the first request is served."""
@@ -11,8 +12,8 @@ from pathlib import Path
 
 from common.questionnaire import Questionnaire, parse
 
-# EventBridge Scheduler's day-of-week tokens; the weigh-in and recap schedules' cron expressions
-# are built from the configured treat day at deploy time.
+# EventBridge Scheduler's day-of-week tokens; the recap schedule's cron expression is built from
+# the configured treat day at deploy time, and the morning job reads the day it runs on in them.
 WEEKDAYS = ("SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT")
 
 # Each token's Hebrew name, as the app writes a weekday wherever a day is named to a reader.
@@ -26,11 +27,21 @@ CHART_SPANS = (1, 3, 12, None)
 
 
 @dataclass(frozen=True)
-class WeighIn:
-    """When the weekly weigh-in reminder fires, in Asia/Jerusalem. The weekday is the treat day's:
-    the program's week turns on one day, and the config declares it once, under treat_day."""
-    weekday: str
+class DebriefConfig:
+    """When a closed day earns the morning's debrief: its score at or past the heavy-day bound
+    times score_factor, or times treat_day_score_factor when the day was the treat day, whose
+    treat meal is expected to cost. Both are at least 1, since a day under the bound is not heavy
+    and has nothing to debrief."""
+    score_factor: float
+    treat_day_score_factor: float
+
+
+@dataclass(frozen=True)
+class MorningConfig:
+    """The daily morning notifications, fired at `hour` in Asia/Jerusalem: the weekly weigh-in
+    reminder on the treat day, and the debrief of a heavy yesterday for whoever earned one."""
     hour: int
+    debrief: DebriefConfig
 
 
 @dataclass(frozen=True)
@@ -45,7 +56,6 @@ class Limits:
 
 @dataclass(frozen=True)
 class WeightConfig:
-    weigh_in: WeighIn
     # Months the chart opens on; one of CHART_SPANS.
     chart_months: int
     limits: Limits
@@ -78,8 +88,8 @@ class DayCloseConfig:
 @dataclass(frozen=True)
 class TreatDayConfig:
     """The weekday the program's week turns on, in the three-letter form the config writes: the
-    day the treat meal is aimed at, the day the weekly weigh-in falls on, and so the day the
-    weekly recap goes out on.
+    day the treat meal is aimed at, the day the weekly weigh-in reminder goes out on, and so the
+    day the weekly recap goes out on.
 
     No day is scored differently for it and no recorded day is marked as one. It names the day
     the weekly recap never counts as a flours-and-sugars finding, and the column the trend chart
@@ -94,23 +104,37 @@ class AppConfig:
     meals: MealsConfig
     day_close: DayCloseConfig
     treat_day: TreatDayConfig
+    morning_notifications: MorningConfig
 
 
-def _parse_weight(raw: dict, treat_day: TreatDayConfig) -> WeightConfig:
-    weigh_in = raw["weigh_in"]
-    if "weekday" in weigh_in:
-        raise ValueError("weigh_in declares a weekday; the weigh-in falls on treat_day's weekday")
-    hour = weigh_in["hour"]
-    if isinstance(hour, bool) or not isinstance(hour, int) or not 0 <= hour <= 23:
-        raise ValueError(f"weigh_in hour {hour!r} must be an integer hour of the day")
+def _parse_weight(raw: dict) -> WeightConfig:
+    if "weigh_in" in raw:
+        raise ValueError("weight declares weigh_in; the weigh-in reminder goes out at "
+                         "morning_notifications.hour on treat_day's weekday")
     chart_months = raw["chart_months"]
     if chart_months not in CHART_SPANS:
         raise ValueError(f"chart_months {chart_months!r} is not one of {list(CHART_SPANS)}")
     limits = Limits(min_kg=raw["limits"]["min_kg"], max_kg=raw["limits"]["max_kg"])
     if limits.min_kg >= limits.max_kg:
         raise ValueError(f"weight limits {limits.min_kg}..{limits.max_kg} span no range")
-    return WeightConfig(weigh_in=WeighIn(weekday=treat_day.weekday, hour=hour),
-                        chart_months=chart_months, limits=limits)
+    return WeightConfig(chart_months=chart_months, limits=limits)
+
+
+def _score_factor(raw: dict, key) -> float:
+    factor = raw[key]
+    if isinstance(factor, bool) or not isinstance(factor, (int, float)) or factor < 1:
+        raise ValueError(f"debrief {key} {factor!r} must be a number of at least 1")
+    return factor
+
+
+def _parse_morning(raw: dict) -> MorningConfig:
+    hour = raw["hour"]
+    if isinstance(hour, bool) or not isinstance(hour, int) or not 0 <= hour <= 23:
+        raise ValueError(f"morning_notifications hour {hour!r} must be an integer hour of the day")
+    debrief = raw["debrief"]
+    return MorningConfig(hour=hour, debrief=DebriefConfig(
+        score_factor=_score_factor(debrief, "score_factor"),
+        treat_day_score_factor=_score_factor(debrief, "treat_day_score_factor")))
 
 
 def _parse_meals(raw: dict) -> MealsConfig:
@@ -156,8 +180,8 @@ def _parse_treat_day(raw: dict) -> TreatDayConfig:
 
 def load(path) -> AppConfig:
     raw = json.loads(Path(path).read_text(encoding="utf-8"))
-    treat_day = _parse_treat_day(raw["treat_day"])
     return AppConfig(questionnaire=parse(raw["questionnaire"]),
-                     weight=_parse_weight(raw["weight"], treat_day),
+                     weight=_parse_weight(raw["weight"]),
                      meals=_parse_meals(raw["meals"]), day_close=_parse_day_close(raw["day_close"]),
-                     treat_day=treat_day)
+                     treat_day=_parse_treat_day(raw["treat_day"]),
+                     morning_notifications=_parse_morning(raw["morning_notifications"]))

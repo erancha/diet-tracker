@@ -96,8 +96,6 @@ export interface Questionnaire {
 export type ChartSpan = 1 | 3 | 12 | null;
 
 export interface WeightSettings {
-  // The hour the weigh-in reminder fires at; its weekday is the treat day's.
-  weigh_in: { hour: number };
   // The span the chart opens on.
   chart_months: ChartSpan;
   // Kilogram bounds the weight inputs constrain to, matching what the API accepts.

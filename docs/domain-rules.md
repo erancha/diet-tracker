@@ -218,16 +218,19 @@ yesterday may still be closed and its meals written, and which doubles as the ho
 stretches to past midnight, and the never-later `delete_until`, up to which its record may still
 be deleted. Its `treat_day` element names the one weekday the program's week turns on: the trend
 chart frames it, the weekly weigh-in falls on it, and the weekly recap goes out on it at midday.
-Its `weight` element holds the weigh-in hour — the weigh-in declares no weekday of its own, and
-the loader rejects one, so the day cannot be stated twice — the chart's opening span, and the
-kilogram bounds both the API and the frontend input constrain to. Like `chat`, the `treat_day`
-element is read by the frontend straight from the file; unlike it, the nudge Lambda reads it too.
+Its `morning_notifications` element holds the hour the morning job fires at — the weigh-in
+reminder declares no hour or weekday of its own, and the loader rejects a `weigh_in` element
+under `weight`, so neither can be stated twice — and, under `debrief`, the two factors of the
+heavy-day bound at which yesterday earns its debrief, on an ordinary day and on the treat day.
+Its `weight` element holds the chart's opening span and the kilogram bounds both the API and the
+frontend input constrain to. Like `chat`, the `treat_day` element is read by the frontend straight
+from the file; unlike it, the nudge Lambda reads it too.
 
 Both runtimes read the same file: the Lambda package carries it, and the frontend fetches it from
-its own origin. The treat day and the weigh-in hour are the one part `scripts/deploy.sh` also
-lifts out at deploy time, because an EventBridge cron expression is fixed when the stack deploys.
-Both the reminder and the recap schedules build on that one weekday parameter, so retargeting the
-treat day carries the weigh-in and the recap to the new day with it.
+its own origin. The treat day and the morning hour are the one part `scripts/deploy.sh` also lifts
+out at deploy time, because an EventBridge cron expression is fixed when the stack deploys. The
+recap schedule builds on the weekday parameter, and the morning job reads the weekday itself, so
+retargeting the treat day carries the weigh-in reminder and the recap to the new day with it.
 
 ## Nudges
 
@@ -303,10 +306,25 @@ Scheduled jobs (EventBridge Scheduler, Asia/Jerusalem) run alongside the tracker
   and one that fails to answer, both still mail the findings and still leave the recap in the
   transcript for the user to follow up themselves. It is asked outside the daily chat quota, which
   counts the questions the user chose to spend — this one they did not ask.
-- **Weigh-in reminder** — a weekly prompt to step on the scale, skipped for anyone who already
-  recorded a weight on the weigh-in day itself, on the same channels as the last call above.
+- **Morning notifications** — one job, fired every morning at `morning_notifications.hour`, after
+  the small-hours window in which yesterday could still be closed has shut. On the treat day it
+  sends the **weigh-in reminder**, a weekly prompt to step on the scale, skipped for anyone who
+  already recorded a weight that day, on the same channels as the last call above. Every day it
+  judges yesterday's closed record for the **debrief of a heavy day**: a day whose score reached
+  the heavy-day bound times `morning_notifications.debrief.score_factor` (1.5, so 18 against the
+  bound of 12), or times `treat_day_score_factor` (2) when yesterday was the treat day, whose
+  treat meal is expected to cost. A day left unclosed has no record to judge and earns none. For
+  each user who earned one, the job queues a message on the app-question queue, the recap's, and
+  the consumer asks
+  the answering service on the user's behalf — one fixed question naming the day and its score
+  and asking why the fall happened and what the one step for today is, over the same recent-data
+  block a question typed in the app carries, so yesterday's meals are what it reads — then
+  stores the exchange as a chat the app wrote and mails the question with its answer. The
+  question is outside the daily chat quota, like the recap's. Without an answer there is nothing
+  to send: a service that fails to answer costs the whole debrief, logged against the user, and
+  a redriven message finds the day's chat already stored and does nothing again.
 
 Every job above reads its audience from the pool minus the accounts that have opted out, so one
-switch silences all of them — the unconditional weekly recap included. The switch is the account
+switch silences all of them — the unconditional weekly recap and the debrief included. The switch is the account
 menu's first item; it toggles, so the same item subscribes again. Opting out changes nothing
 inside the app: a muted account still sees its own red marks on closing a day and in the table.

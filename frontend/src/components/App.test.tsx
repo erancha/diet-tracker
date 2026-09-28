@@ -14,7 +14,7 @@ import { INTRO_STAGE_MS } from "./useWelcomeIntro";
 
 const CONFIG: AppConfigFile = {
   questionnaire: trackerQuestionnaire,
-  weight: { weigh_in: { hour: 8 }, chart_months: 3, limits: { min_kg: 40, max_kg: 200 } },
+  weight: { chart_months: 3, limits: { min_kg: 40, max_kg: 200 } },
   meals: { max_per_day: 4 },
   next_meal: { suggest_before_hours: 1, reuse_within_hours: 1 },
   day_close: { close_until: "02:00", delete_until: "01:30", min_window_hours: 6, close_from: "20:00" },

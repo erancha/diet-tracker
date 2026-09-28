@@ -14,8 +14,11 @@ LEGAL_DAY_CLOSE = {"close_until": "02:00", "delete_until": "01:30", "min_window_
 
 LEGAL_TREAT_DAY = {"weekday": "FRI"}
 
+LEGAL_MORNING = {"hour": 8, "debrief": {"score_factor": 1.5, "treat_day_score_factor": 2}}
 
-def write(tmp_path, weight, meals=LEGAL_MEALS, day_close=LEGAL_DAY_CLOSE, treat_day=LEGAL_TREAT_DAY):
+
+def write(tmp_path, weight, meals=LEGAL_MEALS, day_close=LEGAL_DAY_CLOSE, treat_day=LEGAL_TREAT_DAY,
+          morning=LEGAL_MORNING):
     raw = {
         "questionnaire": {
             "version": 1,
@@ -28,21 +31,22 @@ def write(tmp_path, weight, meals=LEGAL_MEALS, day_close=LEGAL_DAY_CLOSE, treat_
         "meals": meals,
         "day_close": day_close,
         "treat_day": treat_day,
+        "morning_notifications": morning,
     }
     path = tmp_path / "app.json"
     path.write_text(json.dumps(raw), encoding="utf-8")
     return path
 
 
-LEGAL_WEIGHT = {"weigh_in": {"hour": 8}, "chart_months": 3,
-                "limits": {"min_kg": 20, "max_kg": 400}}
+LEGAL_WEIGHT = {"chart_months": 3, "limits": {"min_kg": 20, "max_kg": 400}}
 
 
 def test_repo_config_carries_every_section():
     config = appconfig.load(APP_CONFIG)
     assert config.questionnaire.question("carbs").type == "points"
-    assert config.weight.weigh_in.weekday == config.treat_day.weekday
-    assert config.weight.weigh_in.hour == 8
+    assert config.morning_notifications.hour == 8
+    assert config.morning_notifications.debrief.score_factor == 1.5
+    assert config.morning_notifications.debrief.treat_day_score_factor == 2
     assert config.weight.chart_months == 3
     assert (config.weight.limits.min_kg, config.weight.limits.max_kg) == (40, 200)
     assert config.meals.max_per_day == 5
@@ -99,17 +103,12 @@ def test_max_meals_per_day_must_be_a_positive_integer(tmp_path):
             appconfig.load(path)
 
 
-def test_the_weigh_in_falls_on_the_treat_day(tmp_path):
-    # The program's week turns on one day: the treat meal, the weighing and the recap all fall on
-    # it, so the config declares that weekday once and the weigh-in inherits it.
-    config = appconfig.load(write(tmp_path, LEGAL_WEIGHT, treat_day={"weekday": "SUN"}))
-    assert config.weight.weigh_in.weekday == "SUN"
-
-
-def test_the_weigh_in_declares_no_weekday_of_its_own(tmp_path):
-    # A weekday under weigh_in would read as a second declaration the loader silently ignores.
-    path = write(tmp_path, {**LEGAL_WEIGHT, "weigh_in": {"weekday": "THU", "hour": 8}})
-    with pytest.raises(ValueError, match="weekday"):
+def test_weight_declares_no_weigh_in_of_its_own(tmp_path):
+    # The weigh-in reminder goes out with the morning notifications, at their hour on the treat
+    # day; a weigh_in element under weight would read as a second declaration the loader silently
+    # ignores.
+    path = write(tmp_path, {**LEGAL_WEIGHT, "weigh_in": {"hour": 8}})
+    with pytest.raises(ValueError, match="weigh_in"):
         appconfig.load(path)
 
 
@@ -119,11 +118,25 @@ def test_treat_day_weekday_must_be_a_scheduler_token(tmp_path):
         appconfig.load(path)
 
 
-def test_weigh_in_hour_must_be_an_hour_of_the_day(tmp_path):
+def test_morning_hour_must_be_an_hour_of_the_day(tmp_path):
     for hour in (24, -1, 8.5, True, "8"):
-        path = write(tmp_path, {**LEGAL_WEIGHT, "weigh_in": {"hour": hour}})
+        path = write(tmp_path, LEGAL_WEIGHT, morning={**LEGAL_MORNING, "hour": hour})
         with pytest.raises(ValueError, match="hour"):
             appconfig.load(path)
+
+
+def test_debrief_factors_must_be_numbers_of_at_least_one(tmp_path):
+    # A factor under 1 would debrief a day the app does not call heavy; a boolean or a string is
+    # a typo the arithmetic would otherwise swallow.
+    for key in ("score_factor", "treat_day_score_factor"):
+        for factor in (0.5, 0, True, "1.5"):
+            debrief = {**LEGAL_MORNING["debrief"], key: factor}
+            path = write(tmp_path, LEGAL_WEIGHT, morning={**LEGAL_MORNING, "debrief": debrief})
+            with pytest.raises(ValueError, match=key):
+                appconfig.load(path)
+    config = appconfig.load(write(tmp_path, LEGAL_WEIGHT, morning={
+        **LEGAL_MORNING, "debrief": {"score_factor": 1, "treat_day_score_factor": 1}}))
+    assert config.morning_notifications.debrief.score_factor == 1
 
 
 def test_chart_months_must_name_a_span_the_selector_offers(tmp_path):
@@ -142,7 +155,7 @@ def test_weight_limits_must_span_a_range(tmp_path):
 
 
 def test_missing_keys_surface_instead_of_defaulting(tmp_path):
-    path = write(tmp_path, {"weigh_in": {"hour": 8}})
+    path = write(tmp_path, {"chart_months": 3})
     with pytest.raises(KeyError):
         appconfig.load(path)
 

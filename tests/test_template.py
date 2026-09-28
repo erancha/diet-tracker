@@ -89,12 +89,12 @@ def test_public_chats_are_indexed_by_visibility_and_the_chat_function_can_name_t
     assert "ListUsersPolicy" in chat_function["Policies"]
 
 
-def test_the_recap_consumer_is_granted_every_table_and_service_one_recap_touches():
+def test_the_app_question_consumer_is_granted_every_table_and_service_a_job_touches():
     # A recap reads the user's days, meals and weights, replaces its own chat in the transcript
     # with the answered follow-up (a delete and a put in one transaction), and keeps a refused
-    # email for the app; a missing grant surfaces only as a dead-lettered user on a deployed
-    # stack, after the scheduler has long returned.
-    policies = _load_template()["Resources"]["WeeklyRecapFunction"]["Properties"]["Policies"]
+    # email for the app; a debrief reads and stores the same way. A missing grant surfaces only
+    # as a dead-lettered user on a deployed stack, after the scheduler has long returned.
+    policies = _load_template()["Resources"]["AppQuestionFunction"]["Properties"]["Policies"]
     for table in ("DaysTable", "MealsTable", "WeightsTable"):
         assert {"DynamoDBReadPolicy": {"TableName": table}} in policies
     assert {"DynamoDBCrudPolicy": {"TableName": "ChatHistoryTable"}} in policies
@@ -103,61 +103,69 @@ def test_the_recap_consumer_is_granted_every_table_and_service_one_recap_touches
     assert "ListUsersPolicy" not in policies
 
 
-def test_the_weekly_recap_is_fanned_out_one_user_per_invocation():
-    # The weekly job queues one message per user and a consumer answers each in its own
-    # invocation. The pieces that keep that true — one message per invocation, a crash going
+def test_the_app_questions_are_fanned_out_one_user_per_invocation():
+    # The weekly and morning jobs queue one message per user and a consumer answers each in its
+    # own invocation. The pieces that keep that true — one message per invocation, a crash going
     # straight to the dead-letter queue, the consumer's wait fitting inside the queue's
     # visibility window, the scheduler's right to queue — fail only on a deployed stack.
     from handlers import nudge
 
     template = _load_template()
     resources = template["Resources"]
-    consumer = resources["WeeklyRecapFunction"]["Properties"]
+    consumer = resources["AppQuestionFunction"]["Properties"]
     assert getattr(nudge, consumer["Handler"].split(".")[-1])
     (event,) = consumer["Events"].values()
     assert event["Type"] == "SQS"
-    assert event["Properties"]["Queue"] == "WeeklyRecapQueue.Arn"
+    assert event["Properties"]["Queue"] == "AppQuestionQueue.Arn"
     assert event["Properties"]["BatchSize"] == 1
     assert event["Properties"]["ScalingConfig"]["MaximumConcurrency"] == 2
-    queue = resources["WeeklyRecapQueue"]["Properties"]
-    assert queue["RedrivePolicy"] == {"deadLetterTargetArn": "WeeklyRecapDeadLetterQueue.Arn",
+    queue = resources["AppQuestionQueue"]["Properties"]
+    assert queue["RedrivePolicy"] == {"deadLetterTargetArn": "AppQuestionDeadLetterQueue.Arn",
                                       "maxReceiveCount": 1}
     assert queue["VisibilityTimeout"] >= 6 * consumer["Timeout"]
-    assert consumer["Timeout"] > nudge.RECAP_TIMEOUT_SECONDS
+    assert consumer["Timeout"] > nudge.APP_QUESTION_TIMEOUT_SECONDS
     nudge_policies = resources["NudgeFunction"]["Properties"]["Policies"]
-    assert {"SQSSendMessagePolicy": {"QueueName": "WeeklyRecapQueue.QueueName"}} in nudge_policies
+    assert {"SQSSendMessagePolicy": {"QueueName": "AppQuestionQueue.QueueName"}} in nudge_policies
     shared_variables = template["Globals"]["Function"]["Environment"]["Variables"]
-    assert shared_variables["WEEKLY_RECAP_QUEUE_URL"] == "WeeklyRecapQueue"
+    assert shared_variables["APP_QUESTION_QUEUE_URL"] == "AppQuestionQueue"
 
 
-def test_weigh_in_schedule_defaults_agree_with_the_app_config():
-    # deploy.sh passes config/app.json's weigh-in slot as parameter overrides, so the template's
-    # own defaults never reach a deployed stack. Left to drift they would still mislead anyone
-    # reading the template for when the reminder fires.
+def test_schedule_defaults_agree_with_the_app_config():
+    # deploy.sh passes config/app.json's treat day and morning hour as parameter overrides, so the
+    # template's own defaults never reach a deployed stack. Left to drift they would still mislead
+    # anyone reading the template for when a job fires.
     from common import appconfig
 
     from conftest import APP_CONFIG
     parameters = _load_template()["Parameters"]
-    weigh_in = appconfig.load(APP_CONFIG).weight.weigh_in
-    assert parameters["WeighInWeekday"]["Default"] == weigh_in.weekday
-    assert parameters["WeighInHour"]["Default"] == weigh_in.hour
+    config = appconfig.load(APP_CONFIG)
+    assert parameters["TreatDayWeekday"]["Default"] == config.treat_day.weekday
+    assert parameters["MorningHour"]["Default"] == config.morning_notifications.hour
 
 
 def test_the_weekday_deploy_passes_the_schedules_is_the_treat_day():
-    # The weigh-in falls on the treat day, and config/app.json declares that weekday once, under
-    # treat_day. A deploy lifting the weekday from anywhere else would schedule the reminder and
-    # the recap on a day the app no longer names.
+    # config/app.json declares the treat day's weekday once, under treat_day. A deploy lifting the
+    # weekday from anywhere else would schedule the recap on a day the app no longer names.
     weekday_override = next(line for line in DEPLOY.read_text().splitlines()
-                            if "WeighInWeekday=" in line)
+                            if "TreatDayWeekday=" in line)
     assert "['treat_day']['weekday']" in weekday_override
 
 
-def test_weekly_recap_fires_on_the_weigh_in_weekday():
-    # The recap is timed to read the weigh-in morning's weight. Spelling the weekday out here
-    # instead of reusing the parameter would let a retargeted weigh-in leave the recap behind on
-    # the old night, reading a week-old weight.
+def test_weekly_recap_fires_on_the_treat_day():
+    # The recap is timed to read the weigh-in morning's weight, and the weigh-in falls on the
+    # treat day. Spelling the weekday out here instead of reusing the parameter would let a
+    # retargeted treat day leave the recap behind on the old night, reading a week-old weight.
     schedule = _load_template()["Resources"]["WeeklySchedule"]
-    assert "${WeighInWeekday}" in schedule["Properties"]["ScheduleExpression"]
+    assert "${TreatDayWeekday}" in schedule["Properties"]["ScheduleExpression"]
+
+
+def test_the_morning_notifications_fire_daily_at_the_configured_hour():
+    # The weigh-in reminder is weekly but the debrief of a heavy yesterday can fall on any day, so
+    # the one morning job runs every day and reads the weekday itself. The hour comes from the
+    # parameter deploy.sh lifts out of config/app.json.
+    schedule = _load_template()["Resources"]["MorningSchedule"]["Properties"]
+    assert schedule["ScheduleExpression"] == "cron(0 ${MorningHour} * * ? *)"
+    assert schedule["ScheduleExpressionTimezone"] == "Asia/Jerusalem"
 
 
 def test_every_scheduled_job_name_is_one_the_nudge_handler_dispatches():
@@ -171,7 +179,7 @@ def test_every_scheduled_job_name_is_one_the_nudge_handler_dispatches():
     scheduled = {json.loads(resource["Properties"]["Target"]["Input"])["job"]
                  for resource in template["Resources"].values()
                  if resource["Type"] == "AWS::Scheduler::Schedule"}
-    assert scheduled == {"last_call", "weekly", "weigh_in"}
+    assert scheduled == {"last_call", "weekly", "morning_notifications"}
 
 
 def test_every_parameter_a_schedule_reads_is_passed_on_deploy():
