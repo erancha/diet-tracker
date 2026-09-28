@@ -27,7 +27,7 @@ export function AnswerFoot({ question, onClose, ...own }: { question: string; on
     <div className="answer-foot">
       {!own.readOnly && (
         <>
-          <button type="button" className="secondary compact reply-turn" ref={scrollIntoViewOnMount}
+          <button type="button" className="secondary compact reply-turn border-sweep" ref={scrollIntoViewOnMount}
             aria-label={`שאלת המשך על ${question}`}
             title={FOLLOW_UP_HINT}
             aria-pressed={own.replyPressed}

@@ -532,7 +532,7 @@ export function Chat({ email, api, sampleQuestions, answerPollSeconds,
         <div className="existing-chat" tabIndex={-1} ref={existingRef}>
           <p>{existing.own !== null ? "כבר שאלת את השאלה הזו"
             : `השאלה הזו כבר נשאלה ושותפה על ידי ${existing.shared!.email}`}</p>
-          <button type="button" className="primary compact" onClick={reveal}>להציג את הצ'אט הקיים</button>
+          <button type="button" className="primary compact border-sweep" onClick={reveal}>להציג את הצ'אט הקיים</button>
           <button type="button" className="secondary compact" onClick={askAnyway}>לשאול בכל זאת</button>
         </div>
       )}
