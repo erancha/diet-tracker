@@ -614,15 +614,15 @@ Resources:
                 Action: lambda:InvokeFunction
                 Resource: !GetAtt NudgeFunction.Arn
 
-  # An open day is nudged three times a night: an early call at ten, a last call at half past
-  # eleven — the final slot at which the day being asked about is still the running one — and a
-  # call at half past midnight, inside the small-hours window (day_close.close_until, 02:00) in
-  # which the day just ended can still be closed, so the job still asks about that day. A day
-  # closed between two calls is not nudged again.
+  # An open day is nudged three times a night: an early call at half past ten, a last call at
+  # half past eleven — the final slot at which the day being asked about is still the running
+  # one — and a call at half past midnight, inside the small-hours window (day_close.close_until,
+  # 02:00) in which the day just ended can still be closed, so the job still asks about that day.
+  # A day closed between two calls is not nudged again.
   EarlyCallSchedule:
     Type: AWS::Scheduler::Schedule
     Properties:
-      ScheduleExpression: 'cron(0 22 * * ? *)'
+      ScheduleExpression: 'cron(30 22 * * ? *)'
       ScheduleExpressionTimezone: Asia/Jerusalem
       FlexibleTimeWindow:
         Mode: 'OFF'
