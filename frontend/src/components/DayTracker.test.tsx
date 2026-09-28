@@ -136,6 +136,16 @@ describe("DayTracker", () => {
     expect(screen.queryByText(/ארוחות:/)).toBeNull();
   });
 
+  it("offers close-day on the tracker's title row, not under the meal list", () => {
+    render(<DayTracker expandLabels={false} suggestBeforeHours={1} treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} closeFrom={CLOSE_FROM} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={wideWindowDay}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    const button = screen.getByRole("button", { name: "סגירת יום" });
+    expect(button.closest(".section-header")).toContainElement(screen.getByRole("button", { name: "יומן היום" }));
+  });
+
   it("close-day submits values derived from the recorded meals", () => {
     const onCloseDay = vi.fn();
     render(<DayTracker expandLabels={false} suggestBeforeHours={1} treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} closeFrom={CLOSE_FROM} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={wideWindowDay}

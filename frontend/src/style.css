@@ -704,6 +704,9 @@ main:not(.intro-0, .intro-1, .intro-2, .intro-3, .intro-4) .weight .section-togg
    without shrinking away from its arrow. */
 .meal-form .section-toggle:has(.meal-add-warn) { --btn-fg: #8e1b1b; }
 .section-toggle .meal-add-warn { color: inherit; font-weight: 700; font-size: calc(1em - 1px); }
+/* The controls that ride the tracker's title row — closing the day, and the folded meal toggle
+   once one more meal is discouraged — share the row's baseline at the heading's far end. */
+.tracker-controls { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.75rem; }
 /* Lifted into the tracker's title row, the folded toggle sits on that row's baseline, 6px under
    the section-title size, with its arrow centred on the label rather than on the baseline. */
 .day-tracker > .section-header .meal-form h3 { margin: 0; font-size: calc(var(--section-title-size) - 6px); }
@@ -825,8 +828,8 @@ main:not(.intro-0, .intro-1, .intro-2, .intro-3, .intro-4) .weight .section-togg
    keeps it out of the line box, leaving the row's height set by that text — which is what the
    top-pinned time above measures itself against. The weight list's rows are built the same way. */
 :is(.meal-list .meal-actions, .weight-entries) .glyph { margin-block: -0.35rem; }
-/* The closing panel opens between the action row and the meal list; its own lead keeps the framed
-   fieldset from sitting tight against the buttons while staying anchored to the opener among them. */
+/* The closing panel opens under the action row; its own lead keeps the framed fieldset from
+   sitting tight against the buttons. */
 .close-day { margin-top: 1rem; }
 /* Names the step the panel is, in the accent the app acts in — the control that opened the
    panel is gone by the time this shows. */

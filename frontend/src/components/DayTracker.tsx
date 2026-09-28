@@ -393,6 +393,22 @@ export function DayTracker({ questionnaire, treatDay, day, expandLabels, isToday
   // tracker's title row, so the list no longer walks the eye down to it. Opened, the form
   // returns below the list, where its inputs have room.
   const formInHeader = addMealWarns && formCollapsed && !atCap && !closed && !breakdownShown;
+  // Closing sits on the tracker's title row, at the top of what it ends. A meal still being
+  // composed would go with the closed day — the tracker goes with it — so closing folds it in
+  // rather than stopping over it: a saveable meal is saved by this very click and the flow
+  // continues into the panel. Only a meal the form cannot save yet holds the button, with the
+  // notice under the action row saying why. Once the panel is open the button leaves: the flow
+  // runs forward to the confirmation, not back through a toggle.
+  const closeDayButton = closable && !closing && !closed && !breakdownShown ? (
+    <button type="button" className="secondary compact"
+            disabled={formHoldsUnsavedMeal && !mealSaveable}
+            onClick={() => {
+              if (formHoldsUnsavedMeal) submitMeal();
+              setClosing(true);
+            }}>
+      סגירת יום
+    </button>
+  ) : null;
   const mealForm = atCap && formCollapsed ? (
     <p className="meal-cap-note">{`הושלמו ${maxMealsPerDay} ארוחות היום`}</p>
   ) : (
@@ -527,8 +543,14 @@ export function DayTracker({ questionnaire, treatDay, day, expandLabels, isToday
                         collapsed={sectionCollapsed}
                         onToggle={() => setSectionCollapsed((c) => !c)}
                         // Always an aside, empty or not, so the header keeps one structure and
-                        // the tracker's own toggle is not remounted as the form moves in and out.
-                        headerAside={formInHeader && !sectionCollapsed ? mealForm : null}
+                        // the tracker's own toggle is not remounted as the controls move in and
+                        // out. The fold hides them along with the body they act on.
+                        headerAside={sectionCollapsed ? null : (
+                          <div className="tracker-controls">
+                            {closeDayButton}
+                            {formInHeader && mealForm}
+                          </div>
+                        )}
                         summary={
       <>
         <DayDashboard questionnaire={questionnaire} treatDay={treatDay} date={day.date} derived={derived}
@@ -614,21 +636,6 @@ export function DayTracker({ questionnaire, treatDay, day, expandLabels, isToday
                   onClick={discardForm}>
             {formHoldsUnsavedMeal ? "ביטול שינויים"
               : editing !== undefined ? "יציאה מעריכה" : "סגירת הטופס"}
-          </button>
-        )}
-        {/* A meal still being composed would go with the closed day — the tracker goes with it —
-            so closing folds it in rather than stopping over it: a saveable meal is saved by this
-            very click and the flow continues into the panel. Only a meal the form cannot save yet
-            holds the button, with the notice below saying why. Once the panel is open the button
-            leaves: the flow runs forward to the confirmation, not back through a toggle. */}
-        {closable && !closing && (
-          <button type="button" className="secondary"
-                  disabled={formHoldsUnsavedMeal && !mealSaveable}
-                  onClick={() => {
-                    if (formHoldsUnsavedMeal) submitMeal();
-                    setClosing(true);
-                  }}>
-            סגירת יום
           </button>
         )}
       </div>
