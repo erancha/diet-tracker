@@ -707,6 +707,8 @@ main:not(.intro-0, .intro-1, .intro-2, .intro-3, .intro-4) .weight .section-togg
 /* The controls that ride the tracker's title row — closing the day, and the folded meal toggle
    once one more meal is discouraged — share the row's baseline at the heading's far end. */
 .tracker-controls { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.75rem; }
+/* On a phone the controls wrap under the title, and this keeps them off the dashboard line. */
+.day-tracker > .section-header { margin-bottom: 0.75rem; }
 /* Lifted into the tracker's title row, the folded toggle sits on that row's baseline, 6px under
    the section-title size, with its arrow centred on the label rather than on the baseline. */
 .day-tracker > .section-header .meal-form h3 { margin: 0; font-size: calc(var(--section-title-size) - 6px); }
