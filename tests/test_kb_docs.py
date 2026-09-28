@@ -4,8 +4,8 @@ service answers from an uploaded copy of the guide, so a doc that drifts from co
 confidently wrong answers. Each test pins a quoted value to its config source; a config change
 that fails here is the reminder to update docs/kb/app-guide-he.md and re-upload it. The guide's
 classification extension, docs/kb/app-guide-classify-he.md, is pinned the same way to the meal
-record's fields and to the retrieval window it has to fit, and so is its fat-servings extension,
-docs/kb/app-guide-fat-he.md."""
+record's fields and to the retrieval window it has to fit, and so are its fat-servings extension,
+docs/kb/app-guide-fat-he.md, and its night-fall debrief, docs/kb/app-guide-fall-he.md."""
 
 import json
 import re
@@ -246,3 +246,31 @@ def test_the_fat_doc_quotes_the_day_bounds_in_one_chunk():
     assert len(doc) <= 2000
     assert f"{fat['warn_below']}–{RULES['too_much_fat']['above']} מנות הן תקרה" in doc
     assert f"אין לרדת מ־{fat['warn_below']} מנות ביום" in doc
+
+
+def test_the_fall_doc_maps_the_debrief_to_the_data_block_in_one_chunk():
+    """A "why did I fall last night" question lists the dishes eaten, which retrieval matches to
+    the program's recipe pages rather than to its debrief guides, so the debrief's mapping onto
+    the asker's data lives in its own doc within one retrieval window. It names the data block's
+    own fields and the day bounds the app judges by, points at the program's guides instead of
+    restating them, and is reachable from the guide's night-eating section."""
+    doc = (ROOT / "docs" / "kb" / "app-guide-fall-he.md").read_text()
+    fat = next(q for q in CONFIG["questionnaire"]["questions"] if q["id"] == "fat")
+    vegetables = next(q for q in CONFIG["questionnaire"]["questions"] if q["id"] == "vegetables")
+    assert len(doc) <= 2000
+    assert "הרחבה של סעיף 12" in doc
+    for field in ("שעת הארוחה הראשונה", "ירקות", "מנות שומן", "ציון יומי",
+                  "סיכום הימים האחרונים", "שתיה"):
+        assert field in doc
+    assert f"מעל {RULES['too_much_fat']['above']} ביום" in doc
+    assert f"פחות מ־{fat['warn_below']} ביום" in doc
+    assert f"פחות מ־{vegetables['warn_below']} ארוחות עם ירקות" in doc
+    assert f"פחות מ־{RULES['low_drinking']['below']} ליטר" in doc
+    assert f"ל־{CONFIG['day_close']['close_until']}" in doc
+    for guide in ("המדריך הפארטו לנפילות טובות", "פרוטוקול גלגלי הצלה"):
+        assert guide in doc
+    # Sleep, stress and hunger have no field, and the doc says so rather than letting the chat
+    # read their absence as a habit.
+    assert "אינם במעקב האפליקציה" in doc
+    assert "מדריך האפליקציה — נפלתי בלילה" in _doc_section(
+        "12. התעוררתי באמצע הלילה ואכלתי — מה עושים עם החלון הענק?")
