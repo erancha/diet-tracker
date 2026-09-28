@@ -27,6 +27,18 @@ describe("Alerts", () => {
     expect(screen.getByText("חריגה")).toBeInTheDocument();
   });
 
+  it("takes a success off screen while a violation in its batch stays", () => {
+    render(<Alerts items={[{ kind: "ok", message: "נשמר" }, { kind: "crossing", message: "חצה סף" }]}
+                   onDismiss={vi.fn()} />);
+
+    act(() => vi.advanceTimersByTime(4999));
+    expect(screen.getByText("נשמר")).toBeInTheDocument();
+
+    act(() => vi.advanceTimersByTime(1));
+    expect(screen.queryByText("נשמר")).not.toBeInTheDocument();
+    expect(screen.getByText("חצה סף")).toBeInTheDocument();
+  });
+
   it("leaves a batch carrying a notice on screen", () => {
     const onDismiss = vi.fn();
     render(<Alerts items={[{ kind: "ok", message: "נשמר" },

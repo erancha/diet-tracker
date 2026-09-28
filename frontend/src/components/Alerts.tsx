@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 // A word of an item's message rendered as a control rather than as text, with what pressing it
 // does. The word must occur in the message.
@@ -18,8 +18,8 @@ export interface AlertItem {
   link?: AlertLink;
 }
 
-// How long a batch of successes stays up. A success is read at a glance: it confirms what the
-// user just did.
+// How long a success stays up, whatever shares its batch. A success is read at a glance: it
+// confirms what the user just did.
 const DISMISS_MS = 5000;
 
 // How long a batch carrying a fading item stays up. Longer than a success, because the user did
@@ -44,21 +44,29 @@ function LinkedMessage({ message, link }: { message: string; link: AlertLink }) 
 // push it off screen, so a fresh batch scrolls itself into view instead of waiting to be found.
 export function Alerts({ items, onDismiss }: { items: AlertItem[]; onDismiss: () => void }) {
   const strip = useRef<HTMLDivElement>(null);
+  // The batch whose successes have had their time; the rest of that batch stays on screen.
+  const [successesGoneFrom, setSuccessesGoneFrom] = useState<AlertItem[] | null>(null);
 
   useEffect(() => {
     if (items.length === 0) return;
     strip.current!.scrollIntoView({ behavior: "smooth", block: "nearest" });
-    // Anything else in the batch is waiting to be read at the user's pace, and keeps the whole
-    // batch until the next action replaces it.
-    if (items.some((item) => item.kind !== "ok" && item.fades !== true)) return;
+    // Anything else in the batch is waiting to be read at the user's pace, and keeps the rest of
+    // the batch until the next action replaces it.
+    if (items.some((item) => item.kind !== "ok" && item.fades !== true)) {
+      if (!items.some((item) => item.kind === "ok")) return;
+      const timer = setTimeout(() => setSuccessesGoneFrom(items), DISMISS_MS);
+      return () => clearTimeout(timer);
+    }
     const timer = setTimeout(onDismiss,
                              items.some((item) => item.fades === true) ? FADE_MS : DISMISS_MS);
     return () => clearTimeout(timer);
   }, [items, onDismiss]);
 
+  const shown = successesGoneFrom === items ? items.filter((item) => item.kind !== "ok") : items;
+
   return (
     <div ref={strip}>
-      {items.map((item, i) => (
+      {shown.map((item, i) => (
         <div key={i} className={item.kind}>
           {item.link === undefined
             ? item.message
