@@ -97,6 +97,16 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, c
   // here so the tracker and a history day's view read the same density.
   const [expandLabels, setExpandLabels] = useExpandedGradeLabels();
   const [chatCollapsed, setChatCollapsed] = useState(false);
+  // The chat section sits last on the page, so its heading is read from the bottom of the screen
+  // and what it opens lands below the fold. Opened from that heading, the section is brought to
+  // the top once its body has mounted; opened by a command, the chat itself walks to the answer.
+  const chatSection = useRef<HTMLElement>(null);
+  const [reachChat, setReachChat] = useState(false);
+  useEffect(() => {
+    if (!reachChat || chatCollapsed) return;
+    chatSection.current!.scrollIntoView({ behavior: "smooth", block: "start" });
+    setReachChat(false);
+  }, [reachChat, chatCollapsed]);
   // A question another panel asked the chat to send, until the chat takes it. Opening the chat
   // section is part of asking: the chat mounts with the command and the answer lands in view.
   const [askCommand, setAskCommand] = useState<string | null>(null);
@@ -424,10 +434,13 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, c
         </CollapsibleSection>
         </>}
         {chatAvailable && (
-          <CollapsibleSection className="chat-section"
+          <CollapsibleSection className="chat-section" ref={chatSection}
                               title={<>שאלות על <span className="app-name">תוכנית התזונה</span> 🥗</>}
                               collapsed={chatCollapsed}
-                              onToggle={() => setChatCollapsed((c) => !c)}>
+                              onToggle={() => {
+                                setReachChat(chatCollapsed);
+                                setChatCollapsed((c) => !c);
+                              }}>
             <Chat email={email} api={api} sampleQuestions={configQuery.data.chat.sample_questions}
                   answerPollSeconds={configQuery.data.chat.answer_poll_seconds}
                   defaultTranscriptFolded={openedCondensed}

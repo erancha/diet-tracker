@@ -276,6 +276,24 @@ describe("App", () => {
     expect(screen.queryAllByRole("listitem")).toHaveLength(0);
   });
 
+  it("reaches the chat section when its heading opens it, and stays put when it folds", async () => {
+    const scrollIntoView = vi.spyOn(Element.prototype, "scrollIntoView")
+      .mockImplementation(() => {});
+    renderApp(false);
+    const heading = await screen.findByRole("button", { name: /שאלות על תוכנית התזונה/ });
+
+    fireEvent.click(heading);
+    expect(heading).toHaveAttribute("aria-expanded", "false");
+    expect(scrollIntoView).not.toHaveBeenCalled();
+
+    fireEvent.click(heading);
+    expect(heading).toHaveAttribute("aria-expanded", "true");
+    expect(scrollIntoView).toHaveBeenCalledTimes(1);
+    expect(heading.closest("section")).toBe(scrollIntoView.mock.instances[0]);
+    expect(scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "start" });
+    scrollIntoView.mockRestore();
+  });
+
   it("asks the chat the mail-confirmation question from the welcome button, opening the chat", async () => {
     const client = unverified();
     client.ask = vi.fn().mockResolvedValue({ answer: "ככה", sources: [], at: "2026-09-01T10:00:00" });
