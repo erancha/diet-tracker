@@ -117,6 +117,13 @@ export function Chat({ email, api, sampleQuestions, answerPollSeconds,
   // Whether the draft is a question another panel asked, so sending it anyway still records the
   // chat as the app's. Typing into the draft makes it the user's own.
   const [draftFromApp, setDraftFromApp] = useState(false);
+  // The user's own edit of the question, by typing or by the clear control: whatever the app
+  // or an earlier match said about the previous text no longer applies to the new one.
+  const editDraft = (text: string) => {
+    setDraft(text);
+    setDraftFromApp(false);
+    setExisting(null);
+  };
   // The own chat to open and scroll to once the transcript renders it, or null.
   const [revealAt, setRevealAt] = useState<string | null>(null);
   // The shared chat the others' list is to open and scroll to once it renders, or null.
@@ -510,17 +517,13 @@ export function Chat({ email, api, sampleQuestions, answerPollSeconds,
             ref={draftRef}
             rows={2}
             value={draft}
-            onChange={(event) => {
-              setDraft(event.target.value);
-              setDraftFromApp(false);
-              setExisting(null);
-            }}
+            onChange={(event) => editDraft(event.target.value)}
             placeholder={replyTo === null ? "שאלה על תוכנית התזונה 🥗…" : "שאלת המשך…"}
             aria-label="שאלה"
           />
           {draft !== "" && (
             <button type="button" className="glyph clear-draft" aria-label="ניקוי השאלה"
-              onClick={() => setDraft("")}><Icon name="close" /></button>
+              onClick={() => editDraft("")}><Icon name="close" /></button>
           )}
         </div>
         <button type="submit" className="primary" ref={submitRef}

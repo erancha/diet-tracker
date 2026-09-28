@@ -1603,6 +1603,20 @@ describe("Chat", () => {
     expect(screen.getByRole("textbox")).toHaveValue("שאלה 1 ועוד");
   });
 
+  it("drops the offer along with the question when the composer is cleared", async () => {
+    const chatApi = api({ findExistingChat: existing("2026-09-01T10:00:01", null) });
+    render(<Chat email="a@gmail.com" api={chatApi} sampleQuestions={[]} answerPollSeconds={POLL_SECONDS} />);
+    await ask("שאלה 1");
+    expect(screen.getByRole("button", { name: "להציג את הצ'אט הקיים" })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "ניקוי השאלה" }));
+
+    expect(screen.getByRole("textbox")).toHaveValue("");
+    expect(screen.queryByText("כבר שאלת את השאלה הזו")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "להציג את הצ'אט הקיים" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "לשאול בכל זאת" })).not.toBeInTheDocument();
+  });
+
   it("sends a follow-up without looking for an earlier chat", async () => {
     const chatApi = api({
       getChatTranscript: vi.fn().mockResolvedValue({ turns: turns(1) }),
