@@ -65,7 +65,7 @@ export function Landing({ onSignIn, chatAvailable }: {
             as the signed-in page's sections; the reference table and the footer links stay on the
             page below it. */}
         <div className="landing-card">
-          <AppHeading />
+          <AppHeading showVersion />
           {/* Each habit's bold initial spells the acronym in place, the way the full view's table
               opens its rows. */}
           <p className="landing-condensed">
@@ -96,7 +96,7 @@ export function Landing({ onSignIn, chatAvailable }: {
   return (
     <main className="landing">
       <div className="landing-card">
-        <AppHeading />
+        <AppHeading showVersion />
         <p className="landing-intro">
           אפליקציית SaaS חינמית — יומן ארוחות יומי שעוזר לשמור על הרגלי אכילה בריאים לאורך זמן.
           לא סופרים קלוריות, אלא בוחנים את אופי כל ארוחה ואת המרווחים ביניהן, לפי ארבעת עקרונות
