@@ -76,7 +76,7 @@ Tapping a day's score opens that day's meal log, read-only.
 
 Opening the app greets a crossing rather than leaving it to be found: when yesterday's or the
 running day's score has already crossed its bound, a notice names which of them and clears itself
-after ten seconds, since it only points at marks the chart and the table are already carrying.
+after five seconds, since it only points at marks the chart and the table are already carrying.
 Where it names yesterday, that word is a link: following it opens yesterday's meal log in the same
 place the table opens one, unfolding the trends section and bringing the log on screen. The notice
 answers to the score alone, as does the one raised on closing a day: too little water, no

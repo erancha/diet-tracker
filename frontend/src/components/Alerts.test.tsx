@@ -50,23 +50,15 @@ describe("Alerts", () => {
     expect(screen.getByText("היעד טרם נקבע")).toBeInTheDocument();
   });
 
-  it("leaves a notice marked as fading standing past a success's time", () => {
+  it("dismisses a notice marked as fading after a success's time", () => {
     const onDismiss = vi.fn();
     render(<Alerts items={[{ kind: "notice", message: "אתמול חצה סף", fades: true }]}
                    onDismiss={onDismiss} />);
 
-    act(() => vi.advanceTimersByTime(5000));
-
+    act(() => vi.advanceTimersByTime(4999));
     expect(onDismiss).not.toHaveBeenCalled();
-  });
 
-  it("dismisses a notice marked as fading", () => {
-    const onDismiss = vi.fn();
-    render(<Alerts items={[{ kind: "notice", message: "אתמול חצה סף", fades: true }]}
-                   onDismiss={onDismiss} />);
-
-    act(() => vi.advanceTimersByTime(10_000));
-
+    act(() => vi.advanceTimersByTime(1));
     expect(onDismiss).toHaveBeenCalledOnce();
   });
 

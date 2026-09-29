@@ -18,14 +18,10 @@ export interface AlertItem {
   link?: AlertLink;
 }
 
-// How long a success stays up, whatever shares its batch. A success is read at a glance: it
-// confirms what the user just did.
+// How long a success or a fading item stays up, whatever shares its batch. Both are read at a
+// glance: a success confirms what the user just did, a fading item repeats what the page already
+// marks elsewhere.
 const DISMISS_MS = 5000;
-
-// How long a batch carrying a fading item stays up. Longer than a success, because the user did
-// not ask for it and has to notice it first — and because a fading item may offer a link, which
-// has to be reachable before the batch goes.
-const FADE_MS = 10_000;
 
 // One item's message with its linked word turned into a button, the rest left as text.
 function LinkedMessage({ message, link }: { message: string; link: AlertLink }) {
@@ -57,8 +53,7 @@ export function Alerts({ items, onDismiss }: { items: AlertItem[]; onDismiss: ()
       const timer = setTimeout(() => setSuccessesGoneFrom(items), DISMISS_MS);
       return () => clearTimeout(timer);
     }
-    const timer = setTimeout(onDismiss,
-                             items.some((item) => item.fades === true) ? FADE_MS : DISMISS_MS);
+    const timer = setTimeout(onDismiss, DISMISS_MS);
     return () => clearTimeout(timer);
   }, [items, onDismiss]);
 
