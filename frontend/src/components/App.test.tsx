@@ -530,7 +530,7 @@ describe("App", () => {
     renderApp(false, api({ days: [{ date: todayStr, answers: { drinking: 3, carbs: 4 }, excluded: 0 }] }));
 
     expect(await screen.findByRole("button", { name: "יומן היום" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "הוספת ארוחה" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^הוספת ארוחה / })).toBeInTheDocument();
   });
 
   it("targets a closed yesterday while it can still be reopened", async () => {

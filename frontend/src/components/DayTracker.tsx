@@ -414,6 +414,22 @@ export function DayTracker({ questionnaire, treatDay, day, expandLabels, isToday
       סגירת יום
     </button>
   ) : null;
+  // A closed day's one way back to adding meals takes the title row closing held.
+  const reopenButton = closed && !breakdownShown ? (
+    <button type="button"
+            className={"secondary reopen-toggle" + (addMealWarns ? " meal-add-warn" : "")}
+            onClick={() => {
+              if (!window.confirm(REOPEN_PROMPT)) return;
+              // Pre-opened here: the same instance stays mounted through the deletion's round
+              // trip, so the reopened day presents the inputs this click asked for.
+              setFormCollapsed(false);
+              onReopenDay!();
+            }}>
+      הוספת ארוחה{" "}
+      {/* The button undoes the close, so its effect stands spelled out inside it. */}
+      <span className="reopen-hint">(פתיחת חלון האכילה)</span>
+    </button>
+  ) : null;
   const mealForm = atCap && formCollapsed ? (
     <p className="meal-cap-note">{`הושלמו ${maxMealsPerDay} ארוחות היום`}</p>
   ) : (
@@ -553,6 +569,7 @@ export function DayTracker({ questionnaire, treatDay, day, expandLabels, isToday
                         headerAside={sectionCollapsed ? null : (
                           <div className="tracker-controls">
                             {closeDayButton}
+                            {reopenButton}
                             {formInHeader && mealForm}
                           </div>
                         )}
@@ -579,21 +596,6 @@ export function DayTracker({ questionnaire, treatDay, day, expandLabels, isToday
                         onExpire={() => setBreakdownOpen(false)} />
       ) : closed ? (
         <>
-          <div className="form-actions">
-            <button type="button"
-                    className={"secondary reopen-toggle" + (addMealWarns ? " meal-add-warn" : "")}
-                    onClick={() => {
-              if (!window.confirm(REOPEN_PROMPT)) return;
-              // Pre-opened here: the same instance stays mounted through the deletion's round
-              // trip, so the reopened day presents the inputs this click asked for.
-              setFormCollapsed(false);
-              onReopenDay!();
-            }}>
-              הוספת ארוחה
-            </button>
-            {/* The button undoes the close, so its effect stands spelled out beside it. */}
-            <span className="reopen-hint">(פתיחת חלון האכילה)</span>
-          </div>
           {/* The recorded meals stay readable, as in the history table's day view. Only the last
               one can still be corrected, behind the same reopen question as adding a meal: the
               form takes the meal before the deletion's round trip, so the reopened day comes back

@@ -704,8 +704,8 @@ main:not(.intro-0, .intro-1, .intro-2, .intro-3, .intro-4) .weight .section-togg
    without shrinking away from its arrow. */
 .meal-form .section-toggle:has(.meal-add-warn) { --btn-fg: #8e1b1b; }
 .section-toggle .meal-add-warn { color: inherit; font-weight: 700; font-size: calc(1em - 1px); }
-/* The controls that ride the tracker's title row — closing the day, and the folded meal toggle
-   once one more meal is discouraged — share the row's baseline at the heading's far end. */
+/* The controls that ride the tracker's title row — closing the day, reopening a closed one, and
+   the folded meal toggle once one more meal is discouraged — share the row's baseline at the heading's far end. */
 .tracker-controls { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.75rem; }
 /* On a phone the controls wrap under the title, and this keeps them off the dashboard line. */
 .day-tracker > .section-header { margin-bottom: 0.75rem; }
@@ -764,9 +764,10 @@ main:not(.intro-0, .intro-1, .intro-2, .intro-3, .intro-4) .weight .section-togg
    beside it inherits, so closing reads as the next step and adding as the smaller option. */
 .reopen-toggle { font-size: calc(1rem + 1px); }
 .reopen-toggle.meal-add-warn { font-size: 0.8rem; font-weight: 700; }
-/* Rides the closed tracker's action row beside the add-meal button, naming what that button
-   does to a closed day; muted, because it explains rather than acts. */
-.reopen-hint { align-self: center; }
+/* A second line inside the closed tracker's add-meal button, naming what that button does to a
+   closed day; muted, because it explains rather than acts. */
+.reopen-hint { display: block; font-weight: normal; }
+.reopen-toggle .reopen-hint { font-size: 0.85em; }
 .reopen-hint, .marker-legend { font-size: 0.85rem; color: #8a8a84; }
 /* Every carb-score figure — the day total in the dashboard and each meal's points — wears one
    face: same size, weight and colour, so the rows read beyond doubt as the same kind of number

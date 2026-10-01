@@ -1757,6 +1757,7 @@ describe("DayTracker", () => {
   // A closed day keeps the tracker on screen but reduced to one gated control: the add-meal
   // toggle asks to reopen the eating window, and confirming hands the day-record deletion to
   // the same path the history table uses.
+  const REOPEN_BUTTON = "הוספת ארוחה (פתיחת חלון האכילה)";
   const renderClosed = (onReopenDay = vi.fn()) => {
     render(<DayTracker expandLabels={false} suggestBeforeHours={1} treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} closeFrom={CLOSE_FROM} highlightCloseFrom={HIGHLIGHT_FROM} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire}
                        day={trackedDay} closed onReopenDay={onReopenDay}
@@ -1768,8 +1769,8 @@ describe("DayTracker", () => {
 
   it("reduces a closed day to its meals, read-only, and the add-meal toggle", () => {
     renderClosed();
-    expect(screen.getByRole("button", { name: "הוספת ארוחה" })).toBeInTheDocument();
-    // The button undoes the close, so its effect is spelled out beside it before any click.
+    expect(screen.getByRole("button", { name: REOPEN_BUTTON })).toBeInTheDocument();
+    // The button undoes the close, so its effect is spelled out inside it before any click.
     expect(screen.getByText("(פתיחת חלון האכילה)")).toBeInTheDocument();
     // The recorded meals stay readable, as in the history table's day view, but carry no
     // controls: correcting them means reopening the day first.
@@ -1791,7 +1792,7 @@ describe("DayTracker", () => {
                     onAddMeal: vi.fn(), onUpdateMeal: vi.fn(), onDeleteMeal: vi.fn(),
                     onCloseDay: vi.fn() };
     const { rerender } = render(<DayTracker expandLabels={false} suggestBeforeHours={1} treatDay={TREAT_DAY} {...props} closed />);
-    fireEvent.click(screen.getByRole("button", { name: "הוספת ארוחה" }));
+    fireEvent.click(screen.getByRole("button", { name: REOPEN_BUTTON }));
     expect(window.confirm).toHaveBeenCalledWith("האם לפתוח את חלון האכילה מחדש?");
     expect(onReopenDay).toHaveBeenCalledTimes(1);
 
@@ -1804,7 +1805,7 @@ describe("DayTracker", () => {
   it("leaves a closed day alone when the reopen question is dismissed", () => {
     vi.spyOn(window, "confirm").mockReturnValue(false);
     const onReopenDay = renderClosed();
-    fireEvent.click(screen.getByRole("button", { name: "הוספת ארוחה" }));
+    fireEvent.click(screen.getByRole("button", { name: REOPEN_BUTTON }));
     expect(onReopenDay).not.toHaveBeenCalled();
   });
 
@@ -1859,12 +1860,12 @@ describe("DayTracker", () => {
 
   it("carries the warning onto the closed day's reopen control", () => {
     renderWithMeals(threeMealDay, true);
-    expect(screen.getByRole("button", { name: "הוספת ארוחה" })).toHaveClass("meal-add-warn");
+    expect(screen.getByRole("button", { name: REOPEN_BUTTON })).toHaveClass("meal-add-warn");
   });
 
   it("keeps the reopen control plain while another meal stays within the meals bound", () => {
     renderWithMeals(trackedDay, true);
-    expect(screen.getByRole("button", { name: "הוספת ארוחה" })).not.toHaveClass("meal-add-warn");
+    expect(screen.getByRole("button", { name: REOPEN_BUTTON })).not.toHaveClass("meal-add-warn");
   });
 
   it("warns on the treat day as on any other day", () => {
