@@ -73,7 +73,9 @@ INSIGHTS_QUESTION = ("מהן התובנות לשבוע הבא, לפי עקרונ
 # that matter most. Behavior is the way and the weight its outcome, so the largest change is
 # sought among the behaviors and every step aims at one; direction is weighed, not thresholded —
 # one day alone is noise, several small moves the same way add up, two days is a real change —
-# and a breach is never named without the day it fell on and what was recorded.
+# and a breach is never named without the day it fell on and what was recorded. A breach is
+# weighed by how far past its bound the day went: the aim is clean days off the treat day, but a
+# day that only just crossed is close to it and is read forgivingly.
 INSIGHTS_BRIEF = "\n".join([
     "הנחיות לתשובה: לענות כמאמן/ת של התוכנית, לפי עקרונותיה, ולא לתת ליום או יומיים חלשים להסיט "
     "שבוע שלם.",
@@ -89,6 +91,9 @@ INSIGHTS_BRIEF = "\n".join([
     "הנתונים שלמטה: השבוע הזה והשבוע שלפניו יום־יום, והמשקלים. כל חריגה שמזכירים — לומר באיזה "
     "יום היא היתה ומה נרשם בו, לפי הנתונים יום־יום, כדי שהקורא יבין את ההקשר; לא להזכיר חריגה "
     "בלי ההקשר שלה.",
+    "חריגה נמדדת גם בגודלה — בכמה אחוזים הערך של אותו יום עבר את הגבול שלו, לפי גבולות "
+    "החריגה שבנתונים. המטרה נשארת ימים נקיים מלבד יום הפינוק, אבל יום שחרג רק במעט קרוב "
+    "למטרה: להתייחס אליו בסלחנות ולא כאל כישלון, ולשמור את תשומת הלב לחריגות הגדולות.",
     "אחר כך לבחור את הדבר האחד או השניים בהתנהגות שהכי ישפיעו על השבוע הבא, ולכל אחד: למה הוא "
     "חשוב לפי התוכנית, וצעד אחד קונקרטי ומדיד לשבוע הבא.",
     "לא לחזור על המספרים שבטבלה ולא לעבור על כל חריגה בנפרד. עד שמונה שורות.",

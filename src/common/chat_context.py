@@ -60,6 +60,7 @@ _DAY_BY_DAY = "יום-יום"
 _WEEKDAY = "יום"
 _TREAT_DAY = "יום פינוק"
 _EXCLUDED_POINTS = "קמחים וסוכרים (נקודות)"
+_BOUNDS = "גבולות החריגה ביום"
 
 
 def user_context(store, questionnaire, sub, day) -> str | None:
@@ -101,7 +102,8 @@ def week_context(questionnaire, days: dict, excluded: dict, week_end: str, treat
     recorded no meals and cost nothing. Each week carries its bounds, its tallies — closed days,
     clean days off the treat day, days over each bound by subject, and the days left unclosed —
     and every closed day: its weekday, the treat day named as such, the submitted answers and
-    the day's cost. Newest week first.
+    the day's cost. Newest week first. Each rule's limit rides once, under the heading the day's
+    answers use, so how far past it a day went can be read off beside its value.
 
     While the block is too long, last week's day-by-day goes first, then this week's, then the
     weights. The tracking scope stays, for the reason it stays in user_context; the grade ladder
@@ -110,6 +112,7 @@ def week_context(questionnaire, days: dict, excluded: dict, week_end: str, treat
              for back in range(RECAP_WEEKS)]
     data = {
         _WEEKS: weeks,
+        _BOUNDS: _bounds(questionnaire),
         weight.LABEL: weight.measurements_block(weights, target),
         _SCOPE: _tracking_scope(questionnaire),
     }
@@ -157,6 +160,20 @@ def _week(questionnaire, days, excluded, end, treat_weekday) -> dict:
     week[_DAY_BY_DAY] = {date: _day_entry(questionnaire, date, answers, excluded, treat_weekday)
                          for date, answers in closed.items()}
     return week
+
+
+def _bounds(questionnaire) -> dict:
+    """Each rule's bound as a day crosses it, under its question's day heading."""
+    bounds = {}
+    for rule in questionnaire.rules:
+        if rule.at_least is not None:
+            crossing = f"{rule.at_least:g} ומעלה"
+        elif rule.above is not None:
+            crossing = f"מעל {rule.above:g}"
+        else:
+            crossing = f"מתחת ל-{rule.below:g}"
+        bounds[questionnaire.question(rule.question_id).day_heading] = crossing
+    return bounds
 
 
 def _day_entry(questionnaire, date, answers, excluded, treat_weekday) -> dict:

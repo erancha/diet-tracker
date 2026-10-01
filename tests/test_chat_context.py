@@ -227,6 +227,15 @@ def test_every_week_tallies_its_crossed_bounds_by_subject(questionnaire):
     assert weeks[1]["ימים עם חריגה"] == {"ציון יומי": 1}
 
 
+def test_the_week_context_states_each_bound_under_the_heading_its_day_values_use(
+        questionnaire):
+    bounds = week_data(questionnaire, {SATURDAY: QUIET})["גבולות החריגה ביום"]
+
+    assert bounds['שכפ"צ - שתיה (ליטר)'] == "מתחת ל-2.5"
+    assert bounds["ציון יומי"] == "12 ומעלה"
+    assert len(bounds) == len(questionnaire.rules)
+
+
 def test_clean_days_are_the_closed_days_off_the_treat_day_that_cost_nothing(questionnaire):
     week = week_data(questionnaire, {SATURDAY: QUIET, SUNDAY: QUIET, WEEK_END: QUIET},
                      excluded={SUNDAY: 3, WEEK_END: 12})["שבועות"][0]
