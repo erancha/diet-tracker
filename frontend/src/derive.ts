@@ -123,11 +123,16 @@ export function mealWeights(meals: Pick<Meal, "at" | "carbs_choice" | "fruit" | 
     .map(({ terms, excluded: part }) => ({ total: terms.reduce((sum, t) => sum + t.points, 0), excluded: part }));
 }
 
+// Whether a carb grade of this weight is one the program excludes on its six non-treat days.
+export function excludesGrade(weight: number, excluded: Excluded): boolean {
+  return weight >= excluded.grade;
+}
+
 function mealBreakdown(meals: Pick<Meal, "at" | "carbs_choice" | "fruit" | "additions" | "portion" | "second_source">[], weights: Record<string, number>, additionValues: Record<string, number>, amounts: Amounts, portions: Portions, secondSource: SecondSourceRule, excluded: Excluded): { terms: ScoreTerm[]; excluded: number }[] {
   const chronological = meals.map((meal, index) => ({ meal, index }))
     .sort((a, b) => new Date(a.meal.at).getTime() - new Date(b.meal.at).getTime());
   const result = new Array<{ terms: ScoreTerm[]; excluded: number }>(meals.length);
-  const excludesSource = (weight: number) => weight >= excluded.grade;
+  const excludesSource = (weight: number) => excludesGrade(weight, excluded);
   let fruits = 0;
   for (const { meal, index } of chronological) {
     const terms: ScoreTerm[] = [];

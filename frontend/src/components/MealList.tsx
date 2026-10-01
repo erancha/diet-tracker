@@ -1,5 +1,5 @@
 import { clockTimeOf } from "../dates";
-import { carbsScales, mealWeights } from "../derive";
+import { carbsScales, excludesGrade, mealWeights, type Excluded } from "../derive";
 import { choiceLabel } from "../gradeLabels";
 import type { Choice, Meal, Questionnaire } from "../types";
 import { mealMarkers } from "../mealMarkers";
@@ -72,14 +72,15 @@ export function MealList({ questionnaire, meals, expandLabels, onEdit, editLastO
                 a description too long for one line wraps against its own edge, not the time's. */}
             <strong className="meal-at" {...askLegend}>{clockTimeOf(meal.at)}</strong>
             <span className="meal-text" {...askLegend}>
-              <Grade choice={choice} choiceId={meal.carbs_choice} expanded={expandLabels} />
+              <Grade choice={choice} choiceId={meal.carbs_choice} expanded={expandLabels}
+                     weights={weights} excluded={excluded} />
               {/* A plate that drew on two carb sources names both, each highlighted on its own
                   grade; the row's points are their sum. */}
               {meal.second_source !== null && (
                 <>
                   {" + "}
                   <Grade choice={second} choiceId={meal.second_source.carbs_choice}
-                         expanded={expandLabels} />
+                         expanded={expandLabels} weights={weights} excluded={excluded} />
                 </>
               )}
               {markers.map((m) => ` · ${m.marker}`).join("")}
@@ -124,10 +125,14 @@ export function MealList({ questionnaire, meals, expandLabels, onEdit, editLastO
   );
 }
 
-// One carb source's grade as the row names it. A choice id the current questionnaire has retired
-// carries no weight, so it falls back to the raw id.
-function Grade({ choice, choiceId, expanded }: {
+// One carb source's grade as the row names it, in the flour-and-sugar color when the program
+// excludes it. A choice id the current questionnaire has retired carries no weight, so it falls
+// back to the raw id, uncolored.
+function Grade({ choice, choiceId, expanded, weights, excluded }: {
   choice: Choice | undefined; choiceId: string; expanded: boolean;
+  weights: Record<string, number>; excluded: Excluded;
 }) {
-  return <span>{choice === undefined ? choiceId : choiceLabel(choice, expanded)}</span>;
+  if (choice === undefined) return <span>{choiceId}</span>;
+  return <span className={excludesGrade(weights[choice.id], excluded) ? "excluded" : undefined}>
+    {choiceLabel(choice, expanded)}</span>;
 }

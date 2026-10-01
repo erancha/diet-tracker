@@ -559,9 +559,9 @@ td.view-day { cursor: pointer; }
    the inherited size keep the ledger's text quieter than the figures it prices. */
 .breakdown-label { font-size: calc(1em - 2px); }
 .breakdown-points { white-space: nowrap; font-variant-numeric: tabular-nums; }
-/* The breakdown's flour-and-sugar terms wear the dashboard part's color, so they visibly add up
-   to it. */
-.breakdown-points.excluded { color: var(--excluded); }
+/* The breakdown's flour-and-sugar terms and the meal rows' flour-and-sugar grades wear the
+   dashboard part's color, so they visibly add up to it. */
+.breakdown-points.excluded, .meal-text .excluded { color: var(--excluded); }
 .breakdown-meal-total { border-top: 1px solid #ddd; padding-top: 0.15rem; }
 .breakdown-sum { margin: 0.8rem 0 0; font-weight: 800; }
 
