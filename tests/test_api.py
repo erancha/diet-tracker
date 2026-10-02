@@ -307,6 +307,13 @@ def test_a_heavy_second_source_may_ride_at_the_full_helping(env):
     assert payload["derived"]["carbs"] == 9
 
 
+def test_a_primary_at_the_bound_may_carry_a_second_source(env):
+    # White rice (4) beside a light second source: the higher grade speaks for both.
+    payload = body_of(add_meal("carb_grade_4", portion="full", second_source={
+        "carbs_choice": "carb_grade_2", "portion": None}))
+    assert payload["derived"]["carbs"] == 4
+
+
 def test_a_light_second_source_merges_into_the_higher_grade(env):
     # Quinoa beside beans: two light sources are one method-approved plate, so the higher grade
     # speaks for both.
@@ -339,13 +346,13 @@ def test_add_meal_rejects_the_no_carb_grade_as_a_second_source(env):
     assert "no_carbs" in body_of(response)["error"]
 
 
-def test_add_meal_rejects_a_second_source_beside_a_primary_that_is_not_light(env):
-    # A second source rides only on a light primary grade; a no-carb plate's only carb would
-    # simply be the primary.
-    heavy = add_meal("carb_grade_4", second_source={"carbs_choice": "carb_grade_7",
+def test_add_meal_rejects_a_second_source_beside_a_primary_past_the_bound(env):
+    # A second source rides only on a primary graded up to the bound; a no-carb plate's only carb
+    # would simply be the primary.
+    heavy = add_meal("carb_grade_5", second_source={"carbs_choice": "carb_grade_7",
                                                     "portion": "medium"})
     assert heavy["statusCode"] == 400
-    assert "light primary" in body_of(heavy)["error"]
+    assert "beside a primary graded up to 4" in body_of(heavy)["error"]
     no_carb = add_meal("no_carbs", second_source={"carbs_choice": "carb_grade_1",
                                                   "portion": None})
     assert no_carb["statusCode"] == 400

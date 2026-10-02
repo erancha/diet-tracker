@@ -47,10 +47,11 @@ export interface Question {
   // choice only from `from_value` up, where a lighter helping is a distinction worth drawing.
   portions?: { from_value: number; options: ScaleOption[] };
   // Present only on the carbs question: the second-carb-source contract. A plate earns a second
-  // source only around a light primary grade — one weighing in (0, light_grade_max]. A second
-  // source that is itself light merges into the plate, the higher grade speaking for both; a
-  // heavier one always carries one of the shared helpings, adding its grade at that percentage.
-  second_source?: { light_grade_max: number };
+  // source only around a primary grade weighing in (0, primary_grade_max]. A second source that is
+  // itself light — up to light_grade_max — merges into the plate, the higher grade speaking for
+  // both; a heavier one always carries one of the shared helpings, adding its grade at that
+  // percentage.
+  second_source?: { primary_grade_max: number; light_grade_max: number };
   // Present only on the carbs question: what the program excludes from its six non-treat days —
   // every carb source graded excluded_grade or heavier, and the additions excluded_additions
   // names. The trend chart plots the part of each day score they account for beside the score.

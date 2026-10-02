@@ -232,8 +232,8 @@ NO_CARBS_CHOICE = "no_carbs"
 
 def _second_source_rejection(body, questionnaire):
     """The 400 a meal's second carb source earns, or None when it is storable. A second source
-    rides only on a light primary grade; a light second grade merges and carries no portion,
-    while a heavier one must carry one of the declared helping sizes."""
+    rides only on a primary graded up to the contract's bound; a light second grade merges and
+    carries no portion, while a heavier one must carry one of the declared helping sizes."""
     second = body["second_source"]
     rule = questionnaire.second_source()
     weights = questionnaire.carb_weights()
@@ -246,7 +246,8 @@ def _second_source_rejection(body, questionnaire):
         return _response(400, {"error": f"{NO_CARBS_CHOICE!r} is not a second carb source"})
     if not rule.allows_primary(weights[body["carbs_choice"]]):
         return _response(400, {
-            "error": "a second source is allowed only beside a light primary grade"})
+            "error": f"a second source is allowed only beside a primary graded up to "
+                     f"{rule.primary_grade_max:g}"})
     if rule.is_light(weights[second["carbs_choice"]]):
         if second["portion"] is not None:
             return _response(400, {"error": "a light second source carries no portion"})

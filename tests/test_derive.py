@@ -15,7 +15,7 @@ PORTIONS = Portions(
     options=tuple(ScaleOption(**p) for p in FIXTURE["portions"]["options"]))
 AMOUNTS = Amounts(default=FIXTURE["amounts"]["default"],
                   options=tuple(ScaleOption(**o) for o in FIXTURE["amounts"]["options"]))
-SECOND = SecondSource(light_grade_max=FIXTURE["second_source"]["light_grade_max"])
+SECOND = SecondSource(**FIXTURE["second_source"])
 EXCLUDED = Excluded(grade=FIXTURE["excluded"]["grade"],
                     additions=tuple(FIXTURE["excluded"]["additions"]))
 

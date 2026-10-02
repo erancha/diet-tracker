@@ -172,10 +172,10 @@ export function DayTracker({ questionnaire, treatDay, day, expandLabels, isToday
   // reduced one stuck on.
   const offersPortion = carbsChoiceId !== undefined
     && portionOffered(portionRule, weights[carbsChoiceId]);
-  // A second source rides only on a light primary grade — the same bound the API enforces — and
-  // never on a no-carb plate, whose only carb would simply be the primary.
+  // A second source rides only on a primary graded up to the contract's bound — the same bound
+  // the API enforces — and never on a no-carb plate, whose only carb would simply be the primary.
   const allowsSecond = (choiceId: string) =>
-    weights[choiceId] > 0 && weights[choiceId] <= secondRule.light_grade_max;
+    weights[choiceId] > 0 && weights[choiceId] <= secondRule.primary_grade_max;
   const offersSecondSource = carbsChoiceId !== undefined && allowsSecond(carbsChoiceId);
   // A light second grade merges into the plate and records no helping; only a heavier one asks
   // which helping it was.
@@ -193,7 +193,7 @@ export function DayTracker({ questionnaire, treatDay, day, expandLabels, isToday
   const secondSource: CarbSource | null = secondChoiceId === undefined ? null
     : { carbs_choice: secondChoiceId, portion: secondIsHeavy ? secondPortionId : null };
   // A second source in a form whose primary grade cannot carry one — the state a repick away from
-  // the light grades leaves behind. The plate is unrecordable while it holds, so the save is
+  // the grades that carry one leaves behind. The plate is unrecordable while it holds, so the save is
   // barred until the user lowers the primary again or removes the source.
   const secondSourceBarred = secondSource !== null && !offersSecondSource;
   const nowTime = clockTime(minutesOfDay(new Date()));
@@ -476,7 +476,7 @@ export function DayTracker({ questionnaire, treatDay, day, expandLabels, isToday
         </CarbSourceFields>
       )}
       {/* A plate carrying a second carb source is the exception, so the group is revealed on
-          demand — and offered only beside a light primary grade, the one place the contract
+          demand — and offered only beside a primary graded up to the bound, the one place the contract
           admits one. An open group outlives every repick: this control is the only way one
           goes, so correcting the primary never discards a source the user recorded. */}
       {(offersSecondSource || secondSourceOpen) && (
@@ -622,7 +622,7 @@ export function DayTracker({ questionnaire, treatDay, day, expandLabels, isToday
       )}
       {secondSourceBarred && (
         <p className="notice">
-          {`מקור פחמימה נוסף מותר רק לצד דרגה קלה — עד דרגה ${secondRule.light_grade_max}`}
+          {`מקור פחמימה נוסף מותר רק לצד מקור עיקרי עד דרגה ${secondRule.primary_grade_max}`}
         </p>
       )}
       <div className={"form-actions" + (formInHeader ? " actions-under-list" : "")}>

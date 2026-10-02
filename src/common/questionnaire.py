@@ -76,17 +76,19 @@ class Amounts(Scale):
 class SecondSource:
     """The second-carb-source contract: which plates may carry one and how it merges.
 
-    A plate earns a second source only around a light primary grade — one whose weight sits in
-    (0, light_grade_max]. A second source that is itself light merges into the plate, the higher
-    of the two grades speaking for both, and carries no portion. A heavier second source always
-    carries one of the shared helping sizes, adding its grade at that helping's percentage."""
+    A plate earns a second source only around a primary grade whose weight sits in
+    (0, primary_grade_max]. A second source that is itself light — weighing up to light_grade_max
+    — merges into the plate, the higher of the two grades speaking for both, and carries no
+    portion. A heavier second source always carries one of the shared helping sizes, adding its
+    grade at that helping's percentage."""
+    primary_grade_max: float
     light_grade_max: float
 
     def is_light(self, weight: float) -> bool:
         return weight <= self.light_grade_max
 
     def allows_primary(self, weight: float) -> bool:
-        return 0 < weight <= self.light_grade_max
+        return 0 < weight <= self.primary_grade_max
 
 
 @dataclass(frozen=True)
@@ -340,7 +342,7 @@ def parse(raw: dict) -> Questionnaire:
             amounts=Amounts(default=q["amounts"]["default"],
                             options=_scale_options(q["amounts"]["options"]))
             if "amounts" in q else None,
-            second_source=SecondSource(light_grade_max=q["second_source"]["light_grade_max"])
+            second_source=SecondSource(**q["second_source"])
             if "second_source" in q else None,
             excluded=Excluded(grade=q["excluded_grade"],
                               additions=tuple(q["excluded_additions"]))

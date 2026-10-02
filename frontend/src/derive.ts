@@ -18,9 +18,11 @@ export interface Amounts {
   options: ScaleOption[];
 }
 
-/** The second-carb-source contract, as the derivation prices it: grades up to light_grade_max
- * merge into the plate, heavier ones add their grade at one of the shared helpings. */
+/** The second-carb-source contract: primaries up to primary_grade_max may carry one; second
+ * grades up to light_grade_max merge into the plate, heavier ones add their grade at one of the
+ * shared helpings. */
 export interface SecondSourceRule {
+  primary_grade_max: number;
   light_grade_max: number;
 }
 

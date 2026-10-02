@@ -59,6 +59,7 @@
     ]
   },
   "second_source": {
+    "primary_grade_max": 4,
     "light_grade_max": 2
   },
   "excluded": {

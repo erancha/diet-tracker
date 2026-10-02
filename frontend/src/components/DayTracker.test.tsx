@@ -510,7 +510,7 @@ describe("DayTracker", () => {
     expect(screen.getByRole("button", { name: "עריכת ארוחה 13:30" })).toBeInTheDocument();
   });
 
-  it("offers a second source only beside a light primary, over every grade but the plain no-carb one", () => {
+  it("offers a second source only beside a primary within the bound, over every grade but the plain no-carb one", () => {
     render(<DayTracker expandLabels={false} suggestBeforeHours={1} treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} closeFrom={CLOSE_FROM} highlightCloseFrom={HIGHLIGHT_FROM} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={emptyDay}
                        firstMealHour={NO_NUDGE_HOUR}
                        mealGapHours={NO_NUDGE_GAP_HOURS}
@@ -612,7 +612,7 @@ describe("DayTracker", () => {
     fireEvent.click(primaryGroup().getByLabelText("דרגה 4"));
     expect(screen.getByRole("button", { name: "שמירת ארוחה" })).toBeDisabled();
     // The notice names the bound off the contract, so it reads as the rule rather than a refusal.
-    expect(screen.getByText(/מקור פחמימה נוסף מותר רק לצד דרגה קלה/)).toBeInTheDocument();
+    expect(screen.getByText(/מקור פחמימה נוסף מותר רק לצד מקור עיקרי עד דרגה 2/)).toBeInTheDocument();
     // Dropping the source is the user's own act, and the heavy plate saves once they make it.
     fireEvent.click(screen.getByRole("button", { name: "הסרת מקור פחמימה נוסף" }));
     fireEvent.click(screen.getByRole("button", { name: "שמירת ארוחה" }));

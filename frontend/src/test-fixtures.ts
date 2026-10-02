@@ -76,12 +76,12 @@ export const trackerQuestionnaire: Questionnaire = {
                   options: [{ id: "small", label: "מנה קטנה", percent: 60 },
                             { id: "medium", label: "מנה בינונית", percent: 80 },
                             { id: "full", label: "מנה רגילה", percent: 100 }] },
-      second_source: { light_grade_max: 2 },
+      second_source: { primary_grade_max: 2, light_grade_max: 2 },
       // The steepest grade and the sweet addition are what the program's non-treat days exclude
       // here, so grade 4 and the other additions exercise the permitted side of the decomposition.
       excluded_grade: 7, excluded_additions: ["sweet"],
       // Grades with and without an examples list, so the label-density switch is exercised over
-      // both kinds at once; carb_grade_2 is the light grade the second-source contract admits.
+      // both kinds at once; carb_grade_2 is the one primary grade the second-source contract admits.
       choices: [{ id: "no_carbs", label: "ללא פחמימות", value: 0 },
                 { id: "carb_grade_2", label: "דרגה 2", examples: "קינואה", value: 2 },
                 { id: "carb_grade_4", label: "דרגה 4", examples: "אורז לבן", value: 4 },

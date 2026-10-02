@@ -105,8 +105,11 @@ def test_portion_choices():
         assert f"{option['percent']}%" in DOC
 
 
-def test_second_source_light_bound():
+def test_second_source_bounds():
+    assert f"לצד מקור עיקרי **עד דרגה {CARBS['second_source']['primary_grade_max']}**" in DOC
     assert f"דרגה 1 או {CARBS['second_source']['light_grade_max']}" in DOC
+    classify = (ROOT / "docs" / "kb" / "app-guide-classify-he.md").read_text()
+    assert f"לצד מקור עיקרי עד דרגה {CARBS['second_source']['primary_grade_max']};" in classify
 
 
 def test_score_bounds():
