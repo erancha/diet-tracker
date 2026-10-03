@@ -318,7 +318,7 @@ export function DayTracker({ questionnaire, treatDay, day, expandLabels, isToday
   }
 
   function toggleForm() {
-    if (formCollapsed) setFormCollapsed(false);
+    if (formCollapsed) openForm();
     else discardForm();
   }
 
@@ -367,11 +367,22 @@ export function DayTracker({ questionnaire, treatDay, day, expandLabels, isToday
     setPickedAdditions(new Map());
     setPortionId(defaultPortionId);
     clearSecondSource();
+    resetMealTime();
+    setEditingId(undefined);
+    setFormCollapsed(true);
+  }
+
+  function resetMealTime() {
     const opensOn = openingTime();
     setMealTime(opensOn);
     setPristineTime(opensOn);
-    setEditingId(undefined);
-    setFormCollapsed(true);
+  }
+
+  // A folded form holds nothing but its blank state, so unfolding it re-reads the clock: the app
+  // may have stood open for hours since the form last folded.
+  function openForm() {
+    resetMealTime();
+    setFormCollapsed(false);
   }
 
   // Corrections run through the recording form, so a stored meal becomes the form's contents:
@@ -422,7 +433,7 @@ export function DayTracker({ questionnaire, treatDay, day, expandLabels, isToday
               if (!window.confirm(REOPEN_PROMPT)) return;
               // Pre-opened here: the same instance stays mounted through the deletion's round
               // trip, so the reopened day presents the inputs this click asked for.
-              setFormCollapsed(false);
+              openForm();
               onReopenDay!();
             }}>
       הוספת ארוחה{" "}

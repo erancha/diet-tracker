@@ -1278,6 +1278,19 @@ describe("DayTracker", () => {
     expect(confirmSpy).not.toHaveBeenCalled();
   });
 
+  it("opens the recording form on the clock at unfolding, not at mount", () => {
+    atLocalTime(19, 5);
+    render(<DayTracker expandLabels={false} suggestBeforeHours={1} treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} closeFrom={CLOSE_FROM} highlightCloseFrom={HIGHLIGHT_FROM} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={emptyDay}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
+                       onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    vi.setSystemTime(new Date(2026, 7, 20, 19, 47));
+    openMealForm();
+
+    expect(screen.getByLabelText("שעת הארוחה")).toHaveValue("19:45");
+  });
+
   it("keeps a diverged edit and its open inputs when the fold's dialog is dismissed", () => {
     atLocalTime(19, 5);
     vi.spyOn(window, "confirm").mockReturnValue(false);
