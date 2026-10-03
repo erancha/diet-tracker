@@ -11,7 +11,11 @@
   },
   "addition_values": {
     "sweet": 3,
-    "alcohol": 3
+    "alcohol": 3,
+    "dry_alcohol": 3
+  },
+  "addition_allowances": {
+    "dry_alcohol": 1
   },
   "amounts": {
     "default": "regular",
@@ -65,7 +69,8 @@
   "excluded": {
     "grade": 6,
     "additions": [
-      "sweet"
+      "sweet",
+      "alcohol"
     ]
   },
   "vectors": [
@@ -105,7 +110,7 @@
       "excluded": 0
     },
     {
-      "name": "full day with an alcohol addition",
+      "name": "sugary alcohol counts on the flour-and-sugar line from the first glass",
       "meals": [
         {
           "at": "2026-08-20T09:10:00+03:00",
@@ -160,7 +165,7 @@
         "eating_window": 13,
         "fat": 0
       },
-      "excluded": 7
+      "excluded": 10
     },
     {
       "name": "fat servings count toward the day's fat figure and never toward its score",
@@ -254,7 +259,7 @@
         "eating_window": 0,
         "fat": 0
       },
-      "excluded": 0
+      "excluded": 3
     },
     {
       "name": "out-of-order input still spans first to last",
@@ -677,7 +682,7 @@
         "eating_window": 0,
         "fat": 0
       },
-      "excluded": 3
+      "excluded": 6
     },
     {
       "name": "a small portion counts its grade at the configured percentage",
@@ -1147,7 +1152,7 @@
         "eating_window": 0,
         "fat": 0
       },
-      "excluded": 0
+      "excluded": 6
     },
     {
       "name": "each addition on a meal carries its own amount",
@@ -1179,7 +1184,7 @@
         "eating_window": 0,
         "fat": 0
       },
-      "excluded": 1.5
+      "excluded": 6
     },
     {
       "name": "a no-carb meal escalated by a second fruit excludes nothing",
@@ -1246,6 +1251,178 @@
         "fat": 0
       },
       "excluded": 3.6
+    },
+    {
+      "name": "the day's first dry drink is free; the second pays the surcharge at its amount",
+      "meals": [
+        {
+          "at": "2026-08-20T13:00:00+03:00",
+          "carbs_choice": "carb_grade_1",
+          "vegetables": false,
+          "fruit": false,
+          "additions": [
+            {
+              "id": "dry_alcohol",
+              "amount": "regular"
+            }
+          ],
+          "portion": null,
+          "second_source": null,
+          "fat_servings": 0
+        },
+        {
+          "at": "2026-08-20T20:00:00+03:00",
+          "carbs_choice": "no_carbs",
+          "vegetables": false,
+          "fruit": false,
+          "additions": [
+            {
+              "id": "dry_alcohol",
+              "amount": "much"
+            }
+          ],
+          "portion": null,
+          "second_source": null,
+          "fat_servings": 0
+        }
+      ],
+      "derived": {
+        "carbs": 5.5,
+        "meals": 2,
+        "vegetables": 0,
+        "eating_window": 7,
+        "fat": 0
+      },
+      "excluded": 0
+    },
+    {
+      "name": "a half-liter beer as the day's only drink pays only the half past the allowance",
+      "meals": [
+        {
+          "at": "2026-08-20T20:00:00+03:00",
+          "carbs_choice": "no_carbs",
+          "vegetables": false,
+          "fruit": false,
+          "additions": [
+            {
+              "id": "dry_alcohol",
+              "amount": "much"
+            }
+          ],
+          "portion": null,
+          "second_source": null,
+          "fat_servings": 0
+        }
+      ],
+      "derived": {
+        "carbs": 1.5,
+        "meals": 1,
+        "vegetables": 0,
+        "eating_window": 0,
+        "fat": 0
+      },
+      "excluded": 0
+    },
+    {
+      "name": "two small dry drinks across the day share the one free serving",
+      "meals": [
+        {
+          "at": "2026-08-20T13:00:00+03:00",
+          "carbs_choice": "no_carbs",
+          "vegetables": false,
+          "fruit": false,
+          "additions": [
+            {
+              "id": "dry_alcohol",
+              "amount": "little"
+            }
+          ],
+          "portion": null,
+          "second_source": null,
+          "fat_servings": 0
+        },
+        {
+          "at": "2026-08-20T20:00:00+03:00",
+          "carbs_choice": "no_carbs",
+          "vegetables": false,
+          "fruit": false,
+          "additions": [
+            {
+              "id": "dry_alcohol",
+              "amount": "little"
+            }
+          ],
+          "portion": null,
+          "second_source": null,
+          "fat_servings": 0
+        },
+        {
+          "at": "2026-08-20T21:00:00+03:00",
+          "carbs_choice": "no_carbs",
+          "vegetables": false,
+          "fruit": false,
+          "additions": [
+            {
+              "id": "dry_alcohol",
+              "amount": "little"
+            }
+          ],
+          "portion": null,
+          "second_source": null,
+          "fat_servings": 0
+        }
+      ],
+      "derived": {
+        "carbs": 1.5,
+        "meals": 3,
+        "vegetables": 0,
+        "eating_window": 8,
+        "fat": 0
+      },
+      "excluded": 0
+    },
+    {
+      "name": "a dry drink recorded without an amount counts as one serving",
+      "meals": [
+        {
+          "at": "2026-08-20T13:00:00+03:00",
+          "carbs_choice": "no_carbs",
+          "vegetables": false,
+          "fruit": false,
+          "additions": [
+            {
+              "id": "dry_alcohol",
+              "amount": null
+            }
+          ],
+          "portion": null,
+          "second_source": null,
+          "fat_servings": 0
+        },
+        {
+          "at": "2026-08-20T20:00:00+03:00",
+          "carbs_choice": "no_carbs",
+          "vegetables": false,
+          "fruit": false,
+          "additions": [
+            {
+              "id": "dry_alcohol",
+              "amount": null
+            }
+          ],
+          "portion": null,
+          "second_source": null,
+          "fat_servings": 0
+        }
+      ],
+      "derived": {
+        "carbs": 3,
+        "meals": 2,
+        "vegetables": 0,
+        "eating_window": 7,
+        "fat": 0
+      },
+      "excluded": 0
     }
   ]
 }

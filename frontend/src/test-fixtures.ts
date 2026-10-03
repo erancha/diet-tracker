@@ -66,7 +66,9 @@ export const trackerQuestionnaire: Questionnaire = {
       tooltip: "מנת שומן = כף שמן", choices: [] },
     { id: "carbs", type: "points", text: "פחמימות", max: 30, heavy_meal: 4,
       additions: [{ id: "sweet", label: "מתוק", value: 4 },
-                  { id: "alcohol", label: "אלכוהול לא יבש", value: 4 }],
+                  { id: "alcohol", label: "אלכוהול ממותק", value: 4 },
+                  // The one addition with a daily allowance: its first serving is free.
+                  { id: "dry_alcohol", label: "יין יבש / בירה", value: 4, daily_allowance: 1 }],
       amounts: { default: "regular",
                  options: [{ id: "little", label: "מעט", percent: 75 },
                            { id: "regular", label: "רגיל", percent: 100 },

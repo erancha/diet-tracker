@@ -184,7 +184,8 @@
         "heavy_meal": 4,
         "excluded_grade": 6,
         "excluded_additions": [
-          "sweet"
+          "sweet",
+          "alcohol"
         ],
         "additions": [
           {
@@ -194,8 +195,14 @@
           },
           {
             "id": "alcohol",
-            "label": "אלכוהול לא יבש",
+            "label": "אלכוהול ממותק",
             "value": 3
+          },
+          {
+            "id": "dry_alcohol",
+            "label": "יין יבש / בירה",
+            "value": 3,
+            "daily_allowance": 1
           }
         ],
         "amounts": {

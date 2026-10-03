@@ -14,6 +14,9 @@ export interface Choice {
   // ladder's last measured step: its value is a sentinel one step beyond, not a quantity, so
   // only its wording states its meaning and it marks no gridline position.
   bound?: boolean;
+  // Present only on an addition the program allows in a daily quantity: how many routine
+  // servings of it a day may carry before its surcharge starts.
+  daily_allowance?: number;
 }
 
 export interface Question {

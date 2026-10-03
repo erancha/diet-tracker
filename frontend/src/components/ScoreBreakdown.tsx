@@ -33,9 +33,9 @@ export function ScoreBreakdown({ questionnaire, treatDay, date, meals, onExpire 
     return () => clearTimeout(timer);
   }, []);
   const carbsQuestion = questionnaire.questions.find((q) => q.id === "carbs")!;
-  const { weights, additionValues, amounts, portions, secondSource, excluded } = carbsScales(carbsQuestion);
+  const { weights, additionValues, additionAllowances, amounts, portions, secondSource, excluded } = carbsScales(carbsQuestion);
   const chronological = [...meals].sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime());
-  const terms = mealTerms(chronological, weights, additionValues, amounts, portions, secondSource, excluded);
+  const terms = mealTerms(chronological, weights, additionValues, additionAllowances, amounts, portions, secondSource, excluded);
   const total = terms.flat().reduce((sum, t) => sum + t.points, 0);
   const sumClass = !isViolating(questionnaire, carbsQuestion.id, total) ? "score"
     : fallsOn(date, treatDay.weekday) ? "score heavy-day treat-day" : "score heavy-day";

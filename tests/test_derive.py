@@ -21,13 +21,14 @@ EXCLUDED = Excluded(grade=FIXTURE["excluded"]["grade"],
 
 
 def _derive(meals):
-    return derive(meals, FIXTURE["weights"], FIXTURE["addition_values"], AMOUNTS, PORTIONS, SECOND,
-                  EXCLUDED)
+    return derive(meals, FIXTURE["weights"], FIXTURE["addition_values"], FIXTURE["addition_allowances"],
+                  AMOUNTS, PORTIONS, SECOND, EXCLUDED)
 
 
 def _excluded(meals):
-    return excluded_points(meals, FIXTURE["weights"], FIXTURE["addition_values"], AMOUNTS,
-                           PORTIONS, SECOND, EXCLUDED)
+    return excluded_points(meals, FIXTURE["weights"], FIXTURE["addition_values"],
+                           FIXTURE["addition_allowances"], AMOUNTS, PORTIONS, SECOND,
+                           EXCLUDED)
 
 
 def test_vector_scoring_tables_are_the_repo_configs():
@@ -37,6 +38,7 @@ def test_vector_scoring_tables_are_the_repo_configs():
     questionnaire = appconfig.load(APP_CONFIG).questionnaire
     assert FIXTURE["weights"] == questionnaire.carb_weights()
     assert FIXTURE["addition_values"] == questionnaire.addition_values()
+    assert FIXTURE["addition_allowances"] == questionnaire.addition_allowances()
     assert PORTIONS == questionnaire.portions()
     assert AMOUNTS == questionnaire.amounts()
     assert SECOND == questionnaire.second_source()

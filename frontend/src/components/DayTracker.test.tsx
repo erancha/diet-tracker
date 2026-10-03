@@ -250,7 +250,7 @@ describe("DayTracker", () => {
     fireEvent.click(screen.getByLabelText("ירקות"));
     fireEvent.click(screen.getByLabelText("פרי"));
     fireEvent.click(screen.getByLabelText("מתוק"));
-    fireEvent.click(screen.getByLabelText("אלכוהול לא יבש"));
+    fireEvent.click(screen.getByLabelText("אלכוהול ממותק"));
     fireEvent.click(screen.getByRole("button", { name: "שמירת ארוחה" }));
     expect(onAddMeal).toHaveBeenCalledWith(expect.objectContaining({
       carbs_choice: "carb_grade_4", vegetables: true, fruit: true,
@@ -272,7 +272,7 @@ describe("DayTracker", () => {
     // The amount belongs to one addition, so it appears only once that addition is checked.
     expect(screen.queryByLabelText("כמות — מתוק")).toBeNull();
     fireEvent.click(screen.getByLabelText("מתוק"));
-    fireEvent.click(screen.getByLabelText("אלכוהול לא יבש"));
+    fireEvent.click(screen.getByLabelText("אלכוהול ממותק"));
     fireEvent.change(screen.getByLabelText("כמות — מתוק"), { target: { value: "little" } });
     fireEvent.click(screen.getByRole("button", { name: "שמירת ארוחה" }));
     expect(onAddMeal).toHaveBeenCalledWith(expect.objectContaining({
@@ -1455,7 +1455,7 @@ describe("DayTracker", () => {
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     expect(screen.getByText("09:10").closest("li"))
-      .toHaveTextContent("דרגה 4 · 🥑×2 · 🍪 · 🍷 · 12");
+      .toHaveTextContent("דרגה 4 · 🥑×2 · 🍪 · 🍸 · 12");
   });
 
   it("marks each meal's row controls with the glyph role", () => {

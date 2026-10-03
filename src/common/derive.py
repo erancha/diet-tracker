@@ -37,13 +37,26 @@ def _source_weight(choice, portion_id, weights, portions) -> float:
     return weight
 
 
-def _addition_weight(addition, addition_values, amounts) -> float:
-    """What one recorded addition costs: its configured surcharge at the amount it was recorded
-    at, or the surcharge whole when the record carries no amount."""
-    value = addition_values[addition["id"]]
+def _servings(addition, amounts) -> float:
+    """How many routine servings one recorded addition is: its amount's share of the routine
+    one, or exactly one when the record carries no amount."""
     if addition["amount"] is None:
-        return value
-    return amounts.weigh(value, addition["amount"])
+        return 1
+    return amounts.percent(addition["amount"]) / 100
+
+
+def _addition_weight(addition, addition_values, allowances, served, amounts) -> float:
+    """What one recorded addition costs: its surcharge per routine serving. An addition with a
+    daily allowance pays only for the servings past it — `served` holds what the day already had
+    of each such addition, in meal order, and advances here."""
+    value = addition_values[addition["id"]]
+    servings = _servings(addition, amounts)
+    if addition["id"] not in allowances:
+        return value * servings
+    allowance = allowances[addition["id"]]
+    before = served[addition["id"]]
+    served[addition["id"]] = before + servings
+    return value * (max(0, before + servings - allowance) - max(0, before - allowance))
 
 
 @dataclass(frozen=True)
@@ -56,13 +69,14 @@ class MealWeight:
     excluded: float
 
 
-def meal_weights(meals: list, weights: dict, addition_values: dict, amounts, portions,
-                 second_source, excluded) -> list:
+def meal_weights(meals: list, weights: dict, addition_values: dict, allowances: dict, amounts,
+                 portions, second_source, excluded) -> list:
     """Each meal's contribution, in the order the meals were eaten — the order the fruit
     escalation is applied in. The day's carb score is the sum of the totals and its excluded part
     the sum of the excluded, both weighed in this one walk so the two can never disagree."""
     result = []
     fruits = 0
+    served = {addition: 0 for addition in allowances}
     for meal in sorted(meals, key=lambda meal: datetime.fromisoformat(meal["at"])):
         # Quantity applies to each source's own grade, before the fruit escalation floors their
         # sum: the escalation prices a second fruit, not the helping of whatever else was on the
@@ -89,10 +103,10 @@ def meal_weights(meals: list, weights: dict, addition_values: dict, amounts, por
             fruits += 1
             if fruits > 1:
                 weight = max(weight, weights[FRUIT_ESCALATION_CHOICE])
-        # Additions (a sweet, alcohol) cost on top of the meal's sources (escalated or not),
+        # Additions (a sweet, a drink) cost on top of the meal's sources (escalated or not),
         # so an excellent meal with a cookie stays cheaper than a heavy meal with one.
         for addition in meal["additions"]:
-            surcharge = _addition_weight(addition, addition_values, amounts)
+            surcharge = _addition_weight(addition, addition_values, allowances, served, amounts)
             weight += surcharge
             if excluded.counts_addition(addition["id"]):
                 part += surcharge
@@ -100,8 +114,8 @@ def meal_weights(meals: list, weights: dict, addition_values: dict, amounts, por
     return result
 
 
-def derive(meals: list, weights: dict, addition_values: dict, amounts, portions,
-           second_source, excluded) -> Derived:
+def derive(meals: list, weights: dict, addition_values: dict, allowances: dict, amounts,
+           portions, second_source, excluded) -> Derived:
     if not meals:
         return Derived(carbs=0, meals=0, vegetables=0, eating_window=0, fat=0)
     ordered = sorted(meals, key=lambda meal: datetime.fromisoformat(meal["at"]))
@@ -109,7 +123,8 @@ def derive(meals: list, weights: dict, addition_values: dict, amounts, portions,
               - datetime.fromisoformat(ordered[0]["at"]))
     return Derived(
         carbs=sum(weighed.total for weighed in meal_weights(
-            meals, weights, addition_values, amounts, portions, second_source, excluded)),
+            meals, weights, addition_values, allowances, amounts, portions, second_source,
+            excluded)),
         meals=len(meals),
         vegetables=sum(1 for meal in meals if meal["vegetables"]),
         # Whole hours, rounded up: the window never understates itself, so the floor a
@@ -119,19 +134,20 @@ def derive(meals: list, weights: dict, addition_values: dict, amounts, portions,
     )
 
 
-def excluded_points(meals: list, weights: dict, addition_values: dict, amounts, portions,
-                    second_source, excluded) -> float:
+def excluded_points(meals: list, weights: dict, addition_values: dict, allowances: dict,
+                    amounts, portions, second_source, excluded) -> float:
     """The part of the day's carb score that came from what the program excludes on its six
     non-treat days. Charted beside the score, it separates a day that stayed within the program
     from one that spent the same points on sugar and flour."""
     return sum(weighed.excluded for weighed in meal_weights(
-        meals, weights, addition_values, amounts, portions, second_source, excluded))
+        meals, weights, addition_values, allowances, amounts, portions, second_source, excluded))
 
 
 def excluded_by_day(questionnaire, meals_by_day: dict) -> dict:
     """excluded_points for every day of a range at once, keyed by day."""
     return {day: excluded_points(meals, questionnaire.carb_weights(),
-                                 questionnaire.addition_values(), questionnaire.amounts(),
+                                 questionnaire.addition_values(),
+                                 questionnaire.addition_allowances(), questionnaire.amounts(),
                                  questionnaire.portions(), questionnaire.second_source(),
                                  questionnaire.excluded())
             for day, meals in meals_by_day.items()}

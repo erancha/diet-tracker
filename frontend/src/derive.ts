@@ -38,6 +38,7 @@ export interface Excluded {
 export function carbsScales(question: Question): {
   weights: Record<string, number>;
   additionValues: Record<string, number>;
+  additionAllowances: Record<string, number>;
   amounts: Amounts;
   portions: Portions;
   secondSource: SecondSourceRule;
@@ -46,6 +47,8 @@ export function carbsScales(question: Question): {
   return {
     weights: Object.fromEntries(question.choices.map((c) => [c.id, c.value])),
     additionValues: Object.fromEntries((question.additions ?? []).map((a) => [a.id, a.value])),
+    additionAllowances: Object.fromEntries((question.additions ?? [])
+      .filter((a) => a.daily_allowance !== undefined).map((a) => [a.id, a.daily_allowance!])),
     amounts: question.amounts!,
     portions: question.portions!,
     secondSource: question.second_source!,
@@ -111,8 +114,8 @@ export type ScoreTerm = (
 // Each meal's carb contribution broken into its priced terms, aligned with the input order so
 // callers can label the meals they passed in. The fruit escalation reads the day chronologically,
 // whatever order the meals arrive in.
-export function mealTerms(meals: Pick<Meal, "at" | "carbs_choice" | "fruit" | "additions" | "portion" | "second_source">[], weights: Record<string, number>, additionValues: Record<string, number>, amounts: Amounts, portions: Portions, secondSource: SecondSourceRule, excluded: Excluded): ScoreTerm[][] {
-  return mealBreakdown(meals, weights, additionValues, amounts, portions, secondSource, excluded)
+export function mealTerms(meals: Pick<Meal, "at" | "carbs_choice" | "fruit" | "additions" | "portion" | "second_source">[], weights: Record<string, number>, additionValues: Record<string, number>, additionAllowances: Record<string, number>, amounts: Amounts, portions: Portions, secondSource: SecondSourceRule, excluded: Excluded): ScoreTerm[][] {
+  return mealBreakdown(meals, weights, additionValues, additionAllowances, amounts, portions, secondSource, excluded)
     .map((b) => b.terms);
 }
 
@@ -120,8 +123,8 @@ export function mealTerms(meals: Pick<Meal, "at" | "carbs_choice" | "fruit" | "a
 // additions' surcharges — beside the excluded part of it, aligned with the input order. The totals
 // sum to the day's carb score and the excluded parts to what excludedPoints reports, both weighed
 // in the one walk mealTerms shares so none of the three can disagree.
-export function mealWeights(meals: Pick<Meal, "at" | "carbs_choice" | "fruit" | "additions" | "portion" | "second_source">[], weights: Record<string, number>, additionValues: Record<string, number>, amounts: Amounts, portions: Portions, secondSource: SecondSourceRule, excluded: Excluded): MealWeight[] {
-  return mealBreakdown(meals, weights, additionValues, amounts, portions, secondSource, excluded)
+export function mealWeights(meals: Pick<Meal, "at" | "carbs_choice" | "fruit" | "additions" | "portion" | "second_source">[], weights: Record<string, number>, additionValues: Record<string, number>, additionAllowances: Record<string, number>, amounts: Amounts, portions: Portions, secondSource: SecondSourceRule, excluded: Excluded): MealWeight[] {
+  return mealBreakdown(meals, weights, additionValues, additionAllowances, amounts, portions, secondSource, excluded)
     .map(({ terms, excluded: part }) => ({ total: terms.reduce((sum, t) => sum + t.points, 0), excluded: part }));
 }
 
@@ -130,12 +133,13 @@ export function excludesGrade(weight: number, excluded: Excluded): boolean {
   return weight >= excluded.grade;
 }
 
-function mealBreakdown(meals: Pick<Meal, "at" | "carbs_choice" | "fruit" | "additions" | "portion" | "second_source">[], weights: Record<string, number>, additionValues: Record<string, number>, amounts: Amounts, portions: Portions, secondSource: SecondSourceRule, excluded: Excluded): { terms: ScoreTerm[]; excluded: number }[] {
+function mealBreakdown(meals: Pick<Meal, "at" | "carbs_choice" | "fruit" | "additions" | "portion" | "second_source">[], weights: Record<string, number>, additionValues: Record<string, number>, additionAllowances: Record<string, number>, amounts: Amounts, portions: Portions, secondSource: SecondSourceRule, excluded: Excluded): { terms: ScoreTerm[]; excluded: number }[] {
   const chronological = meals.map((meal, index) => ({ meal, index }))
     .sort((a, b) => new Date(a.meal.at).getTime() - new Date(b.meal.at).getTime());
   const result = new Array<{ terms: ScoreTerm[]; excluded: number }>(meals.length);
   const excludesSource = (weight: number) => excludesGrade(weight, excluded);
   let fruits = 0;
+  const served: Record<string, number> = Object.fromEntries(Object.keys(additionAllowances).map((id) => [id, 0]));
   for (const { meal, index } of chronological) {
     const terms: ScoreTerm[] = [];
     // Quantity applies before the fruit escalation floors the plate's weight: the escalation
@@ -180,15 +184,24 @@ function mealBreakdown(meals: Pick<Meal, "at" | "carbs_choice" | "fruit" | "addi
         weight = lifted;
       }
     }
-    // Additions (a sweet, alcohol) cost on top of the meal's sources (escalated or not),
-    // so an excellent meal with a cookie stays cheaper than a heavy meal with one. Each costs its
-    // surcharge at the amount it was recorded at, or the surcharge whole when it carries none.
+    // Additions (a sweet, a drink) cost on top of the meal's sources (escalated or not), so an
+    // excellent meal with a cookie stays cheaper than a heavy meal with one. Each costs its
+    // surcharge per routine serving — one serving when the record carries no amount. An
+    // addition with a daily allowance pays only for the servings past it, counted in meal order.
     for (const addition of meal.additions) {
       const value = additionValues[addition.id];
       if (value === undefined) throw new Error(`unknown addition ${addition.id}`);
-      const surcharge = addition.amount === null
-        ? value
-        : (value * scalePercent(amounts.options, addition.amount, "amount")) / 100;
+      const servings = addition.amount === null
+        ? 1
+        : scalePercent(amounts.options, addition.amount, "amount") / 100;
+      let charged = servings;
+      if (addition.id in additionAllowances) {
+        const allowance = additionAllowances[addition.id];
+        const before = served[addition.id];
+        served[addition.id] = before + servings;
+        charged = Math.max(0, before + servings - allowance) - Math.max(0, before - allowance);
+      }
+      const surcharge = value * charged;
       const additionExcluded = excluded.additions.includes(addition.id);
       terms.push({ kind: "addition", id: addition.id, amount: addition.amount, points: surcharge,
                    excluded: additionExcluded });
@@ -203,17 +216,17 @@ function mealBreakdown(meals: Pick<Meal, "at" | "carbs_choice" | "fruit" | "addi
 // The part of the day's carb score that came from what the program excludes on its six non-treat
 // days. Charted beside the score, it separates a day that stayed within the program from one that
 // spent the same points on sugar and flour.
-export function excludedPoints(meals: Pick<Meal, "at" | "carbs_choice" | "fruit" | "additions" | "portion" | "second_source">[], weights: Record<string, number>, additionValues: Record<string, number>, amounts: Amounts, portions: Portions, secondSource: SecondSourceRule, excluded: Excluded): number {
-  return mealWeights(meals, weights, additionValues, amounts, portions, secondSource, excluded)
+export function excludedPoints(meals: Pick<Meal, "at" | "carbs_choice" | "fruit" | "additions" | "portion" | "second_source">[], weights: Record<string, number>, additionValues: Record<string, number>, additionAllowances: Record<string, number>, amounts: Amounts, portions: Portions, secondSource: SecondSourceRule, excluded: Excluded): number {
+  return mealWeights(meals, weights, additionValues, additionAllowances, amounts, portions, secondSource, excluded)
     .reduce((sum, w) => sum + w.excluded, 0);
 }
 
-export function deriveDay(meals: Pick<Meal, "at" | "carbs_choice" | "vegetables" | "fruit" | "fat_servings" | "additions" | "portion" | "second_source">[], weights: Record<string, number>, additionValues: Record<string, number>, amounts: Amounts, portions: Portions, secondSource: SecondSourceRule, excluded: Excluded): Derived {
+export function deriveDay(meals: Pick<Meal, "at" | "carbs_choice" | "vegetables" | "fruit" | "fat_servings" | "additions" | "portion" | "second_source">[], weights: Record<string, number>, additionValues: Record<string, number>, additionAllowances: Record<string, number>, amounts: Amounts, portions: Portions, secondSource: SecondSourceRule, excluded: Excluded): Derived {
   if (meals.length === 0) return { carbs: 0, meals: 0, vegetables: 0, eating_window: 0, fat: 0 };
   const ordered = [...meals].sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime());
   const window = new Date(ordered[ordered.length - 1].at).getTime() - new Date(ordered[0].at).getTime();
   return {
-    carbs: mealWeights(meals, weights, additionValues, amounts, portions, secondSource, excluded).reduce((sum, w) => sum + w.total, 0),
+    carbs: mealWeights(meals, weights, additionValues, additionAllowances, amounts, portions, secondSource, excluded).reduce((sum, w) => sum + w.total, 0),
     meals: meals.length,
     vegetables: meals.filter((m) => m.vegetables).length,
     // Whole hours, rounded up like the server: the window never understates itself, so the

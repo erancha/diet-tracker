@@ -19,7 +19,7 @@ export function liveTrendDay(questionnaire: Questionnaire, today: DayPayload, da
   return {
     date: today.date,
     answers: { carbs: today.derived.carbs },
-    excluded: excludedPoints(today.meals, scales.weights, scales.additionValues, scales.amounts,
+    excluded: excludedPoints(today.meals, scales.weights, scales.additionValues, scales.additionAllowances, scales.amounts,
                              scales.portions, scales.secondSource, scales.excluded),
   };
 }

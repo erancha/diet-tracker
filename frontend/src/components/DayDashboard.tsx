@@ -27,7 +27,7 @@ export function DayDashboard({ questionnaire, treatDay, date, derived, meals, on
   const softened = fallsOn(date, treatDay.weekday) ? " treat-day" : "";
   const heavy = isViolating(questionnaire, carbsQuestion.id, derived.carbs);
   const scales = carbsScales(carbsQuestion);
-  const excluded = excludedPoints(meals, scales.weights, scales.additionValues, scales.amounts,
+  const excluded = excludedPoints(meals, scales.weights, scales.additionValues, scales.additionAllowances, scales.amounts,
                                   scales.portions, scales.secondSource, scales.excluded);
   // A figure marks on its rule bound alone, never on a question's display floor. A day holding
   // no meals yet has nothing to judge: its zeros are what has not been recorded, not a bound

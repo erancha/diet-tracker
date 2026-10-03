@@ -18,7 +18,7 @@ describe("mealMarkers", () => {
         { marker: "🍎", label: "פרי" },
         { marker: "🥑×2", label: "מנת שומן" },
         { marker: "🍪", label: "מתוק" },
-        { marker: "🍷", label: "אלכוהול לא יבש" },
+        { marker: "🍸", label: "אלכוהול ממותק" },
       ]);
   });
 

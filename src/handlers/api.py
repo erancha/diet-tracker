@@ -117,6 +117,7 @@ def _day_payload(store, questionnaire, sub, day) -> dict:
     return {"date": day, "meals": meals,
             "derived": asdict(derive(meals, questionnaire.carb_weights(),
                                      questionnaire.addition_values(),
+                                     questionnaire.addition_allowances(),
                                      questionnaire.amounts(),
                                      questionnaire.portions(),
                                      questionnaire.second_source(),
@@ -134,8 +135,9 @@ def _submit(sub, body):
         return rejection
     store = _store()
     floors = derive(store.get_meals(sub, chosen), questionnaire.carb_weights(),
-                    questionnaire.addition_values(), questionnaire.amounts(),
-                    questionnaire.portions(), questionnaire.second_source(),
+                    questionnaire.addition_values(), questionnaire.addition_allowances(),
+                    questionnaire.amounts(), questionnaire.portions(),
+                    questionnaire.second_source(),
                     questionnaire.excluded())
     try:
         questionnaire.validate_answers(answers, floors=asdict(floors))

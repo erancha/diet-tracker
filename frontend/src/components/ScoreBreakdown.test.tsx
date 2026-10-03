@@ -51,7 +51,7 @@ describe("ScoreBreakdown", () => {
     expect(rows[1]).toHaveTextContent("מתוק");
     expect(rows[1]).toHaveTextContent("הרבה");
     expect(rows[1]).toHaveTextContent("+ 5");
-    expect(rows[1]).toHaveTextContent("אלכוהול לא יבש");
+    expect(rows[1]).toHaveTextContent("אלכוהול ממותק");
     expect(rows[1]).toHaveTextContent("+ 4");
     expect(rows[1]).toHaveTextContent("= 16.6");
   });

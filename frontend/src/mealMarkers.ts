@@ -11,7 +11,7 @@ export const FRUIT_FLAG: Marker = { marker: "🍎", label: "פרי" };
 export const FAT_SERVINGS: Marker = { marker: "🥑", label: "מנת שומן" };
 
 // Row marker per addition id.
-const ADDITION_MARKERS: Record<string, string> = { sweet: "🍪", alcohol: "🍷" };
+const ADDITION_MARKERS: Record<string, string> = { sweet: "🍪", alcohol: "🍸", dry_alcohol: "🍷" };
 
 // The markers a meal's row carries: flags, then the fat servings with their count past one, then
 // each addition under the name the questionnaire gives it. A history day may carry an addition

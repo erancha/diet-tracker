@@ -46,7 +46,10 @@ def test_repo_config_loads_with_numeric_choices_and_threshold_rules():
     # it only from the threshold grade up.
     assert [p.percent for p in q.portions().options] == [60, 80, 100]
     assert q.portions().from_value == 4
-    assert q.addition_values() == {"sweet": 3, "alcohol": 3}
+    assert q.addition_values() == {"sweet": 3, "alcohol": 3, "dry_alcohol": 3}
+    # The program allows one dry drink a day before it counts; sugary alcohol never gets one.
+    assert q.addition_allowances() == {"dry_alcohol": 1}
+    assert set(q.excluded().additions) == {"sweet", "alcohol"}
     # An addition's surcharge prices a routine amount, so its scale reaches past 100% and opens
     # on the step that charges the surcharge whole.
     assert [a.percent for a in q.amounts().options] == [50, 100, 150, 200]
@@ -79,6 +82,15 @@ def test_addition_without_numeric_value_is_rejected():
     raw["questions"][0]["additions"] = [{"id": "sweet", "label": "sweet", "value": "4"}]
     with pytest.raises(ValueError, match="sweet"):
         parse(raw)
+
+
+def test_addition_daily_allowance_must_be_a_non_negative_number():
+    for bad in ("1", True, -1):
+        raw = minimal()
+        raw["questions"][0]["additions"] = [
+            {"id": "beer", "label": "beer", "value": 3, "daily_allowance": bad}]
+        with pytest.raises(ValueError, match="daily_allowance"):
+            parse(raw)
 
 
 def test_amounts_missing_from_config_raises():
@@ -141,15 +153,18 @@ def test_excluding_an_addition_the_question_does_not_declare_is_rejected():
         parse(raw)
 
 
-def test_repo_config_excludes_the_flour_grades_and_the_sweet_addition():
+def test_repo_config_excludes_the_flour_grades_and_the_sugary_additions():
     # Grades 6 and 7 are the flours and sugar the program's six non-treat days exclude
     # absolutely, while grades 4 and 5 — white rice, sweet potato, fruit — are permitted within
-    # them: a bound one grade lower would lift the excluded line on most days.
+    # them: a bound one grade lower would lift the excluded line on most days. Of the additions,
+    # a sweet and sugary alcohol are excluded from the first serving; a dry drink is allowed
+    # within its daily allowance, so it never lands on the excluded line.
     excluded = appconfig.load(APP_CONFIG).questionnaire.excluded()
     assert excluded.grade == 6
-    assert excluded.additions == ("sweet",)
+    assert excluded.additions == ("sweet", "alcohol")
     assert not excluded.counts_source(5) and excluded.counts_source(6)
-    assert excluded.counts_addition("sweet") and not excluded.counts_addition("nuts")
+    assert excluded.counts_addition("sweet") and excluded.counts_addition("alcohol")
+    assert not excluded.counts_addition("dry_alcohol")
 
 
 def test_excluded_missing_from_config_raises():

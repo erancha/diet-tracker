@@ -44,9 +44,10 @@ least that grade's weight, and never lowered when the meal's own grade is alread
 
 ## Additions
 
-A meal may carry additions — accompaniments that are not a grade of their own: a sweet or
-non-dry alcohol. Each addition pays its configured surcharge (the carbs question's
-`additions` in the config) on top of the meal's carb sources, after any fruit escalation. The
+A meal may carry additions — accompaniments that are not a grade of their own: a sweet, sugary
+alcohol, or a dry drink (dry wine, beer). Each addition pays its configured surcharge (the carbs
+question's `additions` in the config) per routine serving on top of the meal's carb sources,
+after any fruit escalation. The
 surcharge keeps the base grade meaningful: an excellent meal with a cookie stays cheaper than a
 heavy meal with one, while an addition on every meal still compounds into a poor day score.
 
@@ -59,6 +60,17 @@ save that leaves the amount untouched charges the surcharge whole.
 
 The amount is a second axis over the same surcharge, distinct from the helping scale the carb
 sources use: helpings only discount a grade already eaten, while an amount may also add to one.
+
+**Daily allowance.** An addition may declare a `daily_allowance`: how many routine servings a
+day may carry before its surcharge starts. The program allows one dry drink a day — a glass of
+dry wine or a 330 ml beer, "not optimal but possible" from week 3 on — so `dry_alcohol` carries
+an allowance of 1, and the derivation walks the day's meals in time order charging only the
+servings past it: a 330 ml beer as the day's only drink costs 0, a half-liter bottle (1.5
+servings) 1.5 points, a second glass the whole surcharge. Servings past the allowance lift the
+score but never the excluded line — the program lists dry wine and beer among the foods allowed
+in limited quantity, beside cola zero and honey, not among the sugars. Sugary alcohol is excluded
+outright, so it declares no allowance and, like a sweet, counts on the excluded line from its
+first serving.
 
 Meals stored under a shape the config has since moved past are read as their current equivalent:
 the legacy sweet flag maps to a single sweet addition, an addition stored as a bare id carries no

@@ -14,7 +14,8 @@ def compose(meals: list, questionnaire, clock: str) -> str:
     """The question for today's next meal given today's meals so far and the wall-clock time."""
     carbs = questionnaire.question("carbs")
     weighed = meal_weights(meals, questionnaire.carb_weights(), questionnaire.addition_values(),
-                           questionnaire.amounts(), questionnaire.portions(),
+                           questionnaire.addition_allowances(), questionnaire.amounts(),
+                           questionnaire.portions(),
                            questionnaire.second_source(), questionnaire.excluded())
     heavy = any(weight.total >= carbs.heavy_meal for weight in weighed)
     facts = [

@@ -15,6 +15,10 @@ class Choice:
     # measured step, so its value is a sentinel one step beyond rather than a quantity. Mirrors
     # the bound field frontend/src/types.ts declares.
     bound: bool = False
+    # Present only on an addition the program allows in a daily quantity: how many routine
+    # servings of it a day may carry before its surcharge starts. Mirrors daily_allowance in
+    # frontend/src/types.ts.
+    daily_allowance: float | None = None
     # Sample foods spelling out what the choice covers, carried only by the carb grades. Mirrors
     # the examples field frontend/src/types.ts declares.
     examples: str | None = None
@@ -98,7 +102,7 @@ class Excluded:
 
     The bound is a grade value rather than a list of grades so a regraded ladder keeps meaning
     it, and the additions are named individually because only some of them are excluded — a
-    sweet is, alcohol is not."""
+    sweet and sugary alcohol are, a dry drink is not."""
     grade: float
     additions: tuple[str, ...]
 
@@ -228,6 +232,13 @@ class Questionnaire:
             raise ValueError("carbs question must declare additions")
         return {addition.id: addition.value for addition in additions}
 
+    def addition_allowances(self) -> dict:
+        """Routine servings a day may carry free, per addition id, for the additions that declare
+        a daily allowance — the rest pay from their first serving."""
+        return {addition.id: addition.daily_allowance
+                for addition in self.question("carbs").additions
+                if addition.daily_allowance is not None}
+
     def portions(self) -> Portions:
         """The carbs question's helping-size scale; the config must declare it."""
         declared = self.question("carbs").portions
@@ -317,6 +328,11 @@ def parse(raw: dict) -> Questionnaire:
         for a in q.get("additions", ()):
             if isinstance(a.get("value"), bool) or not isinstance(a.get("value"), Number):
                 raise ValueError(f"addition {a['id']!r} of question {q['id']!r} needs a numeric value")
+            if "daily_allowance" in a and (isinstance(a["daily_allowance"], bool)
+                                           or not isinstance(a["daily_allowance"], Number)
+                                           or a["daily_allowance"] < 0):
+                raise ValueError(f"addition {a['id']!r} of question {q['id']!r} needs a "
+                                 f"non-negative numeric daily_allowance")
         if "per_meal_max" in q and (isinstance(q["per_meal_max"], bool)
                                     or not isinstance(q["per_meal_max"], int)):
             raise ValueError(f"question {q['id']!r} needs an integer per_meal_max")
@@ -334,7 +350,9 @@ def parse(raw: dict) -> Questionnaire:
             panel_title=q.get("panel_title"), per_meal_max=q.get("per_meal_max"),
             max=q.get("max"),
             heavy_meal=q.get("heavy_meal"),
-            additions=tuple(Choice(id=a["id"], label=a["label"], value=a["value"])
+            additions=tuple(Choice(id=a["id"], label=a["label"], value=a["value"],
+                                   daily_allowance=a["daily_allowance"]
+                                   if "daily_allowance" in a else None)
                             for a in q["additions"]) if "additions" in q else None,
             portions=Portions(from_value=q["portions"]["from_value"],
                               options=_scale_options(q["portions"]["options"]))

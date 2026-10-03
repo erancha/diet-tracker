@@ -11,7 +11,7 @@ const fixture = JSON.parse(
 describe("deriveDay", () => {
   for (const vector of fixture.vectors) {
     it(vector.name, () => {
-      expect(deriveDay(vector.meals, fixture.weights, fixture.addition_values, fixture.amounts, fixture.portions, fixture.second_source, fixture.excluded)).toEqual(vector.derived);
+      expect(deriveDay(vector.meals, fixture.weights, fixture.addition_values, fixture.addition_allowances, fixture.amounts, fixture.portions, fixture.second_source, fixture.excluded)).toEqual(vector.derived);
     });
   }
 });
@@ -19,7 +19,7 @@ describe("deriveDay", () => {
 describe("excludedPoints", () => {
   for (const vector of fixture.vectors) {
     it(vector.name, () => {
-      expect(excludedPoints(vector.meals, fixture.weights, fixture.addition_values, fixture.amounts, fixture.portions, fixture.second_source, fixture.excluded)).toBe(vector.excluded);
+      expect(excludedPoints(vector.meals, fixture.weights, fixture.addition_values, fixture.addition_allowances, fixture.amounts, fixture.portions, fixture.second_source, fixture.excluded)).toBe(vector.excluded);
     });
   }
 
@@ -27,7 +27,7 @@ describe("excludedPoints", () => {
     // Every term of the subtotal is also a term of the score, so the chart's second line can
     // never rise above the first.
     for (const vector of fixture.vectors) {
-      expect(excludedPoints(vector.meals, fixture.weights, fixture.addition_values, fixture.amounts, fixture.portions, fixture.second_source, fixture.excluded))
+      expect(excludedPoints(vector.meals, fixture.weights, fixture.addition_values, fixture.addition_allowances, fixture.amounts, fixture.portions, fixture.second_source, fixture.excluded))
         .toBeLessThanOrEqual(vector.derived.carbs);
     }
   });
@@ -36,7 +36,7 @@ describe("excludedPoints", () => {
 describe("mealWeights", () => {
   for (const vector of fixture.vectors) {
     it(`sums to the day's carb score — ${vector.name}`, () => {
-      const perMeal = mealWeights(vector.meals, fixture.weights, fixture.addition_values, fixture.amounts, fixture.portions, fixture.second_source, fixture.excluded);
+      const perMeal = mealWeights(vector.meals, fixture.weights, fixture.addition_values, fixture.addition_allowances, fixture.amounts, fixture.portions, fixture.second_source, fixture.excluded);
       expect(perMeal.reduce((sum, w) => sum + w.total, 0)).toBe(vector.derived.carbs);
     });
   }
@@ -46,7 +46,7 @@ describe("mealWeights", () => {
       { at: "2026-08-20T20:00:00+03:00", carbs_choice: "carb_grade_6", vegetables: false, fruit: false, fat_servings: 0, additions: [], portion: null, second_source: null },
       { at: "2026-08-20T08:00:00+03:00", carbs_choice: "no_carbs", vegetables: false, fruit: false, fat_servings: 0, additions: [], portion: null, second_source: null },
     ];
-    expect(mealWeights(meals, fixture.weights, fixture.addition_values, fixture.amounts, fixture.portions, fixture.second_source, fixture.excluded).map((w) => w.total)).toEqual([6, 0]);
+    expect(mealWeights(meals, fixture.weights, fixture.addition_values, fixture.addition_allowances, fixture.amounts, fixture.portions, fixture.second_source, fixture.excluded).map((w) => w.total)).toEqual([6, 0]);
   });
 
   it("escalates the chronologically later fruit meal even when listed first", () => {
@@ -54,12 +54,12 @@ describe("mealWeights", () => {
       { at: "2026-08-20T13:00:00+03:00", carbs_choice: "carb_grade_1", vegetables: false, fruit: true, fat_servings: 0, additions: [], portion: null, second_source: null },
       { at: "2026-08-20T09:00:00+03:00", carbs_choice: "carb_grade_1", vegetables: false, fruit: true, fat_servings: 0, additions: [], portion: null, second_source: null },
     ];
-    expect(mealWeights(meals, fixture.weights, fixture.addition_values, fixture.amounts, fixture.portions, fixture.second_source, fixture.excluded).map((w) => w.total)).toEqual([5, 1]);
+    expect(mealWeights(meals, fixture.weights, fixture.addition_values, fixture.addition_allowances, fixture.amounts, fixture.portions, fixture.second_source, fixture.excluded).map((w) => w.total)).toEqual([5, 1]);
   });
 });
 
 describe("mealTerms", () => {
-  const scales = [fixture.weights, fixture.addition_values, fixture.amounts, fixture.portions, fixture.second_source, fixture.excluded] as const;
+  const scales = [fixture.weights, fixture.addition_values, fixture.addition_allowances, fixture.amounts, fixture.portions, fixture.second_source, fixture.excluded] as const;
 
   for (const vector of fixture.vectors) {
     it(`terms add up to each meal's weight — ${vector.name}`, () => {
@@ -111,9 +111,26 @@ describe("mealTerms", () => {
         { kind: "source", choice: "no_carbs", portion: null, points: 0, excluded: false },
         { kind: "fruit_escalation", points: 5, excluded: false },
         { kind: "addition", id: "sweet", amount: "much", points: 4.5, excluded: true },
-        { kind: "addition", id: "alcohol", amount: null, points: 3, excluded: false },
+        { kind: "addition", id: "alcohol", amount: null, points: 3, excluded: true },
       ],
       [{ kind: "source", choice: "carb_grade_1", portion: null, points: 1, excluded: false }],
+    ]);
+  });
+
+  it("lists the day's free dry drink as a zero-point term and prices only what passes the allowance", () => {
+    const meals = [
+      { at: "2026-08-20T13:00:00+03:00", carbs_choice: "no_carbs", vegetables: false, fruit: false, fat_servings: 0, additions: [{ id: "dry_alcohol", amount: "regular" }], portion: null, second_source: null },
+      { at: "2026-08-20T20:00:00+03:00", carbs_choice: "no_carbs", vegetables: false, fruit: false, fat_servings: 0, additions: [{ id: "dry_alcohol", amount: "much" }], portion: null, second_source: null },
+    ];
+    expect(mealTerms(meals, ...scales)).toEqual([
+      [
+        { kind: "source", choice: "no_carbs", portion: null, points: 0, excluded: false },
+        { kind: "addition", id: "dry_alcohol", amount: "regular", points: 0, excluded: false },
+      ],
+      [
+        { kind: "source", choice: "no_carbs", portion: null, points: 0, excluded: false },
+        { kind: "addition", id: "dry_alcohol", amount: "much", points: 4.5, excluded: false },
+      ],
     ]);
   });
 });
