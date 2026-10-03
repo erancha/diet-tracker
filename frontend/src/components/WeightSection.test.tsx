@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { WeightSection, WEIGHT_GLANCE_MS } from "./WeightSection";
-import { WIND_DOWN_SWEEP_MS } from "./useWindDownFold";
+import { WeightSection } from "./WeightSection";
+import { WIND_DOWN_FOLD_MS, WIND_DOWN_SWEEP_MS } from "./useWindDownFold";
 import type { WeightPayload, WeightSettings } from "../types";
 import { DISCARD_EDITS_PROMPT } from "../edits";
 import { offDayWeighingHint, WEIGH_IN_CADENCE_QUESTION } from "../weight";
@@ -110,9 +110,26 @@ describe("glance", () => {
     const section = document.querySelector("section.weight")!;
     expect(screen.getByLabelText("המשקל היום")).toBeInTheDocument();
     expect(section).toHaveClass("section-waning");
-    expect(section).toHaveStyle({ "--wind-down-hold": `${WEIGHT_GLANCE_MS}ms` });
-    act(() => { vi.advanceTimersByTime(WEIGHT_GLANCE_MS + WIND_DOWN_SWEEP_MS); });
+    expect(section).toHaveStyle({ "--wind-down-hold": `${WIND_DOWN_FOLD_MS}ms` });
+    act(() => { vi.advanceTimersByTime(WIND_DOWN_FOLD_MS - 1); });
+    expect(screen.getByLabelText("המשקל היום")).toBeInTheDocument();
+    act(() => { vi.advanceTimersByTime(1 + WIND_DOWN_SWEEP_MS); });
     expect(screen.queryByLabelText("המשקל היום")).toBeNull();
+  });
+
+  it("folds at once on a press anywhere outside it", () => {
+    vi.useFakeTimers();
+    renderSection({ entries: GAIN }, {}, false, NOW, true);
+    fireEvent.pointerDown(document.body);
+    expect(screen.queryByLabelText("המשקל היום")).toBeNull();
+    expect(document.querySelector("section.weight")).not.toHaveClass("section-waning");
+  });
+
+  it("stays open under a press inside it", () => {
+    vi.useFakeTimers();
+    renderSection({ entries: GAIN }, {}, false, NOW, true);
+    fireEvent.pointerDown(screen.getByLabelText("המשקל היום"));
+    expect(screen.getByLabelText("המשקל היום")).toBeInTheDocument();
   });
 
   it("stays with the hand that toggled it", () => {

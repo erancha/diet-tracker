@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 
 // How long an auto-opened panel stands before folding away on its own, unless the caller names
 // another hold. The style sheet's wind-down dim reads the hold from the custom property the hook
@@ -15,13 +15,16 @@ export const WIND_DOWN_SWEEP_MS = 500;
  * exit cannot read as a mistake. `armed` runs the countdown; the section's toggle, set() or
  * disarm() hands the fold to the user for the rest of the visit. `waning` dims the section for
  * the armed stretch, `folding` runs the sweep with the content still mounted, and `collapsed`
- * lands after it; `style` tells the dim how long the hold is.
+ * lands after it; `style` tells the dim how long the hold is. A caller that hands `ref` to its
+ * section element also has a press anywhere outside that element fold the armed section at
+ * once, since a hand reaching elsewhere on the page has seen what the section opened to show.
  */
 export function useWindDownFold(armed: boolean, initiallyCollapsed: boolean,
                                 holdMs: number = WIND_DOWN_FOLD_MS) {
   const [collapsed, setCollapsed] = useState(initiallyCollapsed);
   const [folding, setFolding] = useState(false);
   const [engaged, setEngaged] = useState(false);
+  const ref = useRef<HTMLElement | null>(null);
 
   const toggle = () => {
     setEngaged(true);
@@ -47,6 +50,18 @@ export function useWindDownFold(armed: boolean, initiallyCollapsed: boolean,
     return () => { clearTimeout(fold); clearTimeout(folded); };
   }, [armed, engaged, collapsed, holdMs]);
 
+  const waning = armed && !engaged && !collapsed;
+  useEffect(() => {
+    if (!waning) return;
+    const onPress = (event: Event) => {
+      const section = ref.current;
+      if (section === null || section.contains(event.target as Node)) return;
+      set(true);
+    };
+    document.addEventListener("pointerdown", onPress);
+    return () => document.removeEventListener("pointerdown", onPress);
+  }, [waning]);
+
   const style = { "--wind-down-hold": `${holdMs}ms` } as CSSProperties;
-  return { collapsed, folding, waning: armed && !engaged && !collapsed, style, toggle, disarm, set };
+  return { collapsed, folding, waning, style, toggle, disarm, set, ref };
 }

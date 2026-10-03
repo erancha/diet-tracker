@@ -143,10 +143,6 @@ const TREND_ICONS: Record<TrendShape, IconName> = {
   valley: "trendValley",
 };
 
-// How long the glance holds the section open before it folds itself away: enough to take in the
-// chart's newest stretch, short enough that the tracker below is not kept waiting.
-export const WEIGHT_GLANCE_MS = 2_500;
-
 // Today's weighing. The row marks itself on the weigh-in day, which is what the stylesheet sizes
 // it by: the day the rhythm asks for a weighing reads larger. Recording stays open on any day; off
 // the weigh-in day, the row says so as soon as a figure is being typed, rather than after it is
@@ -181,8 +177,8 @@ function TodayRow({ recorded, limits, weighInWeekday, due, onRecord }: {
 // The weight log: today's weighing, the chart and the measurements, folded under one header line
 // carrying the latest weight (the fold's toggle), the target reading and a chart button. Weight
 // moves weekly, so the section normally rests folded; the caller decides when it opens. A glance
-// opens it for a few seconds on a gain, then folds it unless a toggle, the menu's fold or a saved
-// weighing took it over.
+// opens it for a short while on a gain, then folds it unless a toggle, the menu's fold or a saved
+// weighing took it over; a press anywhere else on the page folds it at once.
 export function WeightSection({ weight, settings, weighInWeekday, now, defaultExpanded, glance,
                                 onRecord, onSetTarget, onDelete, onAskChat }: {
   weight: WeightPayload;
@@ -200,8 +196,7 @@ export function WeightSection({ weight, settings, weighInWeekday, now, defaultEx
   onAskChat?: (question: string) => void;
 }) {
   const [span, setSpan] = useState<ChartSpan>(settings.chart_months);
-  const fold = useWindDownFold(glance && !defaultExpanded, !(defaultExpanded || glance),
-                               WEIGHT_GLANCE_MS);
+  const fold = useWindDownFold(glance && !defaultExpanded, !(defaultExpanded || glance));
   useGlobalFold(fold.set);
   const collapsed = fold.collapsed;
   const todayStr = isoDate(now);
@@ -233,6 +228,7 @@ export function WeightSection({ weight, settings, weighInWeekday, now, defaultEx
       className={["weight", summary.overTarget && "weight-over-target", fold.waning && "section-waning"]
         .filter(Boolean).join(" ")}
       style={fold.style}
+      ref={fold.ref}
       headerAside={
         <>
           <TargetReading summary={summary} limits={settings.limits} onSet={onSetTarget} />
