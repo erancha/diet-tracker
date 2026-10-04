@@ -446,12 +446,13 @@ th { vertical-align: top; font-size: calc(var(--cell-font-size) - 1pt); }
   th:not(:nth-last-child(-n+2)) { width: 8rem; }
 }
 /* A panel standing open unbidden makes its exit as a wind-down, not a vanishing act, so it
-   cannot read as a glitch: full presence for the first half, a deep dim across the back half —
-   split from the hold useWindDownFold sets on the section, so the dim ends where its fold
-   begins — and then the content sweeps closed via the grid row while the title line stays. The
-   body wrapper always carries the grid, so the sweep has a single row to close. */
-.section-waning { animation: section-wane calc(var(--wind-down-hold) / 2) ease
-                             calc(var(--wind-down-hold) / 2) forwards; }
+   cannot read as a glitch: full presence for the first seven tenths of the hold, a deep dim
+   across the last three — both cut from the hold useWindDownFold sets on the section, so the
+   dim ends where its fold begins — and then the content sweeps closed via the grid row while
+   the title line stays. The body wrapper always carries the grid, so the sweep has a single row
+   to close. */
+.section-waning { animation: section-wane calc(var(--wind-down-hold) * 0.3) ease
+                             calc(var(--wind-down-hold) * 0.7) forwards; }
 @keyframes section-wane { to { opacity: 0.35; } }
 .section-fold-body { display: grid; grid-template-rows: 1fr; }
 .section-fold-body > div { min-height: 0; }
