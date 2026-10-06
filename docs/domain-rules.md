@@ -45,11 +45,11 @@ least that grade's weight, and never lowered when the meal's own grade is alread
 ## Additions
 
 A meal may carry additions — accompaniments that are not a grade of their own: a sweet, sugary
-alcohol, or a dry drink (dry wine, beer). Each addition pays its configured surcharge (the carbs
-question's `additions` in the config) per routine serving on top of the meal's carb sources,
-after any fruit escalation. The
-surcharge keeps the base grade meaningful: an excellent meal with a cookie stays cheaper than a
-heavy meal with one, while an addition on every meal still compounds into a poor day score.
+alcohol, or a dry drink (dry wine, beer, a shot of neat spirits). Each addition pays its
+configured surcharge (the carbs question's `additions` in the config) per routine serving on top
+of the meal's carb sources, after any fruit escalation. The surcharge keeps the base grade
+meaningful: an excellent meal with a cookie stays cheaper than a heavy meal with one, while an
+addition on every meal still compounds into a poor day score.
 
 **Amount.** The surcharge prices a routine amount of the accompaniment — one cookie, one glass —
 so each recorded addition also names how much of it there was, from the carbs question's
@@ -63,8 +63,9 @@ sources use: helpings only discount a grade already eaten, while an amount may a
 
 **Daily allowance.** An addition may declare a `daily_allowance`: how many routine servings a
 day may carry before its surcharge starts. The program allows one dry drink a day — a glass of
-dry wine or a 330 ml beer, "not optimal but possible" from week 3 on — so `dry_alcohol` carries
-an allowance of 1, and the derivation walks the day's meals in time order charging only the
+dry wine or a 330 ml beer, "not optimal but possible" from week 3 on; the sheets never mention
+spirits, and a neat shot carries no sugar, so it is priced as that same drink — so `dry_alcohol`
+carries an allowance of 1, and the derivation walks the day's meals in time order charging only the
 servings past it: a 330 ml beer as the day's only drink costs 0, a half-liter bottle (1.5
 servings) 1.5 points, a second glass the whole surcharge. Servings past the allowance lift the
 score but never the excluded line — the program lists dry wine and beer among the foods allowed

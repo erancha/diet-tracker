@@ -200,7 +200,7 @@
           },
           {
             "id": "dry_alcohol",
-            "label": "יין יבש / בירה",
+            "label": "יין יבש / בירה / כוסית חריף",
             "value": 3,
             "daily_allowance": 1
           }
