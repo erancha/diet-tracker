@@ -276,6 +276,35 @@ describe("App", () => {
     expect(screen.queryAllByRole("listitem")).toHaveLength(0);
   });
 
+  it("brings the history table on screen when the trends section opens by hand", async () => {
+    // The graphs above the table are tall enough to leave it below the fold on the section's
+    // opening, so the hand that opened it lands on the table; folding moves nothing.
+    window.localStorage.setItem(STORAGE_KEY, "true");
+    // A day within its score rule, so no breach banner scrolls itself into view on load.
+    const client = api({ days: [{ date: isoDate(yesterdayOf(new Date())), answers: { carbs: 3 },
+                                  excluded: 0 }] });
+    const scrollIntoView = vi.spyOn(Element.prototype, "scrollIntoView")
+      .mockImplementation(() => {});
+    renderApp(false, client);
+    const heading = await screen.findByRole("button", { name: "מגמות" });
+    expect(heading).toHaveAttribute("aria-expanded", "false");
+
+    fireEvent.click(heading);
+    expect(heading).toHaveAttribute("aria-expanded", "true");
+    expect(scrollIntoView).toHaveBeenCalledTimes(1);
+    expect(scrollIntoView.mock.instances[0]).toContainElement(screen.getByRole("table"));
+    expect(scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "nearest" });
+
+    fireEvent.click(heading);
+    expect(heading).toHaveAttribute("aria-expanded", "false");
+    expect(scrollIntoView).toHaveBeenCalledTimes(1);
+
+    // The summary line under the folded heading opens the section the same way.
+    fireEvent.click(screen.getByRole("button", { name: /גרפי מגמה/ }));
+    expect(scrollIntoView).toHaveBeenCalledTimes(2);
+    scrollIntoView.mockRestore();
+  });
+
   it("reaches the chat section when its heading opens it, and stays put when it folds", async () => {
     const scrollIntoView = vi.spyOn(Element.prototype, "scrollIntoView")
       .mockImplementation(() => {});

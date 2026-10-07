@@ -122,6 +122,20 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, c
     setRecommendCommand(Date.now());
   };
   useFoldAllEffect(foldAll, trendsFold.set);
+  // The trends section opens on graphs tall enough to push its history table below the fold, so
+  // a hand opening it from the heading or the summary line is brought down to the table once
+  // the body has mounted; the menu's view command opens the section without moving the page.
+  const historyTable = useRef<HTMLDivElement>(null);
+  const [reachHistory, setReachHistory] = useState(false);
+  useEffect(() => {
+    if (!reachHistory || trendsFold.collapsed) return;
+    historyTable.current!.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    setReachHistory(false);
+  }, [reachHistory, trendsFold.collapsed]);
+  const toggleTrends = () => {
+    setReachHistory(trendsFold.collapsed);
+    trendsFold.toggle();
+  };
 
   // The history row whose read-only day view is open, or null when none is.
   const [viewedDate, setViewedDate] = useState<string | null>(null);
@@ -382,14 +396,14 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, c
             onRecommend={chatAvailable ? recommendNextMeal : undefined}
         />
         <CollapsibleSection title="מגמות" collapsed={trendsFold.collapsed}
-                            onToggle={trendsFold.toggle}
+                            onToggle={toggleTrends}
                             // While folded, a summary line names what the fold holds and opens
                             // it, and the headline trend panel stays on screen below it; open,
                             // the graphs speak for themselves and both withdraw.
                             summary={trendsFold.collapsed && (
                               <>
                                 <button type="button" className="disclosure section-summary"
-                                        aria-expanded={false} onClick={trendsFold.toggle}>
+                                        aria-expanded={false} onClick={toggleTrends}>
                                   גרפי מגמה 📈 ונתוני הימים האחרונים 📋
                                 </button>
                                 <TrendChart questionnaire={questionnaire} days={data.days}
@@ -419,6 +433,7 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, c
                        day={viewedDayQuery.data}
                        onClose={() => setViewedDate(null)} />
           )}
+          <div ref={historyTable}>
           <HistoryTable
             questionnaire={questionnaire}
             treatDay={configQuery.data.treat_day}
@@ -429,6 +444,7 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, c
             onDelete={(date) => deleteMutation.mutate(date)}
             onView={setViewedDate}
           />
+          </div>
           </div>
           </div>
           </div>
