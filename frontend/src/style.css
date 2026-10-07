@@ -478,7 +478,8 @@ td.off-norm { font-weight: bold; }
 /* A heavy day or meal reads as red text pinned to the price that earned it: the dashboard total
    and a meal's points. In the dashboard it reaches the figure rather than the whole item, so the
    alarm sits on the number its label merely names, and its specificity outranks the green that
-   figure otherwise carries. The history table says it differently, over the whole row below. */
+   figure otherwise carries. The history table says it over the whole row below, its score in the
+   chart's red. */
 .tracker-dashboard .heavy-day .score, .meal-list .heavy-meal,
 .breakdown-sum .heavy-day { color: var(--danger); }
 /* What shows for a moment — a just-picked grade's full name, the markers' legend — reads as a
@@ -503,9 +504,11 @@ td.off-norm { font-weight: bold; }
    far fainter than the cell marks it sits under, so a breaching answer still stands out on it. */
 tr.heavy-row { background: var(--breach-ground); }
 tr.heavy-row.treat-day { background: var(--treat-breach-ground-faint); }
-/* The score that earned the ground, weighted rather than recoloured: the row says which days were
-   heavy, and the bold number says which figure crossed. */
-tr.heavy-row .day-score { font-weight: bold; }
+/* The score that earned the ground, bold and in the paint the trend chart gives the same day's
+   dot: the row says which days were heavy, the number says which figure crossed, and the two
+   surfaces mark one crossing alike. */
+tr.heavy-row .day-score { font-weight: bold; color: var(--viz-critical); }
+tr.heavy-row.treat-day .day-score { color: var(--viz-treat-breach); }
 /* The bin is lifted out of the cell's line and pinned to the cell's far edge, so it holds one
    position down the column rather than trailing whatever the row's score happens to measure.
    Out of flow it contributes no width, so the cell reserves its footprint as padding instead: the

@@ -122,8 +122,8 @@ export function HistoryTable({ questionnaire, treatDay, days, today, deletableDa
           <tbody>
             {visibleDays.map((day) => {
               // The day's score crossing its rule is what the row's ground reports, and a treat
-              // day's crossing paints amber rather than red. The score column carries no mark of
-              // its own: the ground behind it says the same thing across the whole row.
+              // day's crossing paints amber rather than red. The score itself takes the color
+              // the trend chart gives that day's dot; both ride on the row's classes.
               const heavy = scoreQuestion !== undefined && scoreQuestion.id in day.answers
                 && isViolating(questionnaire, scoreQuestion.id, day.answers[scoreQuestion.id]);
               const softened = heavy && fallsOn(day.date, treatDay.weekday);
@@ -148,7 +148,7 @@ export function HistoryTable({ questionnaire, treatDay, days, today, deletableDa
                   const bound = q.type !== "points" && isBoundValue(q, value);
                   // The violation background belongs to the answer columns, where a value under
                   // its question's warn floor reddens without it. The score column leaves its
-                  // crossing to the row's ground and keeps only what opens the day view.
+                  // crossing to the row's classes and keeps only what opens the day view.
                   const classes = [
                     ...(q.type === "points"
                       ? [viewable && "view-day"]
