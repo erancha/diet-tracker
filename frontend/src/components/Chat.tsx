@@ -48,6 +48,8 @@ function composeFollowUp(target: ChatTurn, question: string): string {
   return `${chain}\n${ANSWER_LABEL} ${target.answer}\n${FOLLOW_UP_LABEL} ${question}`;
 }
 
+const SEARCH_IDLE_SECONDS = 10;
+
 // Q&A over the diet knowledge base: a composer, the user's stored transcript with a side filter,
 // a search over both lists, and a read-only list of chats other users shared. Only the counts
 // load on mount; each list is fetched when first unfolded, so a condensed sign-in never pays for
@@ -107,6 +109,13 @@ export function Chat({ email, api, sampleQuestions, answerPollSeconds,
   const [query, setQuery] = useState("");
   const [queryDraft, setQueryDraft] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
+  // A search box opened and then left blank folds itself away, giving the composer its room
+  // back; the first word written keeps it open.
+  useEffect(() => {
+    if (!searchOpen || queryDraft.trim() !== "") return;
+    const timer = setTimeout(() => setSearchOpen(false), SEARCH_IDLE_SECONDS * 1000);
+    return () => clearTimeout(timer);
+  }, [searchOpen, queryDraft]);
   const [othersFolded, setOthersFolded] = useState(true);
   // Other users' shared chats, or null until first unfolded; folding keeps what was loaded.
   const [others, setOthers] = useState<PublicChat[] | null>(null);
@@ -595,7 +604,8 @@ export function Chat({ email, api, sampleQuestions, answerPollSeconds,
     || (othersTotal !== undefined && othersTotal > 0);
 
   // The open search box takes the place of the sample questions and the composer: stacked, the
-  // two boxes would sit a phone screen apart.
+  // two boxes would sit a phone screen apart. The first words written start a sweep along the
+  // apply control's edge, pointing to the step that makes them a search.
   const search = (
     <div className="chat-search">
       {!searchOpen && sampleQuestions.length > 0 && (
@@ -617,7 +627,8 @@ export function Chat({ email, api, sampleQuestions, answerPollSeconds,
             placeholder="מילה | מילה — אחת מהן, מילה & מילה — שתיהן"
             onChange={(event) => setQueryDraft(event.target.value)} />
           <div className="chat-search-actions">
-            <button type="submit" className="secondary compact">סינון</button>
+            <button type="submit"
+              className={queryDraft.trim() === "" ? "secondary compact" : "secondary compact border-sweep"}>סינון</button>
             {searching && (
               <button type="button" className="secondary compact"
                 onClick={() => { setQuery(""); setQueryDraft(""); }}>ניקוי החיפוש</button>

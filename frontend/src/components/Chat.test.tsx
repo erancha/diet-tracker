@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError, type Api } from "../api";
@@ -1721,6 +1721,58 @@ describe("Chat", () => {
 
       expect(screen.getByRole("button", { name: "חלבון" })).toBeInTheDocument();
       expect(screen.getByRole("textbox", { name: "שאלה" })).toBeInTheDocument();
+    });
+
+    // Fake timers that still run in real time, so the ten idle seconds can be jumped over while
+    // the clicks and keystrokes keep their own small waits.
+    async function idle(seconds: number) {
+      await act(() => vi.advanceTimersByTime(seconds * 1000));
+    }
+
+    it("folds the form away once it has stood empty for ten seconds", async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      try {
+        render(<Chat email="a@gmail.com" api={searchable()} sampleQuestions={[]} answerPollSeconds={POLL_SECONDS} />);
+        await screen.findByText("מתי לישון?");
+        await userEvent.click(screen.getByRole("button", { name: "חיפוש בצ'אטים" }));
+        expect(screen.getByRole("textbox", { name: "מילות חיפוש" })).toBeInTheDocument();
+
+        await idle(10);
+
+        expect(screen.queryByRole("textbox", { name: "מילות חיפוש" })).not.toBeInTheDocument();
+        expect(screen.getByRole("textbox", { name: "שאלה" })).toBeInTheDocument();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("keeps the form while its words are still being written", async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      try {
+        render(<Chat email="a@gmail.com" api={searchable()} sampleQuestions={[]} answerPollSeconds={POLL_SECONDS} />);
+        await screen.findByText("מתי לישון?");
+        await userEvent.click(screen.getByRole("button", { name: "חיפוש בצ'אטים" }));
+        await idle(9);
+        await userEvent.type(screen.getByRole("textbox", { name: "מילות חיפוש" }), "חלבון");
+
+        await idle(10);
+
+        expect(screen.getByRole("textbox", { name: "מילות חיפוש" })).toHaveValue("חלבון");
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("sweeps the apply control's edge once the box holds words", async () => {
+      render(<Chat email="a@gmail.com" api={searchable()} sampleQuestions={[]} answerPollSeconds={POLL_SECONDS} />);
+      await screen.findByText("מתי לישון?");
+      await userEvent.click(screen.getByRole("button", { name: "חיפוש בצ'אטים" }));
+      const apply = screen.getByRole("button", { name: "סינון" });
+      expect(apply).not.toHaveClass("border-sweep");
+
+      await userEvent.type(screen.getByRole("textbox", { name: "מילות חיפוש" }), "חלבון");
+
+      expect(apply).toHaveClass("border-sweep");
     });
 
     it("keeps the words in force after the form closes", async () => {

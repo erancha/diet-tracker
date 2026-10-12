@@ -1048,18 +1048,25 @@ main:not(.intro-0, .intro-1, .intro-2, .intro-3, .intro-4) .weight .section-togg
 /* The text search above both chat lists: a funnel unfolding a form whose words each list is
    narrowed to. It shares the sample questions' row, which never fills the line, so the search
    costs no height of its own; with the form open those questions give way and it stands alone.
-   The words need the room a question gets, so the box takes the whole line and its controls
-   follow on the next one. */
-.chat-search { display: flex; flex-wrap: wrap; align-items: start; margin-bottom: 0.5rem; }
+   The words need the room a question gets, so the box takes the whole line, set off from the
+   funnel's disc above it, and its controls follow on the next one. */
+.chat-search { display: flex; flex-wrap: wrap; row-gap: 0.5rem; align-items: start; margin-bottom: 0.5rem; }
 .chat-search > .glyph { margin-inline-start: auto; }
 .chat-search form { flex-basis: 100%; flex-wrap: wrap; justify-content: flex-end; margin-bottom: 0; }
 .chat-search textarea { flex-basis: 100%; }
 /* Applying and clearing sit under the box, set off from the counts the words act on so the row
    does not read as part of the list heading below it. */
 .chat-search-actions { display: flex; gap: 0.5rem; margin-block-end: 0.75rem; }
-/* A funnel standing over a query in force carries the accent and fills solid, against the outline
-   every other glyph keeps, so a narrowed list reads as narrowed even with the form folded away. */
-.chat-search-on { --btn-fg: var(--accent); }
+/* The sweep that words in the box start on the apply control runs a short two seconds: the
+   step is a tap away, not a control to find. */
+.chat-search-actions .border-sweep { --sweep-seconds: 2; }
+/* While its form is open the funnel holds the pressed state the header's account trigger takes,
+   so the control reads as the source of the box under it. A funnel standing over a query in
+   force goes further: a filled accent disc with the glyph in white, the mark the primary button
+   carries, so a narrowed list reads as narrowed from across the screen even with the form folded
+   away. Outscoring the hover rule keeps either state from lightening back under the pointer. */
+.chat-search > .glyph[aria-expanded="true"]:not(:disabled) { --btn-bg: #dfe4e6; --btn-fg: var(--accent); }
+.chat-search > .glyph.chat-search-on:not(:disabled) { --btn-bg: var(--accent); --btn-fg: #fff; }
 .chat-search-on .icon { fill: currentColor; }
 .chat .clear-draft { position: absolute; inset-inline-end: 0.2rem; top: 50%; transform: translateY(-50%); }
 /* Heads the relocated composer while a reply is in progress, carrying its cancel control. */
