@@ -121,7 +121,8 @@ def _day_payload(store, questionnaire, sub, day) -> dict:
                                      questionnaire.amounts(),
                                      questionnaire.portions(),
                                      questionnaire.second_source(),
-                                     questionnaire.excluded()))}
+                                     questionnaire.excluded(),
+                                     questionnaire.extra_fruit()))}
 
 
 def _submit(sub, body):
@@ -138,7 +139,7 @@ def _submit(sub, body):
                     questionnaire.addition_values(), questionnaire.addition_allowances(),
                     questionnaire.amounts(), questionnaire.portions(),
                     questionnaire.second_source(),
-                    questionnaire.excluded())
+                    questionnaire.excluded(), questionnaire.extra_fruit())
     try:
         questionnaire.validate_answers(answers, floors=asdict(floors))
     except ValueError as error:

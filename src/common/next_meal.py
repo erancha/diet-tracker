@@ -16,7 +16,8 @@ def compose(meals: list, questionnaire, clock: str) -> str:
     weighed = meal_weights(meals, questionnaire.carb_weights(), questionnaire.addition_values(),
                            questionnaire.addition_allowances(), questionnaire.amounts(),
                            questionnaire.portions(),
-                           questionnaire.second_source(), questionnaire.excluded())
+                           questionnaire.second_source(), questionnaire.excluded(),
+                           questionnaire.extra_fruit())
     heavy = any(weight.total >= carbs.heavy_meal for weight in weighed)
     facts = [
         f"ארוחות עד כה היום: {len(meals)}",

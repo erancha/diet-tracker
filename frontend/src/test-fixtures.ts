@@ -64,7 +64,7 @@ export const trackerQuestionnaire: Questionnaire = {
     // The fat question: the form's servings count runs up to its per_meal_max.
     { id: "fat", type: "single", text: "שומנים מרוכזים", day_title: "מנות שומן", per_meal_max: 5,
       tooltip: "מנת שומן = כף שמן", choices: [] },
-    { id: "carbs", type: "points", text: "פחמימות", max: 30, heavy_meal: 4,
+    { id: "carbs", type: "points", text: "פחמימות", max: 30, heavy_meal: 4, extra_fruit: 2,
       additions: [{ id: "sweet", label: "מתוק", value: 4 },
                   { id: "alcohol", label: "אלכוהול ממותק", value: 4 },
                   // The one addition with a daily allowance: its first serving is free.
@@ -81,14 +81,14 @@ export const trackerQuestionnaire: Questionnaire = {
       second_source: { primary_grade_max: 2, light_grade_max: 2 },
       // The steepest grade and the sweet addition are what the program's non-treat days exclude
       // here, so grade 4 and the other additions exercise the permitted side of the decomposition.
-      excluded_grade: 7, excluded_additions: ["sweet"],
+      excluded_grade: 6, excluded_additions: ["sweet"],
       // Grades with and without an examples list, so the label-density switch is exercised over
       // both kinds at once; carb_grade_2 is the one primary grade the second-source contract admits.
       choices: [{ id: "no_carbs", label: "ללא פחמימות", value: 0 },
                 { id: "carb_grade_2", label: "דרגה 2", examples: "קינואה", value: 2 },
                 { id: "carb_grade_4", label: "דרגה 4", examples: "אורז לבן", value: 4 },
                 { id: "grade4b", label: "דרגה 4!", value: 4 },
-                { id: "carb_grade_7", label: "דרגה 7", examples: "קמח לבן", value: 7 }] },
+                { id: "carb_grade_6", label: "דרגה 6", examples: "קמח לבן", value: 6 }] },
   ],
   rules: [
     { id: "heavy_day", question_id: "carbs", at_least: 8 },

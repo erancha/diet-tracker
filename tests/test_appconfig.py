@@ -22,7 +22,7 @@ def write(tmp_path, weight, meals=LEGAL_MEALS, day_close=LEGAL_DAY_CLOSE, treat_
     raw = {
         "questionnaire": {
             "version": 1,
-            "questions": [{"id": "carbs", "type": "points", "text": "carbs", "max": 30, "heavy_meal": 4,
+            "questions": [{"id": "carbs", "type": "points", "text": "carbs", "max": 30, "heavy_meal": 4, "extra_fruit": 2,
                            "excluded_grade": 6, "excluded_additions": [],
                            "choices": [{"id": "no_carbs", "label": "none", "value": 0}]}],
             "rules": [{"id": "heavy_day", "question_id": "carbs", "at_least": 8}],

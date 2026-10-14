@@ -59,8 +59,8 @@ def test_meals_range_groups_each_day_and_closes_over_the_last_days_ids(store):
     store.add_meal("u1", "2026-08-19", meal("2026-08-19T09:00:00+03:00", "carb_grade_3"))
     store.add_meal("u1", "2026-08-20", meal("2026-08-20T09:10:00+03:00", "no_carbs"))
     store.add_meal("u1", "2026-08-20", meal("2026-08-20T13:30:00+03:00", "carb_grade_4"))
-    store.add_meal("u1", "2026-08-21", meal("2026-08-21T09:00:00+03:00", "carb_grade_7"))
-    store.add_meal("u2", "2026-08-20", meal("2026-08-20T09:00:00+03:00", "carb_grade_7"))
+    store.add_meal("u1", "2026-08-21", meal("2026-08-21T09:00:00+03:00", "carb_grade_6"))
+    store.add_meal("u2", "2026-08-20", meal("2026-08-20T09:00:00+03:00", "carb_grade_6"))
     by_day = store.get_meals_range("u1", "2026-08-19", "2026-08-20")
     assert sorted(by_day) == ["2026-08-19", "2026-08-20"]
     assert [m["carbs_choice"] for m in by_day["2026-08-20"]] == ["no_carbs", "carb_grade_4"]
@@ -181,9 +181,9 @@ def test_meal_stored_before_the_second_source_reads_as_drawing_on_one(store, ddb
 def test_a_second_carb_source_roundtrips_with_its_own_helping(store):
     store.add_meal("u1", "2026-08-20", meal(
         "2026-08-20T13:30:00+03:00", "carb_grade_2", vegetables=True,
-        second_source={"carbs_choice": "carb_grade_7", "portion": "small"}))
+        second_source={"carbs_choice": "carb_grade_6", "portion": "small"}))
     assert store.get_meals("u1", "2026-08-20")[0]["second_source"] == {
-        "carbs_choice": "carb_grade_7", "portion": "small"}
+        "carbs_choice": "carb_grade_6", "portion": "small"}
 
 
 def _store_meal_with_second(ddb, second):
@@ -200,20 +200,20 @@ def test_a_flag_shaped_second_source_reads_under_the_portion_contract(store, ddb
     _store_meal_with_second(ddb, {"carbs_choice": "carb_grade_1", "small_portion": False})
     assert store.get_meals("u1", "2026-08-20")[0]["second_source"] == {
         "carbs_choice": "carb_grade_1", "portion": None}
-    _store_meal_with_second(ddb, {"carbs_choice": "carb_grade_7", "small_portion": True})
+    _store_meal_with_second(ddb, {"carbs_choice": "carb_grade_6", "small_portion": True})
     assert store.get_meals("u1", "2026-08-20")[0]["second_source"] == {
-        "carbs_choice": "carb_grade_7", "portion": "medium"}
-    _store_meal_with_second(ddb, {"carbs_choice": "carb_grade_7", "small_portion": False})
+        "carbs_choice": "carb_grade_6", "portion": "medium"}
+    _store_meal_with_second(ddb, {"carbs_choice": "carb_grade_6", "small_portion": False})
     assert store.get_meals("u1", "2026-08-20")[0]["second_source"] == {
-        "carbs_choice": "carb_grade_7", "portion": "medium"}
+        "carbs_choice": "carb_grade_6", "portion": "medium"}
 
 
 def test_a_helping_from_the_retired_scale_reads_as_its_rank_order_equivalent(store, ddb):
     # quarter/half were the helping ids second sources first shipped under; they read as the
     # current scale's small/medium so nothing downstream meets an id the config no longer knows.
-    _store_meal_with_second(ddb, {"carbs_choice": "carb_grade_7", "portion": "quarter"})
+    _store_meal_with_second(ddb, {"carbs_choice": "carb_grade_6", "portion": "quarter"})
     assert store.get_meals("u1", "2026-08-20")[0]["second_source"]["portion"] == "small"
-    _store_meal_with_second(ddb, {"carbs_choice": "carb_grade_7", "portion": "half"})
+    _store_meal_with_second(ddb, {"carbs_choice": "carb_grade_6", "portion": "half"})
     assert store.get_meals("u1", "2026-08-20")[0]["second_source"]["portion"] == "medium"
 
 
@@ -222,12 +222,12 @@ def test_a_meal_stored_with_the_small_portion_flag_reads_as_the_small_helping(st
     # as the scale's smallest helping; an unflagged one carries no helping at all.
     ddb.Table("meals").put_item(Item={
         "pk": "u1", "sk": "2026-08-20#09:10:00-abc123",
-        "at": "2026-08-20T09:10:00+03:00", "carbs_choice": "carb_grade_7", "vegetables": False,
+        "at": "2026-08-20T09:10:00+03:00", "carbs_choice": "carb_grade_6", "vegetables": False,
         "fruit": False, "additions": [], "small_portion": True})
     assert store.get_meals("u1", "2026-08-20")[0]["portion"] == "small"
     ddb.Table("meals").put_item(Item={
         "pk": "u1", "sk": "2026-08-20#09:10:00-abc123",
-        "at": "2026-08-20T09:10:00+03:00", "carbs_choice": "carb_grade_7", "vegetables": False,
+        "at": "2026-08-20T09:10:00+03:00", "carbs_choice": "carb_grade_6", "vegetables": False,
         "fruit": False, "additions": [], "small_portion": False})
     assert store.get_meals("u1", "2026-08-20")[0]["portion"] is None
 
@@ -259,10 +259,10 @@ def test_a_retired_grade_keeps_the_additions_already_recorded_beside_it(store, d
 
 
 def test_a_retired_grade_needing_no_addition_maps_to_the_grade_alone(store, ddb, monkeypatch):
-    monkeypatch.setitem(store_module._RETIRED_GRADES, "retired_plain", ("carb_grade_7", None))
+    monkeypatch.setitem(store_module._RETIRED_GRADES, "retired_plain", ("carb_grade_6", None))
     _store_meal(ddb, "retired_plain", [{"id": "sweet", "amount": "regular"}])
     meal = store.get_meals("u1", "2026-08-20")[0]
-    assert meal["carbs_choice"] == "carb_grade_7"
+    assert meal["carbs_choice"] == "carb_grade_6"
     assert meal["additions"] == [{"id": "sweet", "amount": "regular"}]
 
 

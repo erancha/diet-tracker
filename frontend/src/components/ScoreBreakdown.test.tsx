@@ -5,20 +5,15 @@ import { trackerQuestionnaire } from "../test-fixtures";
 import { STORAGE_KEY as GRADE_LABELS_KEY } from "../gradeLabels";
 import type { Meal, Questionnaire } from "../types";
 
-// The tracker fixture plus the grade a second fruit escalates to, so the escalation term prices.
-const questionnaire: Questionnaire = {
-  ...trackerQuestionnaire,
-  questions: trackerQuestionnaire.questions.map((q) => q.id !== "carbs" ? q
-    : { ...q, choices: [...q.choices, { id: "carb_grade_5", label: "דרגה 5", examples: "פירות", value: 5 }] }),
-};
+const questionnaire: Questionnaire = trackerQuestionnaire;
 
 // Listed out of time order: the breakdown reads the day as it unfolded, so the late meal with
 // the second fruit must come last however the payload lists it.
 const meals: Meal[] = [
   { id: "late", at: "2026-08-20T19:00:00+03:00", carbs_choice: "carb_grade_2", vegetables: false, fruit: true,
     fat_servings: 0, additions: [{ id: "sweet", amount: "much" }, { id: "alcohol", amount: null }], portion: null,
-    second_source: { carbs_choice: "carb_grade_7", portion: "medium" } },
-  { id: "early", at: "2026-08-20T09:00:00+03:00", carbs_choice: "carb_grade_7", vegetables: true, fruit: true,
+    second_source: { carbs_choice: "carb_grade_6", portion: "medium" } },
+  { id: "early", at: "2026-08-20T09:00:00+03:00", carbs_choice: "carb_grade_6", vegetables: true, fruit: true,
     fat_servings: 0, additions: [], portion: "small", second_source: { carbs_choice: "carb_grade_2", portion: null } },
 ];
 
@@ -37,55 +32,55 @@ describe("ScoreBreakdown", () => {
     renderBreakdown();
     const rows = screen.getAllByRole("listitem");
     expect(rows.map((r) => within(r).getByText(/^\d{2}:\d{2}$/).textContent)).toEqual(["09:00", "19:00"]);
-    // 09:00: grade 7 at a small helping (4.2), grade 2 merged into it (lifts nothing).
-    expect(rows[0]).toHaveTextContent("דרגה 7 (קמח לבן)");
+    // 09:00: grade 6 at a small helping (3.6), grade 2 merged into it (lifts nothing).
+    expect(rows[0]).toHaveTextContent("דרגה 6 (קמח לבן)");
     expect(rows[0]).toHaveTextContent("מנה קטנה");
-    expect(rows[0]).toHaveTextContent("4.2");
+    expect(rows[0]).toHaveTextContent("3.6");
     expect(rows[0]).toHaveTextContent("דרגה 2 (קינואה)");
     expect(rows[0]).toHaveTextContent("+ 0");
-    // 19:00: grade 2 (2) + grade 7 at a medium helping (5.6), then the second fruit lifts nothing
-    // past 7.6, then a heaped sweet (5) and a drink recorded before amounts (4): 16.6.
+    // 19:00: grade 2 (2) + grade 6 at a medium helping (4.8), then the second fruit's surcharge
+    // (2), then a heaped sweet (5) and a drink recorded before amounts (4): 17.8.
     expect(rows[1]).toHaveTextContent("מנה בינונית");
-    expect(rows[1]).toHaveTextContent("5.6");
+    expect(rows[1]).toHaveTextContent("4.8");
     expect(rows[1]).toHaveTextContent("פרי נוסף");
     expect(rows[1]).toHaveTextContent("מתוק");
     expect(rows[1]).toHaveTextContent("הרבה");
     expect(rows[1]).toHaveTextContent("+ 5");
     expect(rows[1]).toHaveTextContent("אלכוהול ממותק");
     expect(rows[1]).toHaveTextContent("+ 4");
-    expect(rows[1]).toHaveTextContent("= 16.6");
+    expect(rows[1]).toHaveTextContent("= 17.8");
   });
 
   it("marks the flour-and-sugar terms, the ones the dashboard's part adds up", () => {
     renderBreakdown();
-    // Grade 7 at a small helping, grade 7 as the heavy second source, and the heaped sweet.
+    // Grade 6 at a small helping, grade 6 as the heavy second source, and the heaped sweet.
     expect([...document.querySelectorAll(".breakdown-points.excluded")].map((e) => e.textContent))
-      .toEqual(["4.2", "+ 5.6", "+ 5"]);
+      .toEqual(["3.6", "+ 4.8", "+ 5"]);
   });
 
   it("spells every grade out with its examples whatever density the tracker is set to", () => {
     window.localStorage.setItem(GRADE_LABELS_KEY, "false");
     renderBreakdown();
-    expect(screen.getAllByText(/דרגה 7 \(קמח לבן\)/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/דרגה 6 \(קמח לבן\)/).length).toBeGreaterThan(0);
     window.localStorage.removeItem(GRADE_LABELS_KEY);
   });
 
   it("sums the day beside the rule bound the score crossed", () => {
     renderBreakdown();
     const foot = screen.getByText(/סה״כ/);
-    expect(foot).toHaveTextContent("20.8");
+    expect(foot).toHaveTextContent("21.4");
     expect(foot).toHaveTextContent("מעל 8");
   });
 
   it("paints the sum by the day rule, as the dashboard paints the score", () => {
     renderBreakdown();
-    expect(screen.getByText("20.8")).toHaveClass("heavy-day");
-    expect(screen.getByText("20.8")).not.toHaveClass("treat-day");
+    expect(screen.getByText("21.4")).toHaveClass("heavy-day");
+    expect(screen.getByText("21.4")).not.toHaveClass("treat-day");
   });
 
   it("softens the sum's mark on the treat day", () => {
     renderBreakdown(vi.fn(), "THU");
-    expect(screen.getByText("20.8")).toHaveClass("heavy-day", "treat-day");
+    expect(screen.getByText("21.4")).toHaveClass("heavy-day", "treat-day");
   });
 
   it("carries no control of its own: the score link that opened it is what closes it", () => {

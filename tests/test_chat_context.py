@@ -49,7 +49,7 @@ def test_today_and_yesterday_meals_are_detailed_with_hebrew_labels(store, questi
                                      vegetables=True, fat_servings=2))
     store.add_meal("u1", YESTERDAY, meal(
         f"{YESTERDAY}T09:00:00+03:00", choice="carb_grade_4", portion="small",
-        second_source={"carbs_choice": "carb_grade_7", "portion": "medium"}))
+        second_source={"carbs_choice": "carb_grade_6", "portion": "medium"}))
 
     data = data_of(chat_context.user_context(store, questionnaire, "u1", TODAY))
 
@@ -64,11 +64,11 @@ def test_today_and_yesterday_meals_are_detailed_with_hebrew_labels(store, questi
     assert "פרי" not in entry
 
     yesterday_detail = data["אתמול"]
-    # grade 4 at the small helping + grade 7 at the medium helping: 2.4 + 5.6
-    assert yesterday_detail["ציון יומי"] == 8
+    # grade 4 at the small helping + grade 6 at the medium helping: 2.4 + 4.8
+    assert yesterday_detail["ציון יומי"] == pytest.approx(7.2)
     (entry,) = yesterday_detail["ארוחות"]
     assert entry["מקור פחמימה"] == "דרגה 4 (מנה קטנה)"
-    assert entry["מקור פחמימה נוסף"] == "דרגה 7 (מנה בינונית)"
+    assert entry["מקור פחמימה נוסף"] == "דרגה 6 (מנה בינונית)"
     assert "מנות שומן" not in entry
 
 

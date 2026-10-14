@@ -599,11 +599,11 @@ def test_weekly_counts_the_clean_days_off_the_treat_day(env):
     e, sent = env
     for back in (1, 2, 3):
         e.store.put_day("u1", days_before(today(), back), CLEAN, 1, "t")
-    # Grade 7 is flour and sugar, which the program's six non-treat days leave out; grade 2 is not.
+    # Grade 6 is flour and sugar, which the program's six non-treat days leave out; grade 2 is not.
     # Whichever weekday the test runs on, the flour lands on a day that is not the treat day.
     flour_day, plain_day = [day for day in (days_before(today(), back) for back in (1, 2, 3))
                             if not rules.falls_on(day, e.treat_weekday)][:2]
-    e.store.add_meal("u1", flour_day, meal(f"{flour_day}T12:00:00+03:00", "carb_grade_7"))
+    e.store.add_meal("u1", flour_day, meal(f"{flour_day}T12:00:00+03:00", "carb_grade_6"))
     e.store.add_meal("u1", plain_day, meal(f"{plain_day}T12:00:00+03:00", "carb_grade_2"))
 
     _run_weekly(e)

@@ -14,7 +14,7 @@ const questionnaire: Questionnaire = {
     { id: "vegetables", type: "single", text: "ירקות", warn_below: 2, choices: [] },
     { id: "fat", type: "single", text: "שומן", warn_below: 2, choices: [] },
     { id: "eating_window", type: "single", text: "חלון", unit: "שעות", choices: [] },
-    { id: "carbs", type: "points", text: "פחמימות", max: 30, heavy_meal: 4,
+    { id: "carbs", type: "points", text: "פחמימות", max: 30, heavy_meal: 4, extra_fruit: 2,
       day_title: "ציון יומי", choices: [] },
   ],
   rules: [
@@ -124,16 +124,16 @@ describe("DayDashboard score link", () => {
 
 describe("DayDashboard flour-and-sugar part", () => {
   it("names the score's flour-and-sugar points beside it", () => {
-    const meals = [{ ...trackedDay.meals[1], carbs_choice: "carb_grade_7", fruit: false,
+    const meals = [{ ...trackedDay.meals[1], carbs_choice: "carb_grade_6", fruit: false,
                      additions: [{ id: "sweet", amount: null }] }];
     render(<DayDashboard questionnaire={trackerQuestionnaire} treatDay={TREAT_DAY} date={ORDINARY}
-                         meals={meals} derived={{ ...trackedDay.derived, carbs: 11 }} />);
-    expect(screen.getByRole("button", { name: /קמחים וסוכרים/ })).toHaveTextContent("(קמחים וסוכרים: 11)");
+                         meals={meals} derived={{ ...trackedDay.derived, carbs: 10 }} />);
+    expect(screen.getByRole("button", { name: /קמחים וסוכרים/ })).toHaveTextContent("(קמחים וסוכרים: 10)");
   });
 
   it("floats the part's name over its figure for two seconds when tapped", () => {
     vi.useFakeTimers();
-    const meals = [{ ...trackedDay.meals[1], carbs_choice: "carb_grade_7", fruit: false,
+    const meals = [{ ...trackedDay.meals[1], carbs_choice: "carb_grade_6", fruit: false,
                      additions: [{ id: "sweet", amount: null }] }];
     render(<DayDashboard questionnaire={trackerQuestionnaire} treatDay={TREAT_DAY} date={ORDINARY}
                          meals={meals} derived={{ ...trackedDay.derived, carbs: 11 }} />);

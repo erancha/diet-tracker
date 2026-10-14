@@ -146,6 +146,13 @@ def test_the_treat_day_is_judged_like_any_day_and_marked_softer():
     assert "בכתום" in section
 
 
+def test_extra_fruit_surcharge():
+    # The fruit rule names the surcharge each fruit after the day's first adds, so a repriced
+    # config must reach the sentence the chat answers from.
+    section = _doc_section("כלל הפרי")
+    assert f"מוסיפה **{CARBS['extra_fruit']} נקודות**" in section
+
+
 def test_trend_chart_excluded_line():
     # The guide spells out what the chart's second line sums, so a config that excludes another
     # grade or another addition must reach the sentence.

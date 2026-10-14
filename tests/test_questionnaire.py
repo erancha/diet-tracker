@@ -9,7 +9,7 @@ def minimal(**overrides):
     raw = {
         "version": 1,
         "questions": [{
-            "id": "carbs", "type": "points", "text": "carbs", "max": 30, "heavy_meal": 4,
+            "id": "carbs", "type": "points", "text": "carbs", "max": 30, "heavy_meal": 4, "extra_fruit": 2,
             "excluded_grade": 6, "excluded_additions": [],
             "choices": [{"id": "no_carbs", "label": "none", "value": 0},
                         {"id": "grade3", "label": "g3", "value": 3}],
@@ -22,7 +22,7 @@ def minimal(**overrides):
 
 def test_repo_config_loads_with_numeric_choices_and_threshold_rules():
     q = appconfig.load(APP_CONFIG).questionnaire
-    assert q.version == 16
+    assert q.version == 17
     carbs = q.question("carbs")
     assert carbs.type == "points" and carbs.max == 35
     # One bound defines a heavy meal, another a heavy day; the day bound lives on its rule.
@@ -34,7 +34,7 @@ def test_repo_config_loads_with_numeric_choices_and_threshold_rules():
     assert q.question("drinking").day_heading == f'{q.question("drinking").text} (ליטר)'
     # The grade ladder ranks a meal by its carb source alone: one row per grade, weighted by the
     # grade itself, with no rung standing for a portion of another.
-    assert [w for g, w in q.carb_weights().items() if g != "no_carbs"] == [1, 2, 3, 4, 5, 6, 7]
+    assert [w for g, w in q.carb_weights().items() if g != "no_carbs"] == [1, 2, 3, 4, 5, 6]
     assert q.carb_weights()["no_carbs"] == 0
     # Grades that stood for a quantity, or collapsed two of the scale's steps into one, are gone
     # from the picker; the meals recorded under them were migrated to the current ids in the table.
@@ -154,15 +154,15 @@ def test_excluding_an_addition_the_question_does_not_declare_is_rejected():
 
 
 def test_repo_config_excludes_the_flour_grades_and_the_sugary_additions():
-    # Grades 6 and 7 are the flours and sugar the program's six non-treat days exclude
-    # absolutely, while grades 4 and 5 — white rice, sweet potato, fruit — are permitted within
-    # them: a bound one grade lower would lift the excluded line on most days. Of the additions,
+    # Grades 5 and 6 are the flours and sugar the program's six non-treat days exclude
+    # absolutely, while grade 4 — white rice, sweet potato — is permitted within them: a bound
+    # one grade lower would lift the excluded line on most days. Of the additions,
     # a sweet and sugary alcohol are excluded from the first serving; a dry drink is allowed
     # within its daily allowance, so it never lands on the excluded line.
     excluded = appconfig.load(APP_CONFIG).questionnaire.excluded()
-    assert excluded.grade == 6
+    assert excluded.grade == 5
     assert excluded.additions == ("sweet", "alcohol")
-    assert not excluded.counts_source(5) and excluded.counts_source(6)
+    assert not excluded.counts_source(4) and excluded.counts_source(5)
     assert excluded.counts_addition("sweet") and excluded.counts_addition("alcohol")
     assert not excluded.counts_addition("dry_alcohol")
 

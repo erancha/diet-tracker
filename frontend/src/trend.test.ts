@@ -50,9 +50,9 @@ describe("liveTrendDay", () => {
     // The server sends the subtotal for the days it has stored; the day still being tracked is
     // decomposed in the browser, from the meals the app already holds.
     const day = { ...trackedDay, meals: [
-      { ...trackedDay.meals[0], carbs_choice: "carb_grade_7",
+      { ...trackedDay.meals[0], carbs_choice: "carb_grade_6",
         fat_servings: 0, additions: [{ id: "sweet", amount: "regular" }] }] };
-    expect(liveTrendDay(trackerQuestionnaire, day, [])!.excluded).toBe(11);
+    expect(liveTrendDay(trackerQuestionnaire, day, [])!.excluded).toBe(10);
   });
 
   it("returns null before the first meal", () => {

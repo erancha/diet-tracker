@@ -11,7 +11,7 @@ const fixture = JSON.parse(
 describe("deriveDay", () => {
   for (const vector of fixture.vectors) {
     it(vector.name, () => {
-      expect(deriveDay(vector.meals, fixture.weights, fixture.addition_values, fixture.addition_allowances, fixture.amounts, fixture.portions, fixture.second_source, fixture.excluded)).toEqual(vector.derived);
+      expect(deriveDay(vector.meals, fixture.weights, fixture.addition_values, fixture.addition_allowances, fixture.amounts, fixture.portions, fixture.second_source, fixture.excluded, fixture.extra_fruit)).toEqual(vector.derived);
     });
   }
 });
@@ -19,7 +19,7 @@ describe("deriveDay", () => {
 describe("excludedPoints", () => {
   for (const vector of fixture.vectors) {
     it(vector.name, () => {
-      expect(excludedPoints(vector.meals, fixture.weights, fixture.addition_values, fixture.addition_allowances, fixture.amounts, fixture.portions, fixture.second_source, fixture.excluded)).toBe(vector.excluded);
+      expect(excludedPoints(vector.meals, fixture.weights, fixture.addition_values, fixture.addition_allowances, fixture.amounts, fixture.portions, fixture.second_source, fixture.excluded, fixture.extra_fruit)).toBe(vector.excluded);
     });
   }
 
@@ -27,7 +27,7 @@ describe("excludedPoints", () => {
     // Every term of the subtotal is also a term of the score, so the chart's second line can
     // never rise above the first.
     for (const vector of fixture.vectors) {
-      expect(excludedPoints(vector.meals, fixture.weights, fixture.addition_values, fixture.addition_allowances, fixture.amounts, fixture.portions, fixture.second_source, fixture.excluded))
+      expect(excludedPoints(vector.meals, fixture.weights, fixture.addition_values, fixture.addition_allowances, fixture.amounts, fixture.portions, fixture.second_source, fixture.excluded, fixture.extra_fruit))
         .toBeLessThanOrEqual(vector.derived.carbs);
     }
   });
@@ -36,30 +36,30 @@ describe("excludedPoints", () => {
 describe("mealWeights", () => {
   for (const vector of fixture.vectors) {
     it(`sums to the day's carb score — ${vector.name}`, () => {
-      const perMeal = mealWeights(vector.meals, fixture.weights, fixture.addition_values, fixture.addition_allowances, fixture.amounts, fixture.portions, fixture.second_source, fixture.excluded);
+      const perMeal = mealWeights(vector.meals, fixture.weights, fixture.addition_values, fixture.addition_allowances, fixture.amounts, fixture.portions, fixture.second_source, fixture.excluded, fixture.extra_fruit);
       expect(perMeal.reduce((sum, w) => sum + w.total, 0)).toBe(vector.derived.carbs);
     });
   }
 
   it("aligns results with the input order, not chronological order", () => {
     const meals = [
-      { at: "2026-08-20T20:00:00+03:00", carbs_choice: "carb_grade_6", vegetables: false, fruit: false, fat_servings: 0, additions: [], portion: null, second_source: null },
+      { at: "2026-08-20T20:00:00+03:00", carbs_choice: "carb_grade_5", vegetables: false, fruit: false, fat_servings: 0, additions: [], portion: null, second_source: null },
       { at: "2026-08-20T08:00:00+03:00", carbs_choice: "no_carbs", vegetables: false, fruit: false, fat_servings: 0, additions: [], portion: null, second_source: null },
     ];
-    expect(mealWeights(meals, fixture.weights, fixture.addition_values, fixture.addition_allowances, fixture.amounts, fixture.portions, fixture.second_source, fixture.excluded).map((w) => w.total)).toEqual([6, 0]);
+    expect(mealWeights(meals, fixture.weights, fixture.addition_values, fixture.addition_allowances, fixture.amounts, fixture.portions, fixture.second_source, fixture.excluded, fixture.extra_fruit).map((w) => w.total)).toEqual([5, 0]);
   });
 
-  it("escalates the chronologically later fruit meal even when listed first", () => {
+  it("surcharges the chronologically later fruit meal even when listed first", () => {
     const meals = [
       { at: "2026-08-20T13:00:00+03:00", carbs_choice: "carb_grade_1", vegetables: false, fruit: true, fat_servings: 0, additions: [], portion: null, second_source: null },
       { at: "2026-08-20T09:00:00+03:00", carbs_choice: "carb_grade_1", vegetables: false, fruit: true, fat_servings: 0, additions: [], portion: null, second_source: null },
     ];
-    expect(mealWeights(meals, fixture.weights, fixture.addition_values, fixture.addition_allowances, fixture.amounts, fixture.portions, fixture.second_source, fixture.excluded).map((w) => w.total)).toEqual([5, 1]);
+    expect(mealWeights(meals, fixture.weights, fixture.addition_values, fixture.addition_allowances, fixture.amounts, fixture.portions, fixture.second_source, fixture.excluded, fixture.extra_fruit).map((w) => w.total)).toEqual([3, 1]);
   });
 });
 
 describe("mealTerms", () => {
-  const scales = [fixture.weights, fixture.addition_values, fixture.addition_allowances, fixture.amounts, fixture.portions, fixture.second_source, fixture.excluded] as const;
+  const scales = [fixture.weights, fixture.addition_values, fixture.addition_allowances, fixture.amounts, fixture.portions, fixture.second_source, fixture.excluded, fixture.extra_fruit] as const;
 
   for (const vector of fixture.vectors) {
     it(`terms add up to each meal's weight — ${vector.name}`, () => {
@@ -79,9 +79,9 @@ describe("mealTerms", () => {
   }
 
   it("names the helping a discounted grade was eaten at and the helping of a heavy second source", () => {
-    const meal = { at: "2026-08-20T13:00:00+03:00", carbs_choice: "carb_grade_6", vegetables: false, fruit: false, fat_servings: 0, additions: [], portion: "small", second_source: { carbs_choice: "carb_grade_4", portion: "medium" } };
+    const meal = { at: "2026-08-20T13:00:00+03:00", carbs_choice: "carb_grade_5", vegetables: false, fruit: false, fat_servings: 0, additions: [], portion: "small", second_source: { carbs_choice: "carb_grade_4", portion: "medium" } };
     expect(mealTerms([meal], ...scales)).toEqual([[
-      { kind: "source", choice: "carb_grade_6", portion: "small", points: 3.6, excluded: true },
+      { kind: "source", choice: "carb_grade_5", portion: "small", points: 3, excluded: true },
       { kind: "second_source", choice: "carb_grade_4", portion: "medium", merged: false, points: 3.2, excluded: false },
     ]]);
   });
@@ -101,7 +101,7 @@ describe("mealTerms", () => {
     ]]);
   });
 
-  it("prices the second fruit's escalation as its own term, before the additions at their amounts", () => {
+  it("prices the extra fruit as its own term, before the additions at their amounts", () => {
     const meals = [
       { at: "2026-08-20T13:00:00+03:00", carbs_choice: "no_carbs", vegetables: false, fruit: true, fat_servings: 0, additions: [{ id: "sweet", amount: "much" }, { id: "alcohol", amount: null }], portion: null, second_source: null },
       { at: "2026-08-20T09:00:00+03:00", carbs_choice: "carb_grade_1", vegetables: false, fruit: true, fat_servings: 0, additions: [], portion: null, second_source: null },
@@ -109,7 +109,7 @@ describe("mealTerms", () => {
     expect(mealTerms(meals, ...scales)).toEqual([
       [
         { kind: "source", choice: "no_carbs", portion: null, points: 0, excluded: false },
-        { kind: "fruit_escalation", points: 5, excluded: false },
+        { kind: "extra_fruit", points: 2, excluded: false },
         { kind: "addition", id: "sweet", amount: "much", points: 4.5, excluded: true },
         { kind: "addition", id: "alcohol", amount: null, points: 3, excluded: true },
       ],

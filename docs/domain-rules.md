@@ -10,7 +10,7 @@ Scoring is golf-style: lower is better.
 
 The day's five tracked values all derive from the meal log:
 
-- **Daily score** — sum of the meals' carb-source weights, with the fruit escalation below.
+- **Daily score** — sum of the meals' carb-source weights, with the extra-fruit surcharge below.
 - **Meal count** — number of recorded meals.
 - **Vegetable meals** — number of meals that included vegetables.
 - **Fat servings** — sum of the servings the meals recorded (see Fat servings below).
@@ -29,25 +29,27 @@ lands above zero; a meal switched down to a lighter grade loses the mark with it
 **A second source.** A plate can draw on two sources at once — a grade 2 quinoa bowl beside a
 slice of white bread — and no single grade prices such a plate honestly. A meal may therefore
 record a second carb source: a grade of its own, carrying its own helping. Both sources are
-weighed by the same rule and summed, and it is that sum the fruit escalation floors and the
-additions are charged on top of. The grades table stays the one price list for a carb source, so
+weighed by the same rule and summed, and it is that sum the extra fruit and the additions are
+charged on top of. The grades table stays the one price list for a carb source, so
 a second source is priced exactly as it would be were it the whole meal.
 
 The plain no-carb grade is never a second source — a plate drawing on no carb source says so by
 carrying none at all — and a meal recorded before the field existed reads as drawing on one.
 
-## Fruit escalation
+## Extra fruit
 
 Every carb grade includes one fruit, so the day's first fruit rides free inside its meal's grade.
-Each fruit meal after it counts as grade 5 ("more than one fruit"): its weight is raised to at
-least that grade's weight, and never lowered when the meal's own grade is already heavier.
+Each fruit meal after it adds the carbs question's `extra_fruit` surcharge on top of the meal's
+carb sources, the way an addition does. Fresh fruit is permitted food, so the surcharge never
+counts toward the excluded part. Fruit is not a grade of its own: a plate of fruit alone is the
+no-carb grade with the fruit mark.
 
 ## Additions
 
 A meal may carry additions — accompaniments that are not a grade of their own: a sweet, sugary
 alcohol, or a dry drink (dry wine, beer, a shot of neat spirits). Each addition pays its
 configured surcharge (the carbs question's `additions` in the config) per routine serving on top
-of the meal's carb sources, after any fruit escalation. The surcharge keeps the base grade
+of the meal's carb sources and extra fruit. The surcharge keeps the base grade
 meaningful: an excellent meal with a cookie stays cheaper than a heavy meal with one, while an
 addition on every meal still compounds into a poor day score.
 
@@ -100,7 +102,7 @@ mend, not a breach to count.
 A meal and a day are heavy on what they cost, never on the carb grade alone: a grade 2 bowl beside
 a drink and a spoon of tahini outprices a plain grade 4, and a rule reading the grade would call
 the cheaper plate the worse one. Each scope declares its bound once in `config/app.json` —
-`heavy_meal` on the carbs question for a single plate, weighed after the fruit escalation, the
+`heavy_meal` on the carbs question for a single plate, weighed after the extra fruit, the
 additions and the quantity rule; the `heavy_day` rule's `at_least` for the day's summed score.
 Neither bound derives from the other, and neither derives from `max`, which bounds a closed
 day's stored answer rather than judging one.
@@ -118,8 +120,8 @@ the two readings of that one statement.
 
 A heavy day's score is also a link to its own accounting. In the tracker and in the history
 table's day view the red score opens a breakdown in the meal list's place: every meal in time
-order, each priced term by term — the grade at its helping, the second source, the second fruit's
-escalation, each addition at its amount — down to the day's total beside the bound it crossed.
+order, each priced term by term — the grade at its helping, the second source, the extra
+fruit, each addition at its amount — down to the day's total beside the bound it crossed.
 Grades read there at full length with their examples whatever density the tracker's name switch
 is set to, since naming what cost what is the point. The same link closes it, and it withdraws
 on its own after half a minute so a reader who wandered off finds the log back. The history
@@ -173,8 +175,8 @@ the two runtimes in lockstep.
   That is what the program excludes from its six non-treat days — the flour grades and sugar,
   and a sweet — while the grades below the bound stay permitted within them. Both figures come
   out of one weighing of each meal, so the part can never disagree with the whole: every term of
-  the subtotal is also a term of the score, and the fruit escalation, which belongs to no carb
-  source, lifts the score alone. The history payload carries the subtotal per day, read from the
+  the subtotal is also a term of the score, and the extra-fruit surcharge, which belongs to no
+  carb source, lifts the score alone. The history payload carries the subtotal per day, read from the
   stored meals rather than written with the day, so every recorded day carries it with nothing
   to backfill; the trend chart plots it beside the score, where the gap between the two lines
   is the part of the day that stayed within the program.

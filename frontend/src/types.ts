@@ -34,9 +34,12 @@ export interface Question {
   per_meal_max?: number;
   max?: number;
   // Present only on points questions: what one meal must cost — its grade, second source,
-  // escalated fruit and additions together — to count as heavy. The day-scope counterpart is this
+  // extra fruit and additions together — to count as heavy. The day-scope counterpart is this
   // question's rule threshold, so each scope states its bound once, priced the same way.
   heavy_meal?: number;
+  // Present only on the carbs question: the points each fruit after the day's first adds to its
+  // meal. Every grade includes one fruit, so only the day's first rides free.
+  extra_fruit?: number;
   // Present only on the carbs question: the accompaniments a meal may carry (a sweet, alcohol),
   // each with the point cost a routine amount of it adds on top of the meal's grade. Not
   // choices, so they never appear in the grade picker.

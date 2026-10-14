@@ -592,9 +592,9 @@ describe("App", () => {
     const todayStr = isoDate(new Date());
     const heavyDay: DayPayload = {
       date: todayStr,
-      meals: [{ id: "a", at: `${todayStr}T08:00:00+03:00`, carbs_choice: "carb_grade_7", vegetables: false,
+      meals: [{ id: "a", at: `${todayStr}T08:00:00+03:00`, carbs_choice: "carb_grade_6", vegetables: false,
                 fruit: false, fat_servings: 0, additions: [], portion: null, second_source: null },
-              { id: "b", at: `${todayStr}T15:00:00+03:00`, carbs_choice: "carb_grade_7", vegetables: false,
+              { id: "b", at: `${todayStr}T15:00:00+03:00`, carbs_choice: "carb_grade_6", vegetables: false,
                 fruit: false, fat_servings: 0, additions: [], portion: null, second_source: null }],
       derived: { carbs: 14, meals: 2, vegetables: 0, eating_window: 7, fat: 0 },
     };
@@ -655,7 +655,7 @@ describe("App", () => {
     const client = api({ days: [{ date: yesterdayStr, answers: { drinking: 3, carbs: 9 }, excluded: 0 }] });
     (client.getDay as ReturnType<typeof vi.fn>).mockResolvedValue({
       ...emptyDay(yesterdayStr),
-      meals: [{ id: "m", at: `${yesterdayStr}T13:00:00+03:00`, carbs_choice: "carb_grade_7", vegetables: false,
+      meals: [{ id: "m", at: `${yesterdayStr}T13:00:00+03:00`, carbs_choice: "carb_grade_6", vegetables: false,
                 fruit: false, fat_servings: 0, additions: [{ id: "sweet", amount: null }], portion: null, second_source: null }],
       derived: { carbs: 9, meals: 1, vegetables: 0, eating_window: 0, fat: 0 },
     });

@@ -28,7 +28,7 @@ one.
 From those entries comes the day's score: each meal priced by its carb grade at the helping
 recorded for it, plus its additions at the amount recorded for each, summed over the day.
 Golf-style — lower is better. [The scoring model](domain-rules.md#meal-log-and-scoring) gives the
-grade ladder, the second carb source, the fruit escalation and the addition surcharges.
+grade ladder, the second carb source, the extra-fruit surcharge and the addition surcharges.
 
 A day closes only from the tracker, once its meals span the configured minimum eating window or
 the evening has come round, and stays closable through the small hours after midnight. A day never

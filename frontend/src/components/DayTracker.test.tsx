@@ -376,7 +376,7 @@ describe("DayTracker", () => {
     expect(screen.queryByLabelText(/גודל המנה/)).toBeNull();
     fireEvent.click(screen.getByLabelText("דרגה 4"));
     expect(screen.queryByLabelText(/גודל המנה/)).toBeNull();
-    fireEvent.click(screen.getByLabelText("דרגה 7"));
+    fireEvent.click(screen.getByLabelText("דרגה 6"));
     expect(screen.getByLabelText(/גודל המנה/)).toBeInTheDocument();
   });
 
@@ -388,17 +388,17 @@ describe("DayTracker", () => {
                        onAddMeal={onAddMeal} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     openMealForm();
-    fireEvent.click(screen.getByLabelText("דרגה 7"));
+    fireEvent.click(screen.getByLabelText("דרגה 6"));
     fireEvent.change(screen.getByLabelText(/גודל המנה/), { target: { value: "small" } });
     fireEvent.click(screen.getByRole("button", { name: "שמירת ארוחה" }));
     expect(onAddMeal).toHaveBeenCalledWith(expect.objectContaining({
-      carbs_choice: "carb_grade_7", portion: "small", second_source: null }));
+      carbs_choice: "carb_grade_6", portion: "small", second_source: null }));
 
     // Recording folds the inputs away, so the second half opens them again.
     openMealForm();
     // Reduced on a grade that offers the picker, then switched to one that does not: the picker
     // goes, and the helping must not travel with the meal that gets recorded instead.
-    fireEvent.click(screen.getByLabelText("דרגה 7"));
+    fireEvent.click(screen.getByLabelText("דרגה 6"));
     fireEvent.change(screen.getByLabelText(/גודל המנה/), { target: { value: "small" } });
     fireEvent.click(screen.getByLabelText("דרגה 4"));
     fireEvent.click(screen.getByRole("button", { name: "שמירת ארוחה" }));
@@ -414,10 +414,10 @@ describe("DayTracker", () => {
                        onAddMeal={onAddMeal} onUpdateMeal={vi.fn()}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     openMealForm();
-    fireEvent.click(screen.getByLabelText("דרגה 7"));
+    fireEvent.click(screen.getByLabelText("דרגה 6"));
     fireEvent.click(screen.getByRole("button", { name: "שמירת ארוחה" }));
     expect(onAddMeal).toHaveBeenCalledWith(expect.objectContaining({
-      carbs_choice: "carb_grade_7", portion: "full", second_source: null }));
+      carbs_choice: "carb_grade_6", portion: "full", second_source: null }));
   });
 
   it("reads the grades at the density the menu sets, in the picker and the rows alike", () => {
@@ -525,7 +525,7 @@ describe("DayTracker", () => {
     revealSecondSource();
     // Drawing on no carb source is what carrying no second source says.
     expect(secondSourceGroup().queryByLabelText("ללא פחמימות")).toBeNull();
-    expect(secondSourceGroup().getByLabelText("דרגה 7")).toBeInTheDocument();
+    expect(secondSourceGroup().getByLabelText("דרגה 6")).toBeInTheDocument();
   });
 
   it("records a heavy second source at the picked helping", () => {
@@ -538,14 +538,14 @@ describe("DayTracker", () => {
     openMealForm();
     fireEvent.click(screen.getByLabelText("דרגה 2"));
     revealSecondSource();
-    fireEvent.click(secondSourceGroup().getByLabelText("דרגה 7"));
+    fireEvent.click(secondSourceGroup().getByLabelText("דרגה 6"));
     fireEvent.change(screen.getByLabelText(/גודל המנה/), { target: { value: "small" } });
     fireEvent.click(screen.getByRole("button", { name: "שמירת ארוחה" }));
     // The groups answer independently: a grade picked as the second source must not unseat the
     // meal's own, which sharing one radio name would do.
     expect(onAddMeal).toHaveBeenCalledWith(expect.objectContaining({
       carbs_choice: "carb_grade_2", portion: null,
-      second_source: { carbs_choice: "carb_grade_7", portion: "small" } }));
+      second_source: { carbs_choice: "carb_grade_6", portion: "small" } }));
   });
 
   it("defaults a heavy second source to the full helping", () => {
@@ -558,10 +558,10 @@ describe("DayTracker", () => {
     openMealForm();
     fireEvent.click(screen.getByLabelText("דרגה 2"));
     revealSecondSource();
-    fireEvent.click(secondSourceGroup().getByLabelText("דרגה 7"));
+    fireEvent.click(secondSourceGroup().getByLabelText("דרגה 6"));
     fireEvent.click(screen.getByRole("button", { name: "שמירת ארוחה" }));
     expect(onAddMeal).toHaveBeenCalledWith(expect.objectContaining({
-      second_source: { carbs_choice: "carb_grade_7", portion: "full" } }));
+      second_source: { carbs_choice: "carb_grade_6", portion: "full" } }));
   });
 
   it("records a light second source with no helping and offers no picker for it", () => {
@@ -592,10 +592,10 @@ describe("DayTracker", () => {
     openMealForm();
     fireEvent.click(screen.getByLabelText("דרגה 2"));
     revealSecondSource();
-    fireEvent.click(secondSourceGroup().getByLabelText("דרגה 7"));
+    fireEvent.click(secondSourceGroup().getByLabelText("דרגה 6"));
     fireEvent.click(primaryGroup().getByLabelText("דרגה 4"));
     // Just-picked grades read spelled out for a moment, so the grade is matched by its opening.
-    expect(secondSourceGroup().getByLabelText(/^דרגה 7/)).toBeChecked();
+    expect(secondSourceGroup().getByLabelText(/^דרגה 6/)).toBeChecked();
   });
 
   it("bars the save while the picked primary cannot carry the second source, and frees it on removal", () => {
@@ -608,7 +608,7 @@ describe("DayTracker", () => {
     openMealForm();
     fireEvent.click(screen.getByLabelText("דרגה 2"));
     revealSecondSource();
-    fireEvent.click(secondSourceGroup().getByLabelText("דרגה 7"));
+    fireEvent.click(secondSourceGroup().getByLabelText("דרגה 6"));
     fireEvent.click(primaryGroup().getByLabelText("דרגה 4"));
     expect(screen.getByRole("button", { name: "שמירת ארוחה" })).toBeDisabled();
     // The notice names the bound off the contract, so it reads as the rule rather than a refusal.
@@ -630,7 +630,7 @@ describe("DayTracker", () => {
     openMealForm();
     fireEvent.click(screen.getByLabelText("דרגה 2"));
     revealSecondSource();
-    fireEvent.click(secondSourceGroup().getByLabelText("דרגה 7"));
+    fireEvent.click(secondSourceGroup().getByLabelText("דרגה 6"));
     fireEvent.click(screen.getByRole("button", { name: "הסרת מקור פחמימה נוסף" }));
     fireEvent.click(screen.getByRole("button", { name: "שמירת ארוחה" }));
     expect(onAddMeal).toHaveBeenCalledWith(expect.objectContaining({
@@ -656,7 +656,7 @@ describe("DayTracker", () => {
     const twoSourceDay: DayPayload = {
       ...trackedDay,
       meals: [{ ...trackedDay.meals[1], carbs_choice: "carb_grade_2",
-                second_source: { carbs_choice: "carb_grade_7", portion: "small" } }],
+                second_source: { carbs_choice: "carb_grade_6", portion: "small" } }],
     };
     const onUpdateMeal = vi.fn();
     render(<DayTracker expandLabels={false} suggestBeforeHours={1} treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} closeFrom={CLOSE_FROM} highlightCloseFrom={HIGHLIGHT_FROM} stretchesUntil={STRETCHES_UNTIL} questionnaire={questionnaire} day={twoSourceDay}
@@ -665,13 +665,13 @@ describe("DayTracker", () => {
                        onAddMeal={vi.fn()} onUpdateMeal={onUpdateMeal}
                        onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
     fireEvent.click(screen.getByRole("button", { name: "עריכת ארוחה 13:30" }));
-    expect(secondSourceGroup().getByLabelText("דרגה 7")).toBeChecked();
+    expect(secondSourceGroup().getByLabelText("דרגה 6")).toBeChecked();
     expect(screen.getByLabelText(/גודל המנה/)).toHaveValue("small");
     // An unrelated divergence surfaces the save button while leaving the second source untouched.
     fireEvent.click(screen.getByLabelText("ירקות"));
     fireEvent.click(screen.getByRole("button", { name: "שמירת ארוחה" }));
     expect(onUpdateMeal).toHaveBeenCalledWith("b", expect.objectContaining({
-      second_source: { carbs_choice: "carb_grade_7", portion: "small" } }));
+      second_source: { carbs_choice: "carb_grade_6", portion: "small" } }));
   });
 
   it("records the picked choice id even when another choice shares its numeric value", () => {
@@ -1913,11 +1913,11 @@ describe("DayTracker", () => {
     expect(list.compareDocumentPosition(form) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  // A small helping of grade 7 derives 4.2 points; the mark the dashboard shows reads whole.
+  // A small helping of grade 6 derives 3.6 points; the mark the dashboard shows reads whole.
   it("rounds the dashboard's mark to a whole number", () => {
     renderWithMeals({
       ...emptyDay,
-      meals: [{ id: "h", at: "2026-08-20T09:00:00+03:00", carbs_choice: "carb_grade_7",
+      meals: [{ id: "h", at: "2026-08-20T09:00:00+03:00", carbs_choice: "carb_grade_6",
                 vegetables: false, fruit: false, fat_servings: 0, additions: [], portion: "small",
                 second_source: null }],
     });
@@ -1926,12 +1926,12 @@ describe("DayTracker", () => {
 });
 
 describe("DayTracker score breakdown", () => {
-  // trackedDay with its second meal steepened: grade 7 alone stays under the fixture's day rule
-  // of 8, and the heaped sweet (4 × 125%) lifts the day to 12.
+  // trackedDay with its second meal steepened: grade 6 alone stays under the fixture's day rule
+  // of 8, and the heaped sweet (4 × 125%) lifts the day to 11.
   const heavyDay: DayPayload = {
     ...trackedDay,
     meals: [trackedDay.meals[0],
-            { ...trackedDay.meals[1], carbs_choice: "carb_grade_7", fat_servings: 0, additions: [{ id: "sweet", amount: "much" }] }],
+            { ...trackedDay.meals[1], carbs_choice: "carb_grade_6", fat_servings: 0, additions: [{ id: "sweet", amount: "much" }] }],
   };
   const renderHeavy = () =>
     render(<DayTracker expandLabels={false} suggestBeforeHours={1} treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} closeFrom={CLOSE_FROM} highlightCloseFrom={HIGHLIGHT_FROM} stretchesUntil={STRETCHES_UNTIL}

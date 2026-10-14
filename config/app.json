@@ -1,6 +1,6 @@
 {
   "questionnaire": {
-    "version": 16,
+    "version": 17,
     "questions": [
       {
         "id": "drinking",
@@ -182,7 +182,8 @@
         "panel_title": "סכום ציוני ארוחות",
         "max": 35,
         "heavy_meal": 4,
-        "excluded_grade": 6,
+        "extra_fruit": 2,
+        "excluded_grade": 5,
         "excluded_additions": [
           "sweet",
           "alcohol"
@@ -264,20 +265,14 @@
           {
             "id": "carb_grade_5",
             "label": "דרגה 5",
-            "examples": "פירות",
+            "examples": "קמח מלא | שיבולת שועל דקה",
             "value": 5
           },
           {
             "id": "carb_grade_6",
             "label": "דרגה 6",
-            "examples": "קמח מלא | שיבולת שועל דקה",
-            "value": 6
-          },
-          {
-            "id": "carb_grade_7",
-            "label": "דרגה 7",
             "examples": "קמח לבן | סוכר ודומיו",
-            "value": 7
+            "value": 6
           }
         ],
         "portions": {

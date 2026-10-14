@@ -95,16 +95,16 @@ def test_submit_rejects_non_numeric_answers(env):
 
 
 def test_submit_below_meal_floor_is_rejected_naming_the_field(env):
-    add_meal("carb_grade_7")
-    add_meal("carb_grade_7", at_time="13:00:00")
+    add_meal("carb_grade_6")
+    add_meal("carb_grade_6", at_time="13:00:00")
     response = api.handler(request("POST /days", {"answers": {**ANSWERS, "carbs": 4}}), None)
     assert response["statusCode"] == 400
     assert "carbs" in body_of(response)["error"]
 
 
 def test_submit_at_exactly_the_floor_is_accepted(env):
-    add_meal("carb_grade_7")
-    add_meal("carb_grade_7", vegetables=False, at_time="19:34:00")
+    add_meal("carb_grade_6")
+    add_meal("carb_grade_6", vegetables=False, at_time="19:34:00")
     answers = {"drinking": 3, "vegetables": 1, "fat": 0, "eating_window": 11, "meals": 2, "carbs": 16}
     response = api.handler(request("POST /days", {"answers": answers}), None)
     assert response["statusCode"] == 200
@@ -124,7 +124,7 @@ def test_get_days_reports_each_day_score_beside_its_excluded_part(env):
     from common.store import Store
     store = Store("days", "meals", "state", "weights")
     older = days_before(today(), 3)
-    for day, choice, additions in ((older, "carb_grade_7", []),
+    for day, choice, additions in ((older, "carb_grade_6", []),
                                    (days_before(today(), 2), "carb_grade_3",
                                     [{"id": "nuts", "amount": "regular"}])):
         store.add_meal("u1", day, meal_body(choice, True, False, additions, "09:10:00", None, None,
@@ -134,7 +134,7 @@ def test_get_days_reports_each_day_score_beside_its_excluded_part(env):
     # White flour is excluded from the six non-treat days; a grade 3 plate with nuts is not, so
     # its whole score stayed within the program.
     assert {d["date"]: d["excluded"] for d in payload["days"]} == {
-        older: 7, days_before(today(), 2): 0}
+        older: 6, days_before(today(), 2): 0}
 
 
 def test_get_days_derives_the_excluded_part_from_meals_recorded_before_it_existed(env):
@@ -143,13 +143,13 @@ def test_get_days_derives_the_excluded_part_from_meals_recorded_before_it_existe
     from common.store import Store
     store = Store("days", "meals", "state", "weights")
     day = days_before(today(), 4)
-    store.add_meal("u1", day, meal_body("carb_grade_6", True, False,
+    store.add_meal("u1", day, meal_body("carb_grade_5", True, False,
                                         [{"id": "sweet", "amount": "much"}], "09:10:00", None,
                                         None, day=day))
     store.put_day("u1", day, ANSWERS, 3, "t")
     payload = body_of(api.handler(request("GET /days"), None))
-    # Whole wheat at grade 6 plus a generous sweet: 6 + 3 × 150%.
-    assert payload["days"][0]["excluded"] == 10.5
+    # Whole wheat at grade 5 plus a generous sweet: 5 + 3 × 150%.
+    assert payload["days"][0]["excluded"] == 9.5
 
 
 def test_get_days_keeps_yesterday_floors_once_submitted(env):
@@ -231,8 +231,8 @@ def test_meals_for_a_submitted_yesterday_are_still_refused(env, monkeypatch):
 def test_add_meal_records_and_returns_recomputed_day(env):
     payload = body_of(add_meal("no_carbs"))
     assert payload["derived"] == {"carbs": 0, "meals": 1, "vegetables": 1, "eating_window": 0, "fat": 0}
-    payload = body_of(add_meal("carb_grade_7", vegetables=False, at_time="13:30:00"))
-    assert payload["derived"]["carbs"] == 7
+    payload = body_of(add_meal("carb_grade_6", vegetables=False, at_time="13:30:00"))
+    assert payload["derived"]["carbs"] == 6
     assert payload["derived"]["eating_window"] == 5
 
 
@@ -270,23 +270,23 @@ def test_an_additions_recorded_amount_scales_its_cost(env):
 
 def test_a_heavy_second_source_is_priced_at_its_helping_beside_the_meals_own_grade(env):
     # A grade 2 plate carrying a slice of white bread: the plate keeps its grade, and the bread
-    # costs 80% of grade 7 as the medium helping it was.
+    # costs 80% of grade 6 as the medium helping it was.
     payload = body_of(add_meal("carb_grade_2", second_source={
-        "carbs_choice": "carb_grade_7", "portion": "medium"}))
-    assert payload["derived"]["carbs"] == 7.6
-    assert payload["meals"][0]["second_source"] == {"carbs_choice": "carb_grade_7",
+        "carbs_choice": "carb_grade_6", "portion": "medium"}))
+    assert payload["derived"]["carbs"] == 6.8
+    assert payload["meals"][0]["second_source"] == {"carbs_choice": "carb_grade_6",
                                                     "portion": "medium"}
 
 
 def test_a_reduced_portion_prices_the_meals_own_grade_at_its_percent(env):
-    payload = body_of(add_meal("carb_grade_7", portion="small"))
-    assert payload["derived"]["carbs"] == 4.2
+    payload = body_of(add_meal("carb_grade_6", portion="small"))
+    assert payload["derived"]["carbs"] == 3.6
     assert payload["meals"][0]["portion"] == "small"
 
 
 def test_the_full_portion_keeps_the_grades_whole_weight(env):
-    payload = body_of(add_meal("carb_grade_7", portion="full"))
-    assert payload["derived"]["carbs"] == 7
+    payload = body_of(add_meal("carb_grade_6", portion="full"))
+    assert payload["derived"]["carbs"] == 6
     assert payload["meals"][0]["portion"] == "full"
 
 
@@ -294,17 +294,17 @@ def test_add_meal_rejects_a_portion_that_breaks_the_offer_rule(env):
     # The helping choice exists only from the threshold grade up; below it a meal carries none.
     below_threshold = add_meal("carb_grade_3", portion="small")
     assert below_threshold["statusCode"] == 400
-    unknown = add_meal("carb_grade_7", portion="crumb")
+    unknown = add_meal("carb_grade_6", portion="crumb")
     assert unknown["statusCode"] == 400
     assert "crumb" in body_of(unknown)["error"]
-    unstructured = add_meal("carb_grade_7", portion=True)
+    unstructured = add_meal("carb_grade_6", portion=True)
     assert unstructured["statusCode"] == 400
 
 
 def test_a_heavy_second_source_may_ride_at_the_full_helping(env):
     payload = body_of(add_meal("carb_grade_2", second_source={
-        "carbs_choice": "carb_grade_7", "portion": "full"}))
-    assert payload["derived"]["carbs"] == 9
+        "carbs_choice": "carb_grade_6", "portion": "full"}))
+    assert payload["derived"]["carbs"] == 8
 
 
 def test_a_primary_at_the_bound_may_carry_a_second_source(env):
@@ -324,7 +324,7 @@ def test_a_light_second_source_merges_into_the_higher_grade(env):
 
 def test_correcting_a_meal_can_drop_its_second_carb_source(env):
     meal_id = body_of(add_meal("carb_grade_2", second_source={
-        "carbs_choice": "carb_grade_7", "portion": "small"}))["meals"][0]["id"]
+        "carbs_choice": "carb_grade_6", "portion": "small"}))["meals"][0]["id"]
     payload = body_of(update_meal(meal_id, "carb_grade_2"))
     assert payload["meals"][0]["second_source"] is None
     assert payload["derived"]["carbs"] == 2
@@ -349,7 +349,7 @@ def test_add_meal_rejects_the_no_carb_grade_as_a_second_source(env):
 def test_add_meal_rejects_a_second_source_beside_a_primary_past_the_bound(env):
     # A second source rides only on a primary graded up to the bound; a no-carb plate's only carb
     # would simply be the primary.
-    heavy = add_meal("carb_grade_5", second_source={"carbs_choice": "carb_grade_7",
+    heavy = add_meal("carb_grade_5", second_source={"carbs_choice": "carb_grade_6",
                                                     "portion": "medium"})
     assert heavy["statusCode"] == 400
     assert "beside a primary graded up to 4" in body_of(heavy)["error"]
@@ -364,21 +364,21 @@ def test_add_meal_rejects_a_helping_that_breaks_the_second_source_contract(env):
         "carbs_choice": "carb_grade_1", "portion": "medium"})
     assert light_with_helping["statusCode"] == 400
     heavy_without = add_meal("carb_grade_2", second_source={
-        "carbs_choice": "carb_grade_7", "portion": None})
+        "carbs_choice": "carb_grade_6", "portion": None})
     assert heavy_without["statusCode"] == 400
     unknown_helping = add_meal("carb_grade_2", second_source={
-        "carbs_choice": "carb_grade_7", "portion": "crumb"})
+        "carbs_choice": "carb_grade_6", "portion": "crumb"})
     assert unknown_helping["statusCode"] == 400
     assert "crumb" in body_of(unknown_helping)["error"]
 
 
 def test_add_meal_rejects_a_second_source_that_is_not_a_grade_and_a_helping(env):
-    missing = add_meal("carb_grade_2", second_source={"carbs_choice": "carb_grade_7"})
+    missing = add_meal("carb_grade_2", second_source={"carbs_choice": "carb_grade_6"})
     assert missing["statusCode"] == 400
-    stray = add_meal("carb_grade_2", second_source={"carbs_choice": "carb_grade_7",
+    stray = add_meal("carb_grade_2", second_source={"carbs_choice": "carb_grade_6",
                                                     "portion": "medium", "fruit": True})
     assert stray["statusCode"] == 400
-    unstructured = add_meal("carb_grade_2", second_source="carb_grade_7")
+    unstructured = add_meal("carb_grade_2", second_source="carb_grade_6")
     assert unstructured["statusCode"] == 400
 
 

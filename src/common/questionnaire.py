@@ -136,10 +136,14 @@ class Question:
     # legally exceed it; it caps the slider, not the stored value.
     max: float | None
     # Present only on points questions: what one meal must cost — its grade, second source,
-    # escalated fruit and additions together — to count as heavy. The day-scope counterpart is
+    # extra fruit and additions together — to count as heavy. The day-scope counterpart is
     # this question's rule threshold, so each scope states its bound once and neither is derived
     # from the other. Mirrors heavy_meal in frontend/src/types.ts.
     heavy_meal: float | None
+    # Present only on the carbs question: the points each fruit after the day's first adds to
+    # its meal. Every grade includes one fruit, so only the day's first rides free. Mirrors
+    # extra_fruit in frontend/src/types.ts.
+    extra_fruit: float | None
     # Present only on the carbs question: the accompaniments a meal may carry (a sweet, alcohol),
     # each with the point cost a routine amount of it adds on top of the meal's grade. Not
     # choices, so they never appear in the grade picker or carb_weights().
@@ -260,6 +264,14 @@ class Questionnaire:
             raise ValueError("carbs question must declare second_source")
         return declared
 
+    def extra_fruit(self) -> float:
+        """Points each fruit after the day's first adds to its meal; the config must declare
+        it."""
+        declared = self.question("carbs").extra_fruit
+        if declared is None:
+            raise ValueError("carbs question must declare extra_fruit")
+        return declared
+
     def excluded(self) -> Excluded:
         """What the program excludes from the carbs question's six non-treat days; the config
         must declare it."""
@@ -314,6 +326,8 @@ def parse(raw: dict) -> Questionnaire:
         if q["type"] == "points":
             if isinstance(q.get("heavy_meal"), bool) or not isinstance(q.get("heavy_meal"), Number):
                 raise ValueError(f"points question {q['id']!r} needs a numeric heavy_meal bound")
+            if isinstance(q.get("extra_fruit"), bool) or not isinstance(q.get("extra_fruit"), Number):
+                raise ValueError(f"points question {q['id']!r} needs a numeric extra_fruit surcharge")
             if (isinstance(q.get("excluded_grade"), bool)
                     or not isinstance(q.get("excluded_grade"), Number)):
                 raise ValueError(f"points question {q['id']!r} needs a numeric excluded_grade")
@@ -350,6 +364,7 @@ def parse(raw: dict) -> Questionnaire:
             panel_title=q.get("panel_title"), per_meal_max=q.get("per_meal_max"),
             max=q.get("max"),
             heavy_meal=q.get("heavy_meal"),
+            extra_fruit=q.get("extra_fruit"),
             additions=tuple(Choice(id=a["id"], label=a["label"], value=a["value"],
                                    daily_allowance=a["daily_allowance"]
                                    if "daily_allowance" in a else None)

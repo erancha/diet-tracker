@@ -49,12 +49,12 @@ describe("MealList marker legend", () => {
   it("spells out what the row's grades cover, both carb sources of a plate that drew on two", () => {
     const twoSource: Meal[] = [{ id: "d", at: "2026-08-20T21:40:00+03:00",
       carbs_choice: "carb_grade_2", vegetables: true, fruit: false, fat_servings: 0, additions: [], portion: "full",
-      second_source: { carbs_choice: "carb_grade_7", portion: "full" } }];
+      second_source: { carbs_choice: "carb_grade_6", portion: "full" } }];
     render(<MealList questionnaire={questionnaire} meals={twoSource} expandLabels={false} />);
 
     fireEvent.click(screen.getByText("21:40"));
 
-    expect(screen.getByText("דרגה 2 (קינואה) · דרגה 7 (קמח לבן) · 🥗 ירקות")).toBeInTheDocument();
+    expect(screen.getByText("דרגה 2 (קינואה) · דרגה 6 (קמח לבן) · 🥗 ירקות")).toBeInTheDocument();
   });
 
   it("leaves the grades to the row where the row already spells them out", () => {
@@ -101,10 +101,10 @@ describe("MealList grades", () => {
   it("colors only the grades the flour-and-sugar part counts", () => {
     const twoSource: Meal[] = [{ id: "d", at: "2026-08-20T21:40:00+03:00",
       carbs_choice: "carb_grade_2", vegetables: false, fruit: false, fat_servings: 0, additions: [], portion: "full",
-      second_source: { carbs_choice: "carb_grade_7", portion: "full" } }];
+      second_source: { carbs_choice: "carb_grade_6", portion: "full" } }];
     render(<MealList questionnaire={questionnaire} meals={twoSource} expandLabels={false} />);
 
     expect(screen.getByText(/^דרגה 2/)).not.toHaveClass("excluded");
-    expect(screen.getByText(/^דרגה 7/)).toHaveClass("excluded");
+    expect(screen.getByText(/^דרגה 6/)).toHaveClass("excluded");
   });
 });

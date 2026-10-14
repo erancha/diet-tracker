@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { clockTimeOf, fallsOn } from "../dates";
-import { FRUIT_ESCALATION_CHOICE, carbsScales, mealTerms, type ScoreTerm } from "../derive";
+import { carbsScales, mealTerms, type ScoreTerm } from "../derive";
 import { choiceLabel } from "../gradeLabels";
 import type { Meal, Question, Questionnaire, TreatDaySettings } from "../types";
 import { isViolating, ruleBoundLabel } from "../violations";
@@ -10,7 +10,7 @@ import { isViolating, ruleBoundLabel } from "../violations";
 const BREAKDOWN_MS = 30_000;
 
 // The day's carb score shown as the sum it is: every meal in time order, each priced term by term
-// — grade at its helping, second source, second-fruit escalation, additions at their amounts —
+// — grade at its helping, second source, extra fruit, additions at their amounts —
 // down to the day's total beside the bound it crossed. Grades read at full length whatever the
 // tracker's density, since the point is to name what cost what. The score link that opened it
 // puts the meal list back, and so does BREAKDOWN_MS passing.
@@ -33,9 +33,9 @@ export function ScoreBreakdown({ questionnaire, treatDay, date, meals, onExpire 
     return () => clearTimeout(timer);
   }, []);
   const carbsQuestion = questionnaire.questions.find((q) => q.id === "carbs")!;
-  const { weights, additionValues, additionAllowances, amounts, portions, secondSource, excluded } = carbsScales(carbsQuestion);
+  const { weights, additionValues, additionAllowances, amounts, portions, secondSource, excluded, extraFruit } = carbsScales(carbsQuestion);
   const chronological = [...meals].sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime());
-  const terms = mealTerms(chronological, weights, additionValues, additionAllowances, amounts, portions, secondSource, excluded);
+  const terms = mealTerms(chronological, weights, additionValues, additionAllowances, amounts, portions, secondSource, excluded, extraFruit);
   const total = terms.flat().reduce((sum, t) => sum + t.points, 0);
   const sumClass = !isViolating(questionnaire, carbsQuestion.id, total) ? "score"
     : fallsOn(date, treatDay.weekday) ? "score heavy-day treat-day" : "score heavy-day";
@@ -96,8 +96,8 @@ function termLabel(question: Question, term: ScoreTerm): string {
     case "second_source":
       return `מקור שני: ${gradeLabel(question, term.choice)} · ${term.merged
         ? "נבלע בדרגה הגבוהה" : scaleLabel(question.portions!.options, term.portion!)}`;
-    case "fruit_escalation":
-      return `פרי נוסף · נספר כ${gradeLabel(question, FRUIT_ESCALATION_CHOICE)}`;
+    case "extra_fruit":
+      return "פרי נוסף";
     case "addition": {
       const addition = question.additions!.find((a) => a.id === term.id);
       const label = addition === undefined ? term.id : addition.label;

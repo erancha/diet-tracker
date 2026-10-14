@@ -22,13 +22,13 @@ EXCLUDED = Excluded(grade=FIXTURE["excluded"]["grade"],
 
 def _derive(meals):
     return derive(meals, FIXTURE["weights"], FIXTURE["addition_values"], FIXTURE["addition_allowances"],
-                  AMOUNTS, PORTIONS, SECOND, EXCLUDED)
+                  AMOUNTS, PORTIONS, SECOND, EXCLUDED, FIXTURE["extra_fruit"])
 
 
 def _excluded(meals):
     return excluded_points(meals, FIXTURE["weights"], FIXTURE["addition_values"],
                            FIXTURE["addition_allowances"], AMOUNTS, PORTIONS, SECOND,
-                           EXCLUDED)
+                           EXCLUDED, FIXTURE["extra_fruit"])
 
 
 def test_vector_scoring_tables_are_the_repo_configs():
@@ -43,6 +43,7 @@ def test_vector_scoring_tables_are_the_repo_configs():
     assert AMOUNTS == questionnaire.amounts()
     assert SECOND == questionnaire.second_source()
     assert EXCLUDED == questionnaire.excluded()
+    assert FIXTURE["extra_fruit"] == questionnaire.extra_fruit()
 
 
 @pytest.mark.parametrize("vector", FIXTURE["vectors"], ids=lambda v: v["name"])
@@ -97,6 +98,6 @@ def test_an_unknown_primary_portion_raises_even_below_the_offered_grade():
 def test_a_heavy_second_source_without_a_known_portion_raises():
     meal = {"at": "2026-08-20T09:00:00+03:00", "carbs_choice": "carb_grade_1",
             "vegetables": False, "fruit": False, "additions": [], "portion": None,
-            "second_source": {"carbs_choice": "carb_grade_7", "portion": None}}
+            "second_source": {"carbs_choice": "carb_grade_6", "portion": None}}
     with pytest.raises(KeyError):
         _derive([meal])
