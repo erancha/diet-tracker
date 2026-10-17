@@ -7,7 +7,7 @@ import { MealList } from "./MealList";
 import { ScoreBreakdown } from "./ScoreBreakdown";
 
 // Read-only look at a submitted day's tracker: the derived-values dashboard and the meal list, or
-// the score's breakdown in the list's place while a heavy score is being accounted for. The view
+// the score's breakdown in the list's place while the score is being accounted for. The view
 // always opens on the list; the breakdown is reached from its score alone, as in the tracker. A
 // day without recorded meals says so explicitly instead of showing an all-zero dashboard.
 export function DayView({ questionnaire, treatDay, day, expandLabels, onClose }: {

@@ -1961,12 +1961,13 @@ describe("DayTracker score breakdown", () => {
     expect(screen.getByRole("button", { name: "עריכת ארוחה 13:30" })).toBeInTheDocument();
   });
 
-  it("offers no breakdown on a day within the rule", () => {
+  it("opens the breakdown from a day within the rule too", () => {
     render(<DayTracker expandLabels={false} suggestBeforeHours={1} treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} closeFrom={CLOSE_FROM} highlightCloseFrom={HIGHLIGHT_FROM} stretchesUntil={STRETCHES_UNTIL}
                        questionnaire={questionnaire} day={trackedDay}
                        firstMealHour={NO_NUDGE_HOUR} mealGapHours={NO_NUDGE_GAP_HOURS}
                        onAddMeal={vi.fn()} onUpdateMeal={vi.fn()} onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
-    expect(screen.queryByRole("button", { name: "פירוט הציון" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "פירוט הציון" }));
+    expect(screen.getByRole("heading", { name: "פירוט הציון" })).toBeInTheDocument();
   });
 });
 

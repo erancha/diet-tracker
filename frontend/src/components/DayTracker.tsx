@@ -151,8 +151,8 @@ export function DayTracker({ questionnaire, treatDay, day, expandLabels, isToday
   // leaves it open, and only its own toggle folds it.
   const [sectionCollapsed, setSectionCollapsed] = useState(false);
   // Whether the score's breakdown stands in for the meal list and form. It shows only while the
-  // score is past the day rule — the link that opens it is offered from nothing less — so a
-  // correction that brings the day back under the rule returns the log without a close.
+  // day holds meals — the link that opens it is offered from nothing less — so deleting the
+  // last one returns the log without a close.
   const [breakdownOpen, setBreakdownOpen] = useState(false);
 
   // The day's meals always resolve against the current questionnaire, so deriveDay's throw on an
@@ -163,7 +163,7 @@ export function DayTracker({ questionnaire, treatDay, day, expandLabels, isToday
   // meal under the production config — every add-meal control carries the warning styling, so
   // the caution lands before that meal is recorded rather than through the history row after.
   const addMealWarns = isViolating(questionnaire, "meals", derived.meals + 1);
-  const breakdownShown = breakdownOpen && isViolating(questionnaire, carbsQuestion.id, derived.carbs);
+  const breakdownShown = breakdownOpen && derived.meals > 0;
   const addMealTitle = addMealWarns
     ? <span className="meal-add-warn">הוספת ארוחה</span>
     : "הוספת ארוחה";

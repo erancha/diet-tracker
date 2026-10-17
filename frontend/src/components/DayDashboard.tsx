@@ -18,8 +18,8 @@ export function DayDashboard({ questionnaire, treatDay, date, derived, meals, on
   derived: Derived;
   // The meals the figures were derived from, read again for the score's flour-and-sugar part.
   meals: Meal[];
-  // Opens the score's breakdown. Offered only from a score past the day rule: a score within it
-  // has nothing to account for, so it stays plain text even when a handler is supplied.
+  // Opens the score's breakdown. Offered from any day holding meals: a day without them has no
+  // terms to list, so its score stays plain text even when a handler is supplied.
   onScoreClick?: () => void;
 }) {
   const excludedHint = useReveal<true>();
@@ -46,7 +46,7 @@ export function DayDashboard({ questionnaire, treatDay, date, derived, meals, on
         {derived.vegetables}</span></span>
       <span>שומן: <span className={valueClass("fat", derived.fat)}>{derived.fat}</span></span>
       <strong title={carbsQuestion.tooltip} className={heavy ? `heavy-day${softened}` : undefined}>
-        ציון: {heavy && onScoreClick !== undefined
+        ציון: {derived.meals > 0 && onScoreClick !== undefined
           ? <button type="button" className="score score-link" aria-label="פירוט הציון"
                     onClick={onScoreClick}>{scoreLabel(derived.carbs)}</button>
           : <span className="score">{scoreLabel(derived.carbs)}</span>}

@@ -108,11 +108,16 @@ describe("DayDashboard score link", () => {
     expect(onScoreClick).toHaveBeenCalledOnce();
   });
 
-  it("leaves a score within the rule as plain text even when a handler is offered", () => {
+  it("offers the breakdown from a score within the rule too", () => {
     render(<DayDashboard questionnaire={questionnaire} treatDay={TREAT_DAY} date={ORDINARY}
                          meals={[]} derived={light} onScoreClick={vi.fn()} />);
+    expect(screen.getByRole("button", { name: "פירוט הציון" })).toHaveTextContent("3");
+  });
+
+  it("leaves the score of a day without meals as plain text even when a handler is offered", () => {
+    render(<DayDashboard questionnaire={questionnaire} treatDay={TREAT_DAY} date={ORDINARY}
+                         meals={[]} derived={{ ...light, carbs: 0, meals: 0 }} onScoreClick={vi.fn()} />);
     expect(screen.queryByRole("button", { name: "פירוט הציון" })).toBeNull();
-    expect(screen.getByText("3")).toBeInTheDocument();
   });
 
   it("keeps a heavy score plain where no breakdown is offered", () => {
