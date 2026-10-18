@@ -257,10 +257,10 @@ describe("HistoryTable", () => {
 
   it("rounds the excluded subtotal as the score beside it is rounded", () => {
     render(<HistoryTable questionnaire={trackerQuestionnaire}
-      days={[{ date: "2026-08-17", answers: { carbs: 21, drinking: 3 }, excluded: 10.5 }]}
+      days={[{ date: "2026-08-17", answers: { carbs: 21, drinking: 3 }, excluded: 10.54 }]}
       {...defaults} />);
     const score = screen.getByRole("button", { name: "הצגת היומן של 2026-08-17" });
-    expect(score.previousElementSibling).toHaveTextContent("11");
+    expect(score.previousElementSibling).toHaveTextContent("10.5");
   });
 
   it("grounds the whole row of a score reaching the day rule, marking no cell of it", () => {

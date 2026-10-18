@@ -3,7 +3,7 @@ import { clockTimeOf, fallsOn } from "../dates";
 import { carbsScales, mealTerms, type ScoreTerm } from "../derive";
 import { choiceLabel } from "../gradeLabels";
 import type { Meal, Question, Questionnaire, TreatDaySettings } from "../types";
-import { isViolating, ruleBoundLabel } from "../violations";
+import { isViolating, ruleBoundLabel, scoreLabel } from "../violations";
 
 // How long the breakdown stays before withdrawing on its own: long enough to read a full day's
 // terms, short enough that the log is back by the next glance.
@@ -51,29 +51,23 @@ export function ScoreBreakdown({ questionnaire, treatDay, date, meals, onExpire 
                 <div key={i} className="breakdown-term">
                   <span className="breakdown-label">{termLabel(carbsQuestion, term)}</span>
                   <span className={term.excluded ? "breakdown-points excluded" : "breakdown-points"}>
-                    {i === 0 ? "" : "+ "}{pointsLabel(term.points)}</span>
+                    {i === 0 ? "" : "+ "}{scoreLabel(term.points)}</span>
                 </div>
               ))}
               <div className="breakdown-term breakdown-meal-total">
                 <span />
-                <span className="breakdown-points score">= {pointsLabel(terms[index].reduce((sum, t) => sum + t.points, 0))}</span>
+                <span className="breakdown-points score">= {scoreLabel(terms[index].reduce((sum, t) => sum + t.points, 0))}</span>
               </div>
             </div>
           </li>
         ))}
       </ol>
       <p className="breakdown-sum">
-        סה״כ: <span className={sumClass}>{pointsLabel(total)}</span>
+        סה״כ: <span className={sumClass}>{scoreLabel(total)}</span>
         {" · "}הגבול: {ruleBoundLabel(questionnaire, carbsQuestion.id)}
       </p>
     </section>
   );
-}
-
-// Terms are priced in fractions the grades never show — a reduced helping, a small amount — so
-// they read to one decimal, enough for the column to visibly add up.
-function pointsLabel(points: number): string {
-  return String(Math.round(points * 10) / 10);
 }
 
 function scaleLabel(options: { id: string; label: string }[], id: string): string {

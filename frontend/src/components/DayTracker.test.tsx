@@ -1913,15 +1913,15 @@ describe("DayTracker", () => {
     expect(list.compareDocumentPosition(form) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  // A small helping of grade 6 derives 3.6 points; the mark the dashboard shows reads whole.
-  it("rounds the dashboard's mark to a whole number", () => {
+  // A small helping of grade 6 derives 3.6 points, which the dashboard's mark keeps.
+  it("shows the dashboard's mark to one decimal", () => {
     renderWithMeals({
       ...emptyDay,
       meals: [{ id: "h", at: "2026-08-20T09:00:00+03:00", carbs_choice: "carb_grade_6",
                 vegetables: false, fruit: false, fat_servings: 0, additions: [], portion: "small",
                 second_source: null }],
     });
-    expect(dashboardFigure("ציון")).toHaveTextContent("ציון: 4");
+    expect(dashboardFigure("ציון")).toHaveTextContent("ציון: 3.6");
   });
 });
 

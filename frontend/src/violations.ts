@@ -96,11 +96,11 @@ export function isHeavyMeal(question: Question, points: number): boolean {
   return points >= question.heavy_meal!;
 }
 
-// A day's score wherever it shows as the day's mark. Whole: the fractional points a reduced
-// helping derives are real to the rules and to what the server stores, but a mark of 29.5 reads
-// as a precision the grades never claim.
+// A score wherever it shows — the day's mark and each meal's price. One decimal: a reduced
+// helping or a small amount prices in fractions, and the day's mark must visibly add up from the
+// meals beside it.
 export function scoreLabel(value: number): string {
-  return String(Math.round(value));
+  return String(Math.round(value * 10) / 10);
 }
 
 // The choice label for an exactly-matching value, for the places that show a value on its own —
@@ -134,7 +134,7 @@ export function isBoundValue(question: Question, value: number): boolean {
 // them reads as a column of quantities rather than repeating the unit down every row. A choice
 // phrased as an open-ended bound is not a quantity — its wording is the only thing that says what
 // it means — so it keeps its label whatever the heading says. A points score is the day's mark
-// and reads as the whole number scoreLabel makes of it.
+// and reads as the number scoreLabel makes of it.
 export function headedValue(question: Question, value: number): string {
   if (question.type === "points") return scoreLabel(value);
   return boundChoice(question, value)?.label ?? String(value);
