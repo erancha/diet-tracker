@@ -5,7 +5,8 @@ confidently wrong answers. Each test pins a quoted value to its config source; a
 that fails here is the reminder to update docs/kb/app-guide-he.md and re-upload it. The guide's
 classification extension, docs/kb/app-guide-classify-he.md, is pinned the same way to the meal
 record's fields and to the retrieval window it has to fit, and so are its fat-servings extension,
-docs/kb/app-guide-fat-he.md, and its night-fall debrief, docs/kb/app-guide-fall-he.md."""
+docs/kb/app-guide-fat-he.md, and its night-fall debrief, docs/kb/app-guide-fall-he.md. The
+classification continuation, docs/kb/app-guide-classify-2-he.md, is pinned to the same window."""
 
 import json
 import re
@@ -257,6 +258,14 @@ def test_the_classification_doc_walks_every_meal_field_in_one_chunk():
     # one confuses.
     assert "%" not in doc.replace("15% שומן", "")
     assert "מדריך האפליקציה — איך לסווג ולרשום ארוחה" in _doc_section("3. סיווג מאכלים נפוצים — הכרעות האפליקציה")
+
+
+def test_the_classification_continuation_fits_one_chunk_and_names_its_parent():
+    """The classification doc has no room left in its retrieval window, so further worked
+    examples live in a continuation that also fits one window and names the doc it continues."""
+    doc = (ROOT / "docs" / "kb" / "app-guide-classify-2-he.md").read_text()
+    assert len(doc) <= 2000
+    assert '"מדריך האפליקציה — איך לסווג ולרשום ארוחה"' in doc
 
 
 def test_the_fat_doc_quotes_the_day_bounds_in_one_chunk():
