@@ -185,6 +185,19 @@ export function supportLevel(entries: WeightEntry[]): number | null {
   return Math.max(...bottoms) - Math.min(...bottoms) <= average * SUPPORT_SHARE ? average : null;
 }
 
+// The newest weighing stands near the floor when it sits within this share of it, either side.
+const NEAR_SUPPORT_SHARE = 0.01;
+
+// The heads-up shown while the newest of the entries sits near the floor supportLevel found in
+// them, else null.
+export function supportWarning(entries: WeightEntry[], support: number | null): string | null {
+  if (support === null) return null;
+  const latest = entries[entries.length - 1].kg;
+  return Math.abs(latest - support) <= support * NEAR_SUPPORT_SHARE
+    ? `כדאי לשים לב: קרוב לקו התנגדות ב־${kgLabel(support)} ק״ג`
+    : null;
+}
+
 // Whether the newest weighing is heavier than the one before it — a fresh gain, as distinct from
 // the run over three weighings that trendShape reads.
 export function lastStepRises(entries: WeightEntry[]): boolean {

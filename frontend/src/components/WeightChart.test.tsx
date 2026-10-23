@@ -12,22 +12,22 @@ function grounds(): Element[] {
 
 describe("rising stretches", () => {
   it("grounds each stretch the weight climbed over in the breach tint", () => {
-    render(<WeightChart entries={series(80, 81, 80.5, 82)} target={75} span={3} spans={[3]}
-                        onSpanChange={() => {}} />);
+    render(<WeightChart entries={series(80, 81, 80.5, 82)} target={75} support={null} span={3}
+                        spans={[3]} onSpanChange={() => {}} />);
     expect(grounds().map((rect) => rect.getAttribute("fill")))
       .toEqual(["var(--breach-ground)", "var(--breach-ground)"]);
   });
 
   it("leaves a descent unmarked", () => {
-    render(<WeightChart entries={series(82, 81, 81, 80)} target={75} span={3} spans={[3]}
-                        onSpanChange={() => {}} />);
+    render(<WeightChart entries={series(82, 81, 81, 80)} target={75} support={null} span={3}
+                        spans={[3]} onSpanChange={() => {}} />);
     expect(grounds()).toHaveLength(0);
   });
 
   it("stretches each ground from the lighter weighing to the heavier one", () => {
     const { container } = render(
-      <WeightChart entries={series(80, 81, 81, 82)} target={null} span={3} spans={[3]}
-                   onSpanChange={() => {}} />);
+      <WeightChart entries={series(80, 81, 81, 82)} target={null} support={null} span={3}
+                   spans={[3]} onSpanChange={() => {}} />);
     const dots = [...container.querySelectorAll(".recharts-line-dots circle")]
       .map((dot) => Number(dot.getAttribute("cx")));
     const [first, second] = grounds().map((rect) => ({
@@ -45,15 +45,15 @@ describe("support line", () => {
   const supportLabels = () => [...document.querySelectorAll(".recharts-label")]
     .map((label) => label.textContent);
 
-  it("draws the floor three close bottoms share, labeled with its weight", () => {
-    render(<WeightChart entries={series(107, 105, 107, 105.3, 107, 105.1, 106)} target={95} span={3}
-                        spans={[3]} onSpanChange={() => {}} />);
+  it("draws the floor it is given, labeled with its weight", () => {
+    render(<WeightChart entries={series(107, 105, 107, 105.3, 107, 105.1, 106)} target={95}
+                        support={105.133} span={3} spans={[3]} onSpanChange={() => {}} />);
     expect(supportLabels()).toEqual(["105.1"]);
   });
 
-  it("draws no floor while fewer than three bottoms agree", () => {
-    render(<WeightChart entries={series(107, 105, 107, 105.3, 106)} target={95} span={3} spans={[3]}
-                        onSpanChange={() => {}} />);
+  it("draws no floor when given none", () => {
+    render(<WeightChart entries={series(107, 105, 107, 105.3, 106)} target={95} support={null}
+                        span={3} spans={[3]} onSpanChange={() => {}} />);
     expect(document.querySelector(".weight-support")).toBeNull();
   });
 });

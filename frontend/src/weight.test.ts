@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { activeSpan, ceilingWarning, chartDomain, entriesWithin, floorWarning, kgLabel,
          lastStepRises, offeredSpans, overTargetSeverity, parseKg, rhythmReading, risingEdges,
-         spanChange, summarize, supportLevel, targetChangePrompt, trendShape } from "./weight";
+         spanChange, summarize, supportLevel, supportWarning, targetChangePrompt,
+         trendShape } from "./weight";
 import type { WeightEntry } from "./types";
 
 const TODAY = new Date(2026, 7, 27); // 2026-08-27
@@ -220,6 +221,25 @@ describe("supportLevel", () => {
 
   it("does not count the first or last weighing as a bottom", () => {
     expect(supportLevel(series(105, 107, 105.1, 107, 105.2, 107, 105))).toBeNull();
+  });
+});
+
+describe("supportWarning", () => {
+  const series = (...kgs: number[]): WeightEntry[] =>
+    kgs.map((kg, i) => ({ date: `2026-08-${String(10 + i).padStart(2, "0")}`, kg, at: null }));
+
+  it("names the floor while the newest weighing sits within one percent of it", () => {
+    const entries = series(107, 105, 107, 105.3, 107, 105.1, 106);
+    expect(supportWarning(entries, supportLevel(entries)))
+      .toBe("כדאי לשים לב: קרוב לקו התנגדות ב־105.1 ק״ג");
+  });
+
+  it("stays quiet once the newest weighing climbs past one percent above the floor", () => {
+    expect(supportWarning(series(105.1, 106.3), 105.1)).toBeNull();
+  });
+
+  it("stays quiet where no floor is drawn", () => {
+    expect(supportWarning(series(105.1, 106), null)).toBeNull();
   });
 });
 

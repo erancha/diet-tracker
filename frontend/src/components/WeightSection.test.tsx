@@ -170,6 +170,28 @@ describe("rhythm reading", () => {
   });
 });
 
+describe("support warning", () => {
+  const near = [107, 105, 107, 105.3, 107, 105.1, 106].map((kg, i) =>
+    ({ date: `2026-08-${String(10 + i).padStart(2, "0")}`, kg, at: null }));
+
+  it("warns above the chart while the newest weighing sits near the floor it draws", () => {
+    show({ entries: near });
+    expect(document.querySelector(".weight-support-warning")).toHaveTextContent("105.1 ק״ג");
+  });
+
+  it("shows while folded, and opens the section when pressed", () => {
+    renderSection({ entries: near });
+    fireEvent.click(screen.getByRole("button", { name: /105\.1 ק״ג/ }));
+    expect(screen.getByRole("button", { name: /^משקל/ })).toHaveAttribute("aria-expanded", "true");
+    expect(document.querySelector(".weight-support-warning button")).toBeNull();
+  });
+
+  it("says nothing while no floor is drawn", () => {
+    show({ entries: near.slice(0, 5) });
+    expect(document.querySelector(".weight-support-warning")).toBeNull();
+  });
+});
+
 describe("target", () => {
   it("heads the section with the weight and reads the target beside it", () => {
     show({ target: 72, entries: [{ date: TODAY, kg: 76.5, at: null }] });

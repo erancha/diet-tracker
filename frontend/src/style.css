@@ -2,8 +2,10 @@
   --accent: #2e7d32;
   --accent-border: #b6d0b8;
   --danger: #c62828;
-  /* Flours and sugars: darker than a breach's red, so the part reads apart from the verdict. */
-  --excluded: #8b1a1a;
+  /* Darker than a breach's red, for findings that matter without being a crossing. */
+  --dark-red: #8b1a1a;
+  /* Flours and sugars, set apart from the verdict's red. */
+  --excluded: var(--dark-red);
   --muted-text: #8a8a84;
   /* A bound crossed on the treat day: still a crossing, painted amber rather than red because
      what that day costs is what it is for. */
@@ -935,9 +937,12 @@ main:not(.intro-0, .intro-1, .intro-2, .intro-3, .intro-4) .weight .section-togg
 .weight-over-target .weight-summary .weight-gap,
 .weight-entries .over-target { color: var(--danger); }
 .weight-rhythm { margin: 0 0 0.5rem; opacity: 0.8; }
-/* The word that opens the chat sits inside the sentence rather than beside it, so it reads as a
-   link in running text: the sentence's own colour, marked by the underline alone. */
-.weight-rhythm button { text-decoration: underline; text-underline-offset: 2px; }
+.weight-support-warning { margin: 0 0 0.5rem; font-size: 0.85rem; color: var(--dark-red); }
+.weight-support-warning button { text-align: start; }
+/* Pressable words sit inside the sentence rather than beside it, so they read as a link in running
+   text: the sentence's own colour, marked by the underline alone. */
+:is(.weight-rhythm, .weight-support-warning) button { text-decoration: underline;
+                                                      text-underline-offset: 2px; }
 .weight .trend { margin-bottom: 0.5rem; }
 /* The measurements behind the chart: one grid whose columns — date, hour, weight, delete — each
    sit at their widest content, aligned down the list with no cell stretched. Each row is a

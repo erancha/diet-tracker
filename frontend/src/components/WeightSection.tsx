@@ -3,8 +3,9 @@ import type { ChartSpan, WeightPayload, WeightSettings } from "../types";
 import { isWeighInDay, isoDate } from "../dates";
 import { mayDiscardEdits } from "../edits";
 import { activeSpan, ceilingWarning, entriesWithin, floorWarning, kgLabel, offDayWeighingHint,
-         offeredSpans, parseKg, rhythmReading, summarize, targetChangePrompt, trendShape,
-         WEIGH_IN_CADENCE_QUESTION, type TrendShape, type WeightSummary } from "../weight";
+         offeredSpans, parseKg, rhythmReading, summarize, supportLevel, supportWarning,
+         targetChangePrompt, trendShape, WEIGH_IN_CADENCE_QUESTION, type TrendShape,
+         type WeightSummary } from "../weight";
 import { CollapsibleSection } from "./CollapsibleSection";
 import { Icon, type IconName } from "./Icon";
 import { useGlobalFold } from "./useFoldAll";
@@ -175,10 +176,11 @@ function TodayRow({ recorded, limits, weighInWeekday, due, onRecord }: {
 }
 
 // The weight log: today's weighing, the chart and the measurements, folded under one header line
-// carrying the latest weight (the fold's toggle), the target reading and a chart button. Weight
-// moves weekly, so the section normally rests folded; the caller decides when it opens. A glance
-// opens it for a short while on a gain, then folds it unless a toggle, the menu's fold or a saved
-// weighing took it over; a press anywhere else on the page folds it at once.
+// carrying the latest weight (the fold's toggle), the target reading and a chart button, with a
+// warning under it while the latest weight nears the chart's floor line. Weight moves weekly, so
+// the section normally rests folded; the caller decides when it opens. A glance opens it for a
+// short while on a gain, then folds it unless a toggle, the menu's fold or a saved weighing took it
+// over; a press anywhere else on the page folds it at once.
 export function WeightSection({ weight, settings, weighInWeekday, now, defaultExpanded, glance,
                                 onRecord, onSetTarget, onDelete, onAskChat }: {
   weight: WeightPayload;
@@ -218,6 +220,8 @@ export function WeightSection({ weight, settings, weighInWeekday, now, defaultEx
   const spans = offeredSpans(weight.entries, now);
   const active = activeSpan(spans, span);
   const plotted = entriesWithin(weight.entries, active, now);
+  const support = supportLevel(plotted);
+  const nearSupport = supportWarning(plotted, support);
 
   return (
     <CollapsibleSection
@@ -228,6 +232,14 @@ export function WeightSection({ weight, settings, weighInWeekday, now, defaultEx
       className={["weight", summary.overTarget && "weight-over-target", fold.waning && "section-waning"]
         .filter(Boolean).join(" ")}
       style={fold.style}
+      summary={nearSupport !== null && (
+        // While folded, pressing it opens the section onto the chart that draws the floor.
+        <p className="weight-support-warning">
+          {collapsed
+            ? <button type="button" onClick={fold.toggle}>{nearSupport}</button>
+            : nearSupport}
+        </p>
+      )}
       ref={fold.ref}
       headerAside={
         <>
@@ -261,8 +273,8 @@ export function WeightSection({ weight, settings, weighInWeekday, now, defaultEx
                 weighInWeekday={weighInWeekday} due={isWeighInDay(now, weighInWeekday)}
                 onRecord={(kg) => { fold.disarm(); onRecord(kg); }} />
       {weight.entries.length > 0 && (
-        <WeightChart entries={plotted} target={weight.target} span={active} spans={spans}
-                     onSpanChange={setSpan} />
+        <WeightChart entries={plotted} target={weight.target} support={support} span={active}
+                     spans={spans} onSpanChange={setSpan} />
       )}
       <WeightEntries entries={plotted} target={weight.target} onDelete={onDelete} />
       </div>

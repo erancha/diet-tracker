@@ -2,7 +2,7 @@ import { CartesianGrid, DefaultZIndexes, Line, LineChart, ReferenceArea, Referen
          Tooltip, XAxis, YAxis } from "recharts";
 import type { ChartSpan, WeightEntry } from "../types";
 import { ddmmLabel } from "../dates";
-import { CHART_SPANS, chartDomain, kgLabel, risingEdges, supportLevel } from "../weight";
+import { CHART_SPANS, chartDomain, kgLabel, risingEdges } from "../weight";
 
 const Y_AXIS_WIDTH = 44;
 
@@ -35,16 +35,17 @@ function SpanPicker({ spans, value, onChange }: {
 // weight comes near it. Every stretch the weight climbed over stands on the breach ground the
 // history table and the trend panels use for a crossing, so a gain reads as a setback at a glance.
 // A floor the weight keeps bouncing off draws as a faint line labeled with its weight.
-export function WeightChart({ entries, target, span, spans, onSpanChange }: {
+export function WeightChart({ entries, target, support, span, spans, onSpanChange }: {
   // Already narrowed to the active span — the section resolves it once so the chart and the
   // entries list below it can never disagree about what is on screen.
   entries: WeightEntry[];
   target: number | null;
+  // The floor supportLevel found in those entries; null draws none.
+  support: number | null;
   span: ChartSpan;
   spans: ChartSpan[];
   onSpanChange: (span: ChartSpan) => void;
 }) {
-  const support = supportLevel(entries);
   return (
     <>
       <SpanPicker spans={spans} value={span} onChange={onSpanChange} />
