@@ -611,7 +611,7 @@ def test_weekly_counts_the_clean_days_off_the_treat_day(env):
     body = next(text for _, target, text in sent if target == "a@gmail.com")
     off_treat = sum(1 for back in (1, 2, 3)
                     if not rules.falls_on(days_before(today(), back), e.treat_weekday))
-    assert notify.table_row(["", "ימים נקיים", str(off_treat - 1), "–"]) in body
+    assert notify.table_row(["", "ימים נקיים מקמחים וסוכרים", str(off_treat - 1), "–"]) in body
 
 
 def test_a_week_inside_every_bound_names_no_finding(env):

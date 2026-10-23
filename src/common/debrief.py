@@ -21,7 +21,7 @@ def qualifies(questionnaire, config, answers: dict, on_treat_day: bool) -> bool:
     """Whether a closed day's submitted answers earn the debrief: its score at or past the
     heavy-day bound times the configured factor — the treat day's factor when the day was the
     treat day, whose treat meal is expected to cost."""
-    (heavy,) = [rule for rule in questionnaire.rules if rule.id == "heavy_day"]
+    (heavy,) = [rule for rule in questionnaire.rules if rule.id == rules.HEAVY_DAY]
     factor = config.treat_day_score_factor if on_treat_day else config.score_factor
     return answers["carbs"] >= heavy.at_least * factor
 

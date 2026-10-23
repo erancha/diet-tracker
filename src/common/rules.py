@@ -4,6 +4,11 @@ and what subject a bound is named under."""
 from common import appconfig
 from common.dates import weekday_index
 
+# The rule that bounds the daily score, the sum of the day's meal grades.
+HEAVY_DAY = "heavy_day"
+# How a reader is told what clean_days counts: "clean" alone does not say clean of what.
+CLEAN_DAYS = "ימים נקיים מקמחים וסוכרים"
+
 
 def falls_on(day: str, weekday: str) -> bool:
     """Whether a date falls on the named weekday, given in appconfig.WEEKDAYS' three-letter form."""

@@ -34,7 +34,7 @@ _BULLET = "• "
 # rows are one table whose first row is the header. The plain text keeps the bars, which
 # Telegram and the chat show as written, and the HTML part draws the rows as a table.
 _ROW = "|"
-_CELL_STYLE = "padding: 0.1em 0.6em; border: 1px solid #ccc; text-align: center"
+_CELL_STYLE = "padding: 0.1em 0.6em; border: 1px solid #ccc; text-align: right"
 
 
 def table_row(cells) -> str:

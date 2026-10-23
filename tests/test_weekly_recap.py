@@ -34,16 +34,18 @@ def test_empty_history_message():
 def test_the_recap_is_the_title_line_then_the_table_then_the_trends_pointer():
     text = recap({WEDNESDAY: CLEAN}, {WEDNESDAY: 0})
     assert text == "\n".join([f"סיכום שבועי {LABEL} — נסגרו 1 מתוך 7 ימים.",
-                              HEADER, row("✅", "ימים נקיים", 1, "–"), "", TRENDS])
+                              HEADER, row("✅", "ימים נקיים מקמחים וסוכרים", 1, "–"), "", TRENDS])
 
 
 def test_each_bound_crossed_this_week_is_a_row_named_as_the_charts_name_it():
     week = {WEDNESDAY: HEAVY, THURSDAY: HEAVY, FRIDAY: {**HEAVY, "drinking": 1}}
     text = recap(week)
-    # The subjects follow the questionnaire's order, each counted in days, not in runs.
-    # With no last week to measure against, a row that is not clean carries no mark.
-    assert text.split("\n")[3:5] == [row("", "חריגות שתיה (ליטרים)", 1, "–"),
-                                     row("", "חריגות ציון יומי", 3, "–")]
+    # The score row leads, then clean days, then the other subjects in the questionnaire's
+    # order, each counted in days, not in runs. With no last week to measure against, a row that
+    # is not clean carries no mark.
+    assert text.split("\n")[2:5] == [row("", "חריגות ציון יומי", 3, "–"),
+                                     row("✅", "ימים נקיים מקמחים וסוכרים", 2, "–"),
+                                     row("", "חריגות שתיה (ליטרים)", 1, "–")]
 
 
 def test_a_week_inside_every_bound_has_no_crossing_row():
@@ -54,7 +56,7 @@ def test_a_week_inside_every_bound_has_no_crossing_row():
 def test_clean_days_are_counted_off_the_treat_day_only():
     week = {WEDNESDAY: CLEAN, THURSDAY: CLEAN, FRIDAY: CLEAN}
     # The Friday is the treat day: what it cost is what it is for, so it is neither clean nor not.
-    assert row("", "ימים נקיים", 1, "–") in recap(week, {WEDNESDAY: 7, THURSDAY: 0, FRIDAY: 12})
+    assert row("", "ימים נקיים מקמחים וסוכרים", 1, "–") in recap(week, {WEDNESDAY: 7, THURSDAY: 0, FRIDAY: 12})
 
 
 def test_each_row_opens_with_its_standing_against_last_week():
@@ -62,8 +64,8 @@ def test_each_row_opens_with_its_standing_against_last_week():
             LAST_MONDAY: HEAVY}
     text = recap(days, {WEDNESDAY: 7, LAST_SUNDAY: 5})
     # One clean day fewer is worse, two heavy days fewer is better: direction, not size.
-    assert text.split("\n")[1:4] == [HEADER, row("🔴", "ימים נקיים", 1, 2),
-                                     row("🟢", "חריגות ציון יומי", 1, 3)]
+    assert text.split("\n")[1:4] == [HEADER, row("🟢", "חריגות ציון יומי", 1, 3),
+                                     row("🔴", "ימים נקיים מקמחים וסוכרים", 1, 2)]
 
 
 def test_a_count_level_with_last_week_is_marked_so():
@@ -79,7 +81,7 @@ def test_more_breaches_than_last_week_are_marked_worse():
 
 def test_a_week_with_every_closed_day_clean_meets_the_expectation():
     days = {WEDNESDAY: CLEAN, THURSDAY: CLEAN, FRIDAY: CLEAN, LAST_SATURDAY: CLEAN}
-    assert row("✅", "ימים נקיים", 2, 1) in recap(days, {FRIDAY: 12, LAST_SATURDAY: 0})
+    assert row("✅", "ימים נקיים מקמחים וסוכרים", 2, 1) in recap(days, {FRIDAY: 12, LAST_SATURDAY: 0})
 
 
 def test_a_bound_crossed_last_week_alone_shows_only_when_the_difference_is_real():
@@ -118,8 +120,8 @@ def test_a_weighing_less_than_a_week_old_has_nothing_to_be_set_against():
 def test_the_reading_sits_between_the_table_and_the_trends_pointer():
     text = recap({WEDNESDAY: HEAVY}, insights="להקדים את הארוחה האחרונה.")
     assert text == "\n".join([f"סיכום שבועי {LABEL} — נסגרו 1 מתוך 7 ימים.",
-                              HEADER, row("✅", "ימים נקיים", 1, "–"),
-                              row("", "חריגות ציון יומי", 1, "–"),
+                              HEADER, row("", "חריגות ציון יומי", 1, "–"),
+                              row("✅", "ימים נקיים מקמחים וסוכרים", 1, "–"),
                               "", "תובנות לשבוע הבא:", "להקדים את הארוחה האחרונה.", "", TRENDS])
 
 

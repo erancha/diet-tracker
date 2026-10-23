@@ -1,7 +1,7 @@
 """Renders the weekly Hebrew recap: a title line counting how much of the week was closed, a
-table setting the week beside the one before it — clean days, the bounds its days crossed, the
-same findings the trend charts redden, and the weight — and under it the answering service's
-reading of the weeks behind it.
+table setting the week beside the one before it — the bounds its days crossed, the same findings
+the trend charts redden, with the daily score leading and clean days after it, then the weight —
+and under it the answering service's reading of the weeks behind it.
 
 Every number a week produces is already in the app, so the table names only what asks for
 attention, and the reading is where the email spends its lines."""
@@ -104,8 +104,8 @@ _INSIGHTS_TITLE = "תובנות לשבוע הבא:"
 def text(questionnaire, week_start: str, week_end: str, days: dict, excluded: dict,
          treat_weekday: str, weights: dict, insights: str | None = None) -> str:
     """The week as a title line and a table: which seven days it is and how many were closed,
-    then this week's counts beside last week's — clean days, days over each bound, the latest
-    weighing against the one a week before it.
+    then this week's counts beside last week's — days over the daily score's bound, clean days,
+    days over each other bound, the latest weighing against the one a week before it.
 
     `days` and `excluded` are the closed days and what each day with meals spent on flours and
     sugars, over at least the week and the one before it. Clean days are the closed days off the
@@ -141,16 +141,20 @@ def _table(questionnaire, week_start, this_week, days, excluded, treat_weekday, 
     clean = (rules.clean_days(this_week, excluded, treat_weekday),
              rules.clean_days(last_week, excluded, treat_weekday))
     every_day_clean = off_treat > 0 and clean[0] == off_treat
-    rows = [(_status(clean[0] - clean[1], every_day_clean, bool(last_week)),
-             "ימים נקיים", clean[0], clean[1])]
     crossed = (rules.crossed_days(questionnaire, this_week),
                rules.crossed_days(questionnaire, last_week))
+    bound_rows = {}
     for rule in questionnaire.rules:
         subject = rules.subject_name(questionnaire, rule)
         now, then = (week[subject] if subject in week else 0 for week in crossed)
         if now or then - now >= NOTABLE_DAYS:
-            rows.append((_status(then - now, now == 0, bool(last_week)),
-                         f"חריגות {subject}", now, then))
+            bound_rows[rule.id] = (_status(then - now, now == 0, bool(last_week)),
+                                   f"חריגות {subject}", now, then)
+    # The daily score is the program's headline measure, so its row leads the table.
+    rows = [bound_rows.pop(rules.HEAVY_DAY)] if rules.HEAVY_DAY in bound_rows else []
+    rows.append((_status(clean[0] - clean[1], every_day_clean, bool(last_week)),
+                 rules.CLEAN_DAYS, clean[0], clean[1]))
+    rows += bound_rows.values()
     cells = [(status, subject, str(now), str(then) if last_week else _NO_LAST_WEEK)
              for status, subject, now, then in rows]
     weighed = _weighings_a_week_apart(weights)
