@@ -194,7 +194,7 @@ export function supportWarning(entries: WeightEntry[], support: number | null): 
   if (support === null) return null;
   const latest = entries[entries.length - 1].kg;
   return Math.abs(latest - support) <= support * NEAR_SUPPORT_SHARE
-    ? `כדאי לשים לב: קרוב לקו התנגדות ב־${kgLabel(support)} ק״ג`
+    ? `כדאי לשים לב: המשקל קרוב לקו התנגדות ב־${kgLabel(support)} ק״ג`
     : null;
 }
 

@@ -231,7 +231,7 @@ describe("supportWarning", () => {
   it("names the floor while the newest weighing sits within one percent of it", () => {
     const entries = series(107, 105, 107, 105.3, 107, 105.1, 106);
     expect(supportWarning(entries, supportLevel(entries)))
-      .toBe("כדאי לשים לב: קרוב לקו התנגדות ב־105.1 ק״ג");
+      .toBe("כדאי לשים לב: המשקל קרוב לקו התנגדות ב־105.1 ק״ג");
   });
 
   it("stays quiet once the newest weighing climbs past one percent above the floor", () => {
