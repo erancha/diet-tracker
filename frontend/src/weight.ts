@@ -169,6 +169,22 @@ export function risingEdges(entries: WeightEntry[]): { from: string; to: string 
     step(entries[i].kg, entry.kg) === "up" ? [{ from: entries[i].date, to: entry.date }] : []);
 }
 
+// Three bottoms whose spread stays within this share of their average stand on one floor.
+// Relative rather than in kilograms, so the band reads the same at any body weight.
+const SUPPORT_SHARE = 0.005;
+
+// The floor the weight keeps bouncing off: the average of the three latest bottoms when they stand
+// on one, else null. A bottom is a weighing lower than both neighbors by any amount — a shallow
+// dip shows up in the spread instead. The first and last weighings have only one neighbor, so they
+// are never bottoms.
+export function supportLevel(entries: WeightEntry[]): number | null {
+  const bottoms = entries.slice(1, -1).flatMap((entry, i) =>
+    entry.kg < entries[i].kg && entry.kg < entries[i + 2].kg ? [entry.kg] : []).slice(-3);
+  if (bottoms.length < 3) return null;
+  const average = (bottoms[0] + bottoms[1] + bottoms[2]) / 3;
+  return Math.max(...bottoms) - Math.min(...bottoms) <= average * SUPPORT_SHARE ? average : null;
+}
+
 // Whether the newest weighing is heavier than the one before it — a fresh gain, as distinct from
 // the run over three weighings that trendShape reads.
 export function lastStepRises(entries: WeightEntry[]): boolean {

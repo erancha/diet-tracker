@@ -40,3 +40,20 @@ describe("rising stretches", () => {
     expect(second.right).toBeCloseTo(dots[3]);
   });
 });
+
+describe("support line", () => {
+  const supportLabels = () => [...document.querySelectorAll(".recharts-label")]
+    .map((label) => label.textContent);
+
+  it("draws the floor three close bottoms share, labeled with its weight", () => {
+    render(<WeightChart entries={series(107, 105, 107, 105.3, 107, 105.1, 106)} target={95} span={3}
+                        spans={[3]} onSpanChange={() => {}} />);
+    expect(supportLabels()).toEqual(["105.1"]);
+  });
+
+  it("draws no floor while fewer than three bottoms agree", () => {
+    render(<WeightChart entries={series(107, 105, 107, 105.3, 106)} target={95} span={3} spans={[3]}
+                        onSpanChange={() => {}} />);
+    expect(document.querySelector(".weight-support")).toBeNull();
+  });
+});

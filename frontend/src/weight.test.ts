@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { activeSpan, ceilingWarning, chartDomain, entriesWithin, floorWarning, kgLabel,
          lastStepRises, offeredSpans, overTargetSeverity, parseKg, rhythmReading, risingEdges,
-         spanChange, summarize, targetChangePrompt, trendShape } from "./weight";
+         spanChange, summarize, supportLevel, targetChangePrompt, trendShape } from "./weight";
 import type { WeightEntry } from "./types";
 
 const TODAY = new Date(2026, 7, 27); // 2026-08-27
@@ -190,6 +190,36 @@ describe("risingEdges", () => {
   it("does not count a weighing that held or fell", () => {
     expect(risingEdges(series(80, 80.04, 79))).toEqual([]);
     expect(risingEdges(series(80))).toEqual([]);
+  });
+});
+
+describe("supportLevel", () => {
+  const series = (...kgs: number[]): WeightEntry[] =>
+    kgs.map((kg, i) => ({ date: `2026-08-${String(10 + i).padStart(2, "0")}`, kg, at: null }));
+
+  it("averages the three latest bottoms when they sit within half a percent of each other", () => {
+    expect(supportLevel(series(107, 105, 107, 105.3, 107, 105.1, 106))).toBeCloseTo(105.133, 3);
+  });
+
+  it("reads only the three latest bottoms, however far an older one sits", () => {
+    expect(supportLevel(series(107, 100, 107, 105, 107, 105.3, 107, 105.1, 106))).toBeCloseTo(105.133, 3);
+  });
+
+  it("finds no floor when the three latest bottoms spread wider than half a percent", () => {
+    expect(supportLevel(series(107, 104, 107, 105.3, 107, 105.1, 106))).toBeNull();
+  });
+
+  it("counts a weighing lower than both neighbors as a bottom however shallow the dip", () => {
+    expect(supportLevel(series(106.7, 105.4, 105.1, 106.6, 105, 106, 105.2, 106.1, 105.6)))
+      .toBeCloseTo(105.1, 3);
+  });
+
+  it("does not count a weighing that only matches a neighbor as a bottom", () => {
+    expect(supportLevel(series(107, 105, 105, 107, 105.3, 107, 105.1, 106))).toBeNull();
+  });
+
+  it("does not count the first or last weighing as a bottom", () => {
+    expect(supportLevel(series(105, 107, 105.1, 107, 105.2, 107, 105))).toBeNull();
   });
 });
 
