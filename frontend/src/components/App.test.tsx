@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { focusManager, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Api } from "../api";
 import { isoDate, weekdayDdmmLabel, yesterdayOf } from "../dates";
@@ -544,6 +544,23 @@ describe("App", () => {
 
     expect(await screen.findByRole("button", { name: "יומן היום" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "יומן אתמול" })).toBeNull();
+  });
+
+  it("targets yesterday when a page opened before midnight refetches the days after it", async () => {
+    atClock(23, 50);
+    const client = api({ today: trackedDay("2026-08-21") });
+    renderApp(false, client);
+    expect(await screen.findByRole("button", { name: "יומן היום" })).toBeInTheDocument();
+
+    vi.setSystemTime(new Date(2026, 7, 22, 0, 30));
+    vi.mocked(client.getDays).mockResolvedValue({
+      days: [], today: emptyDay("2026-08-22"), yesterday: trackedDay("2026-08-21"),
+      muted: false, undelivered: [], email_verified: true, loadedInMs: 150,
+    });
+    act(() => { focusManager.setFocused(false); focusManager.setFocused(true); });
+
+    expect(await screen.findByRole("button", { name: "יומן אתמול" })).toBeInTheDocument();
+    focusManager.setFocused(undefined);
   });
 
   it("targets today in the small hours when yesterday holds no meals", async () => {

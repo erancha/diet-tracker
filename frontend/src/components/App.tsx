@@ -43,7 +43,9 @@ export function App({ email, api, firstMealHour, mealGapHours, isAdmin, isDev, c
   onSignOut: () => void;
 }) {
   const queryClient = useQueryClient();
-  const [now] = useState(() => new Date());
+  // Read on every render, so a days payload refetched past midnight is placed against the same
+  // calendar it was fetched on.
+  const now = new Date();
   const todayStr = isoDate(now);
   const yesterdayStr = isoDate(yesterdayOf(now));
 
