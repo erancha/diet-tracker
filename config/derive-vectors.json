@@ -59,6 +59,11 @@
         "id": "full",
         "label": "מנה רגילה",
         "percent": 100
+      },
+      {
+        "id": "large",
+        "label": "מנה גדולה",
+        "percent": 150
       }
     ]
   },

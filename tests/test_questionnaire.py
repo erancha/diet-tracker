@@ -44,7 +44,7 @@ def test_repo_config_loads_with_numeric_choices_and_threshold_rules():
     assert "no_carbs_heavy" not in q.carb_weights()
     # Quantity is one shared scale for both of a plate's carb sources; the primary picker offers
     # it only from the threshold grade up.
-    assert [p.percent for p in q.portions().options] == [60, 80, 100]
+    assert [p.percent for p in q.portions().options] == [60, 80, 100, 150]
     assert q.portions().from_value == 4
     assert q.addition_values() == {"sweet": 3, "alcohol": 3, "dry_alcohol": 3}
     # The program allows one dry drink a day before it counts; sugary alcohol never gets one.
