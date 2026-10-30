@@ -18,6 +18,20 @@ describe("Landing", () => {
     expect(screen.getByRole("button", { name: "התחברות עם Google" })).toBeInTheDocument();
   });
 
+  it("presents sign-in as an outlined Google button in both views", async () => {
+    render(<Landing onSignIn={() => {}} chatAvailable />);
+
+    const expectGoogleSignIn = () => {
+      const signIn = screen.getByRole("button", { name: "התחברות עם Google" });
+      expect(signIn).toHaveClass("secondary");
+      expect(signIn.querySelector("[aria-hidden='true']")).toHaveTextContent("G");
+    };
+
+    expectGoogleSignIn();
+    await expandLanding();
+    expectGoogleSignIn();
+  });
+
   it("opens on the app's own name and offers the next-meal recommendation with the chat", () => {
     const { container } = render(<Landing onSignIn={() => {}} chatAvailable />);
 

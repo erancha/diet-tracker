@@ -24,7 +24,10 @@ export function Landing({ onSignIn, chatAvailable }: {
 }) {
   const [expanded, setExpanded] = useState(false);
   const signInButton = (
-    <button type="button" className="primary" onClick={onSignIn}>התחברות עם Google</button>
+    <button type="button" className="secondary landing-sign-in" onClick={onSignIn}>
+      <span className="landing-sign-in-mark" aria-hidden="true">G</span>
+      התחברות עם Google
+    </button>
   );
   const toggleButton = (
     <button type="button" className="disclosure more-toggle" aria-expanded={expanded}

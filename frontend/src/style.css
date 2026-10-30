@@ -211,6 +211,11 @@ h1 .app-icon { width: 1em; height: 1em; vertical-align: middle; margin-inline-en
    banner rather than a control, so from tablet width up it falls back to its content width, on the
    start edge where the text begins. */
 @media (min-width: 48rem) { .landing button { align-self: flex-start; } }
+/* Dark text on an outline, the look of a third-party sign-in rather than the app's own actions. */
+.landing .landing-sign-in {
+  --btn-fg: inherit; --btn-border: #ccc; border-radius: 999px; font-weight: 600;
+}
+.landing-sign-in-mark { color: #1f4e8c; font-weight: 700; margin-inline-end: 0.6rem; }
 /* The reference card closing the landing and the walkthrough leading the footer links both sit off
    the block above by the same gap, so each reads as its own block rather than as a tail on the
    one before; the invite and repo lines tuck under the walkthrough at the closer spacing. */
