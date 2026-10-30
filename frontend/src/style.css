@@ -181,16 +181,17 @@ h1 .app-icon { width: 1em; height: 1em; vertical-align: middle; margin-inline-en
 .landing .app-heading { margin-bottom: 1rem; }
 /* Two auto margins — above the card and above the footer links — split the condensed view's
    spare height evenly, centering the pitch between the page top and the links riding the bottom;
-   both collapse to zero once the content fills the screen. The title takes hero treatment —
-   centered, display-sized, viewport-capped to one line — while body copy stays start-aligned to
-   read, as does the expanded view's title, which crowns a reading page rather than a splash. */
+   both collapse to zero once the content fills the screen, where the links' top padding keeps
+   them off the card. The title takes hero treatment — centered, display-sized, viewport-capped to
+   one line — while body copy stays start-aligned to read, as does the expanded view's title, which
+   crowns a reading page rather than a splash. */
 /* The pitch is the whole screen here, so from tablet width its card pads wider than the tracker's
    sections; on a phone that padding would eat the column, so the card keeps its base 1rem. */
 .landing-brief .landing-card { margin-top: auto; }
 @media (min-width: 48rem) { .landing-brief .landing-card { padding: 2rem; } }
 .landing-brief .app-heading { margin-inline: auto; }
 .landing-brief h1 { font-size: min(2.6rem, 11vw); }
-.landing-brief .landing-walkthrough { margin-top: auto; }
+.landing-brief .landing-walkthrough { margin-top: auto; padding-top: 2.5rem; }
 .landing-intro, .landing-condensed { margin-top: 0.5em; margin-bottom: 0.6rem; }
 /* The condensed pitch is the page's whole message, so it reads a touch larger than body copy. */
 .landing-condensed { font-size: calc(1em + 2px); }
