@@ -44,6 +44,7 @@
   },
   "portions": {
     "from_value": 4,
+    "default": "full",
     "options": [
       {
         "id": "small",

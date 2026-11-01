@@ -5,9 +5,11 @@
 import type { Derived, Meal, Question, ScaleOption } from "./types";
 
 /** The helping-size scale shared by both carb sources, as the derivation applies it: the
- * primary source discounts only from `from_value` up, a heavy second source at any grade. */
+ * primary source discounts only from `from_value` up, a heavy second source at any grade.
+ * `default` names the step either picker opens on. */
 export interface Portions {
   from_value: number;
+  default: string;
   options: ScaleOption[];
 }
 

@@ -46,6 +46,8 @@ def test_repo_config_loads_with_numeric_choices_and_threshold_rules():
     # it only from the threshold grade up.
     assert [p.percent for p in q.portions().options] == [60, 80, 100, 150]
     assert q.portions().from_value == 4
+    # The helping a picker opens on is the one that charges the grade whole.
+    assert q.portions().percent(q.portions().default) == 100
     assert q.addition_values() == {"sweet": 3, "alcohol": 3, "dry_alcohol": 3}
     # The program allows one dry drink a day before it counts; sugary alcohol never gets one.
     assert q.addition_allowances() == {"dry_alcohol": 1}
@@ -105,6 +107,16 @@ def test_an_amount_scale_defaulting_to_an_undeclared_step_is_rejected():
     raw = minimal()
     raw["questions"][0]["amounts"] = {
         "default": "nope", "options": [{"id": "regular", "label": "regular", "percent": 100}]}
+    with pytest.raises(ValueError, match="nope"):
+        parse(raw)
+
+
+def test_a_portion_scale_defaulting_to_an_undeclared_step_is_rejected():
+    # The default is the step either portion picker opens on; a meal must be able to price it.
+    raw = minimal()
+    raw["questions"][0]["portions"] = {
+        "from_value": 4, "default": "nope",
+        "options": [{"id": "full", "label": "full", "percent": 100}]}
     with pytest.raises(ValueError, match="nope"):
         parse(raw)
 

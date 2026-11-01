@@ -74,10 +74,11 @@ export const trackerQuestionnaire: Questionnaire = {
                            { id: "regular", label: "רגיל", percent: 100 },
                            { id: "much", label: "הרבה", percent: 125 }] },
       tooltip: "המטרה היא ציון נמוך", day_title: "ציון יומי", meal_qualifier: "דרגת הארוחה",
-      portions: { from_value: 5,
+      portions: { from_value: 5, default: "full",
                   options: [{ id: "small", label: "מנה קטנה", percent: 60 },
                             { id: "medium", label: "מנה בינונית", percent: 80 },
-                            { id: "full", label: "מנה רגילה", percent: 100 }] },
+                            { id: "full", label: "מנה רגילה", percent: 100 },
+                            { id: "large", label: "מנה גדולה", percent: 150 }] },
       second_source: { primary_grade_max: 2, light_grade_max: 2 },
       // The steepest grade and the sweet addition are what the program's non-treat days exclude
       // here, so grade 4 and the other additions exercise the permitted side of the decomposition.

@@ -113,10 +113,7 @@ export function DayTracker({ questionnaire, treatDay, day, expandLabels, isToday
   const drinkingQuestion = questionnaire.questions.find((q) => q.id === "drinking")!;
   const { weights, additionValues, additionAllowances, amounts: amountRule, portions: portionRule,
           secondSource: secondRule, excluded: excludedRule, extraFruit } = carbsScales(carbsQuestion);
-  // The fullest helping the scale offers — the default either portion picker opens on, so an
-  // unconsidered save never under-prices the plate.
-  const defaultPortionId =
-    portionRule.options.reduce((a, b) => (b.percent > a.percent ? b : a)).id;
+  const defaultPortionId = portionRule.default;
   // A recorded addition's amount as the form holds it: one carrying none opens on the routine
   // step its surcharge prices.
   const recordedAmount = (addition: MealAddition) => addition.amount ?? amountRule.default;

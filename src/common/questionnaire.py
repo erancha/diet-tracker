@@ -58,8 +58,9 @@ class Portions(Scale):
     The grade ladder ranks a meal by its carb source alone, so the helping is recorded separately.
     The primary source offers the choice only from `from_value` up, where a lighter helping is a
     distinction worth drawing; a heavy second source always names its helping, whatever its
-    grade."""
+    grade. `default` names the step either picker opens on."""
     from_value: float
+    default: str
 
     def offered_for(self, weight: float) -> bool:
         return weight >= self.from_value
@@ -350,10 +351,10 @@ def parse(raw: dict) -> Questionnaire:
         if "per_meal_max" in q and (isinstance(q["per_meal_max"], bool)
                                     or not isinstance(q["per_meal_max"], int)):
             raise ValueError(f"question {q['id']!r} needs an integer per_meal_max")
-        if "amounts" in q and all(o["id"] != q["amounts"]["default"]
-                                  for o in q["amounts"]["options"]):
-            raise ValueError(f"question {q['id']!r} defaults to undeclared amount "
-                             f"{q['amounts']['default']!r}")
+        for scale in ("amounts", "portions"):
+            if scale in q and all(o["id"] != q[scale]["default"] for o in q[scale]["options"]):
+                raise ValueError(f"question {q['id']!r} defaults to undeclared {scale} step "
+                                 f"{q[scale]['default']!r}")
         questions.append(Question(
             id=q["id"], type=q["type"], text=q["text"],
             choices=tuple(Choice(id=c["id"], label=c["label"], value=c["value"],
@@ -370,6 +371,7 @@ def parse(raw: dict) -> Questionnaire:
                                    if "daily_allowance" in a else None)
                             for a in q["additions"]) if "additions" in q else None,
             portions=Portions(from_value=q["portions"]["from_value"],
+                              default=q["portions"]["default"],
                               options=_scale_options(q["portions"]["options"]))
             if "portions" in q else None,
             amounts=Amounts(default=q["amounts"]["default"],

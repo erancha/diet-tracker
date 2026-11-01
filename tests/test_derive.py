@@ -12,6 +12,7 @@ FIXTURE = json.loads(
     (Path(__file__).parent.parent / "config" / "derive-vectors.json").read_text(encoding="utf-8"))
 PORTIONS = Portions(
     from_value=FIXTURE["portions"]["from_value"],
+    default=FIXTURE["portions"]["default"],
     options=tuple(ScaleOption(**p) for p in FIXTURE["portions"]["options"]))
 AMOUNTS = Amounts(default=FIXTURE["amounts"]["default"],
                   options=tuple(ScaleOption(**o) for o in FIXTURE["amounts"]["options"]))
