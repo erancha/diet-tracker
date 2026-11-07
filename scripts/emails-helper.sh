@@ -5,10 +5,12 @@
 # send, and the usage below says which is which.
 #
 # Usage:
-#   scripts/emails-helper.sh --rejected <email> [--subject <text>] [--body <text>] [--env <suffix>]
-#   scripts/emails-helper.sh --weekly-recap <email> [--send] [--env <suffix>]
-#   scripts/emails-helper.sh --debrief <email> [--send] [--env <suffix>]
-#   scripts/emails-helper.sh --verify <email> [--env <suffix>]
+#   scripts/emails-helper.sh --rejected <email> [--subject <text>] [--body <text>] [env]
+#   scripts/emails-helper.sh --weekly-recap <email> [--send] [env]
+#   scripts/emails-helper.sh --debrief <email> [--send] [env]
+#   scripts/emails-helper.sh --verify <email> [env]
+#
+# env: optional suffix (e.g. dev) naming the stack pair, as in deploy.sh.
 #
 # Simulations:
 #   --rejected <email>      Show that user a message as one SES refused to deliver
@@ -25,7 +27,6 @@
 #   --body <text>     With --rejected: body to show (default: the nightly reminder's)
 #   --send            With --weekly-recap or --debrief: really answer, deliver and store, instead
 #                     of printing
-#   --env <suffix>    Target an isolated stack pair (same suffix as deploy.sh)
 #   --help, -h        Show this usage
 #
 # Examples:
@@ -37,39 +38,35 @@
 #   scripts/emails-helper.sh --verify someone@gmail.com                # re-request a dead link
 set -euo pipefail
 cd "$(dirname "$0")/.."
+# shellcheck source=common.sh
+source scripts/common.sh
 source scripts/aws-config.sh
-
-usage() {
-  sed -n '/^# Usage:/,/^set /p' "$0" | sed '$d; s/^# \{0,3\}//'
-  exit "$1"
-}
 
 # The nightly reminder's own wording, so the default lands in the bell reading exactly like the
 # message a user would have missed. Mirrors REMINDER_SUBJECT/REMINDER_TEXT in src/handlers/nudge.py.
 SUBJECT="תזכורת — רישום ארוחות"
 BODY="עדיין לא רשמת ארוחות היום 🌙"
 
-ACTION="" EMAIL="" SEND="" ENV_SUFFIX=""
+ACTION="" EMAIL="" SEND="" ENV_ARGS=()
 while [ $# -gt 0 ]; do
   # Every flag below that names a value, checked once here so a missing one prints the usage
   # rather than tripping over set -u.
   case "$1" in
-    --rejected|--weekly-recap|--debrief|--verify|--subject|--body|--env)
-      [ $# -ge 2 ] || { echo "$1 needs a value" >&2; usage 1; } ;;
+    --rejected|--weekly-recap|--debrief|--verify|--subject|--body)
+      [ $# -ge 2 ] || { print_help >&2; exit 2; } ;;
   esac
   case "$1" in
     --rejected|--weekly-recap|--debrief|--verify) ACTION="${1#--}"; EMAIL="$2"; shift 2 ;;
     --subject) SUBJECT="$2"; shift 2 ;;
     --body)    BODY="$2"; shift 2 ;;
     --send)    SEND=1; shift ;;
-    --env)     ENV_SUFFIX="-$2"; shift 2 ;;
-    --help|-h) usage 0 ;;
-    *)         echo "unknown argument: $1" >&2; usage 1 ;;
+    --help|-h) print_help; exit 0 ;;
+    -*)        print_help >&2; exit 2 ;;
+    *)         ENV_ARGS+=("$1"); shift ;;
   esac
 done
-[ -n "$ACTION" ] && [ -n "$EMAIL" ] || usage 1
-
-APP="diet-tracker${ENV_SUFFIX}"
+[ -n "$ACTION" ] && [ -n "$EMAIL" ] || { print_help >&2; exit 2; }
+parse_env_suffix_arg "${ENV_ARGS[@]}"
 
 # Writes the message directly rather than making SES refuse one: everything downstream of the
 # refusal (the stored item, the API read, the bell, the dismissal) is exercised for real, the

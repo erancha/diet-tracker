@@ -6,13 +6,14 @@
 # let the account back in.
 #
 # Usage:
-#   scripts/reset-user.sh <email> [--keep-account] [--yes] [--env <suffix>]
+#   scripts/reset-user.sh [env] <email> [--keep-account] [--yes]
+#
+# env: optional suffix (e.g. dev) naming the stack pair, as in deploy.sh.
 #
 # Options:
 #   --keep-account   Delete the user's data only, keeping the Cognito account and its sub
 #   --yes, -y        Skip the prompt for an account holding no data; a reset that would destroy
 #                    days, meals, weighings, undelivered messages or nudge state asks either way
-#   --env <suffix>   Target an isolated stack pair (same suffix as deploy.sh)
 #   --help, -h       Show this usage
 #
 # Examples:
@@ -20,28 +21,23 @@
 #   scripts/reset-user.sh someone@gmail.com --keep-account   # wipe the log, keep the account
 set -euo pipefail
 cd "$(dirname "$0")/.."
+# shellcheck source=common.sh
+source scripts/common.sh
 source scripts/aws-config.sh
 
-usage() {
-  sed -n '/^# Usage:/,/^set /p' "$0" | sed '$d; s/^# \{0,3\}//'
-  exit "$1"
-}
-
-EMAIL="" KEEP_ACCOUNT="" ASSUME_YES="" ENV_SUFFIX=""
+KEEP_ACCOUNT="" ASSUME_YES="" POSITIONAL=()
 while [ $# -gt 0 ]; do
   case "$1" in
     --keep-account) KEEP_ACCOUNT=1; shift ;;
     --yes|-y)       ASSUME_YES=1; shift ;;
-    --env)          ENV_SUFFIX="-$2"; shift 2 ;;
-    --help|-h)      usage 0 ;;
-    -*)             echo "unknown argument: $1" >&2; usage 1 ;;
-    *)              [ -z "$EMAIL" ] || { echo "unexpected argument: $1" >&2; usage 1; }
-                    EMAIL="$1"; shift ;;
+    --help|-h)      print_help; exit 0 ;;
+    -*)             print_help >&2; exit 2 ;;
+    *)              POSITIONAL+=("$1"); shift ;;
   esac
 done
-[ -n "$EMAIL" ] || usage 1
-
-APP="diet-tracker${ENV_SUFFIX}"
+[ ${#POSITIONAL[@]} -ge 1 ] || { print_help >&2; exit 2; }
+EMAIL="${POSITIONAL[-1]}"
+parse_env_suffix_arg "${POSITIONAL[@]:0:${#POSITIONAL[@]}-1}"
 POOL=$(aws cloudformation describe-stacks --stack-name "${APP}-cognito" \
   --query "Stacks[0].Outputs[?OutputKey=='UserPoolId'].OutputValue" --output text)
 

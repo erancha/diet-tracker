@@ -12,6 +12,9 @@ committed template `aws-config.example.sh`). A bare `aws` command failing with N
 means the shell didn't source that file — not an expired session. The aws CLI itself lives in
 `~/.local/bin`, which is not always on PATH.
 
+- Every script that targets a stack pair takes the environment as a bare suffix (`dev`), parsed
+  once in `common.sh`; `deploy.sh` packages `build/lambda.zip` through `zip_lambda.py`, so an
+  unchanged source deploys as no change.
 - `aws-helper.sh` — resolves stable Lambda targets to the deployed resources and works with
   their CloudWatch logs; `--help` lists targets and options. Fastest health check of a function:
   `scripts/aws-helper.sh --logs <target> --errors --since 1d`. Targets are aliases (api, nudge,

@@ -248,7 +248,7 @@ Resources:
     Properties:
       # CodeUri must sit on each function: cloudformation package rewrites only per-function
       # values and would otherwise upload the template's own directory.
-      CodeUri: ../build/lambda
+      CodeUri: ../build/lambda.zip
       Handler: handlers/api.handler
       Environment:
         Variables:
@@ -369,7 +369,7 @@ Resources:
   ChatFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ../build/lambda
+      CodeUri: ../build/lambda.zip
       Handler: handlers/chat.handler
       # Past the HTTP API's 30s cap on the browser's request: the answering service may take up
       # to 60s, and the invocation keeps waiting after the gateway has answered the browser, so
@@ -465,7 +465,7 @@ Resources:
   NudgeFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ../build/lambda
+      CodeUri: ../build/lambda.zip
       Handler: handlers/nudge.handler
       # Every job loops the whole user pool inside one invocation, sending per user, so its run
       # time scales with the pool rather than with one request — the global 30s cannot cover it. The
@@ -522,7 +522,7 @@ Resources:
   AppQuestionFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ../build/lambda
+      CodeUri: ../build/lambda.zip
       Handler: handlers/nudge.queued_handler
       # One user's recap or debrief: the answering service's wait (APP_QUESTION_TIMEOUT_SECONDS,
       # 55s) plus the reads and the send around it.

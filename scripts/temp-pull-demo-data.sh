@@ -7,48 +7,46 @@
 # records, the meals and the whole weight series.
 #
 # Usage:
-#   scripts/temp-pull-demo-data.sh <email> [--from <date>] [--to <date>] [--out <path>]
-#                                 [--env <suffix>]
+#   scripts/temp-pull-demo-data.sh [env] <email> [--from <date>] [--to <date>] [--out <path>]
+#
+# env: optional suffix (e.g. dev) naming the stack pair, as in deploy.sh.
 #
 # Options:
 #   --from <date>   First day to read, ISO (default: 30 days before --to)
 #   --to <date>     Last day to read, ISO (default: today)
 #   --out <path>    Where to write the JSON (default: demo-data.json in the current directory)
-#   --env <suffix>  Target an isolated stack pair (same suffix as deploy.sh)
 #   --help, -h      Show this usage
 #
 # Example:
 #   scripts/temp-pull-demo-data.sh someone@gmail.com --from 2026-09-01 --to 2026-09-10
 set -euo pipefail
 cd "$(dirname "$0")/.."
+# shellcheck source=common.sh
+source scripts/common.sh
 export PATH="$HOME/.local/bin:$PATH"
 source scripts/aws-config.sh
 
-usage() { sed -n '2,21p' "$0" | sed 's/^# \{0,1\}//'; }
-
-EMAIL=""
 TO=$(date +%F)
 FROM=""
 OUT=demo-data.json
-ENV_SUFFIX=""
+POSITIONAL=()
 while [ $# -gt 0 ]; do
   case "$1" in
     --from) FROM="$2"; shift 2 ;;
     --to)   TO="$2";   shift 2 ;;
     --out)  OUT="$2";  shift 2 ;;
-    --env)  ENV_SUFFIX="$2"; shift 2 ;;
-    --help|-h) usage; exit 0 ;;
-    -*) echo "unknown option $1" >&2; usage >&2; exit 2 ;;
-    *)  EMAIL="$1"; shift ;;
+    --help|-h) print_help; exit 0 ;;
+    -*) print_help >&2; exit 2 ;;
+    *)  POSITIONAL+=("$1"); shift ;;
   esac
 done
-[ -n "$EMAIL" ] || { echo "an email is required" >&2; usage >&2; exit 2; }
+[ ${#POSITIONAL[@]} -ge 1 ] || { print_help >&2; exit 2; }
+EMAIL="${POSITIONAL[-1]}"
+parse_env_suffix_arg "${POSITIONAL[@]:0:${#POSITIONAL[@]}-1}"
 [ -n "$FROM" ] || FROM=$(date -d "$TO - 30 days" +%F)
 # Meal sort keys are "<date>#<id>", so the range ends at the day after --to to take every meal of
 # that day itself without relying on a high sentinel character.
 AFTER_TO=$(date -d "$TO + 1 day" +%F)
-
-APP="diet-tracker${ENV_SUFFIX}"
 
 resource() {
   aws cloudformation describe-stack-resources --stack-name "$1" \

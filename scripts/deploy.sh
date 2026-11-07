@@ -1,17 +1,23 @@
 #!/bin/bash
 # Deploys both stacks. The Cognito callback URL and API CORS origin need the CloudFront URL,
 # which only exists after the main stack's first deploy — so each run converges: deploy with
-# what is known, then re-deploy both stacks with the now-known URL (no-op when unchanged).
+# what is known, then re-deploy both stacks with the now-known URL (no-op when unchanged). The
+# Lambda package is byte-identical for an unchanged source (zip_lambda.py), so such a run leaves
+# the functions untouched.
+#
+# Usage:
+#   scripts/deploy.sh [env]
+#
+# env: optional suffix (e.g. dev) that deploys a fully isolated stack pair alongside the default
+# one; the Cognito domain prefix varies with it because domains are global.
 set -euo pipefail
 cd "$(dirname "$0")/.."
+# shellcheck source=common.sh
+source scripts/common.sh
+parse_env_suffix_arg "$@"
 source scripts/aws-config.sh
 source scripts/params.sh
 
-# Optional environment suffix (e.g. "dev") deploys a fully isolated stack pair alongside the
-# default one; the Cognito domain prefix must vary with it because domains are global.
-ENV_SUFFIX="${1:+-$1}"
-
-APP="diet-tracker${ENV_SUFFIX}"
 ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
 ARTIFACTS_BUCKET="${APP}-artifacts-${ACCOUNT}"
 aws s3api head-bucket --bucket "$ARTIFACTS_BUCKET" 2>/dev/null || aws s3 mb "s3://${ARTIFACTS_BUCKET}"
@@ -21,6 +27,7 @@ mkdir -p build/lambda
 cp -r src/. build/lambda/
 find build/lambda -type d -name __pycache__ -exec rm -rf {} +
 cp config/app.json build/lambda/
+python3 scripts/zip_lambda.py build/lambda build/lambda.zip
 
 stack_output() {
   local out

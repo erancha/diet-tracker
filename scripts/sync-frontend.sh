@@ -1,11 +1,18 @@
 #!/bin/bash
 # Builds and publishes the frontend: the Vite bundle plus the app config, which the frontend reads
 # from its own origin so the API is only needed for authenticated calls.
+#
+# Usage:
+#   scripts/sync-frontend.sh [env]
+#
+# env: optional suffix (e.g. dev) naming the stack pair, as in deploy.sh.
 set -euo pipefail
 cd "$(dirname "$0")/.."
+# shellcheck source=common.sh
+source scripts/common.sh
+parse_env_suffix_arg "$@"
 source scripts/aws-config.sh
 
-APP="diet-tracker${1:+-$1}"
 stack_output() {
   aws cloudformation describe-stacks --stack-name "$APP" \
     --query "Stacks[0].Outputs[?OutputKey=='$1'].OutputValue" --output text

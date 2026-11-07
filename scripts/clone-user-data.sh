@@ -1,25 +1,28 @@
 #!/bin/bash
 # Copies one user's recorded data into an isolated stack pair, to rehearse the app at a larger
-# user count. Production is only read; every write lands in the --env stacks.
+# user count. Production is only read; every write lands in the env stacks.
 #
 # Usage:
-#   scripts/clone-user-data.sh mirror <email> --env <suffix>
-#   scripts/clone-user-data.sh fictive <email> [--count <n>] --env <suffix>
-#   scripts/clone-user-data.sh delete --env <suffix>
+#   scripts/clone-user-data.sh mirror <env> <email>
+#   scripts/clone-user-data.sh fictive <env> <email> [--count <n>]
+#   scripts/clone-user-data.sh delete <env>
+#
+# env: the suffix (e.g. dev) naming the target stack pair, as in deploy.sh; required here because
+# production is never a target.
 #
 # Actions:
-#   mirror    Replaces the address's rows in the --env stack with its production rows (days,
+#   mirror    Replaces the address's rows in the env stack with its production rows (days,
 #             meals, weights, chats, undelivered messages, nudge state). The address must
-#             already have an account in the --env pool.
-#   fictive   Copies the address's --env rows to <n> accounts (default 100) created directly in
-#             the --env pool as fictive-NNN@example.invalid: no Google account, no email sent,
+#             already have an account in the env pool.
+#   fictive   Copies the address's env rows to <n> accounts (default 100) created directly in
+#             the env pool as fictive-NNN@example.invalid: no Google account, no email sent,
 #             notifications muted, shared chats kept shared. Re-running replaces their rows.
-#   delete    Removes every fictive account and its rows from the --env stack.
+#   delete    Removes every fictive account and its rows from the env stack.
 #
 # Examples:
-#   scripts/clone-user-data.sh mirror someone@gmail.com --env dev
-#   scripts/clone-user-data.sh fictive someone@gmail.com --env dev
-#   scripts/clone-user-data.sh delete --env dev
+#   scripts/clone-user-data.sh mirror dev someone@gmail.com
+#   scripts/clone-user-data.sh fictive dev someone@gmail.com
+#   scripts/clone-user-data.sh delete dev
 set -euo pipefail
 cd "$(dirname "$0")/.."
 source scripts/aws-config.sh
