@@ -84,12 +84,14 @@ def test_a_week_with_every_closed_day_clean_meets_the_expectation():
     assert row("✅", "ימים נקיים מקמחים וסוכרים", 2, 1) in recap(days, {FRIDAY: 12, LAST_SATURDAY: 0})
 
 
-def test_a_bound_crossed_last_week_alone_shows_only_when_the_difference_is_real():
+def test_a_bound_left_behind_this_week_stays_as_met():
+    # The reading weighs it, so the table shows it even when last week crossed it once.
     days = {WEDNESDAY: CLEAN, LAST_SATURDAY: {**CLEAN, "drinking": 1}}
-    # One short day last week and none this week is one day's luck, not a row.
-    assert "שתיה" not in recap(days)
-    days[LAST_SUNDAY] = {**CLEAN, "drinking": 1}
-    assert row("✅", "חריגות שתיה (ליטרים)", 0, 2) in recap(days)
+    assert row("✅", "חריגות שתיה (ליטרים)", 0, 1) in recap(days)
+
+
+def test_a_bound_crossed_in_neither_week_has_no_row():
+    assert "שתיה" not in recap({WEDNESDAY: CLEAN, LAST_SATURDAY: CLEAN})
 
 
 def test_a_loss_past_the_expected_weekly_rate_earns_the_thumb():
@@ -147,10 +149,11 @@ def test_the_follow_up_is_one_question_and_the_brief_stays_out_of_it():
     assert weekly_recap.INSIGHTS_QUESTION.startswith("מהן התובנות לשבוע הבא")
     assert "איזון הורמונלי" in weekly_recap.INSIGHTS_QUESTION
     assert weekly_recap.INSIGHTS_BRIEF.startswith("הנחיות לתשובה:")
-    # Direction is weighed, not thresholded: one day alone is noise, small moves the same way
-    # add up, and the largest change is named first.
+    # Direction is weighed, not thresholded: one day alone is noise and never the headline,
+    # small moves the same way add up, and a real change is named first.
     assert "מצטברים" in weekly_recap.INSIGHTS_BRIEF
-    assert "בשינוי הגדול ביותר בהתנהגות, בשם הנושא שלו" in weekly_recap.INSIGHTS_BRIEF
+    assert "לא להציג אותו כשינוי בולט" in weekly_recap.INSIGHTS_BRIEF
+    assert "לנקוב בו קודם, בשם הנושא שלו" in weekly_recap.INSIGHTS_BRIEF
     # The reading is the conclusion, never the rule it was weighed by.
     assert "בלי לצטט את ההנחיות" in weekly_recap.INSIGHTS_BRIEF
     # Behavior is the way and the weight the outcome; a breach comes with its day.

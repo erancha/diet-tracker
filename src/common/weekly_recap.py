@@ -42,9 +42,6 @@ def week_label(week_start: str, week_end: str) -> str:
 # app stores shows the line by itself, so it ends as a sentence rather than pointing at a link.
 _TRENDS = "הגרפים והטבלה של השבוע במסך המגמות באפליקציה."
 
-# A bound crossed last week alone earns a row only where the difference could not be one day's
-# luck: at least this many days fewer this week.
-NOTABLE_DAYS = 2
 # What a week is expected to take off the scale: guidance puts a sustainable loss at half a
 # percent to one percent of body weight a week, so a loss past the top of that band is more
 # than the program asks of a week.
@@ -70,10 +67,10 @@ INSIGHTS_QUESTION = ("מהן התובנות לשבוע הבא, לפי עקרונ
                      "יום פינוק אחד שאינו גולש, איזון הורמונלי ושובע?")
 
 # How the reading is to be written: a coach's weighing of the table, then the one or two things
-# that matter most. Behavior is the way and the weight its outcome, so the largest change is
-# sought among the behaviors and every step aims at one; direction is weighed, not thresholded —
-# one day alone is noise, several small moves the same way add up, two days is a real change —
-# and a breach is never named without the day it fell on and what was recorded. A breach is
+# that matter most. Behavior is the way and the weight its outcome, so the change is sought
+# among the behaviors and every step aims at one; direction is weighed, not thresholded — one
+# day alone is noise and never a headline, several small moves the same way add up and are read
+# as one direction, two days is a real change and is named first — and a breach is never named without the day it fell on and what was recorded. A breach is
 # weighed by how far past its bound the day went: the aim is clean days off the treat day, but a
 # day that only just crossed is close to it and is read forgivingly.
 INSIGHTS_BRIEF = "\n".join([
@@ -83,11 +80,13 @@ INSIGHTS_BRIEF = "\n".join([
     "המשקל הוא התוצאה, לא הדרך. הדרך היא ההתנהגות שבטבלה — ימים נקיים, שתיה, ארוחות, חלון "
     "אכילה, ירקות, מנות שומן, ציון יומי — ועליה מדברים; המשקל נזכר כתוצאה שמאשרת את הכיוון או "
     "לא, ואף צעד אינו מכוון אליו.",
-    "לפתוח במשפט או שניים שמפרשים את הטבלה שבשאלה, שמציבה את השבוע לצד השבוע שעבר: לנקוב קודם "
-    "בשינוי הגדול ביותר בהתנהגות, בשם הנושא שלו ובכיוונו, ואז לומר לאן השבוע הלך בסך הכול, "
-    "כשמשקללים את גודל השינויים ואת כיוונם המצטבר — הבדל של יום אחד לבדו הוא רעש, כמה שינויים "
-    "קטנים באותו כיוון מצטברים, ושינוי של יומיים ומעלה הוא שינוי של ממש. לכתוב את המסקנה בלבד, "
-    "במילים, בלי לצטט את ההנחיות האלה ובלי כותרות כמו \"מה השתפר:\".",
+    "לפתוח במשפט או שניים שמפרשים את הטבלה שבשאלה, שמציבה את השבוע לצד השבוע שעבר, ואומרים "
+    "לאן השבוע הלך בסך הכול, כשמשקללים את גודל השינויים ואת כיוונם המצטבר. שינוי של יומיים "
+    "ומעלה הוא שינוי של ממש: כשיש כזה, לנקוב בו קודם, בשם הנושא שלו ובכיוונו. הבדל של יום אחד "
+    "לבדו הוא רעש — לא להציג אותו כשינוי בולט, כהישג או ככישלון. כמה הבדלים קטנים באותו כיוון "
+    "מצטברים: לתאר את הכיוון המשותף שלהם, ולא להבליט נושא אחד מתוכם. כשאין שינוי של ממש ואין "
+    "כיוון מצטבר — לומר שהשבוע דומה לשבוע שעבר. לכתוב את המסקנה בלבד, במילים, בלי לצטט את "
+    "ההנחיות האלה ובלי כותרות כמו \"מה השתפר:\".",
     "הנתונים שלמטה: השבוע הזה והשבוע שלפניו יום־יום, והמשקלים. כל חריגה שמזכירים — לומר באיזה "
     "יום היא היתה ומה נרשם בו, לפי הנתונים יום־יום, כדי שהקורא יבין את ההקשר; לא להזכיר חריגה "
     "בלי ההקשר שלה.",
@@ -110,10 +109,9 @@ def text(questionnaire, week_start: str, week_end: str, days: dict, excluded: di
     `days` and `excluded` are the closed days and what each day with meals spent on flours and
     sugars, over at least the week and the one before it. Clean days are the closed days off the
     treat day that spent nothing: the treat day is what the spending is for, so it is neither
-    clean nor not. A bound row is there when a day crossed it this week, counted day by day the
-    way the charts redden a dot and the table a cell, or when last week crossed it NOTABLE_DAYS
-    more times — a bound no day crossed says nothing, and a single short day last week is not a
-    finding about this one. Each row opens with its status: MET when this week has no breach in
+    clean nor not. A bound row is there when a day crossed it in either week, counted day by day
+    the way the charts redden a dot and the table a cell — a bound no day crossed says nothing,
+    while one this week left behind is the evidence the reading under the table weighs. Each row opens with its status: MET when this week has no breach in
     that row or every closed day clean, else BETTER, WORSE or SAME against last week's count; the
     weight row, each weighing dated, is BETTER by any drop, WORSE by any gain, and ABOVE when the
     drop passes ABOVE_EXPECTED_LOSS_PCT of the earlier weighing. Last week's counts read as
@@ -147,7 +145,7 @@ def _table(questionnaire, week_start, this_week, days, excluded, treat_weekday, 
     for rule in questionnaire.rules:
         subject = rules.subject_name(questionnaire, rule)
         now, then = (week[subject] if subject in week else 0 for week in crossed)
-        if now or then - now >= NOTABLE_DAYS:
+        if now or then:
             bound_rows[rule.id] = (_status(then - now, now == 0, bool(last_week)),
                                    f"חריגות {subject}", now, then)
     # The daily score is the program's headline measure, so its row leads the table.

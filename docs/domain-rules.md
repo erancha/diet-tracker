@@ -274,9 +274,8 @@ Scheduled jobs (EventBridge Scheduler, Asia/Jerusalem) run alongside the tracker
   what the spending is for, so it is neither clean nor not); each bound a day crossed this week,
   counted day by day the way the trend chart reddens a dot and the history table marks the day,
   under the subject's own name; and the latest weighing against the latest one at least a week
-  older. A bound crossed last week alone earns a row only when this week crossed it two days
-  fewer or more (`weekly_recap.NOTABLE_DAYS`), so a single short day of water last week is never
-  dressed up as this week's finding. Each row opens, at the table's right edge, with its
+  older. A bound crossed last week alone keeps its row, marked met, so the reading under the
+  table never weighs a change the table hides. Each row opens, at the table's right edge, with its
   standing: ✅ when the week meets the program's expectation in that row — no breach, or every
   closed day clean — else 🟢 better than last week, 🔴 worse, ↔️ the same, by direction alone.
   The weight row, each weighing dated, is 🟢 by any drop and 🔴 by any gain, and 👍 when the
@@ -298,10 +297,11 @@ Scheduled jobs (EventBridge Scheduler, Asia/Jerusalem) run alongside the tracker
   list shows under the recap. How to answer rides beside the data instead, as a brief opening
   the context block (`weekly_recap.INSIGHTS_BRIEF`): answer as the program's coach; behavior
   is the way and the weight its outcome, so speak of the behaviors and cite the weight only as
-  confirming the direction or not; open by naming the largest change in behavior first, by its
-  subject and direction, then saying where the week went once the changes are weighed — one
-  day's difference alone is noise, several small moves the same way add up, two days is a real
-  change — as a conclusion, never quoting the rule it was weighed by; never name a breach without
+  confirming the direction or not; open by saying where the week went once the changes are
+  weighed — a change of two days or more is real and is named first, by its subject and
+  direction; one day's difference alone is noise and is never presented as notable; several
+  small moves the same way are read as one direction rather than one of them singled out; with
+  neither, the week matches the one before — as a conclusion, never quoting the rule it was weighed by; never name a breach without
   the day it fell on and what was recorded; then pick the one or two behaviors that matter most
   for the coming week, each with why it matters and one concrete, measurable step; do not repeat
   the table's numbers or walk every bound, and stay within eight lines. Under the brief in that block
