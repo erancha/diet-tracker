@@ -20,14 +20,12 @@ class Derived:
 
 def _source_weight(choice, portion_id, weights, portions) -> float:
     """What the plate's main carb source weighs: its grade, at its recorded helping where the
-    quantity rule offers one. The helping id must resolve against the declared scale even below
-    the offered grade — a bad id is a data fault, never a quiet full serving — but it discounts
-    only from the threshold up, matching where the picker exists."""
+    quantity rule offers that helping for the grade. The helping id must resolve against the
+    declared scale even where it is not offered — a bad id is a data fault, never a quiet full
+    serving — but it applies only where offered, matching what the picker lists."""
     weight = weights[choice]
-    if portion_id is not None and portions.offered_for(weight):
+    if portion_id is not None and portions.option_offered(portion_id, weight):
         return portions.weigh(weight, portion_id)
-    if portion_id is not None:
-        portions.percent(portion_id)
     return weight
 
 

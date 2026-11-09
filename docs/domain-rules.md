@@ -24,7 +24,9 @@ carry are recorded beside it.
 **Helping.** A grade is a source, not a quantity, so a meal may be marked a small portion and
 counts its grade at the configured percentage. The option is offered only from the configured
 grade up, where a lighter helping is a distinction worth drawing and the reduced weight still
-lands above zero; a meal switched down to a lighter grade loses the mark with it.
+lands above zero; a meal switched down to a lighter grade loses the mark with it. A helping may
+name a lower grade of its own: the regular and large helpings reach one grade further down
+(`from_value` 3), so a large plate of a grade 3 source counts 4.5 rather than 3.
 
 **A second source.** A plate can draw on two sources at once — a grade 2 quinoa bowl beside a
 slice of white bread — and no single grade prices such a plate honestly. A meal may therefore

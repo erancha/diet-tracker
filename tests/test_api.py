@@ -290,10 +290,17 @@ def test_the_full_portion_keeps_the_grades_whole_weight(env):
     assert payload["meals"][0]["portion"] == "full"
 
 
+def test_a_large_helping_is_offered_below_the_reduced_ones(env):
+    payload = body_of(add_meal("carb_grade_3", portion="large"))
+    assert payload["derived"]["carbs"] == 4.5
+    assert payload["meals"][0]["portion"] == "large"
+
+
 def test_add_meal_rejects_a_portion_that_breaks_the_offer_rule(env):
-    # The helping choice exists only from the threshold grade up; below it a meal carries none.
+    # A helping exists only from its threshold grade up; below it a meal cannot carry it.
     below_threshold = add_meal("carb_grade_3", portion="small")
     assert below_threshold["statusCode"] == 400
+    assert add_meal("carb_grade_2", portion="large")["statusCode"] == 400
     unknown = add_meal("carb_grade_6", portion="crumb")
     assert unknown["statusCode"] == 400
     assert "crumb" in body_of(unknown)["error"]

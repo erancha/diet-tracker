@@ -5,8 +5,10 @@
 import type { Derived, Meal, Question, ScaleOption } from "./types";
 
 /** The helping-size scale shared by both carb sources, as the derivation applies it: the
- * primary source discounts only from `from_value` up, a heavy second source at any grade.
- * `default` names the step either picker opens on. */
+ * primary source takes a helping only from `from_value` up, or from the helping's own lower
+ * `from_value`; a heavy second source takes any helping at any grade. `default` names the step
+ * either picker opens on; it must reach as low as any helping does, since the meal form falls
+ * back to it when a grade switch leaves the picked helping unoffered. */
 export interface Portions {
   from_value: number;
   default: string;
@@ -60,10 +62,14 @@ export function carbsScales(question: Question): {
   };
 }
 
-// Whether the helping choice is offered for a grade — the rule the meal form and the derivation
-// both read, so the picker appears exactly where it changes the score.
-export function portionOffered(portions: Portions, weight: number): boolean {
-  return weight >= portions.from_value;
+// The helpings offered for a grade — the rule the meal form and the derivation both read, so the
+// picker lists exactly the helpings that change the score.
+export function offeredPortions(portions: Portions, weight: number): ScaleOption[] {
+  return portions.options.filter((option) => weight >= (option.from_value ?? portions.from_value));
+}
+
+function portionApplies(portions: Portions, portionId: string, weight: number): boolean {
+  return offeredPortions(portions, weight).some((option) => option.id === portionId);
 }
 
 // A step's percentage on a quantity scale; an id the scale does not declare is a data fault.
@@ -74,15 +80,15 @@ function scalePercent(options: ScaleOption[], optionId: string, kind: string): n
 }
 
 // What the meal's main carb source weighs: its grade, at its recorded helping where the quantity
-// rule offers one. The helping id must resolve against the declared scale even below the offered
-// grade — a bad id is a data fault, never a quiet full serving — but it discounts only from the
-// threshold up, matching where the picker exists.
+// rule offers that helping for the grade. The helping id must resolve against the declared scale
+// even where it is not offered — a bad id is a data fault, never a quiet full serving — but it
+// applies only where offered, matching what the picker lists.
 function sourceWeight(choice: string, portionId: string | null, weights: Record<string, number>, portions: Portions): number {
   const weight = weights[choice];
   if (weight === undefined) throw new Error(`unknown carbs choice ${choice}`);
   if (portionId !== null) {
     const percent = scalePercent(portions.options, portionId, "portion");
-    if (portionOffered(portions, weight)) return (weight * percent) / 100;
+    if (portionApplies(portions, portionId, weight)) return (weight * percent) / 100;
   }
   return weight;
 }
@@ -144,7 +150,7 @@ function mealBreakdown(meals: Pick<Meal, "at" | "carbs_choice" | "fruit" | "addi
     let weight = sourceWeight(meal.carbs_choice, meal.portion, weights, portions);
     const sourceExcluded = excludesSource(weights[meal.carbs_choice]);
     terms.push({ kind: "source", choice: meal.carbs_choice,
-                 portion: meal.portion !== null && portionOffered(portions, weights[meal.carbs_choice]) ? meal.portion : null,
+                 portion: meal.portion !== null && portionApplies(portions, meal.portion, weights[meal.carbs_choice]) ? meal.portion : null,
                  points: weight, excluded: sourceExcluded });
     let part = sourceExcluded ? weight : 0;
     // A plate drawing on two light carb sources is one method-approved plate, so the higher grade

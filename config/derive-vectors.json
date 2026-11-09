@@ -59,12 +59,14 @@
       {
         "id": "full",
         "label": "מנה רגילה",
-        "percent": 100
+        "percent": 100,
+        "from_value": 3
       },
       {
         "id": "large",
         "label": "מנה גדולה",
-        "percent": 150
+        "percent": 150,
+        "from_value": 3
       }
     ]
   },
@@ -729,6 +731,29 @@
       ],
       "derived": {
         "carbs": 3,
+        "meals": 1,
+        "vegetables": 0,
+        "eating_window": 0,
+        "fat": 0
+      },
+      "excluded": 0
+    },
+    {
+      "name": "a large helping reaches below the offered grade",
+      "meals": [
+        {
+          "at": "2026-08-20T13:00:00+03:00",
+          "carbs_choice": "carb_grade_3",
+          "vegetables": false,
+          "fruit": false,
+          "additions": [],
+          "portion": "large",
+          "second_source": null,
+          "fat_servings": 0
+        }
+      ],
+      "derived": {
+        "carbs": 4.5,
         "meals": 1,
         "vegetables": 0,
         "eating_window": 0,

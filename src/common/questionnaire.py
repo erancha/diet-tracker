@@ -33,6 +33,9 @@ class ScaleOption:
     id: str
     label: str
     percent: float
+    # Present only on a helping offered below its scale's own threshold: the lowest grade weight
+    # it is offered for. Mirrors the from_value field frontend/src/types.ts declares.
+    from_value: float | None = None
 
 
 @dataclass(frozen=True)
@@ -56,14 +59,20 @@ class Portions(Scale):
     """The helping-size scale shared by both of a plate's carb sources.
 
     The grade ladder ranks a meal by its carb source alone, so the helping is recorded separately.
-    The primary source offers the choice only from `from_value` up, where a lighter helping is a
-    distinction worth drawing; a heavy second source always names its helping, whatever its
-    grade. `default` names the step either picker opens on."""
+    The primary source offers a helping only from `from_value` up, where a lighter helping is a
+    distinction worth drawing, or from the helping's own lower `from_value` where it carries one;
+    a heavy second source always names its helping, whatever its grade. `default` names the step
+    either picker opens on; it must reach as low as any helping does, since the meal form falls
+    back to it when a grade switch leaves the picked helping unoffered."""
     from_value: float
     default: str
 
-    def offered_for(self, weight: float) -> bool:
-        return weight >= self.from_value
+    def option_offered(self, option_id: str, weight: float) -> bool:
+        for option in self.options:
+            if option.id == option_id:
+                threshold = self.from_value if option.from_value is None else option.from_value
+                return weight >= threshold
+        raise KeyError(option_id)
 
 
 @dataclass(frozen=True)
@@ -316,7 +325,8 @@ class Questionnaire:
 
 
 def _scale_options(raw: list) -> tuple:
-    return tuple(ScaleOption(id=o["id"], label=o["label"], percent=o["percent"]) for o in raw)
+    return tuple(ScaleOption(id=o["id"], label=o["label"], percent=o["percent"],
+                             from_value=o.get("from_value")) for o in raw)
 
 
 def parse(raw: dict) -> Questionnaire:

@@ -292,12 +292,14 @@
             {
               "id": "full",
               "label": "מנה רגילה",
-              "percent": 100
+              "percent": 100,
+              "from_value": 3
             },
             {
               "id": "large",
               "label": "מנה גדולה",
-              "percent": 150
+              "percent": 150,
+              "from_value": 3
             }
           ]
         },

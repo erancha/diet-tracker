@@ -52,8 +52,8 @@ in the middle of serving a request.
 
 The questionnaire's own vocabulary is objects too. `Scale` holds the percentage arithmetic a
 quantity axis needs, and `Portions` and `Amounts` extend it with only the rule that distinguishes
-them — the helping threshold below which no choice is offered, and the default step a newly
-recorded addition carries.
+them — the grade threshold below which a helping is not offered (a scale-wide one, which a
+helping may lower for itself), and the default step a newly recorded addition carries.
 
 ## Rules judge one value and name their own bound
 

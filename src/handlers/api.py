@@ -309,9 +309,9 @@ def _meal_rejection(body, allowed, stretch_until, questionnaire):
         rule = questionnaire.portions()
         if not isinstance(portion, str) or all(p.id != portion for p in rule.options):
             return _response(400, {"error": f"unknown portion {portion!r}"})
-        if not rule.offered_for(questionnaire.carb_weights()[body["carbs_choice"]]):
+        if not rule.option_offered(portion, questionnaire.carb_weights()[body["carbs_choice"]]):
             return _response(400, {
-                "error": "a portion is offered only from the threshold grade up"})
+                "error": f"portion {portion!r} is not offered for this grade"})
     additions = _additions_rejection(body["additions"], questionnaire)
     if additions is not None:
         return additions

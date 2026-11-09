@@ -104,6 +104,10 @@ def test_portion_choices():
     for option in portions["options"]:
         assert option["label"] in DOC
         assert f"{option['percent']}%" in DOC
+    lower = [o for o in portions["options"] if "from_value" in o]
+    for value in {o["from_value"] for o in lower}:
+        labels = " או ".join(f"**{o['label']}**" for o in lower if o["from_value"] == value)
+        assert f"בדרגה {value} אפשר לבחור רק {labels}" in DOC
 
 
 def test_second_source_bounds():

@@ -49,9 +49,9 @@ export interface Question {
   // more. `default` names the step a newly checked addition carries.
   amounts?: { default: string; options: ScaleOption[] };
   // Present only on the carbs question: the quantity axis the grade ladder does not carry — the
-  // helping-size scale shared by both of a plate's carb sources. The primary source offers the
-  // choice only from `from_value` up, where a lighter helping is a distinction worth drawing.
-  // `default` names the step either picker opens on.
+  // helping-size scale shared by both of a plate's carb sources. The primary source offers a
+  // helping only from `from_value` up, where a lighter helping is a distinction worth drawing, or
+  // from the helping's own lower `from_value`. `default` names the step either picker opens on.
   portions?: { from_value: number; default: string; options: ScaleOption[] };
   // Present only on the carbs question: the second-carb-source contract. A plate earns a second
   // source only around a primary grade weighing in (0, primary_grade_max]. A second source that is
@@ -185,6 +185,9 @@ export interface ScaleOption {
   id: string;
   label: string;
   percent: number;
+  // Present only on a helping offered below its scale's own threshold: the lowest grade weight it
+  // is offered for. Mirrors from_value on ScaleOption in src/common/questionnaire.py.
+  from_value?: number;
 }
 
 /** A plate's second carb source: the grade it drew on and the helping it was eaten as. A light

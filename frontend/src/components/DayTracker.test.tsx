@@ -2,7 +2,7 @@ import { act, cleanup, fireEvent, render, screen, within } from "@testing-librar
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DayTracker } from "./DayTracker";
 import { PICK_REVEAL_MS } from "./ChoiceFieldset";
-import type { DayPayload } from "../types";
+import type { DayPayload, Questionnaire } from "../types";
 import { dashboardFigure, trackedDay, trackerQuestionnaire as questionnaire } from "../test-fixtures";
 
 const emptyDay: DayPayload = {
@@ -87,6 +87,14 @@ const openMealForm = () =>
 // Both grade groups offer the same choices, so a query has to say which plate source it means.
 const secondSourceGroup = () => within(screen.getByRole("group", { name: "מקור פחמימה נוסף" }));
 const primaryGroup = () => within(screen.getByRole("group", { name: "פחמימות (דרגת הארוחה)" }));
+// The fixture questionnaire with its fuller helpings reaching down to grade 4, one grade below the
+// reduced ones.
+const fullerHelpingsFromGrade4: Questionnaire = {
+  ...questionnaire,
+  questions: questionnaire.questions.map((q) => q.portions === undefined ? q : {
+    ...q, portions: { ...q.portions, options: q.portions.options.map((o) =>
+      o.percent >= 100 ? { ...o, from_value: 4 } : o) } }),
+};
 const revealSecondSource = () =>
   fireEvent.click(screen.getByRole("button", { name: "הוספת מקור פחמימה נוסף" }));
 
@@ -378,6 +386,30 @@ describe("DayTracker", () => {
     expect(screen.queryByLabelText(/גודל המנה/)).toBeNull();
     fireEvent.click(screen.getByLabelText("דרגה 6"));
     expect(screen.getByLabelText(/גודל המנה/)).toBeInTheDocument();
+  });
+
+  it("offers below the reduced helpings' grade only the helpings that reach it", () => {
+    const onAddMeal = vi.fn();
+    render(<DayTracker expandLabels={false} suggestBeforeHours={1} treatDay={TREAT_DAY} maxMealsPerDay={NO_CAP_MEALS} closeMinWindowHours={6} closeFrom={CLOSE_FROM} highlightCloseFrom={HIGHLIGHT_FROM} stretchesUntil={STRETCHES_UNTIL} questionnaire={fullerHelpingsFromGrade4} day={emptyDay}
+                       firstMealHour={NO_NUDGE_HOUR}
+                       mealGapHours={NO_NUDGE_GAP_HOURS}
+                       onAddMeal={onAddMeal} onUpdateMeal={vi.fn()}
+                       onDeleteMeal={vi.fn()} onCloseDay={vi.fn()} />);
+    openMealForm();
+    fireEvent.click(screen.getByLabelText("דרגה 4"));
+    const offered = Array.from((screen.getByLabelText(/גודל המנה/) as HTMLSelectElement).options)
+      .map((option) => option.value);
+    expect(offered).toEqual(["full", "large"]);
+
+    // Reduced, then switched to a grade offering only the fuller helpings: the reduced one cannot
+    // ride along, so the meal is recorded at the default helping.
+    fireEvent.click(screen.getByLabelText("דרגה 6"));
+    fireEvent.change(screen.getByLabelText(/גודל המנה/), { target: { value: "small" } });
+    fireEvent.click(screen.getByLabelText("דרגה 4"));
+    expect(screen.getByLabelText(/גודל המנה/)).toHaveValue("full");
+    fireEvent.click(screen.getByRole("button", { name: "שמירת ארוחה" }));
+    expect(onAddMeal).toHaveBeenCalledWith(expect.objectContaining({
+      carbs_choice: "carb_grade_4", portion: "full", second_source: null }));
   });
 
   it("records the picked portion, and drops it when the grade no longer offers one", () => {
