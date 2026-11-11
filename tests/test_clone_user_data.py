@@ -113,3 +113,9 @@ def test_the_target_stack_must_be_named(monkeypatch):
     monkeypatch.setattr(sys, "argv", ["clone", "fictive", EMAIL])
     with pytest.raises(SystemExit):
         clone.main()
+
+
+def test_production_is_refused_as_the_target(monkeypatch):
+    monkeypatch.setattr(sys, "argv", ["clone", "delete", "--target-stack", clone.PRODUCTION_APP])
+    with pytest.raises(SystemExit):
+        clone.main()

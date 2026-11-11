@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Resets one user to a first-time sign-in: deletes their Cognito account and the rows they own in
 # the day, meal, weight, undelivered-message and nudge-state tables. Cognito mints a new sub for
 # the recreated account, so the rows must go with it — left behind they are orphans no sign-in can
@@ -6,9 +6,9 @@
 # let the account back in.
 #
 # Usage:
-#   scripts/reset-user.sh [env] <email> [--keep-account] [--yes]
+#   scripts/reset-user.sh <email> [--keep-account] [--yes]
 #
-# env: optional suffix (e.g. dev) naming the stack pair, as in deploy.sh.
+# Acts on the stack pair the current git branch selects, as deploy.sh does.
 #
 # Options:
 #   --keep-account   Delete the user's data only, keeping the Cognito account and its sub
@@ -20,10 +20,10 @@
 #   scripts/reset-user.sh someone@gmail.com
 #   scripts/reset-user.sh someone@gmail.com --keep-account   # wipe the log, keep the account
 set -euo pipefail
-cd "$(dirname "$0")/.."
-# shellcheck source=common.sh
-source scripts/common.sh
-source scripts/aws-config.sh
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=lib/app-env.sh
+source "$SCRIPT_DIR/lib/app-env.sh"
 
 KEEP_ACCOUNT="" ASSUME_YES="" POSITIONAL=()
 while [ $# -gt 0 ]; do
@@ -31,14 +31,16 @@ while [ $# -gt 0 ]; do
     --keep-account) KEEP_ACCOUNT=1; shift ;;
     --yes|-y)       ASSUME_YES=1; shift ;;
     --help|-h)      print_help; exit 0 ;;
-    -*)             print_help >&2; exit 2 ;;
+    -*)             usage_error "Unknown option: $1" ;;
     *)              POSITIONAL+=("$1"); shift ;;
   esac
 done
-[ ${#POSITIONAL[@]} -ge 1 ] || { print_help >&2; exit 2; }
-EMAIL="${POSITIONAL[-1]}"
-parse_env_suffix_arg "${POSITIONAL[@]:0:${#POSITIONAL[@]}-1}"
-POOL=$(aws cloudformation describe-stacks --stack-name "${APP}-cognito" \
+[ ${#POSITIONAL[@]} -eq 1 ] || usage_error "Expected one email address"
+EMAIL="${POSITIONAL[0]}"
+cd "$APP_FOLDER"
+load_aws_config
+resolve_stack_pair
+POOL=$(aws cloudformation describe-stacks --stack-name "$COGNITO_STACK_NAME" \
   --query "Stacks[0].Outputs[?OutputKey=='UserPoolId'].OutputValue" --output text)
 
 USERNAME=$(aws cognito-idp list-users --user-pool-id "$POOL" --filter "email = \"$EMAIL\"" \
@@ -54,7 +56,7 @@ ROW_TABLES="DaysTable MealsTable WeightsTable UndeliveredTable"
 STATE_TABLE="NudgeStateTable"
 
 table() {
-  aws cloudformation describe-stack-resources --stack-name "$APP" --logical-resource-id "$1" \
+  aws cloudformation describe-stack-resources --stack-name "$STACK_NAME" --logical-resource-id "$1" \
     --query "StackResources[0].PhysicalResourceId" --output text
 }
 
@@ -81,7 +83,7 @@ STATE_HELD=$(aws dynamodb get-item --table-name "$(table "$STATE_TABLE")" \
 HELD=$((HELD + STATE_HELD))
 INVENTORY="${INVENTORY}  $STATE_TABLE: $STATE_HELD item(s)"
 
-echo "Resetting $EMAIL (username $USERNAME, sub $SUB) in $APP"
+echo "Resetting $EMAIL (username $USERNAME, sub $SUB) in $STACK_NAME"
 [ -n "$KEEP_ACCOUNT" ] && echo "  the Cognito account is kept" || echo "  the Cognito account is deleted"
 echo "$INVENTORY"
 

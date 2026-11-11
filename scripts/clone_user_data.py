@@ -1,5 +1,6 @@
 """Copies one user's recorded data between deployed stacks, to rehearse the app at a larger user
-count in an isolated stack pair. Run through scripts/clone-user-data.sh.
+count in an isolated stack pair. Run through scripts/clone-user-data.sh, which names the stack
+pair of the current git branch as the target.
 
 - mirror: the production account's rows land under the same address's account in the target
   stack, replacing whatever that account held there.
@@ -147,16 +148,21 @@ def delete_fictive(stack):
 
 
 def main():
-    """Parses the action and the target stack suffix, then runs the action against it."""
+    """Parses the action and the target stack, then runs the action against it."""
     parser = argparse.ArgumentParser(prog="clone-user-data.sh")
     parser.add_argument("action", choices=("mirror", "fictive", "delete"))
-    parser.add_argument("env", help="suffix of the target stack pair, as deploy.sh takes it")
     parser.add_argument("email", nargs="?")
     parser.add_argument("--count", type=int, default=100)
+    parser.add_argument("--target-stack", required=True,
+                        help="app stack of the target pair; clone-user-data.sh passes the "
+                             "current git branch's")
     args = parser.parse_args()
     if args.action != "delete" and args.email is None:
         parser.error(f"{args.action} needs an email")
-    target = Stack.resolve(f"{PRODUCTION_APP}-{args.env}")
+    if args.target_stack == PRODUCTION_APP:
+        parser.error(f"{PRODUCTION_APP} is production and never a target; "
+                     "run from a feature branch")
+    target = Stack.resolve(args.target_stack)
     if args.action == "mirror":
         mirror(Stack.resolve(PRODUCTION_APP), target, args.email.lower())
     elif args.action == "fictive":

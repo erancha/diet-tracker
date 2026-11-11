@@ -43,7 +43,7 @@ Parameters:
     Type: String
     Description: The admin's address — the one account allowed the per-user activity listing,
       and the recipient of the chat's daily-limit notices; passed by scripts/deploy.sh from
-      params.sh
+      lib/params.sh
   BotTokenParam:
     Type: String
     Default: /diet-tracker/telegram/bot-token
@@ -54,7 +54,7 @@ Parameters:
     Type: String
     Default: ''
     Description: Base URL of the external Summaries.AI REST API answering corpus questions
-      (its POST /rag/query route); passed by scripts/deploy.sh from params.sh. Chat questions
+      (its POST /rag/query route); passed by scripts/deploy.sh from lib/params.sh. Chat questions
       fail until it is configured
   RagApiKeyParam:
     Type: String
@@ -64,11 +64,11 @@ Parameters:
     Type: Number
     Description: Questions a user may ask per day unless ChatDailyLimitOverrides names them —
       chat is the only feature that spends money per use, so this is the per-user cost ceiling;
-      passed by scripts/deploy.sh from params.sh
+      passed by scripts/deploy.sh from lib/stack-params.sh
   ChatDailyLimitOverrides:
     Type: String
     Description: JSON object mapping a user's email (lowercase) to a daily limit that replaces
-      ChatDailyLimit for that user; passed by scripts/deploy.sh from params.sh
+      ChatDailyLimit for that user; passed by scripts/deploy.sh from lib/params.sh
   LogRetentionDays:
     Type: Number
     Default: 14

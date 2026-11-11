@@ -1,16 +1,16 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Helper for the app's outgoing mail, against the deployed stacks. Each action is named by its own
 # parameter and acts on one user, so a surface can be looked at on demand instead of waiting for a
 # schedule to fire or for SES to refuse something. Most only simulate; --verify really asks SES to
 # send, and the usage below says which is which.
 #
 # Usage:
-#   scripts/emails-helper.sh --rejected <email> [--subject <text>] [--body <text>] [env]
-#   scripts/emails-helper.sh --weekly-recap <email> [--send] [env]
-#   scripts/emails-helper.sh --debrief <email> [--send] [env]
-#   scripts/emails-helper.sh --verify <email> [env]
+#   scripts/emails-helper.sh --rejected <email> [--subject <text>] [--body <text>]
+#   scripts/emails-helper.sh --weekly-recap <email> [--send]
+#   scripts/emails-helper.sh --debrief <email> [--send]
+#   scripts/emails-helper.sh --verify <email>
 #
-# env: optional suffix (e.g. dev) naming the stack pair, as in deploy.sh.
+# Acts on the stack pair the current git branch selects, as deploy.sh does.
 #
 # Simulations:
 #   --rejected <email>      Show that user a message as one SES refused to deliver
@@ -37,23 +37,23 @@
 #   scripts/emails-helper.sh --debrief someone@gmail.com               # yesterday's debrief, if due
 #   scripts/emails-helper.sh --verify someone@gmail.com                # re-request a dead link
 set -euo pipefail
-cd "$(dirname "$0")/.."
-# shellcheck source=common.sh
-source scripts/common.sh
-source scripts/aws-config.sh
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=lib/app-env.sh
+source "$SCRIPT_DIR/lib/app-env.sh"
 
 # The nightly reminder's own wording, so the default lands in the bell reading exactly like the
 # message a user would have missed. Mirrors REMINDER_SUBJECT/REMINDER_TEXT in src/handlers/nudge.py.
 SUBJECT="תזכורת — רישום ארוחות"
 BODY="עדיין לא רשמת ארוחות היום 🌙"
 
-ACTION="" EMAIL="" SEND="" ENV_ARGS=()
+ACTION="" EMAIL="" SEND=""
 while [ $# -gt 0 ]; do
-  # Every flag below that names a value, checked once here so a missing one prints the usage
+  # Every flag below that names a value, checked once here so a missing one is a usage error
   # rather than tripping over set -u.
   case "$1" in
     --rejected|--weekly-recap|--debrief|--verify|--subject|--body)
-      [ $# -ge 2 ] || { print_help >&2; exit 2; } ;;
+      [ $# -ge 2 ] || usage_error "$1 needs a value" ;;
   esac
   case "$1" in
     --rejected|--weekly-recap|--debrief|--verify) ACTION="${1#--}"; EMAIL="$2"; shift 2 ;;
@@ -61,12 +61,13 @@ while [ $# -gt 0 ]; do
     --body)    BODY="$2"; shift 2 ;;
     --send)    SEND=1; shift ;;
     --help|-h) print_help; exit 0 ;;
-    -*)        print_help >&2; exit 2 ;;
-    *)         ENV_ARGS+=("$1"); shift ;;
+    *)         usage_error "Unknown argument: $1" ;;
   esac
 done
-[ -n "$ACTION" ] && [ -n "$EMAIL" ] || { print_help >&2; exit 2; }
-parse_env_suffix_arg "${ENV_ARGS[@]}"
+[ -n "$ACTION" ] && [ -n "$EMAIL" ] || usage_error "No action given"
+cd "$APP_FOLDER"
+load_aws_config
+resolve_stack_pair
 
 # Writes the message directly rather than making SES refuse one: everything downstream of the
 # refusal (the stored item, the API read, the bell, the dismissal) is exercised for real, the
@@ -75,7 +76,7 @@ parse_env_suffix_arg "${ENV_ARGS[@]}"
 # only be watched happening to somebody else. Dismissing the message in the app deletes the row,
 # so this leaves nothing behind once looked at.
 rejected() {
-  POOL=$(aws cloudformation describe-stacks --stack-name "${APP}-cognito" \
+  POOL=$(aws cloudformation describe-stacks --stack-name "$COGNITO_STACK_NAME" \
     --query "Stacks[0].Outputs[?OutputKey=='UserPoolId'].OutputValue" --output text)
 
   USERNAME=$(aws cognito-idp list-users --user-pool-id "$POOL" --filter "email = \"$EMAIL\"" \
@@ -87,7 +88,7 @@ rejected() {
   SUB=$(aws cognito-idp admin-get-user --user-pool-id "$POOL" --username "$USERNAME" \
     --query "UserAttributes[?Name=='sub'].Value" --output text)
 
-  TABLE=$(aws cloudformation describe-stack-resources --stack-name "$APP" \
+  TABLE=$(aws cloudformation describe-stack-resources --stack-name "$STACK_NAME" \
     --logical-resource-id UndeliveredTable \
     --query "StackResources[0].PhysicalResourceId" --output text)
 
@@ -114,7 +115,7 @@ answering_job() {
   [ -x .venv/bin/python ] \
     || { echo "no .venv — run scripts/test.sh once to create it" >&2; exit 1; }
 
-  FUNCTION=$(aws cloudformation describe-stack-resources --stack-name "$APP" \
+  FUNCTION=$(aws cloudformation describe-stack-resources --stack-name "$STACK_NAME" \
     --logical-resource-id NudgeFunction \
     --query "StackResources[0].PhysicalResourceId" --output text)
 

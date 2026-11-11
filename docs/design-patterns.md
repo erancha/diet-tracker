@@ -84,7 +84,7 @@ which is what lets the component tests run against a fake client.
 `main.tsx` is the single place that wires the app: it resolves the session, builds the API client,
 and injects config, identity and callbacks into the tree, under an error boundary and the query
 client. Environment settings arrive separately, as `window.CONFIG` typed by `AppConfig` and
-generated per environment into `public/config.js`, so retargeting a deployment needs no rebuild.
+generated per stack pair into `public/config.js`, so retargeting a deployment needs no rebuild.
 
 A rejected request becomes an `ApiError` carrying the status alongside the server's own Hebrew
 wording, and `alertMessage` decides from it what the user reads. Timed and folding behaviour lives

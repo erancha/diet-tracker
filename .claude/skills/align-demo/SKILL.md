@@ -44,4 +44,4 @@ such a beat's caption stays empty. One short sentence, never narration of the ta
    Every beat must report no missing tap target and no spill. Then read the screenshots of the
    beats you changed. Scroll and flash targets that appear only after their beat applies are
    expected, and so is the favicon failing to load under file://.
-6. **Publish** with `scripts/sync-frontend.sh`; the demo ships with the frontend.
+6. **Publish** with `scripts/deploy.sh --frontend-only`; the demo ships with the frontend.

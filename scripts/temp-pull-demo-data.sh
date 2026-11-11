@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Read-only dump of one user's tracked data from the deployed tables, as the JSON DynamoDB
 # returns it. It exists to seed frontend/public/demo.html's snapshot from real recorded days
 # rather than from invented ones; nothing in the app reads its output.
@@ -7,9 +7,9 @@
 # records, the meals and the whole weight series.
 #
 # Usage:
-#   scripts/temp-pull-demo-data.sh [env] <email> [--from <date>] [--to <date>] [--out <path>]
+#   scripts/temp-pull-demo-data.sh <email> [--from <date>] [--to <date>] [--out <path>]
 #
-# env: optional suffix (e.g. dev) naming the stack pair, as in deploy.sh.
+# Acts on the stack pair the current git branch selects, as deploy.sh does.
 #
 # Options:
 #   --from <date>   First day to read, ISO (default: 30 days before --to)
@@ -20,11 +20,11 @@
 # Example:
 #   scripts/temp-pull-demo-data.sh someone@gmail.com --from 2026-09-01 --to 2026-09-10
 set -euo pipefail
-cd "$(dirname "$0")/.."
-# shellcheck source=common.sh
-source scripts/common.sh
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=lib/app-env.sh
+source "$SCRIPT_DIR/lib/app-env.sh"
 export PATH="$HOME/.local/bin:$PATH"
-source scripts/aws-config.sh
 
 TO=$(date +%F)
 FROM=""
@@ -32,17 +32,22 @@ OUT=demo-data.json
 POSITIONAL=()
 while [ $# -gt 0 ]; do
   case "$1" in
+    --from|--to|--out) [ $# -ge 2 ] || usage_error "$1 needs a value" ;;
+  esac
+  case "$1" in
     --from) FROM="$2"; shift 2 ;;
     --to)   TO="$2";   shift 2 ;;
     --out)  OUT="$2";  shift 2 ;;
     --help|-h) print_help; exit 0 ;;
-    -*) print_help >&2; exit 2 ;;
+    -*) usage_error "Unknown option: $1" ;;
     *)  POSITIONAL+=("$1"); shift ;;
   esac
 done
-[ ${#POSITIONAL[@]} -ge 1 ] || { print_help >&2; exit 2; }
-EMAIL="${POSITIONAL[-1]}"
-parse_env_suffix_arg "${POSITIONAL[@]:0:${#POSITIONAL[@]}-1}"
+[ ${#POSITIONAL[@]} -eq 1 ] || usage_error "Expected one email address"
+EMAIL="${POSITIONAL[0]}"
+cd "$APP_FOLDER"
+load_aws_config
+resolve_stack_pair
 [ -n "$FROM" ] || FROM=$(date -d "$TO - 30 days" +%F)
 # Meal sort keys are "<date>#<id>", so the range ends at the day after --to to take every meal of
 # that day itself without relying on a high sentinel character.
@@ -53,10 +58,10 @@ resource() {
     --logical-resource-id "$2" --query 'StackResources[0].PhysicalResourceId' --output text
 }
 
-DAYS=$(resource "$APP" DaysTable)
-MEALS=$(resource "$APP" MealsTable)
-WEIGHTS=$(resource "$APP" WeightsTable)
-POOL=$(resource "${APP}-cognito" UserPool)
+DAYS=$(resource "$STACK_NAME" DaysTable)
+MEALS=$(resource "$STACK_NAME" MealsTable)
+WEIGHTS=$(resource "$STACK_NAME" WeightsTable)
+POOL=$(resource "$COGNITO_STACK_NAME" UserPool)
 
 SUB=$(aws cognito-idp list-users --user-pool-id "$POOL" \
   --filter "email = \"$EMAIL\"" \

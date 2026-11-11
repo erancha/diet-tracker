@@ -5,7 +5,7 @@ from pathlib import Path
 import yaml
 
 TEMPLATE = Path(__file__).parent.parent / "scripts" / "template.yaml"
-DEPLOY = Path(__file__).parent.parent / "scripts" / "deploy.sh"
+STACK_PARAMS = Path(__file__).parent.parent / "scripts" / "lib" / "stack-params.sh"
 
 
 class _CloudFormationLoader(yaml.SafeLoader):
@@ -53,7 +53,7 @@ def test_admin_listing_is_routed_gated_and_granted_pool_access():
                for policy in api_function["Policies"] if isinstance(policy, dict)
                for statement in policy.get("Statement", []))
     assert "ListUsersPolicy" in template["Resources"]["NudgeFunction"]["Properties"]["Policies"]
-    assert "AdminEmail=" in DEPLOY.read_text()
+    assert "AdminEmail=" in STACK_PARAMS.read_text()
 
 
 def test_chat_function_can_address_the_admin_quota_notice():
@@ -146,7 +146,7 @@ def test_schedule_defaults_agree_with_the_app_config():
 def test_the_weekday_deploy_passes_the_schedules_is_the_treat_day():
     # config/app.json declares the treat day's weekday once, under treat_day. A deploy lifting the
     # weekday from anywhere else would schedule the recap on a day the app no longer names.
-    weekday_override = next(line for line in DEPLOY.read_text().splitlines()
+    weekday_override = next(line for line in STACK_PARAMS.read_text().splitlines()
                             if "TreatDayWeekday=" in line)
     assert "['treat_day']['weekday']" in weekday_override
 
@@ -195,8 +195,8 @@ def test_every_parameter_a_schedule_reads_is_passed_on_deploy():
                       if resource["Type"] == "AWS::Scheduler::Schedule"
                       for name in re.findall(r"\$\{(\w+)\}",
                                              resource["Properties"]["ScheduleExpression"])}
-    deploy = DEPLOY.read_text()
-    assert [name for name in sorted(read_by_a_cron) if f"{name}=" not in deploy] == []
+    passed = STACK_PARAMS.read_text()
+    assert [name for name in sorted(read_by_a_cron) if f"{name}=" not in passed] == []
 
 
 def test_the_chat_function_outlives_the_gateway_so_a_slow_answer_is_still_stored():
