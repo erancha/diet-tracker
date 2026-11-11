@@ -20,7 +20,8 @@ session. The aws CLI itself lives in `~/.local/bin`, which is not always on PATH
   stacks are deployed with; the gitignored `secrets.sh` holds the Google OAuth client and the
   gitignored `params.sh` the addresses, sign-up allow-list, per-user chat limits and answering
   service URL, each with a committed `.example.sh`. `.githooks/pre-commit` refuses a commit that
-  stages a secrets file or a value from one.
+  stages a secrets file or a value from one, or an address of `params.sh` other than the
+  published sender, admin and developer addresses (`PUBLISHED_SETTINGS` of `lib/app-env.sh`).
 - `aws-helper.sh` — the one script for AWS operations, the same file in every AWS repo; `--help`
   lists its options and then this repo's own from `lib/aws-helper-app.sh`. Fastest health check
   of a function: `scripts/aws-helper.sh --logs <function> --errors --since 1d`, where
