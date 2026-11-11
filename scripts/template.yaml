@@ -69,6 +69,11 @@ Parameters:
     Type: String
     Description: JSON object mapping a user's email (lowercase) to a daily limit that replaces
       ChatDailyLimit for that user; passed by scripts/deploy.sh from params.sh
+  LogRetentionDays:
+    Type: Number
+    Default: 14
+    Description: Days every log group of the stack keeps its events; passed from
+      LOG_RETENTION_DAYS of scripts/lib/app-env.sh
 
 Globals:
   Function:
@@ -77,7 +82,9 @@ Globals:
     MemorySize: 256
     Timeout: 30
     # JSON format is what activates the runtime-level filter; raise ApplicationLogLevel to INFO
-    # to surface the request lines and delivery receipts the code emits.
+    # to surface the request lines and delivery receipts the code emits. Every function adds the
+    # log group the stack declares for it (<Function>LogGroup, named
+    # /aws/lambda/<stack>/<Function>), so the stack sets the group's retention and deletes it.
     LoggingConfig:
       LogFormat: JSON
       ApplicationLogLevel: WARN
@@ -243,9 +250,17 @@ Resources:
                 - !Ref UserPoolClientId
             IdentitySource: '$request.header.Authorization'
 
+  ApiFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${AWS::StackName}/ApiFunction'
+      RetentionInDays: !Ref LogRetentionDays
+
   ApiFunction:
     Type: AWS::Serverless::Function
     Properties:
+      LoggingConfig:
+        LogGroup: !Ref ApiFunctionLogGroup
       # CodeUri must sit on each function: cloudformation package rewrites only per-function
       # values and would otherwise upload the template's own directory.
       CodeUri: ../build/lambda.zip
@@ -366,9 +381,17 @@ Resources:
               Action: ses:GetIdentityVerificationAttributes
               Resource: '*'
 
+  ChatFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${AWS::StackName}/ChatFunction'
+      RetentionInDays: !Ref LogRetentionDays
+
   ChatFunction:
     Type: AWS::Serverless::Function
     Properties:
+      LoggingConfig:
+        LogGroup: !Ref ChatFunctionLogGroup
       CodeUri: ../build/lambda.zip
       Handler: handlers/chat.handler
       # Past the HTTP API's 30s cap on the browser's request: the answering service may take up
@@ -462,9 +485,17 @@ Resources:
             TableName: !Ref WeightsTable
         - !Ref NotifyPolicy
 
+  NudgeFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${AWS::StackName}/NudgeFunction'
+      RetentionInDays: !Ref LogRetentionDays
+
   NudgeFunction:
     Type: AWS::Serverless::Function
     Properties:
+      LoggingConfig:
+        LogGroup: !Ref NudgeFunctionLogGroup
       CodeUri: ../build/lambda.zip
       Handler: handlers/nudge.handler
       # Every job loops the whole user pool inside one invocation, sending per user, so its run
@@ -519,9 +550,17 @@ Resources:
     Properties:
       MessageRetentionPeriod: 1209600
 
+  AppQuestionFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${AWS::StackName}/AppQuestionFunction'
+      RetentionInDays: !Ref LogRetentionDays
+
   AppQuestionFunction:
     Type: AWS::Serverless::Function
     Properties:
+      LoggingConfig:
+        LogGroup: !Ref AppQuestionFunctionLogGroup
       CodeUri: ../build/lambda.zip
       Handler: handlers/nudge.queued_handler
       # One user's recap or debrief: the answering service's wait (APP_QUESTION_TIMEOUT_SECONDS,

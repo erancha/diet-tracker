@@ -25,11 +25,26 @@ Parameters:
   DomainPrefix:
     Type: String
     Default: diet-trk
+  LogRetentionDays:
+    Type: Number
+    Default: 14
+    Description: Days every log group of the stack keeps its events; passed from
+      LOG_RETENTION_DAYS of scripts/lib/app-env.sh
 
 Resources:
+  # The function writes to a log group the stack declares for it, so the stack sets the
+  # group's retention and deletes it.
+  PreSignupFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${AWS::StackName}/PreSignupFunction'
+      RetentionInDays: !Ref LogRetentionDays
+
   PreSignupFunction:
     Type: AWS::Serverless::Function
     Properties:
+      LoggingConfig:
+        LogGroup: !Ref PreSignupFunctionLogGroup
       CodeUri: ../build/lambda.zip
       Handler: handlers/presignup.handler
       Runtime: python3.13
