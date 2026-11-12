@@ -1,6 +1,7 @@
-"""Exercises the check that keeps the email addresses of the private settings file out of git: the
-pre-commit hook on a staged snapshot, and assert_addresses_untracked of scripts/lib/app-env.sh on
-the tracked files.
+"""Exercises the checks on the private settings file: the one that keeps its email addresses out of
+git (the pre-commit hook on a staged snapshot, and assert_addresses_untracked of
+scripts/lib/app-env.sh on the tracked files), and the one in scripts/lib/stack-params.sh that
+stops a deploy while a required setting is missing or still the example's placeholder.
 
 Each test runs in a scratch git checkout holding the repo's app-env.sh and hook, stub secrets
 files, and a stub lib/params.sh whose addresses no tracked file holds, plus one address for each
@@ -14,8 +15,10 @@ import pytest
 
 REPO = Path(__file__).resolve().parent.parent
 APP_ENV = "scripts/lib/app-env.sh"
+STACK_PARAMS = "scripts/lib/stack-params.sh"
 HOOK = ".githooks/pre-commit"
 IDENTITY = ["-c", "user.name=test", "-c", "user.email=test@example.invalid"]
+SECRETS = "export GOOGLE_CLIENT_ID=stub-client-id\nexport GOOGLE_CLIENT_SECRET=stub-client-secret\n"
 
 
 def _published_settings():
@@ -28,22 +31,28 @@ def _published_settings():
 PUBLISHED = _published_settings()
 PARAMS = "".join(f"export {name}={name.lower()}@published.test\n" for name in PUBLISHED) + (
     "export ALLOWED_EMAILS='user\\.one@stub\\.test|two@stub\\.test'\n"
-    'export LIMITS=\'{"three@stub.test": 9}\'\n'
+    "export LIMITS='{\"three@stub.test\": 9}'\n"
     "export EVERYONE='.*'\n"
+)
+PARAMS += "".join(
+    f"export {name}={name.lower()}@stub.test\n"
+    for name in ("SES_SENDER", "ADMIN_EMAIL")
+    if name not in PUBLISHED
 )
 
 
 class Checkout:
     def __init__(self, root):
         self.root = root
-        for name in (APP_ENV, HOOK):
+        for name in (APP_ENV, STACK_PARAMS, HOOK):
             target = root / name
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text((REPO / name).read_text())
         (root / HOOK).chmod(0o755)
         lib = root / "scripts" / "lib"
         (lib / "aws-config.sh").write_text("export AWS_ACCESS_KEY_ID=stub-key-id\n")
-        (lib / "secrets.sh").write_text("export STUB_SECRET=stub-secret-value\n")
+        self.secrets = lib / "secrets.sh"
+        self.secrets.write_text(SECRETS)
         self.params = lib / "params.sh"
         self.params.write_text(PARAMS)
         (root / ".gitignore").write_text(
@@ -73,6 +82,16 @@ class Checkout:
             f'set -euo pipefail; SCRIPT_DIR="{self.root / "scripts"}"; '
             f'source "$SCRIPT_DIR/lib/app-env.sh"; {override}'
             f'assert_addresses_untracked "{self.params}" worktree; echo passed'
+        )
+        return subprocess.run(["bash", "-c", script], check=False, capture_output=True, text=True)
+
+
+    def source_stack_params(self):
+        """Sources lib/stack-params.sh the way deploy.sh does."""
+        script = (
+            f'set -euo pipefail; SCRIPT_DIR="{self.root / "scripts"}"; '
+            f'source "$SCRIPT_DIR/lib/app-env.sh"; source "$SCRIPT_DIR/lib/stack-params.sh"; '
+            "echo passed"
         )
         return subprocess.run(["bash", "-c", script], check=False, capture_output=True, text=True)
 
@@ -124,3 +143,30 @@ def test_an_at_sign_outside_a_full_address_is_refused(checkout):
     result = checkout.check_tracked()
     assert result.returncode != 0
     assert "GROUPED" in result.stderr and "in full" in result.stderr
+
+
+def test_stack_params_load_with_every_required_setting_filled_in(checkout):
+    result = checkout.source_stack_params()
+    assert (result.returncode, result.stdout) == (0, "passed\n"), result.stderr
+
+
+@pytest.mark.parametrize("name", ["SES_SENDER", "ADMIN_EMAIL"])
+@pytest.mark.parametrize("value", [None, "", "<placeholder-address>"])
+def test_stack_params_refuse_a_required_setting_missing_or_left_as_placeholder(
+    checkout, name, value
+):
+    kept = [line for line in PARAMS.splitlines(keepends=True) if f"export {name}=" not in line]
+    replacement = [] if value is None else [f'export {name}="{value}"\n']
+    checkout.params.write_text("".join(kept + replacement))
+    result = checkout.source_stack_params()
+    assert result.returncode != 0
+    assert result.stdout == ""
+    assert name in result.stderr and "/params." in result.stderr
+
+
+def test_stack_params_refuse_a_missing_google_setting(checkout):
+    checkout.secrets.write_text("export GOOGLE_CLIENT_ID=stub-client-id\n")
+    result = checkout.source_stack_params()
+    assert result.returncode != 0
+    assert result.stdout == ""
+    assert "GOOGLE_CLIENT_SECRET" in result.stderr and "secrets.example.sh" in result.stderr

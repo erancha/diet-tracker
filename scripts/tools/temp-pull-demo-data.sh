@@ -7,7 +7,7 @@
 # records, the meals and the whole weight series.
 #
 # Usage:
-#   scripts/temp-pull-demo-data.sh <email> [--from <date>] [--to <date>] [--out <path>]
+#   ./scripts/tools/temp-pull-demo-data.sh <email> [--from <date>] [--to <date>] [--out <path>]
 #
 # Acts on the stack pair the current git branch selects, as deploy.sh does.
 #
@@ -18,10 +18,10 @@
 #   --help, -h      Show this usage
 #
 # Example:
-#   scripts/temp-pull-demo-data.sh someone@gmail.com --from 2026-09-01 --to 2026-09-10
+#   ./scripts/tools/temp-pull-demo-data.sh someone@gmail.com --from 2026-09-01 --to 2026-09-10
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck source=lib/app-env.sh
 source "$SCRIPT_DIR/lib/app-env.sh"
 export PATH="$HOME/.local/bin:$PATH"

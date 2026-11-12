@@ -1,5 +1,5 @@
 // Runtime configuration injected by public/config.js (generated per environment by
-// scripts/app-config.sh), loaded as a plain script before the app bundle so a rebuild is never
+// scripts/lib/app-config.sh), loaded as a plain script before the app bundle so a rebuild is never
 // needed to retarget an environment.
 
 export interface AppConfig {

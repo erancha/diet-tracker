@@ -39,7 +39,7 @@ DEFAULT_REGION='eu-central-1'
 # Days every log group of the stack keeps its events: lib/stack-params.sh passes it to the
 # template's LogRetentionDays, and aws-helper.sh --log-retention sets it on existing groups.
 LOG_RETENTION_DAYS=14
-# The React app (repo-relative) and the config file app-config.sh writes for it.
+# The React app (repo-relative) and the config file lib/app-config.sh writes for it.
 FRONTEND_FOLDER='frontend'
 APP_CONFIG_FILE="$APP_FOLDER/$FRONTEND_FOLDER/public/config.js"
 
@@ -165,6 +165,7 @@ assert_addresses_untracked() {
         # shellcheck source=/dev/null
         source "$file"
         for name in "${PUBLISHED_SETTINGS[@]}"; do
+            [[ -v "$name" ]] || die "PUBLISHED_SETTINGS names $name, which $file does not set"
             published+="${!name,,} "
         done
         for name in $(setting_names "$file"); do
@@ -189,7 +190,7 @@ assert_addresses_untracked() {
 # made from a checkout that holds the file.
 source_checked_file() {
     local file="$SCRIPT_DIR/lib/$1" check="$2"
-    [[ -f "$file" ]] || die "Missing $file (copy lib/${1%.sh}.example.sh and fill it in)"
+    [[ -f "$file" ]] || die "Missing $file; create it with ./scripts/init-env.sh and fill it in"
     "$check" "$file" worktree
     # shellcheck source=/dev/null
     source "$file"
@@ -204,7 +205,11 @@ source_secrets_file() { source_checked_file "$1" assert_secrets_untracked; }
 source_private_file() { source_checked_file "$1" assert_addresses_untracked; }
 
 # The deploying user's AWS credentials and region.
-load_aws_config() { source_secrets_file aws-config.sh; }
+load_aws_config() {
+    source_secrets_file aws-config.sh
+    [[ -n "${AWS_DEFAULT_REGION:-}" && "$AWS_DEFAULT_REGION" != "<"*">" ]] ||
+        die "Set AWS_DEFAULT_REGION in scripts/lib/aws-config.sh to the region to deploy to"
+}
 
 # The Google OAuth client the Cognito stack signs users in through.
 load_secrets() { source_secrets_file secrets.sh; }
@@ -272,6 +277,22 @@ ensure_node_modules() {
 # the answering service URL. The sender and admin address are in the user guide, which tells
 # users which sender to allow, and the developer's in NOTICE; any other address stays out of git.
 load_params() { source_private_file params.sh; }
+
+# Prints the Cognito domain prefix of the branch's stack pair. Cognito domains are global, so the
+# prefix varies with the stack as the stack name does: diet-trk for diet-tracker, diet-trk-fb for
+# diet-tracker-fb. Needs resolve_stack.
+cognito_domain_prefix() { echo "diet-trk${STACK_NAME#"$(get_app_name)"}"; }
+
+# Stops unless each named variable holds a real value: set, not empty, and not the example's
+# placeholder. Names the settings file under lib/ that exports it.
+require_settings() {  # settings-file variable...
+    local file="$1" name
+    shift
+    for name in "$@"; do
+        [[ -n "${!name:-}" && "${!name}" != "<"*">" ]] ||
+            die "Set $name in scripts/lib/$file (see lib/${file%.sh}.example.sh)"
+    done
+}
 
 # The branch's stack pair: resolve_stack, then COGNITO_STACK_NAME, the pair's Cognito stack.
 resolve_stack_pair() {

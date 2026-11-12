@@ -1,5 +1,5 @@
-"""Exercises scripts/clone_user_data.py against moto tables and pools standing in for a production
-and a dev stack."""
+"""Exercises scripts/tools/clone_user_data.py against moto tables and pools standing in for a
+production and a dev stack."""
 
 import sys
 from pathlib import Path
@@ -8,7 +8,7 @@ import boto3
 import pytest
 from moto import mock_aws
 
-sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
+sys.path.insert(0, str(Path(__file__).parent.parent / "scripts" / "tools"))
 import clone_user_data as clone  # noqa: E402
 from common import users  # noqa: E402
 from common.store import Store  # noqa: E402

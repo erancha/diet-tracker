@@ -6,7 +6,7 @@
 # let the account back in.
 #
 # Usage:
-#   scripts/reset-user.sh <email> [--keep-account] [--yes]
+#   ./scripts/tools/reset-user.sh <email> [--keep-account] [--yes]
 #
 # Acts on the stack pair the current git branch selects, as deploy.sh does.
 #
@@ -17,11 +17,12 @@
 #   --help, -h       Show this usage
 #
 # Examples:
-#   scripts/reset-user.sh someone@gmail.com
-#   scripts/reset-user.sh someone@gmail.com --keep-account   # wipe the log, keep the account
+#   ./scripts/tools/reset-user.sh someone@gmail.com
+#   # wipe the log, keep the account:
+#   ./scripts/tools/reset-user.sh someone@gmail.com --keep-account
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck source=lib/app-env.sh
 source "$SCRIPT_DIR/lib/app-env.sh"
 

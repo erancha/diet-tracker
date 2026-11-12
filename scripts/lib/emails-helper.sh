@@ -5,10 +5,10 @@
 # send, and the usage below says which is which.
 #
 # Usage:
-#   scripts/emails-helper.sh --rejected <email> [--subject <text>] [--body <text>]
-#   scripts/emails-helper.sh --weekly-recap <email> [--send]
-#   scripts/emails-helper.sh --debrief <email> [--send]
-#   scripts/emails-helper.sh --verify <email>
+#   ./scripts/aws-helper.sh --emails --rejected <email> [--subject <text>] [--body <text>]
+#   ./scripts/aws-helper.sh --emails --weekly-recap <email> [--send]
+#   ./scripts/aws-helper.sh --emails --debrief <email> [--send]
+#   ./scripts/aws-helper.sh --emails --verify <email>
 #
 # Acts on the stack pair the current git branch selects, as deploy.sh does.
 #
@@ -30,15 +30,18 @@
 #   --help, -h        Show this usage
 #
 # Examples:
-#   scripts/emails-helper.sh --rejected someone@gmail.com
-#   scripts/emails-helper.sh --rejected someone@gmail.com --subject 'סיכום שבועי' --body 'שבוע טוב'
-#   scripts/emails-helper.sh --weekly-recap someone@gmail.com          # what the week would send
-#   scripts/emails-helper.sh --weekly-recap someone@gmail.com --send   # send it, to that user only
-#   scripts/emails-helper.sh --debrief someone@gmail.com               # yesterday's debrief, if due
-#   scripts/emails-helper.sh --verify someone@gmail.com                # re-request a dead link
+#   ./scripts/aws-helper.sh --emails --rejected someone@gmail.com
+#   ./scripts/aws-helper.sh --emails --rejected someone@gmail.com --subject 'סיכום שבועי' \
+#       --body 'שבוע טוב'
+#   # what the week would send, then send it to that user only:
+#   ./scripts/aws-helper.sh --emails --weekly-recap someone@gmail.com
+#   ./scripts/aws-helper.sh --emails --weekly-recap someone@gmail.com --send
+#   # yesterday's debrief, if due; then re-request a dead verification link:
+#   ./scripts/aws-helper.sh --emails --debrief someone@gmail.com
+#   ./scripts/aws-helper.sh --emails --verify someone@gmail.com
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck source=lib/app-env.sh
 source "$SCRIPT_DIR/lib/app-env.sh"
 

@@ -96,6 +96,9 @@ case "$1 $2" in
     done | jq -s .
     exit 0 ;;
   "lambda delete-layer-version") exit 0 ;;
+  "sts get-caller-identity") echo 123456789012; exit 0 ;;
+  "s3api head-bucket") [ -n "${ARTIFACTS_BUCKET_EXISTS:-}" ] || exit 254; exit 0 ;;
+  "s3api delete-bucket") exit 0 ;;
 esac
 """
 
@@ -115,7 +118,7 @@ class Helper:
             target = self.checkout / "scripts" / name
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy(SCRIPTS / name, target)
-        (self.checkout / CREDENTIALS).write_text("")
+        (self.checkout / CREDENTIALS).write_text("export AWS_DEFAULT_REGION=eu-central-1\n")
         (self.checkout / ".gitignore").write_text(f"/{CREDENTIALS}\n")
         self._git("init", "--quiet", "--initial-branch", branch)
         self._git("add", "--all")
@@ -135,10 +138,12 @@ class Helper:
     def _git(self, *args):
         subprocess.run(["git", "-C", str(self.checkout), *args], check=True)
 
-    def run(self, *args, failure="", stdin=None, holds_objects=False, used_layer_versions="3"):
+    def run(self, *args, failure="", stdin=None, holds_objects=False, used_layer_versions="3",
+            artifacts_bucket=False):
         return subprocess.run(["bash", str(self.checkout / "scripts" / "aws-helper.sh"), *args],
                               env={**self.env, "AWS_FAILURE": failure,
                                    "BUCKET_HOLDS_OBJECTS": "1" if holds_objects else "",
+                                   "ARTIFACTS_BUCKET_EXISTS": "1" if artifacts_bucket else "",
                                    "USED_LAYER_VERSIONS": used_layer_versions},
                               capture_output=True, text=True, input=stdin)
 
@@ -294,6 +299,28 @@ def test_delete_stack_deletes_stacks_whose_buckets_are_empty(helper):
     assert len(_calls(helper, "cloudformation delete-stack")) == 2
 
 
+@pytest.mark.parametrize(("fixture", "stack"), [("helper", "diet-tracker"),
+                                                ("branch_helper", "diet-tracker-fb")])
+def test_delete_stack_deletes_the_deploys_artifacts_bucket_after_the_stacks(
+        request, fixture, stack):
+    helper = request.getfixturevalue(fixture)
+    result = helper.run("--delete-stack", stdin=f"{stack}\n", artifacts_bucket=True)
+    assert result.returncode == 0, result.stderr
+    calls = helper.all_calls()
+    bucket = f"{stack}-artifacts-123456789012"
+    removed = [i for i, call in enumerate(calls)
+               if call.startswith("s3api delete-bucket") and f"--bucket {bucket}" in call]
+    deleted = [i for i, call in enumerate(calls)
+               if call.startswith("cloudformation delete-stack")]
+    assert len(removed) == 1 and deleted[-1] < removed[0]
+
+
+def test_delete_stack_skips_an_artifacts_bucket_that_does_not_exist(helper):
+    result = helper.run("--delete-stack", stdin="diet-tracker\n")
+    assert result.returncode == 0, result.stderr
+    assert _calls(helper, "s3api delete-bucket") == []
+
+
 def test_delete_stack_touches_nothing_unless_the_stack_is_named(helper):
     result = helper.run("--delete-stack", "--empty", stdin="other\n", holds_objects=True)
     assert result.returncode == 1
@@ -352,3 +379,17 @@ def test_enabling_the_git_hooks_is_reported_outside_the_captured_output(helper):
     result = helper.run("--log-group", "api")
     assert (result.returncode, result.stdout) == (0, "/aws/lambda/declared/diet-tracker-ApiFunction-x1\n")
     assert "core.hooksPath" in result.stderr
+
+
+@pytest.mark.parametrize(("fixture", "prefix"), [("helper", "diet-trk"),
+                                                 ("branch_helper", "diet-trk-fb")])
+def test_redirect_uri_names_the_branch_pairs_cognito_domain_before_any_deploy(
+        request, fixture, prefix):
+    result = request.getfixturevalue(fixture).run("--redirect-uri")
+    assert result.returncode == 0, result.stderr
+    assert result.stdout == (f"https://{prefix}-123456789012.auth.eu-central-1.amazoncognito.com"
+                             "/oauth2/idpresponse\n")
+
+
+def test_redirect_uri_takes_no_argument(helper):
+    assert helper.run("--redirect-uri", "x").returncode == 2

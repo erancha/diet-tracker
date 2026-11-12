@@ -16,9 +16,10 @@
 # untouched.
 #
 # Stack parameters come from lib/stack-params.sh. A backend run ends by writing
-# frontend/public/config.js for the stack pair (app-config.sh); the frontend publish refuses a
-# config.js that targets another stack's API. config/app.json ships inside the Lambda package
-# and is published beside the frontend, so an edit to it needs --frontend.
+# frontend/public/config.js for the stack pair from its outputs (lib/app-config.sh), and the
+# frontend publish writes it again first, so a published config.js always targets this stack's
+# API. config/app.json ships inside the Lambda package and is published beside the frontend, so
+# an edit to it needs --frontend.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -104,7 +105,7 @@ deploy_backend() {
     fi
     ok "Stacks '$COGNITO_STACK_NAME' and '$STACK_NAME' deployed."
 
-    "$SCRIPT_DIR/app-config.sh"
+    "$SCRIPT_DIR/lib/app-config.sh"
 }
 
 deploy_frontend() {
@@ -114,12 +115,10 @@ deploy_frontend() {
     api_url="$(stack_output "$outputs" ApiUrl)"
 
     # config.js holds one stack pair's endpoints; publishing one left by another branch's deploy
-    # would point this stack's users at that one's API.
-    [[ -f "$APP_CONFIG_FILE" ]] ||
-        die "$APP_CONFIG_FILE is missing; write it for this stack: ./scripts/app-config.sh"
+    # would point this stack's users at that one's API, so it is written for this stack first.
+    "$SCRIPT_DIR/lib/app-config.sh"
     grep -qF "$api_url" "$APP_CONFIG_FILE" ||
-        die "$APP_CONFIG_FILE does not target the API of '$STACK_NAME' ($api_url);" \
-            "write it for this stack: ./scripts/app-config.sh"
+        die "$APP_CONFIG_FILE does not target the API of '$STACK_NAME' ($api_url)"
 
     ensure_node_modules "$FRONTEND_FOLDER"
     step "Building the frontend"

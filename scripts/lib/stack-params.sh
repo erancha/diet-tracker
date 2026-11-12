@@ -14,7 +14,9 @@
 # parameter still at its template default (the meal hours, the SSM parameter names).
 
 load_secrets
+require_settings secrets.sh GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET
 load_params
+require_settings params.sh SES_SENDER ADMIN_EMAIL
 
 # Chat questions each user may ask per day; CHAT_DAILY_LIMIT_OVERRIDES of lib/params.sh names
 # the users whose allowance differs.
@@ -29,9 +31,6 @@ app_config() {
 }
 
 # $1: the frontend's CloudFront URL, empty before the app stack's first deploy.
-#
-# Cognito domains are global, so the domain prefix varies with the stack as the stack name does:
-# diet-trk for diet-tracker, diet-trk-fb for diet-tracker-fb.
 cognito_stack_parameters() {
     local frontend_url="$1" callbacks="$LOCAL_FRONTEND_URL/"
     [[ -z "$frontend_url" ]] || callbacks+=",$frontend_url/"
@@ -42,7 +41,7 @@ cognito_stack_parameters() {
         "AdminEmail=$ADMIN_EMAIL"
         "SesSender=$SES_SENDER"
         "CallbackUrls=$callbacks"
-        "DomainPrefix=diet-trk${STACK_NAME#"$(get_app_name)"}"
+        "DomainPrefix=$(cognito_domain_prefix)"
         "LogRetentionDays=$LOG_RETENTION_DAYS"
     )
 }

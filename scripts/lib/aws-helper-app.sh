@@ -11,6 +11,14 @@
 #   --set-rag-key [<key id>]    copy a Summaries.AI API key (default: its production stack's)
 #                               into the SSM parameter the chat function reads on every
 #                               question, without the key touching a file or the terminal
+#   --redirect-uri              print the address Google returns sign-in to, Cognito's
+#                               /oauth2/idpresponse on the branch's stack pair, from the account
+#                               and region alone, so the Google client can name it before any
+#                               deploy (docs/sign-in.md)
+#   --emails <action> <email> [...]
+#                               act on one user's outgoing mail: preview or send the weekly recap
+#                               or the morning debrief, show a refused delivery, re-request SES
+#                               verification; --emails --help lists the actions
 #
 # This stack pair's functions for --logs: api, chat, nudge, question (the per-user consumer
 # answering the weekly recap and the morning debrief), presignup.
@@ -25,6 +33,7 @@
 #   ./scripts/aws-helper.sh --stack-logs rag --errors --since 1d
 #   ./scripts/aws-helper.sh --stack-logs sum:BillingFunction --errors
 #   ./scripts/aws-helper.sh --log-group nudge
+#   ./scripts/aws-helper.sh --emails --weekly-recap someone@gmail.com
 
 # Summaries.AI's production stack and its function that answers the in-app chat.
 RAG_TARGET='sum:RagQueryFunction'
@@ -75,6 +84,16 @@ set_rag_key() {
     ok "SSM $RAG_KEY_PARAMETER updated from API key id $key_id"
 }
 
+# The Cognito domain's address follows from the account, the region and the prefix, as the
+# UserPoolDomain of template-cognito.yaml builds it, so it is known before the stack exists.
+print_redirect_uri() {
+    local account_id domain
+    connect
+    account_id="$(aws sts get-caller-identity --query Account --output text)"
+    domain="$(cognito_domain_prefix)-$account_id.auth.$REGION.amazoncognito.com"
+    echo "https://$domain/oauth2/idpresponse"
+}
+
 app_option() {
     local option="$1"
     shift
@@ -82,6 +101,8 @@ app_option() {
         --stack-logs) stack_logs "$@" ;;
         --log-group) print_log_group "$@" ;;
         --set-rag-key) set_rag_key "$@" ;;
+        --redirect-uri) no_arguments --redirect-uri "$@"; print_redirect_uri ;;
+        --emails) "$SCRIPT_DIR/lib/emails-helper.sh" "$@" ;;
         *) return 1 ;;
     esac
 }

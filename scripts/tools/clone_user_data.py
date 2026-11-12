@@ -1,5 +1,5 @@
 """Copies one user's recorded data between deployed stacks, to rehearse the app at a larger user
-count in an isolated stack pair. Run through scripts/clone-user-data.sh, which names the stack
+count in an isolated stack pair. Run through scripts/tools/clone-user-data.sh, which names the stack
 pair of the current git branch as the target.
 
 - mirror: the production account's rows land under the same address's account in the target

@@ -24,7 +24,7 @@ graphify-out/
 /tmp/
 
 # Machine-local deploy inputs, tracked only as their .example.sh templates, and the config.js
-# scripts/app-config.sh generates from them and the stacks' outputs
+# scripts/lib/app-config.sh generates from them and the stacks' outputs
 /scripts/lib/aws-config.sh
 /scripts/lib/secrets.sh
 /scripts/lib/params.sh

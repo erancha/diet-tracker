@@ -5,9 +5,9 @@
 # target, so the script runs from a feature branch only.
 #
 # Usage:
-#   scripts/clone-user-data.sh mirror <email>
-#   scripts/clone-user-data.sh fictive <email> [--count <n>]
-#   scripts/clone-user-data.sh delete
+#   ./scripts/tools/clone-user-data.sh mirror <email>
+#   ./scripts/tools/clone-user-data.sh fictive <email> [--count <n>]
+#   ./scripts/tools/clone-user-data.sh delete
 #
 # Actions:
 #   mirror    Replaces the address's rows in the branch stack with its production rows (days,
@@ -20,12 +20,12 @@
 #   delete    Removes every fictive account and its rows from the branch stack.
 #
 # Examples:
-#   scripts/clone-user-data.sh mirror someone@gmail.com
-#   scripts/clone-user-data.sh fictive someone@gmail.com
-#   scripts/clone-user-data.sh delete
+#   ./scripts/tools/clone-user-data.sh mirror someone@gmail.com
+#   ./scripts/tools/clone-user-data.sh fictive someone@gmail.com
+#   ./scripts/tools/clone-user-data.sh delete
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck source=lib/app-env.sh
 source "$SCRIPT_DIR/lib/app-env.sh"
 
@@ -45,4 +45,5 @@ cd "$APP_FOLDER"
 [ -x .venv/bin/python ] || { echo "no .venv — run scripts/test.sh once to create it" >&2; exit 1; }
 load_aws_config
 resolve_stack
-PYTHONPATH=src exec .venv/bin/python scripts/clone_user_data.py --target-stack "$STACK_NAME" "$@"
+PYTHONPATH=src exec .venv/bin/python scripts/tools/clone_user_data.py \
+    --target-stack "$STACK_NAME" "$@"
