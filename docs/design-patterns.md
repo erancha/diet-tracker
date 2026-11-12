@@ -1,9 +1,20 @@
 # Design patterns
 
 The same few shapes recur throughout the code: one gateway per store, one dispatch behind each
-door, values parsed once into frozen objects, and every dependency handed in rather than reached
-for. [Architecture](architecture.md) describes where the pieces run; this describes how they are
-put together inside.
+entry point, values parsed once into frozen objects, and every dependency handed in rather than
+reached for. [Architecture](architecture.md) describes where the pieces run; this describes how
+they are put together inside.
+
+**Contents:** [Data access behind one gateway](#data-access-behind-one-gateway) ·
+[Stored records are upcast as they are read](#stored-records-are-upcast-as-they-are-read) ·
+[One entry point, one dispatch](#one-entry-point-one-dispatch) ·
+[AWS inputs gathered once, job logic left pure](#aws-inputs-gathered-once-job-logic-left-pure) ·
+[Configuration parsed once into frozen objects](#configuration-parsed-once-into-frozen-objects) ·
+[Rules judge one value and name their own bound](#rules-judge-one-value-and-name-their-own-bound) ·
+[Services outside the stack sit behind one client each](#services-outside-the-stack-sit-behind-one-client-each) ·
+[The frontend is handed what it uses](#the-frontend-is-handed-what-it-uses) ·
+[Tests supply their own doubles](#tests-supply-their-own-doubles) ·
+[Failure surfaces where it happens](#failure-surfaces-where-it-happens)
 
 ## Data access behind one gateway
 
@@ -24,9 +35,9 @@ vocabulary in the table. `store.py` maps those ids to their current equivalents 
 `_RETIRED_GRADES`, `_LEGACY_LIGHT_SECOND_GRADES`, `_RETIRED_PORTIONS` — so a re-derived day keeps
 its score and nothing above the store branches on which version wrote a meal.
 
-## One door, one dispatch
+## One entry point, one dispatch
 
-Each door's `handler` maps its event to a private function and raises on anything unmapped:
+Each entry point's `handler` maps its event to a private function and raises on anything unmapped:
 `api.py` and `chat.py` on the API Gateway `routeKey`, `nudge.py` on the `{"job": ...}` the
 scheduler sends. An unrecognised route is a deployment mismatch between the template and the
 code, so it fails loudly rather than returning an empty success.
@@ -69,11 +80,11 @@ over stdlib `urllib` so the Lambdas need no third-party HTTP dependency. Neither
 an unreachable or erroring service raises, because what to do about it — a 502, a logged skip, a
 retry on the queue — belongs to the caller.
 
-`chat_question.answer` is the one flow that asks a question on a user's behalf: context block,
-upstream call, transcript write. The chat endpoint and the weekly recap both go through it, so a
-question the app composes reaches the service in the same shape a user's own question takes; the
-recap alone hands over a context block of its own, the weeks behind it, in place of the asker's
-recent days.
+`chat_question.answer` is the one flow that sends a question to the answering service: context
+block, upstream call, transcript write. The chat endpoint, the next-meal recommendation, the
+weekly recap and the morning debrief all go through it, so a question the app composes reaches the
+service in the same shape a user's own question takes; the recap alone hands over a context block
+of its own, the weeks behind it, in place of the asker's recent days.
 
 ## The frontend is handed what it uses
 

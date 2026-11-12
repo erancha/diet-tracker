@@ -1,5 +1,16 @@
 # Domain rules
 
+This document details the rules behind the scoring that [Architecture](architecture.md)
+summarizes: how a meal is scored, how a day opens and closes, what each scheduled job sends, and
+the configuration they read, with the exact values the code uses.
+
+**Contents:** [Meal log and scoring](#meal-log-and-scoring) ·
+[Carb sources on a plate](#carb-sources-on-a-plate) · [Extra fruit](#extra-fruit) ·
+[Additions](#additions) · [Fat servings](#fat-servings) ·
+[Heavy meals and heavy days](#heavy-meals-and-heavy-days) · [Day lifecycle](#day-lifecycle) ·
+[Shared derivation](#shared-derivation) · [Weight](#weight) ·
+[Versioned configuration](#versioned-configuration) · [Nudges](#nudges)
+
 ## Meal log and scoring
 
 Each meal is recorded as it happens with a timestamp, the carb source or sources it drew on,
@@ -171,17 +182,17 @@ backend as the authority, `frontend/src/derive.ts` in the browser for live dashb
 Both implementations must satisfy the shared test vectors in `config/derive-vectors.json`, keeping
 the two runtimes in lockstep.
 
-- **Excluded points** — the same meal walk also decomposes the day's score: per meal, the
-  weighed contribution of any carb source graded at or above the carbs question's
-  `excluded_grade`, plus the weighed surcharge of every addition its `excluded_additions` names.
-  That is what the program excludes from its six non-treat days — the flour grades and sugar,
-  and a sweet — while the grades below the bound stay permitted within them. Both figures come
-  out of one weighing of each meal, so the part can never disagree with the whole: every term of
-  the subtotal is also a term of the score, and the extra-fruit surcharge, which belongs to no
-  carb source, lifts the score alone. The history payload carries the subtotal per day, read from the
-  stored meals rather than written with the day, so every recorded day carries it with nothing
-  to backfill; the trend chart plots it beside the score, where the gap between the two lines
-  is the part of the day that stayed within the program.
+- **Excluded points** — the same meal walk also decomposes the day's score: per meal, the weighed
+  contribution of any carb source graded at or above the carbs question's `excluded_grade`, plus the
+  weighed surcharge of every addition its `excluded_additions` names. That is what the program
+  excludes from its six non-treat days — the flour grades and sugar, and a sweet — while the grades
+  below the bound stay permitted within them. Both figures come out of one weighing of each meal, so
+  the part can never disagree with the whole: every term of the subtotal is also a term of the
+  score, and the extra-fruit surcharge, which belongs to no carb source, lifts the score alone. The
+  history payload carries the subtotal per day, read from the stored meals rather than written with
+  the day, so every recorded day carries it with nothing to backfill; the trend chart plots it
+  beside the score, where the gap between the two lines is the part of the day that stayed within
+  the program.
 - **The treat day** — `treat_day` in the config names the weekday the program's week turns on:
   the treat meal is aimed at it, the weekly weigh-in falls on it, and the weekly recap goes out
   on it. The trend chart frames that column. Nothing marks a stored day as a treat day and no
@@ -291,26 +302,25 @@ Scheduled jobs (EventBridge Scheduler, Asia/Jerusalem) run alongside the tracker
   app, a tap away, where the closing line points; the table is there to set up the reading, not
   to restate the app.
 
-  That table is the app's own arithmetic. What follows it is the answering service's reading of
-  the two weeks: the job stores the line and the table as a chat of the user's and asks
-  that chat a follow-up over the path a follow-up the user types takes
-  (`src/common/chat_question.py`). The follow-up is one question — the insights for the coming
-  week, by the program's principles, named so retrieval matches them — and it is all the chat
-  list shows under the recap. How to answer rides beside the data instead, as a brief opening
-  the context block (`weekly_recap.INSIGHTS_BRIEF`): answer as the program's coach; behavior
-  is the way and the weight its outcome, so speak of the behaviors and cite the weight only as
-  confirming the direction or not; open by saying where the week went once the changes are
-  weighed — a change of two days or more is real and is named first, by its subject and
-  direction; one day's difference alone is noise and is never presented as notable; several
-  small moves the same way are read as one direction rather than one of them singled out; with
-  neither, the week matches the one before — as a conclusion, never quoting the rule it was weighed by; never name a breach without
-  the day it fell on and what was recorded; then pick the one or two behaviors that matter most
-  for the coming week, each with why it matters and one concrete, measurable step; do not repeat
-  the table's numbers or walk every bound, and stay within eight lines. Under the brief in that block
-  (`chat_context.week_context`) are the recap's week and the one before it day by day —
-  weekday, treat day, the submitted answers, what the day cost in flours and sugars — and the
-  weights with the target. Nothing older rides: the table compares two weeks, and a reading
-  given more never referred to it. Retrieval embeds the question
+  That table is the app's own arithmetic. What follows it is the answering service's reading of the
+  two weeks: the job stores the line and the table as a chat of the user's and asks that chat a
+  follow-up over the path a follow-up the user types takes (`src/common/chat_question.py`). The
+  follow-up is one question — the insights for the coming week, by the program's principles, named
+  so retrieval matches them — and it is all the chat list shows under the recap. How to answer rides
+  beside the data instead, as a brief opening the context block (`weekly_recap.INSIGHTS_BRIEF`):
+  answer as the program's coach; behavior is the way and the weight its outcome, so speak of the
+  behaviors and cite the weight only as confirming the direction or not; open by saying where the
+  week went once the changes are weighed — a change of two days or more is real and is named first,
+  by its subject and direction; one day's difference alone is noise and is never presented as
+  notable; several small moves the same way are read as one direction rather than one of them
+  singled out; with neither, the week matches the one before — as a conclusion, never quoting the
+  rule it was weighed by; never name a breach without the day it fell on and what was recorded; then
+  pick the one or two behaviors that matter most for the coming week, each with why it matters and
+  one concrete, measurable step; do not repeat the table's numbers or walk every bound, and stay
+  within eight lines. Under the brief in that block (`chat_context.week_context`) are the recap's
+  week and the one before it day by day — weekday, treat day, the submitted answers, what the day
+  cost in flours and sugars — and the weights with the target. Nothing older rides: the table
+  compares two weeks, and a reading given more never referred to it. Retrieval embeds the question
   alone, and the question carries the week's table and the principles, so what comes back is
   guidance about what this user's weeks did rather than about the program at large.
 
@@ -342,6 +352,7 @@ Scheduled jobs (EventBridge Scheduler, Asia/Jerusalem) run alongside the tracker
   a redriven message finds the day's chat already stored and does nothing again.
 
 Every job above reads its audience from the pool minus the accounts that have opted out, so one
-switch silences all of them — the unconditional weekly recap and the debrief included. The switch is the account
-menu's first item; it toggles, so the same item subscribes again. Opting out changes nothing
-inside the app: a muted account still sees its own red marks on closing a day and in the table.
+switch silences all of them — the unconditional weekly recap and the debrief included. The switch is
+the account menu's first item; it toggles, so the same item subscribes again. Opting out changes
+nothing inside the app: a muted account still sees its own red marks on closing a day and in the
+table.

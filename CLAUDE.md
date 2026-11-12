@@ -1,8 +1,8 @@
 # CLAUDE.md
 
 Serverless Hebrew diet tracker: Python Lambdas (`src/handlers/` over a shared `src/common/`
-core), React frontend, DynamoDB, deployed by CloudFormation. README.md covers the product and
-architecture. The checkout belongs on the WSL ext4 filesystem, not under `/mnt/c`;
+core), React frontend, DynamoDB, deployed by CloudFormation. Layout and parts:
+docs/architecture.md. The checkout belongs on the WSL ext4 filesystem, not under `/mnt/c`;
 docs/development.md explains the cost.
 
 ## Operations scripts (scripts/)
@@ -34,13 +34,16 @@ session. The aws CLI itself lives in `~/.local/bin`, which is not always on PATH
   bucket and tears a stack pair down.
 - `test.sh [pytest args]` — `bash -n` on every script, then the venv + pytest wrapper; creates
   and populates `.venv` on first run.
+- `init-env.sh [--force]` — creates each gitignored `scripts/lib/<name>.sh` from its
+  `.example.sh`.
 - `deploy.sh` — backend deploy of both stacks; `--frontend` adds the frontend publish and
   `--frontend-only` runs it alone. It packages `build/lambda.zip` through `zip_lambda.py`, so an
   unchanged source deploys as no change. `config/app.json` also ships inside the Lambda package,
   so config edits need `deploy.sh --frontend`, not just the frontend publish.
-- `app-config.sh` — writes `frontend/public/config.js` from the stack pair's outputs; `deploy.sh`
-  runs it after every backend deploy.
-- `emails-helper.sh` — acts on the outgoing mail of one user; `--help` lists what it offers.
+- `lib/app-config.sh` — writes `frontend/public/config.js` from the stack pair's outputs;
+  `deploy.sh` runs it after every backend deploy and before every frontend publish.
+- `aws-helper.sh --emails` (`lib/emails-helper.sh`) — acts on the outgoing mail of one user;
+  `--emails --help` lists what it offers.
   `--rejected <email>` writes a message into the deployed undelivered table so the header's alarm
   bell shows it, the only way to see that surface on an account whose address SES has verified
   (dismissing it in the app deletes the row). `--weekly-recap <email>` runs the weekly recap job
@@ -51,3 +54,8 @@ session. The aws CLI itself lives in `~/.local/bin`, which is not always on PATH
   user. `--verify <email>` really asks SES to mail the address its verification request again —
   the only way back for an address whose 24-hour link expired, since sign-up requests it once and
   never resends.
+- `tools/reset-user.sh <email> [--keep-account] [--yes]` — returns one user to a first-time sign-in.
+- `tools/clone-user-data.sh mirror | fictive | delete` — copies a user's production rows into the
+  feature branch's stack pair, or to fictive accounts; refuses the production pair as a target.
+- `tools/temp-pull-demo-data.sh <email>` — read-only dump of one user's days, to seed
+  `frontend/public/demo.html`.

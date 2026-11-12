@@ -5,6 +5,13 @@ Scoring arithmetic, the day's lifecycle and the scheduled jobs are specified in
 [Domain rules](domain-rules.md); this document describes what a user sees and links there for the
 rule behind it.
 
+**Contents:** [The four principles (שכפ"צ)](#the-four-principles-שכפצ) ·
+[The meal log and the daily score](#the-meal-log-and-the-daily-score) · [Weight](#weight) ·
+[Trends and history](#trends-and-history) ·
+[Reminders and the weekly recap](#reminders-and-the-weekly-recap) ·
+[Mail that could not be delivered](#mail-that-could-not-be-delivered) ·
+[Knowledge-base chat](#knowledge-base-chat) · [User activity (admin)](#user-activity-admin)
+
 ## The four principles (שכפ"צ)
 
 Four habits carry the whole tracker: drinking enough water, vegetables in your meals, a short
