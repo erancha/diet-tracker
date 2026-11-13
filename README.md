@@ -2,7 +2,7 @@
 
 [![License: PolyForm Noncommercial 1.0.0](https://img.shields.io/badge/License-PolyForm%20Noncommercial%201.0.0-blue.svg)](LICENSE)
 
-A free Hebrew web app for following an existing weight-loss program day by day, open to anyone
+A Hebrew web app for following an existing weight-loss program day by day, open to anyone
 with a Google account; it is an independent tracker inspired by the program, not part of it. The
 program judges a day by the character of its meals and the gaps between them, not by calories,
 and as in golf a lower score is better. You log each meal as you eat it; the app scores the day,
