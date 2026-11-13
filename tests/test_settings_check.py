@@ -150,7 +150,7 @@ def test_stack_params_load_with_every_required_setting_filled_in(checkout):
     assert (result.returncode, result.stdout) == (0, "passed\n"), result.stderr
 
 
-@pytest.mark.parametrize("name", ["SES_SENDER", "ADMIN_EMAIL"])
+@pytest.mark.parametrize("name", ["ALLOWED_EMAILS", "SES_SENDER", "ADMIN_EMAIL"])
 @pytest.mark.parametrize("value", [None, "", "<placeholder-address>"])
 def test_stack_params_refuse_a_required_setting_missing_or_left_as_placeholder(
     checkout, name, value
@@ -170,3 +170,7 @@ def test_stack_params_refuse_a_missing_google_setting(checkout):
     assert result.returncode != 0
     assert result.stdout == ""
     assert "GOOGLE_CLIENT_SECRET" in result.stderr and "secrets.example.sh" in result.stderr
+
+
+def test_the_license_contact_is_a_published_setting():
+    assert "LICENSE_CONTACT" in PUBLISHED

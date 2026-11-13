@@ -90,7 +90,7 @@ Two lists apply, and an address must pass both.
   verification review.
 - **The sign-up allow-list.** `ALLOWED_EMAILS` in `scripts/lib/params.sh` is a regex a new
   account's address must match in full, ignoring case: join addresses with `|` to name several,
-  or leave `.*` to admit everyone. The presignup Lambda reads it on each new account, so it
+  or set `.*` to admit everyone. The presignup Lambda reads it on each new account, so it
   gates sign-up, not sign-in: an account already in the pool stays when the regex changes. A
   change takes a backend deploy.
 

@@ -16,7 +16,7 @@
 load_secrets
 require_settings secrets.sh GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET
 load_params
-require_settings params.sh SES_SENDER ADMIN_EMAIL
+require_settings params.sh ALLOWED_EMAILS SES_SENDER ADMIN_EMAIL
 
 # Chat questions each user may ask per day; CHAT_DAILY_LIMIT_OVERRIDES of lib/params.sh names
 # the users whose allowance differs.

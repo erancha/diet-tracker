@@ -107,9 +107,10 @@ SECRETS_FILES=("$SCRIPT_DIR/lib/aws-config.sh" "$SCRIPT_DIR/lib/secrets.sh")
 # values may appear in git, but an email address they hold may not, unless PUBLISHED_SETTINGS names
 # the setting that holds it.
 PRIVATE_FILES=("$SCRIPT_DIR/lib/params.sh")
-# Settings of a private file whose address the app shows its users, so a copy in a tracked file is
-# no leak.
-PUBLISHED_SETTINGS=(SES_SENDER ADMIN_EMAIL DEV_EMAIL)
+# Settings of a private file whose address is public anyway, so a copy in a tracked file is no
+# leak: the app shows SES_SENDER, ADMIN_EMAIL and DEV_EMAIL to its users, and LICENSE_CONTACT is
+# the address the README and NOTICE give for a commercial license.
+PUBLISHED_SETTINGS=(SES_SENDER ADMIN_EMAIL DEV_EMAIL LICENSE_CONTACT)
 
 # Fatal unless git ignores <file>.
 assert_gitignored() {

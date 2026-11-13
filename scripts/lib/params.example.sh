@@ -3,8 +3,8 @@
 # answering service URL. ./scripts/init-env.sh copies this file to lib/params.sh (gitignored);
 # fill it in there and never commit it.
 
-# Optional: a regex an email must fullmatch to sign up; join addresses with "|". The default
-# ".*" allows everyone.
+# Required: a regex a Google address must fully match to sign up, ignoring case. Join addresses
+# with "|" and escape their dots; ".*" admits everyone.
 export ALLOWED_EMAILS=".*"
 
 # Required: the From address of every mail the app sends; must be a verified SES identity.
@@ -13,6 +13,11 @@ export SES_SENDER="<sender-address>"
 # Required: notified about each new user, shown to rejected sign-ins as the access contact,
 # and the one account the app treats as admin.
 export ADMIN_EMAIL="<admin-address>"
+
+# Required: your email address for commercial-license requests, the one NOTICE and the README
+# give. Nothing in the app reads it; naming it here lets that one address appear in git, which
+# the address check of lib/app-env.sh otherwise refuses for every address of this file.
+export LICENSE_CONTACT="<commercial-license-address>"
 
 # Optional: the developer's own account: diagnostic readings the app takes of itself are shown
 # to it alone. Leave empty to show them to nobody.
