@@ -1,5 +1,6 @@
 # diet-tracker
 
+[![In production](https://img.shields.io/badge/%F0%9F%8C%90-In%20production-brightgreen.svg)](https://dwyjxouhdjlxp.cloudfront.net)
 [![License: PolyForm Noncommercial 1.0.0](https://img.shields.io/badge/License-PolyForm%20Noncommercial%201.0.0-blue.svg)](LICENSE)
 
 A Hebrew web app for following an existing weight-loss program day by day, open to anyone
