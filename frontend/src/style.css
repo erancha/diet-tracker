@@ -170,8 +170,8 @@ h1 .app-icon { width: 1em; height: 1em; vertical-align: middle; margin-inline-en
 .app-version { margin: 0.1rem 0 0; font-size: 0.75rem; color: var(--muted-text); }
 .landing { display: flex; flex-direction: column; }
 /* The condensed view fills the viewport so the footer links ride the page's bottom edge; the
-   expanded view scrolls past a screen anyway, and there they keep the fixed gap the walkthrough
-   line shares with the principles table instead. */
+   expanded view scrolls past a screen anyway, and there they keep the fixed gap the links' line
+   shares with the principles table instead. */
 .landing-brief { min-height: calc(100dvh - var(--page-pad-top) - var(--page-pad-bottom)); }
 /* The card's padding seats the title off its top edge, and a rem of air parts the version line
    under it from the summary. The card is a flex column like the page, so that margin stands
@@ -191,7 +191,7 @@ h1 .app-icon { width: 1em; height: 1em; vertical-align: middle; margin-inline-en
 @media (min-width: 48rem) { .landing-brief .landing-card { padding: 2rem; } }
 .landing-brief .app-heading { margin-inline: auto; }
 .landing-brief h1 { font-size: min(2.6rem, 11vw); }
-.landing-brief .landing-walkthrough { margin-top: auto; padding-top: 2.5rem; }
+.landing-brief .landing-links { margin-top: auto; padding-top: 2.5rem; }
 .landing-intro, .landing-condensed { margin-top: 0.5em; margin-bottom: 0.6rem; }
 /* The condensed pitch is the page's whole message, so it reads a touch larger than body copy. */
 .landing-condensed { font-size: calc(1em + 2px); }
@@ -216,13 +216,13 @@ h1 .app-icon { width: 1em; height: 1em; vertical-align: middle; margin-inline-en
   --btn-fg: inherit; --btn-border: #ccc; border-radius: 999px; font-weight: 600;
 }
 .landing-sign-in-mark { color: #1f4e8c; font-weight: 700; margin-inline-end: 0.6rem; }
-/* The reference card closing the landing and the walkthrough leading the footer links both sit off
-   the block above by the same gap, so each reads as its own block rather than as a tail on the
-   one before; the invite and repo lines tuck under the walkthrough at the closer spacing. */
-.landing-reference, .landing-walkthrough { margin-top: 2.5rem; }
-.landing-invite, .landing-repo { margin-top: 0.5rem; }
-/* A note about the page the link leads to, not a second link, so it reads as chrome beside it. */
-.landing-walkthrough-hint { color: #5f5f5f; font-size: 0.85rem; }
+/* The reference card closing the landing and the links' line under it both sit off the block
+   above by the same gap, so each reads as its own block rather than as a tail on the one before.
+   The three links share one centered line, wrapping on a narrow phone. */
+.landing-reference, .landing-links { margin-top: 2.5rem; }
+.landing-links {
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem 1.5rem;
+}
 /* The table is reference material below the screen's single action, so it is toned off the body
    text rather than competing with the summary above the button for the reader's first pass. Its
    card's padding seats it, so the global table margin is dropped along with the min-width the

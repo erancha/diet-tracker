@@ -16,6 +16,7 @@ const CARB_GRADES_PATH = "carb-grades.html";
 // The animated walkthrough, published beside the app from the same directory. It is the one place
 // a visitor can see the app work before deciding whether to sign in, so it leads the footer links.
 const WALKTHROUGH_PATH = "demo.html";
+const WALKTHROUGH_HINT = "ניתן להאט את ההדגמה; מומלץ לראות במסך מחשב";
 export function Landing({ onSignIn, chatAvailable }: {
   onSignIn: () => void;
   // Whether this deployment configures the service answering the in-app chat. The landing page
@@ -35,31 +36,21 @@ export function Landing({ onSignIn, chatAvailable }: {
       {expanded ? "פחות" : "יותר"}
     </button>
   );
-  const walkthroughLink = (
-    <p className="landing-walkthrough">
-      <a href={WALKTHROUGH_PATH} target="_blank" rel="noreferrer">
+  // The replay opens at double speed and draws a phone on a workbench, so the walkthrough's
+  // tooltip says both before the click. A visitor is not the developer, so the invite always
+  // speaks as a received recommendation.
+  const footerLinks = (
+    <footer className="landing-links">
+      <a href={WALKTHROUGH_PATH} target="_blank" rel="noreferrer" title={WALKTHROUGH_HINT}>
         הדגמה
-      </a>{" "}
-      {/* The replay opens at double speed and draws a phone on a workbench beside its narration,
-          so both notes sit with the link rather than waiting to be discovered on the page they
-          lead to. Outside the anchor, so the link's accessible name stays the walkthrough's own. */}
-      <span className="landing-walkthrough-hint">(ניתן להאט את ההדגמה; מומלץ לראות במסך מחשב)</span>
-    </p>
-  );
-  // A visitor is not the developer, so the invite always speaks as a received recommendation.
-  const inviteLink = (
-    <p className="landing-invite">
+      </a>
       <a href={whatsAppInviteUrl(false)} target="_blank" rel="noreferrer">
         הזמנת חברים ב-WhatsApp
       </a>
-    </p>
-  );
-  const repoLink = (
-    <p className="landing-repo">
       <a href="https://github.com/erancha/diet-tracker" target="_blank" rel="noreferrer">
         קוד המקור ב-GitHub
       </a>
-    </p>
+    </footer>
   );
   if (!expanded) {
     return (
@@ -90,9 +81,7 @@ export function Landing({ onSignIn, chatAvailable }: {
           {toggleButton}
           {signInButton}
         </div>
-        {walkthroughLink}
-        {inviteLink}
-        {repoLink}
+        {footerLinks}
       </main>
     );
   }
@@ -153,9 +142,7 @@ export function Landing({ onSignIn, chatAvailable }: {
           </tbody>
         </table>
       </div>
-      {walkthroughLink}
-      {inviteLink}
-      {repoLink}
+      {footerLinks}
     </main>
   );
 }

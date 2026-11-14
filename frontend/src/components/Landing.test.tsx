@@ -125,21 +125,21 @@ describe("Landing", () => {
     expect(summaryText).toContain("מסמכי המקור");
   });
 
-  it("offers the walkthrough in both modes, above the invite it leads", async () => {
+  it("lines up the walkthrough, invite and repo links on one footer line in both modes", async () => {
     render(<Landing onSignIn={() => {}} chatAvailable />);
 
     const walkthrough = () => screen.getByRole("link", { name: "הדגמה" });
+    const footerLinks = () => [...walkthrough().closest(".landing-links")!.querySelectorAll("a")]
+      .map((link) => link.textContent);
     expect(walkthrough()).toHaveAttribute("href", "demo.html");
-    // The note rides beside the link rather than inside it, so the link's name stays the page's.
-    expect(walkthrough().parentElement).toHaveTextContent("(ניתן להאט את ההדגמה; מומלץ לראות במסך מחשב)");
-    // The footer links read walkthrough, invite, repo — the order the stylesheet spaces them in.
-    expect(walkthrough().compareDocumentPosition(
-      screen.getByRole("link", { name: "הזמנת חברים ב-WhatsApp" }),
-    ) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // The note is the link's tooltip, so the line holds only the three link names.
+    expect(walkthrough()).toHaveAttribute("title", "ניתן להאט את ההדגמה; מומלץ לראות במסך מחשב");
+    expect(screen.queryByText(/מומלץ לראות במסך מחשב/)).not.toBeInTheDocument();
+    expect(footerLinks()).toEqual(["הדגמה", "הזמנת חברים ב-WhatsApp", "קוד המקור ב-GitHub"]);
 
     await expandLanding();
 
-    expect(walkthrough()).toHaveAttribute("href", "demo.html");
+    expect(footerLinks()).toEqual(["הדגמה", "הזמנת חברים ב-WhatsApp", "קוד המקור ב-GitHub"]);
   });
 
   it("links to the source repository in both modes", async () => {
